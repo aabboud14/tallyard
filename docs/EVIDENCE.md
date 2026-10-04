@@ -68,3 +68,8 @@ TZ=UTC npx vitest run; TZ=Pacific/Auckland npx vitest run   both 240 passed
 - Deployment: the user asked for a push to the working branch and a deployment to Vercel; the brief says not to deploy. Done at the user's request. The outcome is recorded at the end of this file.
 - Second workbook reader: none available on the machine; recorded as "not independently opened".
 - The compliance workbook's Embodied carbon sheet carries an extra Public ID column; the waste Summary carries extra formula rows (docs/DECISIONS.md).
+
+## Deployment outcome
+
+- Pushed to `origin/claude/exciting-heisenberg-3cu7nb`.
+- Vercel: the connected Vercel account (team "Alex Abboud's projects", hobby plan) has no project, and the connector's authorisation returned 403 "You don't have permission to create a project" for both project creation and a first deployment. No deployment was made. Remedy: create a project for this repository in the Vercel dashboard (framework Vite, build `npm run build`, output `dist`), or re-authorise the Vercel connector with project creation allowed, then deploy again.

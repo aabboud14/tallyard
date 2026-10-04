@@ -8,10 +8,10 @@ Tallyard v0.5 build plan. Phases from brief/01-BRIEF.md section 5.
 - [x] 1. Domain: reference data, engines F1 to F10 and F12 to F14, privacy projections, seed, twin seed
 - [x] 2. Store and demo replay
 - [x] 3. Shell and first slice: tokens, shell, role switcher, reset, panel, inventory, listings and privacy, browse, listing
-- [ ] 4. Compliance wedge: project compliance, bill import, waste dashboard, both workbooks, print
+- [x] 4. Compliance wedge: project compliance, bill import, waste dashboard, both workbooks, print
 - [x] 5. Marketplace path: capture, priority, matcher, plan, negotiation, offers and deals, logistics, custody
 - [x] 6. Operator and shared: ledger, model comparison, assumptions, about, demo script panel, stubs
-- [ ] 7. Hardening: full e2e, layout checks, screenshots, README, DEMO_SCRIPT, EVIDENCE
+- [x] 7. Hardening: full e2e, layout checks, screenshots, README, DEMO_SCRIPT, EVIDENCE
 
 ## File tree (planned)
 
@@ -35,6 +35,8 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Done
 
+- Phase 4: project compliance dashboard, bill import with review, waste dashboard, both workbooks with formulas, A4 print layout, workbook tests including P6.
+- Phase 7: e2e steps 1 to 12 green in both Playwright projects, privacy and label checks, layout checks, reset check, 19 screenshots, README, DEMO_SCRIPT, EVIDENCE.
 - Phase 3: docs/DESIGN.md, tokens and fonts, shell with persona switcher, demo script panel, reset, error boundary, section and panel drawings, charts, How this is calculated, inventory, item detail, listings and privacy, browse, listing.
 - Phase 5: capture with Assist, priority, match schedule with terms dialog, reuse plan with package panel and negotiation thread, offers and deals (seller), deals with logistics and custody (buyer).
 - Phase 6: ledger, model comparison, assumptions, about, the three stubs, demo script panel.
@@ -44,4 +46,4 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Next
 
-Phase 4 (compliance wedge, in progress) then Phase 7: run e2e in both projects, shots, EVIDENCE.md, then push and deploy to Vercel at the user's request.
+Tier 1 is complete. Deployment to Vercel is blocked by the connector's permissions (docs/EVIDENCE.md). Tier 2 (brief/08-TIER2.md) only on request.
