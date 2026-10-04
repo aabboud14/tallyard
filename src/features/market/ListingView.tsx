@@ -107,7 +107,7 @@ export function ListingView({ listing: l, testPrefix = 'listing', compact = fals
             {priceRangeText(l)}
           </span>
           <span data-testid={`${testPrefix}-signal`}>Market signal: {SIGNAL_LABELS[l.price.signal]}</span>
-          <span className="text-xs text-mill-text">{LABELS.L10}</span>
+          <span className="text-xs text-mill-text" data-testid="label-L10">{LABELS.L10}</span>
           {!compact ? <HowCalculated title={`guide price for ${l.publicId}`} {...guideSections(gp, l.family, l.condition, l.testStatus)} testId={`${testPrefix}-price-calc`} /> : null}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

@@ -9,10 +9,10 @@ export function PersonaSwitcher() {
   const setPersona = useStore((s) => s.setPersona)
   const navigate = useNavigate()
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex min-w-0 items-center gap-2 text-sm">
       <span className="text-mill-text">Persona</span>
       <select
-        className="min-h-9 rounded-sm border border-rule bg-panel px-2 text-sm"
+        className="min-h-9 max-w-[calc(100vw-120px)] rounded-sm border border-rule bg-panel px-2 text-sm sm:max-w-md"
         value={personaId}
         data-testid="persona-switcher"
         onChange={(e) => {

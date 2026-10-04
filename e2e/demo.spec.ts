@@ -21,8 +21,8 @@ function allLotPrivateStrings(): string[] {
   return [...out]
 }
 const LOT_PRIVATE = allLotPrivateStrings()
-/** Exchanged after confirmation (04 section 3, rule 3) for the two parties to the deal. */
-const EXCHANGED = ['Ostlea Estates', 'Tom Ashby', ...dateFormats('2027-03-15')]
+/** Exchanged after confirmation (04 section 3, rule 3) for the two parties to the deal, plus the tested date derived from the handover (rule 15). */
+const EXCHANGED = ['Ostlea Estates', 'Tom Ashby', ...dateFormats('2027-03-15'), ...dateFormats('2027-03-29')]
 const PROJECT_PRIVATE = projectPrivateStrings(seed.projects[MERROWGATE_ID], seed)
 
 async function expectNoLotPrivate(page: import('@playwright/test').Page, allowExchanged = false) {

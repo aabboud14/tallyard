@@ -9,7 +9,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primar
 
 export function Button({ variant = 'secondary', size = 'md', className, ...rest }: ButtonProps) {
   const base = 'inline-flex items-center justify-center rounded-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
-  const sizes = size === 'lg' ? 'min-h-11 px-4 text-base' : 'min-h-9 px-3 text-sm'
+  const sizes = size === 'lg' ? 'min-h-[44px] px-4 text-base' : 'min-h-9 px-3 text-sm'
   const look =
     variant === 'primary'
       ? 'border-steel bg-steel text-white hover:bg-steel-deep'
@@ -35,10 +35,14 @@ export function Panel({ title, children, className, actions, ...rest }: HTMLAttr
   )
 }
 
-export function Tag({ children, tone = 'survey', className }: { children: ReactNode; tone?: 'survey' | 'teal' | 'oxide' | 'steel' | 'grey'; className?: string }) {
+export function Tag({ children, tone = 'survey', className, ...rest }: HTMLAttributes<HTMLSpanElement> & { children: ReactNode; tone?: 'survey' | 'teal' | 'oxide' | 'steel' | 'grey' }) {
   const look =
     tone === 'teal' ? 'bg-teal-tint text-ink' : tone === 'oxide' ? 'bg-oxide-tint text-ink' : tone === 'steel' ? 'bg-steel-tint text-ink' : tone === 'grey' ? 'bg-rule-soft text-ink' : 'bg-survey text-ink'
-  return <span className={cx('inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 font-display text-sm leading-tight tracking-wide', look, className)}>{children}</span>
+  return (
+    <span className={cx('inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 font-display text-sm leading-tight tracking-wide', look, className)} {...rest}>
+      {children}
+    </span>
+  )
 }
 
 export function Figure({ label, value, sub, testId, size = 'md' }: { label: ReactNode; value: ReactNode; sub?: ReactNode; testId?: string; size?: 'md' | 'lg' }) {
@@ -60,13 +64,15 @@ export function Private({ children, className, inline = false }: { children: Rea
       <span className={cx('inline-flex items-center gap-1 border-l-2 border-oxide pl-1.5', className)}>
         {children}
         <Lock />
-        <span className="text-xs font-medium text-oxide">{LABELS.L28}</span>
+        <span className="text-xs font-medium text-oxide" data-testid="label-L28">
+          {LABELS.L28}
+        </span>
       </span>
     )
   }
   return (
     <div className={cx('border-l-2 border-oxide pl-3', className)}>
-      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-oxide">
+      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-oxide" data-testid="label-L28">
         <Lock />
         {LABELS.L28}
       </div>
@@ -189,5 +195,5 @@ export function Field({ label, children, hint, htmlFor, className }: { label: Re
   )
 }
 
-export const inputClass = 'min-h-11 w-full rounded-sm border border-rule bg-panel px-3 text-base text-ink focus:border-steel'
-export const selectClass = 'min-h-11 w-full rounded-sm border border-rule bg-panel px-2 text-base text-ink focus:border-steel'
+export const inputClass = 'min-h-[44px] w-full rounded-sm border border-rule bg-panel px-3 text-base text-ink focus:border-steel'
+export const selectClass = 'min-h-[44px] w-full rounded-sm border border-rule bg-panel px-2 text-base text-ink focus:border-steel'

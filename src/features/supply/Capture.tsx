@@ -144,7 +144,7 @@ export function Capture() {
         </div>
       ) : null}
       <Field label="Photo" htmlFor="capture-photo" hint="Re-encoded through a canvas on capture, so embedded metadata never reaches the store. Private until ticked public.">
-        <input id="capture-photo" type="file" accept="image/*" capture="environment" className="min-h-11 w-full text-base" onChange={(e) => onPhoto(e.target.files?.[0])} data-testid="capture-photo" />
+        <input id="capture-photo" type="file" accept="image/*" capture="environment" className="min-h-[44px] w-full text-base" onChange={(e) => onPhoto(e.target.files?.[0])} data-testid="capture-photo" />
       </Field>
       {photos.length ? (
         <div className="flex flex-wrap gap-3" data-testid="capture-photos">
