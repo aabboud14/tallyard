@@ -48,7 +48,7 @@ export function captureAssist(input: string): AssistResult {
   const take = (re: RegExp, field: string): RegExpExecArray | null => {
     const m = re.exec(t)
     if (!m) return null
-    evidence[field] = input.slice(m.index, m.index + m[0].length).trim()
+    evidence[field] = m[0].replace(/\u0001/g, '').trim()
     t = t.slice(0, m.index) + BLANK + t.slice(m.index + m[0].length)
     return m
   }
@@ -78,7 +78,7 @@ export function captureAssist(input: string): AssistResult {
     if (chosen) {
       r.section = chosen.designation
       r.family = 'steel_section'
-      evidence.section = input.slice(sm.index, sm.index + sm[0].length).trim()
+      evidence.section = sm[0].trim()
       t = t.slice(0, sm.index) + BLANK + t.slice(sm.index + sm[0].length)
     }
   }
