@@ -20,3 +20,7 @@ Proof for each item of the definition of done (brief/01-BRIEF.md section 7). Fil
 
 - `npx vitest run`: 17 files, 208 tests passed. Same under `TZ=UTC` and `TZ=Pacific/Auckland`.
 - Independent review of `src/domain` against 03, 06 and 07 by a fresh-context agent: no formula, rounding, ordering, label or seed deviation; two notes recorded in `docs/DECISIONS.md`.
+
+## Phase 2
+
+- `npx vitest run src/store`: the replay test runs steps 1 to 12 on fresh seed and asserts every value in the acceptance table of 02 section 3, plus the three dashboard states for step 10 and the B7 post-deal matcher variant. 15 tests pass.

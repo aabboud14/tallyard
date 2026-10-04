@@ -6,7 +6,7 @@ Tallyard v0.5 build plan. Phases from brief/01-BRIEF.md section 5.
 
 - [x] 0. Set up and plan: git, scaffold, pinned dependencies, both builds, lint, unit tests, Playwright, spike
 - [x] 1. Domain: reference data, engines F1 to F10 and F12 to F14, privacy projections, seed, twin seed
-- [ ] 2. Store and demo replay
+- [x] 2. Store and demo replay
 - [ ] 3. Shell and first slice: tokens, shell, role switcher, reset, panel, inventory, listings and privacy, browse, listing
 - [ ] 4. Compliance wedge: project compliance, bill import, waste dashboard, both workbooks, print
 - [ ] 5. Marketplace path: capture, priority, matcher, plan, negotiation, offers and deals, logistics, custody
@@ -35,9 +35,10 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Done
 
+- Phase 2: store, actions, selectors, runDemoStep(1..12), replay test asserting every acceptance-table value (15 tests).
 - Phase 1: reference data, engines F1 to F10 and F12 to F14, projections, seed, twin seed; 208 unit tests from 07 pass under TZ=UTC and TZ=Pacific/Auckland; independent review found no formula or data deviation.
 - Phase 0: scaffold, pinned dependencies, both builds, lint, vitest, Playwright with the pre-installed Chromium (ladder rung 1), spike passing in both projects, scan script, sample file builder, photo fixture builder.
 
 ## Next
 
-Phase 2: store, actions, selectors, runDemoStep and the replay test.
+Phase 3: docs/DESIGN.md, tokens, shell, role switcher, reset, panel; inventory, listings and privacy, browse, listing; e2e for steps 3 and 4.
