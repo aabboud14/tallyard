@@ -97,7 +97,7 @@ for (const file of files) {
       if ([...allowed].some((a) => a.includes(candidate) || candidate.includes(a))) continue
       if (isTwinFixture && twinNames.some((t) => candidate.includes(t))) continue
       // Generic phrases that end in an allowed suffix but are not names.
-      if (/^(Open|Covered|The|This|A|An|Project|Plan|Of|Policy|London|Durnley|Twin|Tiverne|Merrowgate|Garnet|Sample|Demo|Earlier|Private|Public|Blind|Supply|Market|Compliance|Operator|Design|Platform|Reuse|Reclaimed|New|Steel|Structural|Clay|Stone|Timber|Precast|Curtain|Raised|Mixed|Hazardous|Heavy|Primary|Secondary|Upper|Lower|Infill|Reinforcement|Metal|Concrete|Building|Match|Partitions|Roof|Other|Unitised|Portland)\b/.test(candidate)) continue
+      if (/^(Open|Covered|The|This|A|An|Project|Plan|Of|Policy|London|Durnley|Twin|Tiverne|Merrowgate|Garnet|Sample|Demo|Earlier|Private|Public|Blind|Supply|Market|Compliance|Operator|Design|Platform|Reuse|Reclaimed|New|Steel|Structural|Clay|Stone|Timber|Precast|Curtain|Raised|Mixed|Hazardous|Heavy|Primary|Secondary|Upper|Lower|Infill|Reinforcement|Metal|Concrete|Building|Match|Partitions|Roof|Other|Unitised|Portland|Demolition|Waste)\b/.test(candidate)) continue
       problems.push(`${where}: name not in the allowed list "${candidate}"`)
     }
   })

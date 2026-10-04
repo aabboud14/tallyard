@@ -15,3 +15,8 @@ Proof for each item of the definition of done (brief/01-BRIEF.md section 7). Fil
 
 - Browser ladder: rung 1. `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` holds chromium-1194, which matches Playwright 1.63.0, so `executablePath` is set from it in `playwright.config.ts`.
 - Spike (`e2e/spike.spec.ts`): passed in both projects, `http` (dist/ behind vite preview) and `single-file` (dist-single/index.html over file:// with offline on and a request guard).
+
+## Phase 1
+
+- `npx vitest run`: 17 files, 208 tests passed. Same under `TZ=UTC` and `TZ=Pacific/Auckland`.
+- Independent review of `src/domain` against 03, 06 and 07 by a fresh-context agent: no formula, rounding, ordering, label or seed deviation; two notes recorded in `docs/DECISIONS.md`.
