@@ -7,10 +7,10 @@ Tallyard v0.5 build plan. Phases from brief/01-BRIEF.md section 5.
 - [x] 0. Set up and plan: git, scaffold, pinned dependencies, both builds, lint, unit tests, Playwright, spike
 - [x] 1. Domain: reference data, engines F1 to F10 and F12 to F14, privacy projections, seed, twin seed
 - [x] 2. Store and demo replay
-- [ ] 3. Shell and first slice: tokens, shell, role switcher, reset, panel, inventory, listings and privacy, browse, listing
+- [x] 3. Shell and first slice: tokens, shell, role switcher, reset, panel, inventory, listings and privacy, browse, listing
 - [ ] 4. Compliance wedge: project compliance, bill import, waste dashboard, both workbooks, print
-- [ ] 5. Marketplace path: capture, priority, matcher, plan, negotiation, offers and deals, logistics, custody
-- [ ] 6. Operator and shared: ledger, model comparison, assumptions, about, demo script panel, stubs
+- [x] 5. Marketplace path: capture, priority, matcher, plan, negotiation, offers and deals, logistics, custody
+- [x] 6. Operator and shared: ledger, model comparison, assumptions, about, demo script panel, stubs
 - [ ] 7. Hardening: full e2e, layout checks, screenshots, README, DEMO_SCRIPT, EVIDENCE
 
 ## File tree (planned)
@@ -35,10 +35,13 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Done
 
+- Phase 3: docs/DESIGN.md, tokens and fonts, shell with persona switcher, demo script panel, reset, error boundary, section and panel drawings, charts, How this is calculated, inventory, item detail, listings and privacy, browse, listing.
+- Phase 5: capture with Assist, priority, match schedule with terms dialog, reuse plan with package panel and negotiation thread, offers and deals (seller), deals with logistics and custody (buyer).
+- Phase 6: ledger, model comparison, assumptions, about, the three stubs, demo script panel.
 - Phase 2: store, actions, selectors, runDemoStep(1..12), replay test asserting every acceptance-table value (15 tests).
 - Phase 1: reference data, engines F1 to F10 and F12 to F14, projections, seed, twin seed; 208 unit tests from 07 pass under TZ=UTC and TZ=Pacific/Auckland; independent review found no formula or data deviation.
 - Phase 0: scaffold, pinned dependencies, both builds, lint, vitest, Playwright with the pre-installed Chromium (ladder rung 1), spike passing in both projects, scan script, sample file builder, photo fixture builder.
 
 ## Next
 
-Phase 3: docs/DESIGN.md, tokens, shell, role switcher, reset, panel; inventory, listings and privacy, browse, listing; e2e for steps 3 and 4.
+Phase 4 (compliance wedge, in progress) then Phase 7: run e2e in both projects, shots, EVIDENCE.md, then push and deploy to Vercel at the user's request.

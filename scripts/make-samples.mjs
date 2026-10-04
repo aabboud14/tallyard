@@ -1,7 +1,7 @@
 // Builds the two sample files (06-DATA.md section C) as real files for tests
 // and as strings in src/domain/reference/samples.ts for the app.
 import ExcelJS from 'exceljs'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 
 const rows = [
   [1, 'Concrete crushed for 6F2', '17 01 01', '6,650', 't', 'Recycled off site', 'Aggregate recycler, Essex'],
@@ -46,6 +46,11 @@ async function buildBill() {
 
 const schedule = 'Mark,Section,Length (mm),Qty,Grade\nR1,UB 457x191x67,7200,52,S355\nR2,UB 533x210x92,8400,12,S355\nR3,UC 305x305x118,3600,10,S355\nR4,UB 457x191x74,7200,8,S355\nR5,UB 610x229x125,10500,6,S355\nR6,UB 406x178x54,5500,14,S275\n'
 
+const force = process.argv.includes('--force')
+if (!force && existsSync('src/domain/reference/samples.ts') && existsSync('e2e/fixtures/durnley-house-bill.xlsx') && existsSync('e2e/fixtures/merrowgate-wharf-schedule.csv')) {
+  console.log('samples already built (pass --force to rebuild)')
+  process.exit(0)
+}
 const bill = await buildBill()
 mkdirSync('e2e/fixtures', { recursive: true })
 mkdirSync('src/domain/reference', { recursive: true })
