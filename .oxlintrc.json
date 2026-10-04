@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "ignorePatterns": ["dist", "dist-single", "node_modules", "test-results", "playwright-report", "docs/screens"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  },
+  "overrides": [
+    {
+      "files": ["e2e/**/*.ts", "scripts/**/*.mjs", "*.config.ts"],
+      "rules": {
+        "react/rules-of-hooks": "off",
+        "react/only-export-components": "off"
+      }
+    }
+  ]
+}
