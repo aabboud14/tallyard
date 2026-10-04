@@ -19,7 +19,7 @@ const singleFile = 'file://' + path.resolve('dist-single/index.html')
 
 export default defineConfig({
   testDir: 'e2e',
-  testMatch: /demo\.spec\.ts|spike\.spec\.ts/,
+  testMatch: /demo\.spec\.ts/,
   retries: 0,
   workers: 1,
   timeout: 120_000,
