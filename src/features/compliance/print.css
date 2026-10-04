@@ -1,0 +1,106 @@
+/* A4 print layout for the project compliance screen (04 section 5.8). The shell hides its header, rail and footer. */
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  html {
+    font-size: 10pt;
+    background: #ffffff;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .compliance-report {
+    display: block;
+  }
+
+  .compliance-report .report-grid {
+    display: block;
+  }
+
+  .compliance-report section {
+    border: 0;
+    margin-bottom: 8mm;
+    padding: 0;
+  }
+
+  .compliance-report section > header,
+  .compliance-report h2,
+  .compliance-report h3 {
+    break-after: avoid;
+  }
+
+  .compliance-report section > div {
+    padding: 0;
+  }
+
+  .compliance-report section > header {
+    border-bottom: 1px solid #14202b;
+    padding: 0 0 2mm;
+    margin-bottom: 2mm;
+  }
+
+  .compliance-report .overflow-x-auto {
+    overflow: visible;
+  }
+
+  .compliance-report table {
+    width: 100%;
+    font-size: 7.5pt;
+    table-layout: auto;
+  }
+
+  .compliance-report td,
+  .compliance-report th {
+    padding: 1mm 1.5mm !important;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  .compliance-report td.text-right,
+  .compliance-report td.font-display {
+    white-space: nowrap;
+  }
+
+  .compliance-report td.whitespace-nowrap {
+    white-space: normal;
+  }
+
+  .compliance-report th {
+    white-space: normal;
+  }
+
+  .compliance-report tr {
+    break-inside: avoid;
+  }
+
+  .compliance-report thead {
+    display: table-header-group;
+  }
+
+  .compliance-report svg {
+    max-width: 100%;
+  }
+
+  .compliance-report .print-only {
+    display: block;
+  }
+
+  .compliance-report .print-hide {
+    display: none !important;
+  }
+
+  .compliance-report .report-title {
+    margin-bottom: 4mm;
+  }
+}
+
+@media screen {
+  .compliance-report .print-only {
+    display: none;
+  }
+}
