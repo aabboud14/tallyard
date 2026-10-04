@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { useStore } from '../../store/store'
 import { PRODUCT_NAME, DEMO_TODAY } from '../../domain/constants'
 import { LABELS } from '../../domain/reference/labels'
@@ -52,7 +52,7 @@ export function Layout() {
           </aside>
         ) : null}
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6" id="main">
-          <ErrorBoundary resetKey={location.pathname}>
+          <ErrorBoundary key={location.pathname}>
             <Outlet />
           </ErrorBoundary>
         </main>
@@ -68,9 +68,4 @@ function TopLink({ to, children }: { to: string; children: string }) {
       {children}
     </NavLink>
   )
-}
-
-export function useGoHome() {
-  const navigate = useNavigate()
-  return (personaId: string) => navigate(WORKSPACES[personaId].home)
 }
