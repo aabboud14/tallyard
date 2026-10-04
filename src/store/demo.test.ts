@@ -9,7 +9,7 @@ import { LABELS, SIGNAL_LABELS, VISIBILITY_LABELS, GRADE_UNKNOWN } from '../doma
 import { blindBuyerText } from '../domain/privacy/blindBuyer'
 import { lotPrivateStrings, projectPrivateStrings } from '../domain/privacy/privateStrings'
 import { unresolvedNotice } from '../domain/engines/waste'
-import { lotOf, lotByPublicId, offerViews, sellerDeals, buyerDealView, itemView, priorityFor, disclosureFor, previewListing, browseListings, listingForProject, planItemView, complianceView, wasteView, ledgerView, modelViews, approvedProjectsBlind, buildingItems } from './selectors'
+import { lotOf, offerViews, sellerDeals, buyerDealView, itemView, priorityFor, disclosureFor, previewListing, browseListings, listingForProject, planItemView, complianceView, wasteView, ledgerView, modelViews, approvedProjectsBlind, buildingItems } from './selectors'
 import { formatDate } from '../domain/dates'
 
 const world = () => useStore.getState().world
