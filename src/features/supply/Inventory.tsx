@@ -14,7 +14,7 @@ export function Inventory() {
   const { persona } = usePersona()
   const items = buildingItems(world, TIVERNE_ID)
   const building = world.buildings[TIVERNE_ID]
-  const scale = scaleFor(items.filter((i) => i.spec.family === 'steel_section').map((i) => (i.spec as { designation: string }).designation), 48)
+  const scale = scaleFor(items.filter((i) => i.spec.family === 'steel_section').map((i) => (i.spec as { designation: string }).designation), 64)
   return (
     <>
       <PageTitle title={`Inventory, ${building.name}`} sub={`First survey tranche, surveyed ${f.date(building.surveyedBy!.date)} by ${building.surveyedBy!.personaName}. Viewing as ${persona.name}.`} />
@@ -48,7 +48,7 @@ export function Inventory() {
                     </Link>
                   </td>
                   <td>
-                    <ItemDrawing spec={item.spec} scale={scale} box={36} caption={false} dims={false} />
+                    <ItemDrawing spec={item.spec} scale={scale} box={56} caption={false} dims={false} />
                   </td>
                   <td>{v.listing.title}</td>
                   <Num>{item.quantity.kind === 'pieces' ? f.quantity(item.quantity.pieces, FAMILIES[item.family].countable && item.family !== 'clay_brick' && item.family !== 'raised_floor' ? 'pieces' : FAMILIES[item.family].unit) : item.quantity.kind === 'area' ? f.quantity(item.quantity.areaM2, 'm2') : f.quantity(item.quantity.volumeM3, 'm3')}</Num>

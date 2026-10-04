@@ -61,7 +61,7 @@ export function SectionDrawing({ designation, scale, lengthM, caption = true, di
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className={className} role="img" aria-label={`Section drawing of ${designation}`}>
       <g transform={`translate(${padL} ${top})`}>
-        <path d={profilePath(s.h, s.b, s.tw, s.tf, 1.2 * s.tw)} transform={`scale(${k})`} fill="#E4EDF4" stroke={ink} strokeWidth={1.5 / k} vectorEffect="non-scaling-stroke" />
+        <path d={profilePath(s.h, s.b, s.tw, s.tf, 1.2 * s.tw)} transform={`scale(${k})`} fill="#E4EDF4" stroke={ink} strokeWidth={(k < 0.15 ? 0.75 : 1.5) / k} vectorEffect="non-scaling-stroke" />
         {dims ? (
         <>
         {/* width dimension above */}
