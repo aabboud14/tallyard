@@ -46,4 +46,4 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Next
 
-Tier 1 is complete. Deployment to Vercel is blocked by the connector's permissions (docs/EVIDENCE.md). Tier 2 (brief/08-TIER2.md) only on request.
+Tier 1 is complete and deployed from `main` through Vercel's GitHub import (see docs/HANDOFF.md). The working branch carries an unreleasable scaffold for five additions from the founder's notes; start from docs/HANDOFF.md section 8. Tier 2 (brief/08-TIER2.md) is only on request.

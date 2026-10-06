@@ -73,3 +73,8 @@ TZ=UTC npx vitest run; TZ=Pacific/Auckland npx vitest run   both 240 passed
 
 - Pushed to `origin/claude/exciting-heisenberg-3cu7nb`.
 - Vercel: the connected Vercel account (team "Alex Abboud's projects", hobby plan) has no project, and the connector's authorisation returned 403 "You don't have permission to create a project" for both project creation and a first deployment. No deployment was made. Remedy: create a project for this repository in the Vercel dashboard (framework Vite, build `npm run build`, output `dist`), or re-authorise the Vercel connector with project creation allowed, then deploy again.
+
+## Deployment outcome, updated
+
+- The first deployment attempts from this session failed: the Vercel connector could not create a project (403) and the container cannot reach Vercel. The user then imported the GitHub repository in the Vercel dashboard. The first build failed only because the project's Output Directory was `build`; a `vercel.json` setting `dist` fixed it and the user confirmed the deployment worked.
+- Not verified by the builder: the live URL and which branch Vercel treats as Production. See docs/HANDOFF.md sections 2, 4 and 9.
