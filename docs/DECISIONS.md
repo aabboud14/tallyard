@@ -17,3 +17,4 @@ One line per decision where the brief was silent or an instruction had to be rec
 - 2026-10-04. The waste Summary carries the counted total, reused off site, recycled on site, landfill, intensity, hazardous and rows awaiting review as formulas over the other sheets.
 - 2026-10-04. The content by value chart's scale is fixed at 30% so the 20% aim sits right of centre; the waste export button is disabled until a bill is loaded.
 - 2026-10-04. The sample file builder only rebuilds when an output is missing (pass --force), because a fresh zip carries new timestamps and would churn git on every build.
+- 2026-10-06. `vercel.json` and an `engines.node` of 22.x pin the Vercel build to the toolchain the project was built with. They do not change the app.
