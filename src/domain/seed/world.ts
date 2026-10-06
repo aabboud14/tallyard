@@ -17,9 +17,10 @@ export const ORG_IDS = {
   lantern: 'org_lantern',
   halewick: 'org_halewick',
   pellory: 'org_pellory',
+  wrenlow: 'org_wrenlow',
 } as const
 
-export const PERSONA_IDS = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', marcus: 'per_marcus', operator: 'per_operator' } as const
+export const PERSONA_IDS = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', marcus: 'per_marcus', ruth: 'per_ruth', operator: 'per_operator' } as const
 
 export const TIVERNE_ID = 'bld_zad898'
 export const MERROWGATE_ID = 'prj_hp23zk'
@@ -37,6 +38,7 @@ const orgs: Org[] = [
   { id: ORG_IDS.lantern, name: 'Lantern Quay Developments', type: 'Developer' },
   { id: ORG_IDS.halewick, name: 'Halewick Sustainability', type: 'Sustainability consultant' },
   { id: ORG_IDS.pellory, name: 'Pellory Estates', type: 'Asset owner' },
+  { id: ORG_IDS.wrenlow, name: 'Wrenlow Build', type: 'Main contractor' },
 ]
 
 const personas: Persona[] = [
@@ -44,6 +46,7 @@ const personas: Persona[] = [
   { id: PERSONA_IDS.dana, name: 'Dana Kowalski', orgId: ORG_IDS.tarnbrook, role: 'Site surveyor', tier: 'active' },
   { id: PERSONA_IDS.priya, name: 'Priya Nair', orgId: ORG_IDS.oriel, role: 'Project architect', tier: 'passive' },
   { id: PERSONA_IDS.marcus, name: 'Marcus Lindqvist', orgId: ORG_IDS.halewick, role: 'Sustainability consultant', tier: 'passive' },
+  { id: PERSONA_IDS.ruth, name: 'Ruth Adeyemi', orgId: ORG_IDS.wrenlow, role: 'Estimator', tier: 'passive' },
   { id: PERSONA_IDS.operator, name: 'Platform operator', orgId: ORG_IDS.tallyard, role: 'Operations', tier: 'platform' },
 ]
 
@@ -69,6 +72,7 @@ const tiverne: SourceBuilding = {
   defaultHubId: 'HUB-BARK',
   locationLevel: 'region',
   timingLevel: 'quarter',
+  arisingsTitle: 'owner',
   distancesKm: { 'HUB-BARK': 18, 'HUB-PARK': 14, 'HUB-TILB': 38, [MERROWGATE_ID]: 9 },
   surveyedBy: { personaName: 'Dana Kowalski', orgName: 'Tarnbrook Deconstruction', date: '2026-09-14' },
 }
@@ -195,8 +199,8 @@ const merrowgate: Project = {
   id: MERROWGATE_ID,
   name: 'Merrowgate Wharf',
   developerOrgId: ORG_IDS.lantern,
-  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
-  teamPersonaIds: [PERSONA_IDS.priya, PERSONA_IDS.marcus],
+  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick, ORG_IDS.wrenlow],
+  teamPersonaIds: [PERSONA_IDS.priya, PERSONA_IDS.marcus, PERSONA_IDS.ruth],
   postcodeDistrict: 'E16',
   localAuthority: 'Newham',
   region: 'Inner London East',
@@ -215,6 +219,8 @@ const merrowgate: Project = {
   seededDeals,
   hubDistancesKm: { 'HUB-BARK': 14, 'HUB-PARK': 24, 'HUB-TILB': 31 },
   consultantOrgId: ORG_IDS.halewick,
+  contractorOrgId: ORG_IDS.wrenlow,
+  targets: { contentByValue: 0.25, avoidedCarbonT: 150 },
 }
 
 const durnley: WasteEngagement = {
@@ -298,6 +304,7 @@ export function createSeed(): World {
       defaultHubId: r.hub?.id ?? null,
       locationLevel: 'region',
       timingLevel: r.timingLevel,
+      arisingsTitle: r.sellerType === 'Deconstruction contractor' ? 'contractor' : 'owner',
       distancesKm: {},
       surveyedBy: null,
     }

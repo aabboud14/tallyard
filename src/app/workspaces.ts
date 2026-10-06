@@ -44,11 +44,21 @@ export const WORKSPACES: Record<string, Workspace> = {
     title: 'Compliance',
     subtitle: 'Engagements',
     home: '/compliance/project',
-    sees: 'Compliance workspace: Merrowgate Wharf (project compliance) and Durnley House (waste and reuse)',
+    sees: 'Compliance workspace: Merrowgate Wharf (project compliance, targets and the design-team summary), Durnley House (waste and reuse), and listing for Ostlea Estates at Tiverne House',
     tabs: [
       { label: 'Merrowgate Wharf', to: '/compliance/project' },
+      { label: 'Design-team summary', to: '/compliance/summary' },
       { label: 'Durnley House', to: '/compliance/waste' },
+      { label: 'Tiverne House, inventory', to: '/supply/inventory' },
+      { label: 'Tiverne House, capture', to: '/supply/capture' },
     ],
+  },
+  [PERSONA_IDS.ruth]: {
+    title: 'Contractor',
+    subtitle: 'Merrowgate Wharf',
+    home: '/contractor/bid-pack',
+    sees: 'Contractor workspace for Merrowgate Wharf: the bid pack of reused items, from public fields only',
+    tabs: [{ label: 'Bid pack', to: '/contractor/bid-pack' }],
   },
   [PERSONA_IDS.operator]: {
     title: 'Operator',

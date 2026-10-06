@@ -14,6 +14,8 @@ import { Plan } from '../features/project/Plan'
 import { Deals } from '../features/project/Deals'
 import { ProjectCompliance } from '../features/compliance/ProjectCompliance'
 import { Waste } from '../features/compliance/Waste'
+import { Summary } from '../features/compliance/Summary'
+import { BidPack } from '../features/contractor/BidPack'
 import { Ledger } from '../features/operator/Ledger'
 import { Models } from '../features/operator/Models'
 import { Assumptions } from '../features/shared/Assumptions'
@@ -39,6 +41,8 @@ export const router = createHashRouter([
       { path: 'project/deals', element: <Deals /> },
       { path: 'compliance/project', element: <ProjectCompliance /> },
       { path: 'compliance/waste', element: <Waste /> },
+      { path: 'compliance/summary', element: <Summary /> },
+      { path: 'contractor/bid-pack', element: <BidPack /> },
       { path: 'operator/ledger', element: <Ledger /> },
       { path: 'operator/models', element: <Models /> },
       { path: 'assumptions', element: <Assumptions /> },

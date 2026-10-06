@@ -83,6 +83,8 @@ export type SourceBuilding = {
   defaultHubId: string | null
   locationLevel: LocationLevel
   timingLevel: TimingLevel
+  /** Who holds title to the arisings and sells them: the owner or the deconstruction contractor (open question 12). */
+  arisingsTitle: 'owner' | 'contractor'
   /** Record data: km from the source to each hub and project. */
   distancesKm: Record<string, number>
   surveyedBy: { personaName: string; orgName: string; date: string } | null
@@ -277,6 +279,9 @@ export type Project = {
   /** Record data: km from each hub to the site. */
   hubDistancesKm: Record<string, number>
   consultantOrgId: string
+  contractorOrgId: string | null
+  /** Targets set at inception by the consultant. Sample data, placeholder. */
+  targets: { contentByValue: number; avoidedCarbonT: number }
 }
 
 export type CostLine = { id: string; label: string; amount: number }

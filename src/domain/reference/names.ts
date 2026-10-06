@@ -8,11 +8,12 @@ export const ALLOWED_ORGANISATIONS = [
   'Lantern Quay Developments',
   'Halewick Sustainability',
   'Pellory Estates',
+  'Wrenlow Build',
   'Corvane Insurance',
   'Meridale Partners',
 ] as const
 
-export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Marcus Lindqvist'] as const
+export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Marcus Lindqvist', 'Ruth Adeyemi'] as const
 
 export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Merrowgate Wharf', 'Durnley House'] as const
 
