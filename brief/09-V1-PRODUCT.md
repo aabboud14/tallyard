@@ -276,3 +276,85 @@ Privacy checks on rendered text: P3, P4, P5b and P7 as before on the new routes;
 - The sustainability consultant's workflow (next call).
 - Whether the engineer or testing partner gets a role in the spec sheet's growth through the stages.
 - One Click LCA and EPD data as the carbon source (an integration, version 2 or later).
+
+## 13. Resolutions after review (these override sections 1 to 12 where they differ)
+
+An independent review against the call transcripts, the rules and the code raised 140 points. These are the decisions. Where a point is not listed here, apply the reviewer's fix if it is in your area and does not contradict this section (the full list is in the session scratchpad, `critique.md`).
+
+### 13.1 Names, organisations and regions
+
+- Ferrymoor Yard's client is **Quillon Homes** (developer), not Meridale Partners: Meridale is a Tiverne House tenant and a lot private string.
+- Harrowden Court is owned by **Brackwater Estates** (asset owner), not Pellory Estates. Pellory Estates stays the owner of Durnley House and becomes the client of Sallow Court. No organisation is both a lot seller and a buying client.
+- The buying-side owner persona is **Isla Brennan**, Lantern Quay Developments, Development manager (not Isla Fenwick).
+- Allowed names to add to `names.ts`: Isla Brennan, Quillon Homes, Brackwater Estates, Harrowden Court, Sallow Court, Ferrymoor Yard. Remove Wrenlow Build and Ruth Adeyemi.
+- Regions: use only regions already in the seed (Central London, Inner London East, Inner London West, Outer London East, Outer London West, East of England, South East). Ferrymoor Yard is in Hackney, Inner London East. Sallow Court is in Camden, Central London. Harrowden Court is in Ealing, Outer London West.
+- No real vendor appears anywhere (section 12's "One Click LCA" becomes "a life cycle assessment database and Environmental Product Declarations").
+
+### 13.2 Labels and the replay
+
+- Keep `VISIBILITY_LABELS`, L6 and L7 text unchanged (the replay and the required-labels test read them). Add `OWNER_VISIBILITY_LABELS = { private: 'Private', matched_only: 'Shared privately with selected projects', open: 'Published to the marketplace' }` for the owner's new screens.
+- L21 becomes "Approve as Lantern Quay Developments" (the client presses it herself now).
+- At deal confirmation the buyer contact exchanged to the seller is the buying owner (Isla Brennan), not the architect. Update the replay test's expected buyer contact and record it in `docs/DECISIONS.md`. Every other acceptance value is unchanged.
+- The persist `version` in `store.ts` goes to 2, so a browser holding a 0.5 world re-seeds instead of crashing. The storage prefix stays `tallyard-v05`.
+
+### 13.3 Dates
+
+- **Project start.** `Project.startDate` is labelled "Materials needed on site from". Merrowgate Wharf's is 2028-04-03, the same as its steel need-by, so the wish list and the reuse plan count storage to the same date. Sallow Court 2028-01-10, Ferrymoor Yard 2027-06-07.
+- **Expected availability.** `InventoryItem.expectedAvailableFrom` is an ISO date, defaulting at capture to the building's dismantling start (2027-01-25 for Tiverne House), shown as a month. A captured item's lot takes it as `availableFrom`. Seeded Tiverne items take their existing `availableFrom`; no seeded date changes, so every acceptance value holds. Journey 1 leaves the default.
+- The owner may edit `availableFrom` only for a lot that is still private; the demo never does.
+- Add project start dates, expected availability dates and the new names to `lotPrivateStrings` and `projectPrivateStrings` as appropriate.
+
+### 13.4 Sharing, terms and visibility on the architect side
+
+- "Shared with you" is a route, `/market/shared`, and a rail entry under Marketplace. It is grouped by project; each group says "Shared with this project by the owner, in confidence" and carries the terms dialog for that project. Terms are per project, as now.
+- A shared lot can be saved only to a project that can see it (`lotsVisibleToProject`). It cannot go to Saved or be moved to another project.
+- A wish list row whose lot the project can no longer see, or whose status is "No longer available", shows the title and "No longer shared with this project" or "No longer available", no figures, and is left out of totals, the spec sheet and the client's approvals.
+- The owner's sharing list stays blind (organisation type, project type, region, need-by quarter from `toBlindBuyer`). The About screen lists "Should the owner see which practice a shared project's architect is?" under open questions.
+
+### 13.5 Wish list
+
+- Transitions: pending to sent (send to client); sent to approved or declined (client); declined to pending (architect edits the note, then sends again). The client's decision note shows on the architect's row. An approved item cannot be removed by the architect.
+- Totals sum only rows whose lot is visible and available.
+- Approvals never add to the reuse plan directly. The client's Approvals screen links to the project's Match schedule (advanced), where `addToPlan` works as now. The plan, package, negotiation and logistics stay on the client's side only because steps 5 to 9 of the replay (R1) run through them; the partner said the architect does not need the reuse plan.
+
+### 13.6 Architect-created projects
+
+`createProject({ name, clientName, projectType, localAuthority, region, startDate })` builds a full `Project`: client organisation looked up or created as a developer, `blind { orgType: 'Design team', projectType: '<type> project' }`, `giaM2 0`, `ribaStage 1`, empty bill, requirements, plan and seeded deals, `termsAccepted false`, `approvedByOwnerOrgIds []`, `hubDistancesKm` from a fixed per-region table in the v1 assumptions, `consultantOrgId` Halewick Sustainability, `keyDates { planningSubmission: startDate, steelNeedBy: startDate }`, `frameMassT 0`, `targets { contentByValue: 0, avoidedCarbonT: 0 }`. Tested.
+
+### 13.7 Sustainability band
+
+Thresholds (placeholders): High at 90% or more of new avoided, Medium at 80%, Low below, "Not claimed" when no carbon is claimed. Steel and curtain wall read High, Portland stone Medium, raised floor Low on the seed.
+
+### 13.8 Geometry
+
+- **2D: DXF** of the profile (as section 5.7).
+- **3D: OBJ** mesh, the same profile extruded along the length for steel, a box for a panel, brick or floor panel. Timber has no recorded section: unavailable.
+- **BIM family (IFC or Revit)**: greyed, L35.
+- File names from public fields only: `<publicId>-<designation or family>.dxf` or `.obj`, spaces as hyphens. Each file opens with comment lines carrying L20 and L42.
+
+### 13.9 Browse
+
+Filters and sorts are a pure, tested domain function (`src/domain/engines/browse.ts`). One filter surface: a chip row (typology) and a "More filters" panel (family, availability quarter, condition, region, band, fits the project start). On a phone the panel is a sheet. The left rail never holds filters.
+
+### 13.10 Listing detail for the architect
+
+A public photo, when there is one, is shown beside the dimensioned drawing, never instead of it. The architect's listing never shows reserve copy ("To reserve steel..." and L25 are for the client's view). Guide price stays, as a secondary line.
+
+### 13.11 Layout
+
+At phone width the folder rail collapses into a "Projects" button that opens a drawer; wish list rows become cards. Browse, listing, wish list and capture must work at 390 px; every other screen from 1024 px.
+
+### 13.12 Consultant
+
+Wish list review is read only: items by state with mass and avoided carbon totals. No comparison with targets.
+
+### 13.13 Access
+
+`WasteEngagement` gains `consultantOrgId`. `canAccess` covers buildings, projects and engagements.
+
+### 13.14 Tests and housekeeping
+
+- P10: the spec workbook and both geometry files hold none of the `lotPrivateStrings` of any lot. Project strings are allowed in the architect's own spec sheet.
+- P11: on every architect route, no element with a test id containing `negotiat`, `mandate`, `buyer-approve`, `offer` or `deal`, and no text "Negotiation", "Mandate" or "Deals".
+- The end-to-end journeys run as separate tests, each from a fresh seed, so the architect accepting terms does not disturb the replay's before-acceptance values.
+- Update `src/test/boundaries.test.ts` for the new feature folders, `CLAUDE.md` to read this file, and `scripts/scan.mjs` only through `names.ts`.
