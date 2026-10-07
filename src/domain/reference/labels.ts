@@ -34,6 +34,16 @@ export const LABELS = {
   L32: 'Founder assumption, to be validated',
   L33: 'Not part of this prototype.',
   L34: 'Publishing at this disclosure level lets an outsider narrow down the building. Review what is listed below.',
+  // Version 1.0 (brief/09-V1-PRODUCT.md section 7).
+  L35: 'Version 2. Not in this release.',
+  L36: 'Illustration generated from the survey record, not a photograph.',
+  L37: 'Indicative sustainability band, rule-based. Stands in for a reviewed assessment.',
+  L38: 'Timeline check against the project start date. Indicative.',
+  L39: 'Compiled from the public listing. Confirm with the seller, the engineer and testing before specifying.',
+  L40: 'Approval and purchase sit with the client, not the architect.',
+  L41: 'The UK decision tree has five steps: reuse, upcycle, downcycle, recycle, scrap. The rule in this version assigns reuse, downcycle and recycle.',
+  L42: 'Geometry generated from the recorded dimensions.',
+  L43: 'Expected by the surveyor. The owner sets the date when listing.',
 } as const
 
 export type LabelId = keyof typeof LABELS
@@ -44,4 +54,18 @@ export const SIGNAL_LABELS = { low: 'Low demand', balanced: 'Balanced', high: 'H
 export const VISIBILITY_LABELS = { private: 'Private', matched_only: 'Private matching only', open: 'Open marketplace' } as const
 export const TEST_STATUS_LABELS = { untested: 'Untested', inspected: 'Inspected', tested: 'Tested', certified: 'Certified' } as const
 export const GRADE_UNKNOWN = 'To be confirmed by testing'
-export const SOURCE_TYPE_LABELS = { deconstruction: 'Deconstruction', unused_surplus: 'Unused surplus', fit_out_strip: 'Fit-out strip' } as const
+export const OWNER_VISIBILITY_LABELS = { private: 'Private', matched_only: 'Shared privately with selected projects', open: 'Published to the marketplace' } as const
+export const TIMELINE_TEXT = {
+  in_time: 'Available in time',
+  tight: 'Tight: available close to the start date',
+  late: 'Not available in time',
+  now: 'Available now: storage until the start',
+} as const
+export const BAND_WORDS = { high: 'High', medium: 'Medium', low: 'Low', none: 'Not claimed' } as const
+export const WISH_STATUS_LABELS = { pending: 'Pending', sent: 'Sent to client', approved: 'Approved', declined: 'Declined' } as const
+export const TYPOLOGY_LABELS = { structure: 'Structure', envelope: 'Envelope', finishes: 'Finishes' } as const
+export const DECISION_ROUTE_LABELS = { reuse: 'Reuse', upcycle: 'Upcycle', downcycle: 'Downcycle', recycle: 'Recycle', scrap: 'Scrap' } as const
+export const PROJECT_TYPE_LABELS = { office: 'Office', hotel: 'Hotel', residential: 'Residential', other: 'Other' } as const
+export const NOT_SHARED = 'No longer shared with this project'
+export const NOT_AVAILABLE_TO_ROLE = 'Not available to this role'
+export const SOURCE_TYPE_LABELS ={ deconstruction: 'Deconstruction', unused_surplus: 'Unused surplus', fit_out_strip: 'Fit-out strip' } as const
