@@ -34,6 +34,8 @@ Verified on the last run: 20 unit test files with 240 tests passing; `npm run ch
 
 ## 4. Branch state: read this before touching anything
 
+**Update, 7 October 2026: version 1.0 is under way on this branch** (`brief/09-V1-PRODUCT.md`). The contractor scaffold described below is removed: Wrenlow Build, Ruth Adeyemi, `opportunity.ts`, `bidPack.ts`, the two placeholder screens, their routes and tabs, and Marcus's two Tiverne House tabs. Items 1, 2 and 4 of section 8 are superseded by brief 09. Done so far: the version 1.0 engines (typology, decision tree route, timeline fit, sustainability band, spec sheet, browse, wish list, geometry) with tests, the access model, the new seed (Isla Brennan, Harrowden Court, Sallow Court, Ferrymoor Yard, wish lists) and the `src/components/v1` building blocks. Next: the store, the folder shell and the role screens. See `PLAN.md`.
+
 `main` holds finished Tier 1, a `vercel.json`, the About concept section and the gap analysis.
 
 The working branch has two further commits that are **not on `main`**:

@@ -20,7 +20,7 @@ export const LABELS = {
   L18: "Actual, from contractor's bill",
   L19: 'Input to the evidence for this requirement. Confirm with the assessor and the current scheme manual.',
   L20: 'Prototype output from sample data. Indicative factors. Not a compliant assessment.',
-  L21: 'Approve for Lantern Quay Developments (client sign-off simulated)',
+  L21: 'Approve as Lantern Quay Developments',
   L22: 'Deposit held (simulated)',
   L23: 'Held by the platform, withheld by seller',
   L24: 'Seller not simulated in this prototype',

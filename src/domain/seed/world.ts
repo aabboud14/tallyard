@@ -1,5 +1,6 @@
-// The seed world (06-DATA.md sections A3 to A9). Loaded without randomness.
+// The seed world (06-DATA.md sections A3 to A9, with brief/09-V1-PRODUCT.md sections 8 and 13). Loaded without randomness.
 import type { BillLine, InventoryItem, Lot, Org, Persona, Project, Requirement, SourceBuilding, World, WasteEngagement, LedgerEntry, Spec, Quantity, Condition, Recoverability, TestStatus, SteelGrade, EraBand, TimingLevel, SeededDeal } from '../types'
+import type { Wishlist } from '../v1types'
 import { buildSnapshot, demandFromRequirements, type DemandLine } from './snapshot'
 import { itemMeasures } from '../engines/measures'
 
@@ -17,13 +18,17 @@ export const ORG_IDS = {
   lantern: 'org_lantern',
   halewick: 'org_halewick',
   pellory: 'org_pellory',
-  wrenlow: 'org_wrenlow',
+  quillon: 'org_quillon',
+  brackwater: 'org_brackwater',
 } as const
 
-export const PERSONA_IDS = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', marcus: 'per_marcus', ruth: 'per_ruth', operator: 'per_operator' } as const
+export const PERSONA_IDS = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', isla: 'per_isla', marcus: 'per_marcus', operator: 'per_operator' } as const
 
 export const TIVERNE_ID = 'bld_zad898'
+export const HARROWDEN_ID = 'bld_m5tq8r'
 export const MERROWGATE_ID = 'prj_hp23zk'
+export const SALLOW_ID = 'prj_k2r8sw'
+export const FERRYMOOR_ID = 'prj_x6dq3n'
 export const DURNLEY_ID = 'wst_6yy2w2'
 export const STEEL_NEED_BY = '2028-04-03'
 
@@ -38,15 +43,16 @@ const orgs: Org[] = [
   { id: ORG_IDS.lantern, name: 'Lantern Quay Developments', type: 'Developer' },
   { id: ORG_IDS.halewick, name: 'Halewick Sustainability', type: 'Sustainability consultant' },
   { id: ORG_IDS.pellory, name: 'Pellory Estates', type: 'Asset owner' },
-  { id: ORG_IDS.wrenlow, name: 'Wrenlow Build', type: 'Main contractor' },
+  { id: ORG_IDS.quillon, name: 'Quillon Homes', type: 'Developer' },
+  { id: ORG_IDS.brackwater, name: 'Brackwater Estates', type: 'Asset owner' },
 ]
 
 const personas: Persona[] = [
   { id: PERSONA_IDS.tom, name: 'Tom Ashby', orgId: ORG_IDS.ostlea, role: 'Asset manager', tier: 'active' },
   { id: PERSONA_IDS.dana, name: 'Dana Kowalski', orgId: ORG_IDS.tarnbrook, role: 'Site surveyor', tier: 'active' },
   { id: PERSONA_IDS.priya, name: 'Priya Nair', orgId: ORG_IDS.oriel, role: 'Project architect', tier: 'passive' },
+  { id: PERSONA_IDS.isla, name: 'Isla Brennan', orgId: ORG_IDS.lantern, role: 'Development manager', tier: 'active' },
   { id: PERSONA_IDS.marcus, name: 'Marcus Lindqvist', orgId: ORG_IDS.halewick, role: 'Sustainability consultant', tier: 'passive' },
-  { id: PERSONA_IDS.ruth, name: 'Ruth Adeyemi', orgId: ORG_IDS.wrenlow, role: 'Estimator', tier: 'passive' },
   { id: PERSONA_IDS.operator, name: 'Platform operator', orgId: ORG_IDS.tallyard, role: 'Operations', tier: 'platform' },
 ]
 
@@ -70,12 +76,50 @@ const tiverne: SourceBuilding = {
   tenants: ['Corvane Insurance', 'Meridale Partners'],
   programme: { stripOutStart: '2027-01-04', dismantlingStart: '2027-01-25', clearBy: '2027-04-30' },
   defaultHubId: 'HUB-BARK',
+  surveyorOrgId: ORG_IDS.tarnbrook,
   locationLevel: 'region',
   timingLevel: 'quarter',
   arisingsTitle: 'owner',
   distancesKm: { 'HUB-BARK': 18, 'HUB-PARK': 14, 'HUB-TILB': 38, [MERROWGATE_ID]: 9 },
   surveyedBy: { personaName: 'Dana Kowalski', orgName: 'Tarnbrook Deconstruction', date: '2026-09-14' },
 }
+
+/** Version 1.0: a second client of the surveyor. Every record here is private; nothing is listed. */
+const harrowden: SourceBuilding = {
+  id: HARROWDEN_ID,
+  ownerOrgId: ORG_IDS.brackwater,
+  sellerType: 'Asset owner',
+  sourceType: 'deconstruction',
+  name: 'Harrowden Court',
+  address: '31 Brindle Road, London W13',
+  postcodeDistrict: 'W13',
+  localAuthority: 'Ealing',
+  region: 'Outer London West',
+  yearBuilt: 1991,
+  eraBand: '1970 or later',
+  storeys: 5,
+  giaM2: 4300,
+  structureType: 'Steel frame with composite slabs, brick cladding and raised floors',
+  tenants: [],
+  programme: { stripOutStart: '2027-06-14', dismantlingStart: '2027-07-05', clearBy: '2027-09-24' },
+  defaultHubId: 'HUB-PARK',
+  surveyorOrgId: ORG_IDS.tarnbrook,
+  locationLevel: 'region',
+  timingLevel: 'quarter',
+  arisingsTitle: 'owner',
+  distancesKm: { 'HUB-BARK': 34, 'HUB-PARK': 5, 'HUB-TILB': 55, [MERROWGATE_ID]: 25, [SALLOW_ID]: 13, [FERRYMOOR_ID]: 19 },
+  surveyedBy: { personaName: 'Dana Kowalski', orgName: 'Tarnbrook Deconstruction', date: '2026-09-28' },
+}
+
+type HcRow = { id: string; tag: string; publicId: string; spec: Spec; quantity: Quantity; condition: Condition; recoverability: Recoverability; location: string }
+
+const HARROWDEN_AVAILABLE_FROM = '2027-07-05'
+
+const hcRows: HcRow[] = [
+  { id: 'itm_v3gk7p', tag: 'HC-01', publicId: 'L-K3TB7D', spec: { family: 'steel_section', designation: 'UB 356x171x51', lengthM: 6.0 }, quantity: { kind: 'pieces', pieces: 40 }, condition: 'B', recoverability: 'B', location: 'Floor beams, levels 1 to 4' },
+  { id: 'itm_f8nr2j', tag: 'HC-02', publicId: 'L-P6HV2Q', spec: { family: 'clay_brick', brickType: 'facing', mortar: 'cement mortar' }, quantity: { kind: 'pieces', pieces: 12000 }, condition: 'B', recoverability: 'C', location: 'Outer leaf, rear and side elevations' },
+  { id: 'itm_u6dy4b', tag: 'HC-03', publicId: 'L-X4NJ8G', spec: { family: 'raised_floor', panelSize: '600 by 600' }, quantity: { kind: 'pieces', pieces: 1800 }, condition: 'B', recoverability: 'A', location: 'Office floors, levels 1 to 4' },
+]
 
 type ThRow = { id: string; tag: string; publicId: string; spec: Spec; quantity: Quantity; condition: Condition; recoverability: Recoverability; availableFrom: string; location: string; visibility: 'private' | 'matched_only'; ask: number | null; reserve: number | null }
 
@@ -199,8 +243,14 @@ const merrowgate: Project = {
   id: MERROWGATE_ID,
   name: 'Merrowgate Wharf',
   developerOrgId: ORG_IDS.lantern,
-  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick, ORG_IDS.wrenlow],
-  teamPersonaIds: [PERSONA_IDS.priya, PERSONA_IDS.marcus, PERSONA_IDS.ruth],
+  clientOrgId: ORG_IDS.lantern,
+  architectOrgId: ORG_IDS.oriel,
+  projectType: 'office',
+  startDate: STEEL_NEED_BY,
+  createdBy: null,
+  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
+  /** The client persona comes first: she is the buyer contact exchanged at confirmation. */
+  teamPersonaIds: [PERSONA_IDS.isla, PERSONA_IDS.priya, PERSONA_IDS.marcus],
   postcodeDistrict: 'E16',
   localAuthority: 'Newham',
   region: 'Inner London East',
@@ -219,15 +269,111 @@ const merrowgate: Project = {
   seededDeals,
   hubDistancesKm: { 'HUB-BARK': 14, 'HUB-PARK': 24, 'HUB-TILB': 31 },
   consultantOrgId: ORG_IDS.halewick,
-  contractorOrgId: ORG_IDS.wrenlow,
   targets: { contentByValue: 0.25, avoidedCarbonT: 150 },
 }
+
+const SALLOW_START = '2028-01-10'
+
+/** Version 1.0: a second project for the architect. Bill, schedule and plan are empty; distances are placeholders. */
+const sallow: Project = {
+  id: SALLOW_ID,
+  name: 'Sallow Court',
+  developerOrgId: ORG_IDS.pellory,
+  clientOrgId: ORG_IDS.pellory,
+  architectOrgId: ORG_IDS.oriel,
+  projectType: 'hotel',
+  startDate: SALLOW_START,
+  createdBy: null,
+  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
+  teamPersonaIds: [PERSONA_IDS.priya, PERSONA_IDS.marcus],
+  postcodeDistrict: 'NW1',
+  localAuthority: 'Camden',
+  region: 'Central London',
+  blind: { orgType: 'Design team', projectType: 'hotel project' },
+  giaM2: 9800,
+  ribaStage: 1,
+  description: 'A hotel of 9,800 m2 GIA at RIBA stage 1.',
+  keyDates: { planningSubmission: SALLOW_START, steelNeedBy: SALLOW_START },
+  frameMassT: 0,
+  billOfMaterials: [],
+  requirements: [],
+  matchResult: null,
+  planItems: [],
+  termsAccepted: false,
+  approvedByOwnerOrgIds: [],
+  seededDeals: [],
+  hubDistancesKm: { 'HUB-BARK': 17, 'HUB-PARK': 11, 'HUB-TILB': 41 },
+  consultantOrgId: ORG_IDS.halewick,
+  targets: { contentByValue: 0, avoidedCarbonT: 0 },
+}
+
+const FERRYMOOR_START = '2027-06-07'
+
+/** Version 1.0: a third project for the architect. Bill, schedule and plan are empty; distances are placeholders. */
+const ferrymoor: Project = {
+  id: FERRYMOOR_ID,
+  name: 'Ferrymoor Yard',
+  developerOrgId: ORG_IDS.quillon,
+  clientOrgId: ORG_IDS.quillon,
+  architectOrgId: ORG_IDS.oriel,
+  projectType: 'residential',
+  startDate: FERRYMOOR_START,
+  createdBy: null,
+  teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
+  teamPersonaIds: [PERSONA_IDS.priya, PERSONA_IDS.marcus],
+  postcodeDistrict: 'E9',
+  localAuthority: 'Hackney',
+  region: 'Inner London East',
+  blind: { orgType: 'Design team', projectType: 'residential project' },
+  giaM2: 12400,
+  ribaStage: 3,
+  description: 'A residential scheme of 12,400 m2 GIA at RIBA stage 3.',
+  keyDates: { planningSubmission: FERRYMOOR_START, steelNeedBy: FERRYMOOR_START },
+  frameMassT: 0,
+  billOfMaterials: [],
+  requirements: [],
+  matchResult: null,
+  planItems: [],
+  termsAccepted: false,
+  approvedByOwnerOrgIds: [],
+  seededDeals: [],
+  hubDistancesKm: { 'HUB-BARK': 12, 'HUB-PARK': 19, 'HUB-TILB': 33 },
+  consultantOrgId: ORG_IDS.halewick,
+  targets: { contentByValue: 0, avoidedCarbonT: 0 },
+}
+
+/** One wish list per project, plus Studio Oriel's general list (projectId null). Seeded items are open lots only. */
+const wishlistsSeed: Wishlist[] = [
+  { id: 'wl_hp23zk', orgId: ORG_IDS.oriel, projectId: MERROWGATE_ID, items: [] },
+  {
+    id: 'wl_k2r8sw',
+    orgId: ORG_IDS.oriel,
+    projectId: SALLOW_ID,
+    items: [
+      { id: 'wli_k2r8sw_1', publicId: 'L-Q23X7N', addedOn: '2026-09-29', addedByPersonaId: PERSONA_IDS.priya, note: 'Portland stone for the entrance front, subject to a colour match', status: 'pending', decidedOn: null, decisionNote: null },
+      { id: 'wli_k2r8sw_2', publicId: 'L-A945G6', addedOn: '2026-10-01', addedByPersonaId: PERSONA_IDS.priya, note: 'London stock for the courtyard walls', status: 'pending', decidedOn: null, decisionNote: null },
+    ],
+  },
+  {
+    id: 'wl_x6dq3n',
+    orgId: ORG_IDS.oriel,
+    projectId: FERRYMOOR_ID,
+    items: [{ id: 'wli_x6dq3n_1', publicId: 'L-6VWCWH', addedOn: '2026-09-22', addedByPersonaId: PERSONA_IDS.priya, note: 'Raised floor for the ground floor workspace units', status: 'sent', decidedOn: null, decisionNote: null }],
+  },
+  {
+    id: 'wl_oriel',
+    orgId: ORG_IDS.oriel,
+    projectId: null,
+    items: [{ id: 'wli_oriel_1', publicId: 'L-CJGQP7', addedOn: '2026-09-17', addedByPersonaId: PERSONA_IDS.priya, note: 'Pitch pine for joinery, no project yet', status: 'pending', decidedOn: null, decisionNote: null }],
+  },
+]
 
 const durnley: WasteEngagement = {
   id: DURNLEY_ID,
   name: 'Durnley House',
   buildingName: 'Durnley House',
   ownerOrgId: ORG_IDS.pellory,
+  consultantOrgId: ORG_IDS.halewick,
   giaM2: 15800,
   period: 'Deconstructed in the first half of 2026',
   bill: null,
@@ -246,7 +392,10 @@ function osBuildingId(itemId: string): string {
 }
 
 export function createSeed(): World {
-  const buildings: Record<string, SourceBuilding> = { [tiverne.id]: { ...tiverne, distancesKm: { ...tiverne.distancesKm } } }
+  const buildings: Record<string, SourceBuilding> = {
+    [tiverne.id]: { ...tiverne, distancesKm: { ...tiverne.distancesKm } },
+    [harrowden.id]: { ...harrowden, distancesKm: { ...harrowden.distancesKm } },
+  }
   const items: Record<string, InventoryItem> = {}
   const lots: Record<string, Lot> = {}
   for (const r of thRows) {
@@ -266,6 +415,7 @@ export function createSeed(): World {
       notes: r.spec.family === 'steel_section' ? TIVERNE_STEEL_NOTE : '',
       capturedBy: 'Dana Kowalski',
       capturedOn: '2026-09-14',
+      expectedAvailableFrom: r.availableFrom,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -279,6 +429,40 @@ export function createSeed(): World {
       listedMonth: r.visibility === 'matched_only' ? '2026-09' : null,
       askPerUnit: r.ask,
       reservePerUnit: r.reserve,
+      sold: false,
+    }
+  }
+  for (const r of hcRows) {
+    items[r.id] = {
+      id: r.id,
+      buildingId: HARROWDEN_ID,
+      tag: r.tag,
+      family: r.spec.family,
+      spec: r.spec,
+      quantity: r.quantity,
+      condition: r.condition,
+      recoverability: r.recoverability,
+      testStatus: 'untested',
+      grade: r.spec.family === 'steel_section' ? 'unknown' : null,
+      location: r.location,
+      photos: [],
+      notes: '',
+      capturedBy: 'Dana Kowalski',
+      capturedOn: '2026-09-28',
+      expectedAvailableFrom: HARROWDEN_AVAILABLE_FROM,
+    }
+    lots['lot_' + r.id.slice(4)] = {
+      id: 'lot_' + r.id.slice(4),
+      itemId: r.id,
+      publicId: r.publicId,
+      visibility: 'private',
+      piecesOnOffer: r.quantity.kind === 'pieces' ? r.quantity.pieces : null,
+      shareOnOffer: 1,
+      availableFrom: HARROWDEN_AVAILABLE_FROM,
+      inStock: null,
+      listedMonth: null,
+      askPerUnit: null,
+      reservePerUnit: null,
       sold: false,
     }
   }
@@ -302,6 +486,7 @@ export function createSeed(): World {
       tenants: [],
       programme: { stripOutStart: null, dismantlingStart: null, clearBy: null },
       defaultHubId: r.hub?.id ?? null,
+      surveyorOrgId: null,
       locationLevel: 'region',
       timingLevel: r.timingLevel,
       arisingsTitle: r.sellerType === 'Deconstruction contractor' ? 'contractor' : 'owner',
@@ -324,6 +509,7 @@ export function createSeed(): World {
       notes: '',
       capturedBy: '',
       capturedOn: '2026-09-01',
+      expectedAvailableFrom: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -348,9 +534,10 @@ export function createSeed(): World {
     buildings,
     items,
     lots,
-    projects: { [merrowgate.id]: structuredClone(merrowgate) },
+    projects: Object.fromEntries([merrowgate, sallow, ferrymoor].map((p) => [p.id, structuredClone(p)])),
     deals: {},
     engagements: { [durnley.id]: structuredClone(durnley) },
+    wishlists: Object.fromEntries(wishlistsSeed.map((l) => [l.id, structuredClone(l)])),
     snapshot,
     ledger: ledgerSeed.map((l) => ({ ...l })),
     publicIdPool: [...PUBLIC_ID_POOL],

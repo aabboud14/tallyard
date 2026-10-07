@@ -7,7 +7,7 @@ import { ItemDrawing } from '../../components/drawings/ItemDrawing'
 import { scaleFor } from '../../components/drawings/SectionDrawing'
 import { SIGNAL_LABELS, LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
-import { availabilityText, quantityText, priceRangeText } from './ListingView'
+import { availabilityText, quantityText, priceRangeText } from '../../domain/engines/specSheet'
 
 export function Browse() {
   const world = useWorld()

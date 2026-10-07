@@ -6,7 +6,7 @@ import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../src/do
 import { dateFormats } from '../src/domain/dates'
 import { LABELS } from '../src/domain/reference/labels'
 
-const P = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', marcus: 'per_marcus', operator: 'per_operator' }
+const P = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', isla: 'per_isla', marcus: 'per_marcus', operator: 'per_operator' }
 const seed = createSeed()
 const th01 = itemByTag(seed, 'TH-01')
 
@@ -171,7 +171,8 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await expect(page.getByTestId('listing-price-calc-panel')).toContainText(LABELS.L2)
   await page.keyboard.press('Escape')
 
-  // Step 5. Match a schedule (Priya)
+  // Step 5. Match a schedule (Isla, the client)
+  await setPersona(page, P.isla)
   await go(page, '/project/match')
   assertRoute(page)
   await page.getByTestId('load-sample-schedule').click()
@@ -199,7 +200,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await page.getByTestId('add-to-plan-R1-L-9F4CQQ').click()
   await expect(page.getByText('The reuse plan has 1 item.')).toBeVisible()
 
-  // Step 6. Bridge the gap (Priya)
+  // Step 6. Bridge the gap (Isla)
   await go(page, '/project/plan')
   assertRoute(page)
   await expect(page.getByTestId('package-route')).toHaveText('Via storage hub')
@@ -223,7 +224,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await expect(page.getByTestId('facility-total-HUB-PARK')).toHaveText('£26,324.13')
   await expectNoLotPrivate(page)
 
-  // Step 7. Negotiate through an agent (Priya)
+  // Step 7. Negotiate through an agent (Isla)
   await expect(page.getByTestId('mandate-open')).toHaveValue('700')
   await expect(page.getByTestId('mandate-max')).toHaveValue('780')
   await page.getByTestId('start-negotiation').click()
@@ -240,7 +241,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   expect(await mainText(page)).not.toContain('730')
   await expectNoLotPrivate(page)
 
-  // Step 8. Seller approves (Tom, then Priya)
+  // Step 8. Seller approves (Tom, then Isla)
   await setPersona(page, P.tom)
   await go(page, '/supply/offers')
   assertRoute(page)
@@ -257,7 +258,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await label(page, 'L22')
   await expect(page.getByTestId('seller-deal-status')).toHaveText('Confirmed')
   await expect(page.getByTestId('seller-deal-buyer')).toHaveText('Lantern Quay Developments')
-  await expect(page.getByTestId('seller-deal-contact')).toHaveText('Priya Nair, Studio Oriel')
+  await expect(page.getByTestId('seller-deal-contact')).toHaveText('Isla Brennan, Lantern Quay Developments')
   await expect(page.getByTestId('seller-deal-handover')).toHaveText('Handover 15 March 2027 at Open yard, Tilbury')
   await expect(page.getByTestId('seller-deal-inbound')).toHaveText('Inbound haulage £248.40, booked')
   {
@@ -266,7 +267,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
     expect(text).not.toMatch(/\b13 months\b/)
     expect(text).not.toContain('21,227.74')
   }
-  await setPersona(page, P.priya)
+  await setPersona(page, P.isla)
   await go(page, '/project/deals')
   assertRoute(page)
   await expect(page.getByTestId('buyer-deal-status')).toHaveText('Confirmed')
@@ -286,7 +287,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await go(page, '/market')
   await expect(page.getByTestId('browse-card-L-9F4CQQ')).toHaveCount(0)
 
-  // Step 9. Logistics (Priya)
+  // Step 9. Logistics (Isla)
   await go(page, '/project/deals')
   await page.getByTestId('arrange-delivery').click()
   await label(page, 'L3')
@@ -438,7 +439,8 @@ test('labels off the demo path, P5b, and the three stubs', async ({ page, entry 
   await expect(page.getByTestId('listing-carbon')).toHaveText(LABELS.L14)
   await go(page, '/market/L-Q23X7N')
   await label(page, 'L25')
-  // L27 and L24: after the terms, a shared lot reached from the matcher, and a plan item for another seller.
+  // L27 and L24: after the terms, a shared lot reached from the client's matcher, and a plan item for another seller.
+  await setPersona(page, P.isla)
   await go(page, '/project/match')
   await page.getByTestId('load-sample-schedule').click()
   await page.getByTestId('open-terms').click()
@@ -482,7 +484,7 @@ test('layout at 1024 and 1440 after the full demo, and reset removes only this a
   await setUpTo(page, 12)
   const screens: [string, string][] = [
     [P.tom, '/supply/inventory'], [P.tom, '/supply/inventory/itm_7fk2qa'], [P.tom, '/supply/priority'], [P.tom, '/supply/listings'], [P.tom, '/supply/offers'],
-    [P.priya, '/market'], [P.priya, '/market/L-NHZ32R'], [P.priya, '/project/match'], [P.priya, '/project/plan'], [P.priya, '/project/deals'],
+    [P.priya, '/market'], [P.priya, '/market/L-NHZ32R'], [P.isla, '/project/match'], [P.isla, '/project/plan'], [P.isla, '/project/deals'],
     [P.marcus, '/compliance/project'], [P.marcus, '/compliance/waste'], [P.operator, '/operator/ledger'], [P.operator, '/operator/models'], [P.operator, '/assumptions'], [P.operator, '/about'],
   ]
   for (const width of [1024, 1440]) {

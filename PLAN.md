@@ -35,6 +35,7 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Done
 
+- Version 1.0, stage 1 (brief/09-V1-PRODUCT.md): engines for typology, decision tree route, timeline fit, sustainability band, spec sheet, browse, wish list and geometry, test first; access model; seed with Isla Brennan, Harrowden Court, Sallow Court, Ferrymoor Yard and four wish lists; privacy lists extended; contractor scaffold removed; `src/components/v1` (swatch, band, timeline strip, chips, sheet, listing card, icons) with a gallery test; e2e personas moved to Isla for steps 5 to 9.
 - Phase 4: project compliance dashboard, bill import with review, waste dashboard, both workbooks with formulas, A4 print layout, workbook tests including P6.
 - Phase 7: e2e steps 1 to 12 green in both Playwright projects, privacy and label checks, layout checks, reset check, 19 screenshots, README, DEMO_SCRIPT, EVIDENCE.
 - Phase 3: docs/DESIGN.md, tokens and fonts, shell with persona switcher, demo script panel, reset, error boundary, section and panel drawings, charts, How this is calculated, inventory, item detail, listings and privacy, browse, listing.
@@ -46,4 +47,6 @@ scripts/               scan.mjs, make-samples.mjs, make-photo-fixture.mjs, shots
 
 ## Next
 
-Tier 1 is complete and deployed from `main` through Vercel's GitHub import (see docs/HANDOFF.md). The working branch carries an unreleasable scaffold for five additions from the founder's notes; start from docs/HANDOFF.md section 8. Tier 2 (brief/08-TIER2.md) is only on request.
+Version 1.0, in the order of brief 09 section 10: the store (wish list and project actions, createProject), the folder shell with every route of section 4 resolving and checking `canAccess`, then the role screens (architect first), then the end-to-end journeys of section 9 with P10 and P11, then screenshots. Update `src/test/boundaries.test.ts` when the new feature folders exist.
+
+Earlier note: Tier 1 is complete and deployed from `main` through Vercel's GitHub import (see docs/HANDOFF.md). The working branch carries an unreleasable scaffold for five additions from the founder's notes; start from docs/HANDOFF.md section 8. Tier 2 (brief/08-TIER2.md) is only on request.

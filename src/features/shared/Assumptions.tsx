@@ -1,6 +1,7 @@
 // Assumptions (04 section 5.7): read-only grouped tables of every parameter in 06 section A2,
 // with value, unit, source and status.
 import { parameterRows, type Parameter } from '../../domain/reference/assumptions'
+import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
 import { PageTitle, Panel, Table, Tag } from '../../components/ui'
 import type { ReferenceStatus } from '../../domain/types'
 
@@ -25,10 +26,10 @@ function groupRows(rows: Parameter[]): { group: string; rows: Parameter[] }[] {
 }
 
 export function Assumptions() {
-  const groups = groupRows(parameterRows())
+  const groups = groupRows([...parameterRows(), ...V1_PARAMETER_ROWS])
   return (
     <>
-      <PageTitle title="Assumptions" sub="Every factor, price, fee, target and weight the prototype uses. Read-only in this run. Distances are record data held on the building, hub and project records and are not shown here." />
+      <PageTitle title="Assumptions" sub="Every factor, price, fee, target and weight the prototype uses. Read-only in this run. Distances on the building, hub and project records are record data and are not shown here. The region distances below apply only to projects created in the tool." />
       <div className="flex flex-col gap-4">
         {groups.map((g) => (
           <Panel key={g.group} title={g.group} data-testid={`assumptions-group-${g.group.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>

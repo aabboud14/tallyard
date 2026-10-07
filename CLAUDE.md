@@ -8,6 +8,7 @@ Project: Tallyard, a clickable prototype of a marketplace for salvaged construct
 2. `PLAN.md` (what is done, what is next)
 3. `docs/DECISIONS.md`
 4. The brief files listed for the current phase in `01-BRIEF.md` section 5
+5. `brief/09-V1-PRODUCT.md`, the governing file for version 1.0. It wins over files 01 to 08 where they differ, and its section 13 wins over its sections 1 to 12. Under it, R6 reads `src/domain/reference/names.ts` as the allowed list.
 
 Read each file to its last line. If a read is truncated, continue from where it stopped. Never work from memory of the brief.
 

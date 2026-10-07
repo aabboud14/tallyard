@@ -222,7 +222,7 @@ describe('demo replay, steps 1 to 12 on fresh seed', () => {
     const d = deals[0]
     expect(d.status).toBe('confirmed')
     expect(d.exchanged.buyerOrg).toBe('Lantern Quay Developments')
-    expect(d.exchanged.buyerContact).toBe('Priya Nair, Studio Oriel')
+    expect(d.exchanged.buyerContact).toBe('Isla Brennan, Lantern Quay Developments')
     expect(`Handover ${formatDate(d.handoverDate)} at ${o.hubName}`).toBe('Handover 15 March 2027 at Open yard, Tilbury')
     expect(`Inbound haulage ${f.money(d.inbound)}, booked`).toBe('Inbound haulage £248.40, booked')
     const sellerSide = JSON.stringify({ lines: d.sellerLines, net: d.sellerNet, uplift: d.upliftVsScrap, inbound: d.inbound, handover: d.handoverDate, exchanged: d.exchanged })

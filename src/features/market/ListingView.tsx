@@ -12,52 +12,7 @@ import { guidePrice } from '../../domain/engines/pricing'
 import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
 import { factorQty } from '../../domain/engines/measures'
 import { carbonSections, guideSections } from '../shared/calc'
-
-export function availabilityText(l: PublicListing): string {
-  return l.availability.kind === 'now' ? 'Available now' : `Available from ${l.availability.label}`
-}
-
-export function quantityText(l: PublicListing): string {
-  if (l.quantity.pieces !== null && l.family === 'steel_section') return f.quantity(l.quantity.pieces, 'pieces')
-  if (l.family === 'curtain_wall') return `${f.quantity(l.quantity.pieces ?? 0, 'panels')} (${f.quantity(l.quantity.value, 'm2')})`
-  return f.quantity(l.quantity.value, l.quantity.unit)
-}
-
-export function priceRangeText(l: PublicListing): string {
-  return `${f.priceOnly(l.price.low, l.family)} to ${f.unitPrice(l.price.high, l.family)}`
-}
-
-export function specRows(l: PublicListing): { label: string; value: string }[] {
-  const s = l.spec
-  switch (s.family) {
-    case 'steel_section':
-      return [
-        { label: 'Designation', value: s.designation },
-        { label: 'Length', value: `${s.lengthM.toFixed(1)} m` },
-      ]
-    case 'curtain_wall':
-      return [
-        { label: 'System', value: s.system },
-        { label: 'Panel', value: `${s.panelWidthM} m by ${s.panelHeightM} m` },
-      ]
-    case 'precast_cladding':
-      return [{ label: 'Thickness', value: `${s.thicknessMm} mm` }]
-    case 'stone_cladding':
-      return [
-        { label: 'Stone', value: s.stone },
-        { label: 'Thickness', value: `${s.thicknessMm} mm` },
-      ]
-    case 'clay_brick':
-      return [
-        { label: 'Type', value: s.brickType },
-        { label: 'Mortar', value: s.mortar },
-      ]
-    case 'raised_floor':
-      return [{ label: 'Panel size', value: `${s.panelSize} mm` }]
-    case 'timber_joist':
-      return [{ label: 'Species', value: s.species }]
-  }
-}
+import { availabilityText, quantityText, priceRangeText, specFieldRows } from '../../domain/engines/specSheet'
 
 export function ListingView({ listing: l, testPrefix = 'listing', compact = false }: { listing: PublicListing; testPrefix?: string; compact?: boolean }) {
   const fam = FAMILIES[l.family]
@@ -87,7 +42,7 @@ export function ListingView({ listing: l, testPrefix = 'listing', compact = fals
         <Dl
           testPrefix={testPrefix}
           rows={[
-            ...specRows(l).map((r) => ({ label: r.label, value: r.value })),
+            ...specFieldRows(l.spec).map((r) => ({ label: r.label, value: r.value })),
             { label: 'Quantity', value: quantityText(l), testId: 'quantity' },
             { label: 'Mass', value: f.massT(l.massT), testId: 'mass' },
             { label: 'Condition', value: l.condition, testId: 'condition' },

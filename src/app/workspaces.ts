@@ -40,25 +40,26 @@ export const WORKSPACES: Record<string, Workspace> = {
       { label: 'Deals', to: '/project/deals' },
     ],
   },
+  [PERSONA_IDS.isla]: {
+    title: 'Client',
+    subtitle: 'Merrowgate Wharf',
+    home: '/project/match',
+    sees: 'Client workspace for Merrowgate Wharf: match schedule, reuse plan, deals',
+    tabs: [
+      { label: 'Match schedule', to: '/project/match' },
+      { label: 'Reuse plan', to: '/project/plan' },
+      { label: 'Deals', to: '/project/deals' },
+    ],
+  },
   [PERSONA_IDS.marcus]: {
     title: 'Compliance',
     subtitle: 'Engagements',
     home: '/compliance/project',
-    sees: 'Compliance workspace: Merrowgate Wharf (project compliance, targets and the design-team summary), Durnley House (waste and reuse), and listing for Ostlea Estates at Tiverne House',
+    sees: 'Compliance workspace: Merrowgate Wharf (project compliance and targets) and Durnley House (waste and reuse)',
     tabs: [
       { label: 'Merrowgate Wharf', to: '/compliance/project' },
-      { label: 'Design-team summary', to: '/compliance/summary' },
       { label: 'Durnley House', to: '/compliance/waste' },
-      { label: 'Tiverne House, inventory', to: '/supply/inventory' },
-      { label: 'Tiverne House, capture', to: '/supply/capture' },
     ],
-  },
-  [PERSONA_IDS.ruth]: {
-    title: 'Contractor',
-    subtitle: 'Merrowgate Wharf',
-    home: '/contractor/bid-pack',
-    sees: 'Contractor workspace for Merrowgate Wharf: the bid pack of reused items, from public fields only',
-    tabs: [{ label: 'Bid pack', to: '/contractor/bid-pack' }],
   },
   [PERSONA_IDS.operator]: {
     title: 'Operator',

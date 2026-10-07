@@ -23,6 +23,7 @@ function tiverneWithTh12() {
     notes: '',
     capturedBy: 'Dana Kowalski',
     capturedOn: '2026-10-07',
+    expectedAvailableFrom: '2027-01-25',
   }
   w.items[th12.id] = th12
   w.lots['lot_q7m2kd'] = { id: 'lot_q7m2kd', itemId: th12.id, publicId: 'L-GMXG69', visibility: 'private', piecesOnOffer: 30, shareOnOffer: 1, availableFrom: '2027-01-25', inStock: null, listedMonth: null, askPerUnit: null, reservePerUnit: null, sold: false }

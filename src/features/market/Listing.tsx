@@ -11,7 +11,8 @@ export function Listing() {
   const { publicId } = useParams()
   const world = useWorld()
   const { persona } = usePersona()
-  const project = persona.id === PERSONA_IDS.priya ? world.projects[MERROWGATE_ID] : null
+  // Until the project picker lands, the architect and the client of Merrowgate Wharf see its shared lots (terms count for the project).
+  const project = persona.id === PERSONA_IDS.priya || persona.id === PERSONA_IDS.isla ? world.projects[MERROWGATE_ID] : null
   const listing = publicId ? listingForProject(world, project, publicId, A) : null
   return (
     <>

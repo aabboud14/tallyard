@@ -1,7 +1,7 @@
 // npm run shots: the screenshots in 05 section 2.7, after runDemoSteps(1, 12), into docs/screens/.
 import { test, open, go, setPersona, setUpTo } from './helpers'
 
-const P = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', marcus: 'per_marcus', operator: 'per_operator' }
+const P = { tom: 'per_tom', dana: 'per_dana', priya: 'per_priya', isla: 'per_isla', marcus: 'per_marcus', operator: 'per_operator' }
 const out = (name: string) => `docs/screens/${name}.png`
 
 test('screenshots after the full demo', async ({ page, entry }) => {
@@ -25,13 +25,13 @@ test('screenshots after the full demo', async ({ page, entry }) => {
   })
   await shot(P.priya, '/market', '05-browse')
   await shot(P.priya, '/market/L-9F4CQQ', '06-listing-L-9F4CQQ')
-  await shot(P.priya, '/project/match', '07-match-schedule')
-  await shot(P.priya, '/project/plan', '08-reuse-plan-package')
-  await shot(P.priya, '/project/plan', '09-negotiation-thread', async () => {
+  await shot(P.isla, '/project/match', '07-match-schedule')
+  await shot(P.isla, '/project/plan', '08-reuse-plan-package')
+  await shot(P.isla, '/project/plan', '09-negotiation-thread', async () => {
     await page.getByTestId('negotiation-panel').scrollIntoViewIfNeeded()
   })
   await shot(P.tom, '/supply/offers', '10-offers-and-deals')
-  await shot(P.priya, '/project/deals', '11-deals-custody')
+  await shot(P.isla, '/project/deals', '11-deals-custody')
   await shot(P.marcus, '/compliance/project', '12-project-compliance')
   await shot(P.marcus, '/compliance/waste', '13-waste-dashboard')
   await shot(P.marcus, '/compliance/waste', '14-bill-review', async () => {

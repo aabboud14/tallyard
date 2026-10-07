@@ -1,4 +1,4 @@
-// Allowed names (06-DATA.md section A11). The scan script reads this module.
+// Allowed names (06-DATA.md section A11, with brief/09-V1-PRODUCT.md section 13.1). The scan script reads this module.
 // Group 1: the fictional world.
 export const ALLOWED_ORGANISATIONS = [
   'Tallyard',
@@ -8,14 +8,15 @@ export const ALLOWED_ORGANISATIONS = [
   'Lantern Quay Developments',
   'Halewick Sustainability',
   'Pellory Estates',
-  'Wrenlow Build',
+  'Quillon Homes',
+  'Brackwater Estates',
   'Corvane Insurance',
   'Meridale Partners',
 ] as const
 
-export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Marcus Lindqvist', 'Ruth Adeyemi'] as const
+export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Isla Brennan', 'Marcus Lindqvist'] as const
 
-export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Merrowgate Wharf', 'Durnley House'] as const
+export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House'] as const
 
 export const ALLOWED_PARTNERS = [
   'Open yard, Barking',

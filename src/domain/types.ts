@@ -1,4 +1,5 @@
-// Data model (03-ENGINES.md section 2). The private and public split is the point.
+// Data model (03-ENGINES.md section 2, extended by brief/09-V1-PRODUCT.md section 5.1). The private and public split is the point.
+import type { ProjectType, Wishlist } from './v1types'
 
 export type FamilyId =
   | 'steel_section'
@@ -81,6 +82,8 @@ export type SourceBuilding = {
   tenants: string[]
   programme: { stripOutStart: string | null; dismantlingStart: string | null; clearBy: string | null }
   defaultHubId: string | null
+  /** The deconstruction contractor appointed to survey this building, if any. */
+  surveyorOrgId: string | null
   locationLevel: LocationLevel
   timingLevel: TimingLevel
   /** Who holds title to the arisings and sells them: the owner or the deconstruction contractor (open question 12). */
@@ -106,6 +109,8 @@ export type InventoryItem = {
   notes: string
   capturedBy: string
   capturedOn: string
+  /** When the surveyor expects the material to be free (ISO date, shown as a month). Private; the owner sets the lot date. */
+  expectedAvailableFrom: string | null
 }
 
 export type Lot = {
@@ -257,7 +262,16 @@ export type MatchResult = {
 export type Project = {
   id: string
   name: string
+  /** The paying client. Equals clientOrgId. */
   developerOrgId: string
+  /** The buying-side asset owner who approves, buys and controls what is bought. */
+  clientOrgId: string
+  architectOrgId: string
+  projectType: ProjectType
+  /** Materials needed on site from (construction start), ISO. Private. */
+  startDate: string
+  /** The persona who created the project in the tool; null for seeded projects. */
+  createdBy: string | null
   teamOrgIds: string[]
   teamPersonaIds: string[]
   postcodeDistrict: string
@@ -279,7 +293,6 @@ export type Project = {
   /** Record data: km from each hub to the site. */
   hubDistancesKm: Record<string, number>
   consultantOrgId: string
-  contractorOrgId: string | null
   /** Targets set at inception by the consultant. Sample data, placeholder. */
   targets: { contentByValue: number; avoidedCarbonT: number }
 }
@@ -367,6 +380,7 @@ export type WasteEngagement = {
   name: string
   buildingName: string
   ownerOrgId: string
+  consultantOrgId: string
   giaM2: number
   period: string
   bill: WasteBill | null
@@ -389,6 +403,7 @@ export type World = {
   projects: Record<string, Project>
   deals: Record<string, Deal>
   engagements: Record<string, WasteEngagement>
+  wishlists: Record<string, Wishlist>
   snapshot: MarketSnapshot
   ledger: LedgerEntry[]
   publicIdPool: string[]

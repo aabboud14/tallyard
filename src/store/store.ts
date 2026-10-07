@@ -77,7 +77,8 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: STORE_KEY,
-      version: 1,
+      // Version 2 (brief 09 section 13.2): a stored version 0.5 world is replaced by a fresh seed.
+      version: 2,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ world: s.world, personaId: s.personaId, lastCapturedItemId: s.lastCapturedItemId }),
       migrate: () => ({ world: createSeed(), personaId: PERSONA_IDS.tom, lastCapturedItemId: null }),
