@@ -13,7 +13,7 @@ Tallyard is a clickable prototype of a marketplace for salvaged construction mat
 | Repository | https://github.com/aabboud14/tallyard |
 | Working branch | `claude/exciting-heisenberg-3cu7nb`, holds version 1.0 (see section 4) |
 | Version 0.5 deploy | `main`, imported into Vercel from GitHub by the user. Believed live at https://tallyard-aabboud.vercel.app/ (inferred from Vercel's alias pattern, **not verified by the builder**) |
-| Version 1.0 deploy | Vercel project `tallyard-v1`, meant to build the working branch so the version 0.5 site stays as it is. **Not created or opened by the builder**: the container cannot reach Vercel. Settings: import the repository, Production Branch `claude/exciting-heisenberg-3cu7nb`; `vercel.json` already sets framework Vite, `npm ci`, `npm run build` and output `dist`. If the page asks visitors to log in, switch off Deployment Protection for the demo. |
+| Version 1.0 deploy | Vercel project `tallyard-v1` (prj_NYsr9TI8M34N9RpILubJs30qzuMi), created through the Vercel connector on 8 October 2026 at the user's request. Production deployment dpl_AbTKWRwXrnM2StsEH54eUvkdNQQi of commit 12e241c on the working branch, state READY, at https://tallyard-v1.vercel.app/ . The builder could not open the page (the container cannot reach vercel.app). The project's Production Branch is still the default (`main`), so a push to the working branch makes a preview, not a new production build: redeploy through the connector, or set Settings, Git, Production Branch to `claude/exciting-heisenberg-3cu7nb`. Deployment Protection is the team default (Vercel Authentication except production domains). |
 | Specification | `brief/09-V1-PRODUCT.md` governs version 1.0 (its section 13 overrides sections 1 to 12); `brief/01-BRIEF.md` to `08` are the version 0.5 spec and still hold where 09 is silent |
 | Rules that survive a reset | `CLAUDE.md` (rules R1 to R8, commands, standing facts) |
 | Progress and decisions | `PLAN.md`, `docs/DECISIONS.md`, `docs/EVIDENCE.md` |
@@ -117,6 +117,6 @@ Wants plain language and short answers, often asks for just a link or a one-line
 
 1. Read `CLAUDE.md`, `PLAN.md`, `docs/DECISIONS.md`, then `brief/09-V1-PRODUCT.md` to its last line (section 13 overrides the rest).
 2. Run `npm run check` and `npm run e2e` to confirm the starting state (536 unit tests; 12 end-to-end tests across two projects).
-3. Ask the user whether the Vercel project `tallyard-v1` exists, which branch it builds, and what it shows; check the version 0.5 project still builds `main`.
+3. Ask the user whether https://tallyard-v1.vercel.app/ shows version 1.0 without a login, and check the version 0.5 project still builds `main`.
 4. Ask what the partner has sent (section 8) and replace only the placeholders that material covers, test first, one commit each.
 5. Before anything goes to `main`, run the full gate and get the user's explicit go-ahead.

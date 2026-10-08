@@ -79,3 +79,4 @@ One line per decision where the brief was silent or an instruction had to be rec
 - 2026-10-08. The negotiation screenshot captures the negotiation panel on its own, because a full page shot after scrolling caught the sticky rail half way down the page.
 - 2026-10-08. The package version is 1.0.0 to match the product version on the landing and About screens; nothing in the app reads it, and the storage prefix stays `tallyard-v05`.
 - 2026-10-08. Version 1.0 is meant to deploy from the working branch as a separate Vercel project, `tallyard-v1`, so the version 0.5 site built from `main` stays as it is; the builder did not create or open that project from this container.
+- 2026-10-08. At the user's request version 1.0 was deployed to a new Vercel project, tallyard-v1, from the working branch (commit 12e241c), through the Vercel connector. The version 0.5 project was not touched.
