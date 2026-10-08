@@ -53,3 +53,7 @@ npm run scan      dashes, filler text, disallowed names
 ## If something fails three times
 
 Use the fallback for that item in `01-BRIEF.md` section 6, record it in `docs/EVIDENCE.md` under "Deviations", and move on. Never fall back on steps 10 and 11, the engine tests, the privacy tests or the labels.
+
+## The platform folder
+
+`platform/` is a separate app, the SaaS-style platform, with its own rules in `platform/CLAUDE.md` and its spec in `platform/BRIEF.md`. Inside `platform/` those govern; the demo rules above (the demo path, the offline single file, the fixed demo date and the fixed label list) apply only to the demo in `src/`.
