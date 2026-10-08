@@ -1,51 +1,50 @@
 # Handoff
 
-Written on 6 October 2026 so that a person or a fresh session with no memory of the build can continue it. Read this first, then `CLAUDE.md`, then `PLAN.md`.
+Rewritten on 8 October 2026 for version 1.0, so that a person or a fresh session with no memory of the build can continue it. Read this first, then `CLAUDE.md`, then `PLAN.md`, then `brief/09-V1-PRODUCT.md`.
 
 ## 1. What this is, in one paragraph
 
-Tallyard is a clickable prototype of a marketplace for salvaged construction materials. It is client only: no backend, offline, one browser, sample data. It exists as a test instrument to show a London sustainability founder and then developers, architects and consultants, to find out whether the concept holds, which business model fits, and how much disclosure owners will accept. The brief says the fixed demo date, 7 October 2026, is the day of the follow-up meeting, so the priority is a stable, correct demo. Every company, person, building and address is fictional.
+Tallyard is a clickable prototype of a marketplace for salvaged construction materials, with the workflow around it for each role on a project. It is client only: no backend, offline, one browser, sample data, a fixed demo date of 7 October 2026. Version 0.5 was a demo of the concept. Version 1.0 (`brief/09-V1-PRODUCT.md`, from two calls with a London architect, the domain partner) is a role-specific tool, architect first: each role gets its own interface, navigated project by project, and decision rights are fixed. The architect chooses on function, appearance and carbon; the asset owner approves, buys and controls what is visible; the architect never makes a deal. It is a marketplace and workflow tool, not an AI tool: the rule-based stand-ins keep their labels as quiet footnotes. Every company, person, building and address is fictional.
 
 ## 2. Where everything is
 
 | Thing | Location |
 |---|---|
 | Repository | https://github.com/aabboud14/tallyard |
-| Working branch | `claude/exciting-heisenberg-3cu7nb` (ahead of `main`, see section 4) |
-| Deploy branch | `main` (Vercel imports it from GitHub; the user did the import in the Vercel dashboard) |
-| Live URL | Believed to be https://tallyard-aabboud.vercel.app/ . **Not verified by the builder**: it was inferred from Vercel's alias pattern. Check the Deployments tab. |
-| Specification | `brief/01-BRIEF.md` is the entry point; `brief/02` to `07` are the spec; `brief/08-TIER2.md` is the optional second run |
+| Working branch | `claude/exciting-heisenberg-3cu7nb`, holds version 1.0 (see section 4) |
+| Version 0.5 deploy | `main`, imported into Vercel from GitHub by the user. Believed live at https://tallyard-aabboud.vercel.app/ (inferred from Vercel's alias pattern, **not verified by the builder**) |
+| Version 1.0 deploy | Vercel project `tallyard-v1`, meant to build the working branch so the version 0.5 site stays as it is. **Not created or opened by the builder**: the container cannot reach Vercel. Settings: import the repository, Production Branch `claude/exciting-heisenberg-3cu7nb`; `vercel.json` already sets framework Vite, `npm ci`, `npm run build` and output `dist`. If the page asks visitors to log in, switch off Deployment Protection for the demo. |
+| Specification | `brief/09-V1-PRODUCT.md` governs version 1.0 (its section 13 overrides sections 1 to 12); `brief/01-BRIEF.md` to `08` are the version 0.5 spec and still hold where 09 is silent |
 | Rules that survive a reset | `CLAUDE.md` (rules R1 to R8, commands, standing facts) |
 | Progress and decisions | `PLAN.md`, `docs/DECISIONS.md`, `docs/EVIDENCE.md` |
-| Founder's notes against the build | `docs/FOUNDER-NOTES-GAPS.md` |
-| Presenter's script | `docs/DEMO_SCRIPT.md`; screenshots in `docs/screens/` |
+| Presenter's script | `docs/DEMO_SCRIPT.md`; 34 screenshots in `docs/screens/` |
 
-## 3. What exists and works (Tier 1, complete)
+## 3. What exists and works (version 1.0)
 
-All twelve demo steps in `brief/02-DEMO-PATH.md` run end to end on fresh seed data with the stated values. The five personas are Tom Ashby (asset owner), Dana Kowalski (surveyor), Priya Nair (architect for the buyer), Marcus Lindqvist (sustainability consultant) and the platform operator.
+The landing page groups the roles, architect first, with one line each. The persona switcher in the top bar changes role; the left rail is a folder tree built from the world and the persona. A screen that resolves a building, project or engagement from the URL checks access and shows "Not available to this role" when it fails.
 
-- Domain engines F1 to F14 (mass, carbon, price guidance, priority, schedule matching, package costs, negotiation, disclosure score, revenue and models, waste rates, content by value, bill import, capture parsing), all pure functions in `src/domain/`.
-- Two privacy projections, `toPublicListing` and `toBlindBuyer`, so neither side sees the other's private figures before a deal is confirmed.
-- Screens for supply, marketplace, project, compliance (with two XLSX exports and an A4 print layout), operator, assumptions and about.
-- Three labelled stubs: BIM import, photo recognition, PDF bill reading.
-- An About screen with a "The concept in full" section added from the founder's notes.
+| Role | Persona | Screens |
+|---|---|---|
+| Architect | Priya Nair, Studio Oriel | Marketplace: Browse (visual cards, typology chips, More filters, sort, the project picker with a fit tag per card), Shared with you (per project, behind the confidentiality terms), Saved. Listing detail: visual and dimensioned drawing, band, key figures, timeline strip, spec rows, guide price as a secondary line, Save, DXF and OBJ downloads, BIM family greyed. Projects (Merrowgate Wharf, Sallow Court, Ferrymoor Yard), each with Wish list, Spec sheet (print or save as PDF, spreadsheet) and Match schedule (version 2, greyed). New project. No deal, mandate, offer or negotiation anywhere. |
+| Asset owner, client | Isla Brennan, Lantern Quay Developments | Merrowgate Wharf: Approvals (approve or decline each sent item with a note), Match schedule (advanced), Reuse plan with the package and negotiation, Deals with logistics and custody. |
+| Site surveyor | Dana Kowalski, Tarnbrook Deconstruction | Clients as folders: Ostlea Estates with Tiverne House, Brackwater Estates with Harrowden Court. Per building: Inventory, item detail, Capture with Assist and expected availability. |
+| Asset owner, selling | Tom Ashby, Ostlea Estates | Tiverne House only: Inventory, Priority with the five-step decision tree legend, Listings and visibility (Private, Shared privately with selected projects, Published to the marketplace, the blind sharing list). Offers and deals. Harrowden Court is out of reach, by rail and by URL. |
+| Sustainability consultant | Marcus Lindqvist, Halewick Sustainability | Projects: Compliance (two workbooks and print), Wish list review (read only). Engagements: Durnley House waste and reuse with the bill import. |
+| Platform operator | Platform operator, Tallyard | Ledger and model comparison, open only to the operator. |
 
-Verified on the last run: 20 unit test files with 240 tests passing; `npm run check` green; `npm run e2e` 6 passed (3 tests in each of two Playwright projects, including the single file opened from disk with the network blocked); scan clean; 19 screenshots. Every worked example in `brief/07-EXAMPLES.md` has a test, and `docs/EVIDENCE.md` maps them.
+Shared by every role: Assumptions (with the version 1.0 parameters as placeholders), About (what is real, simulated, rule-based and version 2, and the open questions), Reset demo data, and the demo script panel for presenters.
+
+Under the screens: pure engines in `src/domain/engines` for typology, decision tree route, timeline fit, sustainability band, spec sheet, browse, wish list and geometry, beside the version 0.5 engines F1 to F14; the access model in `src/domain/access.ts`; the two privacy projections `toPublicListing` and `toBlindBuyer`, unchanged.
+
+Verified on the last run (8 October 2026): `npm run check` green with 42 test files and 536 unit tests; `npm run e2e` 12 of 12 (6 in `http`, 6 in `single-file`); scan clean on 197 files; 34 screenshots looked at. The twelve-step replay still passes at store level and in the browser with every acceptance value; steps 5 to 7 and 9 now run as Isla. Details in `docs/EVIDENCE.md`.
 
 ## 4. Branch state: read this before touching anything
 
-**Update, 7 October 2026: version 1.0 is under way on this branch** (`brief/09-V1-PRODUCT.md`). The contractor scaffold described below is removed: Wrenlow Build, Ruth Adeyemi, `opportunity.ts`, `bidPack.ts`, the two placeholder screens, their routes and tabs, and Marcus's two Tiverne House tabs. Items 1, 2 and 4 of section 8 are superseded by brief 09. Done so far: the version 1.0 engines (typology, decision tree route, timeline fit, sustainability band, spec sheet, browse, wish list, geometry) with tests, the access model, the new seed (Isla Brennan, Harrowden Court, Sallow Court, Ferrymoor Yard, wish lists) and the `src/components/v1` building blocks. Next: the store, the folder shell and the role screens. See `PLAN.md`.
-
-`main` holds finished Tier 1, a `vercel.json`, the About concept section and the gap analysis.
-
-The working branch has two further commits that are **not on `main`**:
-
-1. A scaffold for five additions from the founder's notes (section 6). It adds a contractor persona (Ruth Adeyemi at Wrenlow Build), project targets, an `arisingsTitle` field on source buildings, two domain helpers that are written but untested and unused (`src/domain/engines/opportunity.ts`, `bidPack.ts`), two placeholder screens that only say "This screen is being built" (`src/features/compliance/Summary.tsx`, `src/features/contractor/BidPack.tsx`), their routes, and workspace tabs.
-2. The About commit (also on `main`).
-
-Unit tests and the end-to-end suite pass with the scaffold, but the branch is **not releasable**: a visitor who picks the new persona lands on a placeholder.
-
-**Open risk.** The builder believed only `main` is the live site. A Vercel screenshot labelled a deployment built from the working branch as "Production". Until someone checks Project Settings, Git, Production Branch and the Deployments tab, assume the scaffold may already be live. If it is, either revert the scaffold commit on the branch or point Production at `main`.
+- `claude/exciting-heisenberg-3cu7nb` holds version 1.0 and is ahead of `main`: the brief 09 commits, the contract (`615ad22`), stage 1 (`db6b6bf`), stage 2 (`38d1fc9`), stage 3 (`d147a40`) and the final gate commit "Version 1.0: role-specific tool, architect first". It is pushed to `origin`.
+- `main` holds finished version 0.5 (Tier 1), a `vercel.json`, the About concept section and the gap analysis. Version 1.0 has **not** been merged to `main`, and should not be without the user's explicit go-ahead.
+- The version 0.5 contractor scaffold (Wrenlow Build, Ruth Adeyemi, `opportunity.ts`, `bidPack.ts`, the two placeholder screens, and Marcus's Tiverne House tabs) is removed on this branch; git history keeps it.
+- Open risk carried from version 0.5: a Vercel screenshot once labelled a deployment built from the working branch as "Production" on the version 0.5 project. If that project builds this branch, the version 0.5 site now shows version 1.0. Check Project Settings, Git, Production Branch on the existing project, and keep it on `main`.
+- The browser store is persisted at version 2 under the `tallyard-v05` prefix; a browser holding a version 0.5 world re-seeds instead of crashing.
 
 ## 5. How to run and verify
 
@@ -83,19 +82,23 @@ Practical notes:
 - Choices where the brief was silent are one line each in `docs/DECISIONS.md`. The two that matter most: reference rows for transport margin and matching fee carry the status `candidate`, as `brief/06-DATA.md` writes them; the sample file builder is idempotent to stop timestamp churn in git.
 - No fallback from `brief/01-BRIEF.md` section 6 was used. No test was weakened or skipped.
 
-## 8. Pending work: the five additions from the founder's notes
+## 8. Pending from the partner
 
-The user approved these ("go ahead and make the updates to the product"). Status of each, with a caution on the first.
+Brief 09 section 12 and section 13.4. Do not build any of these until the material arrives; each replaces a placeholder named in brief 09 and listed on the About screen under open questions.
 
-1. **Consultant lists materials for the developer.** Partly scaffolded, **and the scaffold is wrong**: it adds Tiverne House inventory and capture tabs to Marcus's workspace. Marcus is the buyer-side consultant on Merrowgate Wharf, so this lets one person see both sides' private data, which the About screen lists as outside the model and which breaks the blind-until-confirmed design. Remove those two tabs and instead add a separate consultant persona who acts for the owner, with its own organisation, before building anything on this.
-2. **Inception targets and a carbon opportunity view.** The seed has sample targets (25% content by value and 150 tCO2e) that are invented placeholders and must be labelled as such. `opportunity.ts` computes potential, secured and remaining carbon by bill line but has no test and no screen. Needs: tests first, a design-team summary screen at `/compliance/summary`, placeholder labelling.
-3. **Who holds title to arisings.** The `arisingsTitle` field exists and is seeded, but nothing reads it, and the one line in the projection that uses it never fires. Needs a decision on what the screens should show. This is open question 12 for the founder.
-4. **Contractor bid pack** (`brief/08-TIER2.md` section 5). The persona, organisation and allowed names exist; `handlingNotes` is written but untested; the screen is a placeholder; the XLSX export is not built. The spec: confirmed and planned reused items from public fields only, with expected delivery date, generated handling notes, the P427 line (L4), and an export carrying the caveat line (L20). Add privacy tests as for the buyer-side workbook.
-5. **Presentation-ready outputs.** Not started. It needs a decision first, because slides are outside both tiers of the brief; the founder's notes ask for charts and a presentation at early design stages.
+1. **The product name.** The partner says Tallyard is taken and will propose another. Rename then, in the one constant `PRODUCT_NAME`.
+2. **The office's specification template.** Replaces the first-cut column set of the spec sheet and its spreadsheet.
+3. **Screenshots of the tools the office uses today**, to align the architect's screens.
+4. **The office's sustainability diagram.** Replaces the three-segment band and its placeholder thresholds (90% and 80% of the new product's carbon).
+5. **The list of UK and London frameworks and the decision tree** the office works to. Replaces the five-step legend (L41) and the rule that assigns only reuse, downcycle and recycle.
+6. **The sustainability consultant's workflow**, for the next call. The consultant's wish list review is read only and stops there on purpose.
+7. **Whether the engineer or testing partner gets a role** in the spec sheet's growth through the stages.
+8. **A life cycle assessment database and Environmental Product Declarations** as the carbon source: an integration, version 2 or later.
+9. **Should the owner see which practice a shared project's architect is?** The owner's sharing list is blind for now.
 
-Rules for finishing them: write the test before the function, keep each addition behind green `npm run check` and `npm run e2e`, record decisions, and do not push to `main` until the demo path and all checks pass.
+Not from the partner but still open: timber joists have no recorded section size, so their geometry download is unavailable and says so.
 
-Tier 2 items not started: aggregated market insights (F11), file upload on both importers, browse filters, project overview, reuse narrative, "Jump here", listing spec sheet, owner audit workbook, editable assumptions.
+Version 0.5 founder-note additions (the old section 8): the consultant listing for the developer and the contractor bid pack are superseded by brief 09; who holds title to arisings is an open question on the About screen; the inception targets view is not built (the consultant's review makes no comparison with targets, 13.12); presentation outputs are not started and need a decision first.
 
 ## 9. Known gaps and things not verified
 
@@ -104,7 +107,7 @@ Tier 2 items not started: aggregated market insights (F11), file upload on both 
 - The workbooks were re-opened only by ExcelJS. No second reader (LibreOffice, openpyxl) was available.
 - `npm install` reports 5 advisories in transitive dependencies; they are left alone as the brief instructs.
 - The JavaScript bundle is one 1.5 MB chunk; the size warning is raised, not fixed.
-- The attached single file `dist-single/index.html` is about 1.7 MB and opens from disk.
+- The single file `dist-single/index.html` is about 1.9 MB (1,960,368 bytes) and opens from disk.
 
 ## 10. How the user works
 
@@ -112,8 +115,8 @@ Wants plain language and short answers, often asks for just a link or a one-line
 
 ## 11. First steps for the next session
 
-1. Read `CLAUDE.md`, `PLAN.md`, `docs/DECISIONS.md`, then the brief files for whatever you are about to touch.
-2. Ask the user to confirm which branch Vercel treats as Production and what the live site shows.
-3. Run `npm run check` and `npm run e2e` to confirm the starting state.
-4. Remove the Marcus tabs for Tiverne House, then build the five additions in the order in section 8, one commit each.
+1. Read `CLAUDE.md`, `PLAN.md`, `docs/DECISIONS.md`, then `brief/09-V1-PRODUCT.md` to its last line (section 13 overrides the rest).
+2. Run `npm run check` and `npm run e2e` to confirm the starting state (536 unit tests; 12 end-to-end tests across two projects).
+3. Ask the user whether the Vercel project `tallyard-v1` exists, which branch it builds, and what it shows; check the version 0.5 project still builds `main`.
+4. Ask what the partner has sent (section 8) and replace only the placeholders that material covers, test first, one commit each.
 5. Before anything goes to `main`, run the full gate and get the user's explicit go-ahead.

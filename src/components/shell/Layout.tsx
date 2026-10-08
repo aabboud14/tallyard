@@ -1,7 +1,7 @@
 // The version 1.0 shell: a calm top bar, the role's folder rail on the left, and the screen.
 // At phone width the rail folds into a "Menu" button that opens a sheet. The landing page has no rail.
 // The rail sits outside <main>, so the rendered privacy checks on the screen never read it.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useStore } from '../../store/store'
 import { PRODUCT_NAME, DEMO_TODAY } from '../../domain/constants'
@@ -37,7 +37,42 @@ export function Layout() {
   )
 }
 
+/** True below 640 px. */
+function useIsPhone(): boolean {
+  const query = '(max-width: 639px)'
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches)
+  useEffect(() => {
+    const m = window.matchMedia?.(query)
+    if (!m) return
+    const on = () => setPhone(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [])
+  return phone
+}
+
+/** On a phone, inside a workspace with a rail, the shared links move into the Menu sheet so the bar stays two rows. */
+function useSharedInMenu(): boolean {
+  const phone = useIsPhone()
+  const location = useLocation()
+  const world = useStore((s) => s.world)
+  const personaId = useStore((s) => s.personaId)
+  return phone && location.pathname !== '/' && railFor(world, personaId).length > 0
+}
+
+function SharedNav({ className }: { className?: string }) {
+  return (
+    <nav className={className} aria-label="Shared">
+      <DemoScriptPanel />
+      <TopLink to="/assumptions">Assumptions</TopLink>
+      <TopLink to="/about">About</TopLink>
+      <ResetButton />
+    </nav>
+  )
+}
+
 function TopBar() {
+  const inMenu = useSharedInMenu()
   return (
     <header className="border-b border-rule bg-panel print:hidden">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2 lg:flex-nowrap lg:px-6">
@@ -49,12 +84,7 @@ function TopBar() {
         </span>
         <div className="hidden h-6 border-l border-rule lg:block" aria-hidden="true" />
         <PersonaSwitcher />
-        <nav className="-mx-2.5 flex w-full flex-wrap items-center gap-x-1 lg:mx-0 lg:ml-auto lg:w-auto" aria-label="Shared">
-          <DemoScriptPanel />
-          <TopLink to="/assumptions">Assumptions</TopLink>
-          <TopLink to="/about">About</TopLink>
-          <ResetButton />
-        </nav>
+        {inMenu ? null : <SharedNav className="-mx-2.5 flex w-full flex-wrap items-center gap-x-1 lg:mx-0 lg:ml-auto lg:w-auto" />}
       </div>
     </header>
   )
@@ -76,6 +106,7 @@ function Workspace() {
   const org = persona ? world.orgs[persona.orgId] : undefined
   const sections = railFor(world, personaId)
   const trail = trailFor(sections, location.pathname)
+  const sharedInMenu = useSharedInMenu()
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPath, setMenuPath] = useState(location.pathname)
   if (menuPath !== location.pathname) {
@@ -87,7 +118,7 @@ function Workspace() {
       <div className="truncate text-sm font-semibold text-ink" data-testid="rail-persona">
         {persona.name}
       </div>
-      <div className="truncate text-xs text-mill-text">
+      <div className="break-words text-xs text-mill-text" data-testid="rail-role">
         {org?.name}, {roleTitle(world, personaId)}
       </div>
     </div>
@@ -117,6 +148,7 @@ function Workspace() {
             <div className="-mx-2 flex flex-col gap-5">
               {who}
               <FolderNav sections={sections} pathname={location.pathname} onNavigate={() => setMenuOpen(false)} />
+              {sharedInMenu ? <SharedNav className="flex flex-col items-start gap-1 border-t border-rule-soft px-1 pt-3" /> : null}
             </div>
           </Sheet>
         </>

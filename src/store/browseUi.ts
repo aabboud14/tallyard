@@ -4,6 +4,7 @@
 import { create } from 'zustand'
 import type { BrowseFilters, BrowseSort } from '../domain/v1types'
 import { NO_FILTERS } from '../domain/v1types'
+import { withTypology } from '../domain/engines/browse'
 
 type BrowseUi = {
   filters: BrowseFilters
@@ -17,7 +18,8 @@ type BrowseUi = {
 export const useBrowseUi = create<BrowseUi>()((set) => ({
   filters: NO_FILTERS,
   sort: 'newest',
-  patch: (p) => set((s) => ({ filters: { ...s.filters, ...p } })),
+  // Choosing a typology clears a family outside it.
+  patch: (p) => set((s) => ({ filters: { ...(p.typology !== undefined ? withTypology(s.filters, p.typology) : s.filters), ...p } })),
   clear: () => set({ filters: NO_FILTERS }),
   setSort: (sort) => set({ sort }),
   reset: () => set({ filters: NO_FILTERS, sort: 'newest' }),

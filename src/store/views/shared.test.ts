@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { createSeed, PERSONA_IDS } from '../../domain/seed/world'
 import { typologyOf } from '../../domain/engines/typology'
-import { landingGroups, landingShowcase } from './shared'
+import { assumptionRowsFor, landingGroups, landingShowcase } from './shared'
 
 describe('landingGroups', () => {
   it('puts the architect first and names each role group', () => {
@@ -35,5 +35,16 @@ describe('landingShowcase', () => {
     expect(new Set(picks.map((l) => l.publicId)).size).toBe(picks.length)
     expect(typologyOf(picks[0].family)).toBe('envelope')
     for (const l of picks) expect(l.sharing).toBe('open')
+  })
+})
+
+describe('assumptionRowsFor', () => {
+  it('leaves the negotiation agent out for the architect only', () => {
+    const w = createSeed()
+    const ids = (personaId: string) => assumptionRowsFor(w, personaId).map((r) => r.id)
+    expect(ids(PERSONA_IDS.priya)).not.toContain('negotiation')
+    expect(ids(PERSONA_IDS.isla)).toContain('negotiation')
+    expect(ids(PERSONA_IDS.operator)).toContain('negotiation')
+    expect(ids(PERSONA_IDS.priya).length).toBe(ids(PERSONA_IDS.isla).length - 1)
   })
 })

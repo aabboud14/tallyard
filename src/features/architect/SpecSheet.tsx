@@ -49,15 +49,15 @@ export function SpecSheet() {
   }
 
   return (
-    <div className="spec-sheet mx-auto flex max-w-[1080px] flex-col gap-5" data-testid="spec-sheet" data-which={which}>
+    <div className="spec-sheet flex max-w-[1180px] flex-col gap-5" data-testid="spec-sheet" data-which={which}>
       <div className="print-hide flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Spec sheet</p>
           <h1 className="mt-1 text-2xl font-semibold leading-tight">{header.project.name}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="lg" className="gap-2" onClick={() => window.print()} disabled={empty} data-testid="spec-print">
-            Print
+          <Button size="lg" className="gap-2" onClick={() => window.print()} disabled={empty} data-testid="spec-print" title="Choose Save as PDF in the print dialog.">
+            Print or save as PDF
           </Button>
           <Button variant="primary" size="lg" className="gap-2 text-panel" onClick={download} disabled={empty || busy} data-testid="spec-download">
             <Download size={18} />

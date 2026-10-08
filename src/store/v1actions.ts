@@ -165,19 +165,36 @@ export function nextProjectId(world: World, architectOrgId: string): string {
   }
 }
 
-function clientOrgFor(world: World, clientName: string): { orgId: string; create: boolean } | { error: string } {
+function clientOrgFor(world: World, architectOrgId: string, clientName: string): { orgId: string; create: boolean } | { error: string } {
   const key = clientName.trim().toLowerCase()
-  const found = Object.values(world.orgs).find((o) => o.name.trim().toLowerCase() === key)
-  if (!found) {
-    for (let n = 1; ; n++) {
-      const id = `org_${opaque(`client:${key}:${n}`)}`
-      if (!world.orgs[id]) return { orgId: id, create: true }
-    }
+  const named = (id: string) => world.orgs[id]?.name.trim().toLowerCase() === key
+  // The practice cannot be its own client.
+  if (named(architectOrgId)) return { error: V1_ERRORS.clientNotBuyer }
+  // Reuse an existing organisation only when it is a developer or already a client of this practice. Any other
+  // name, a seller's included, gets a new developer record, so the form never tells the architect who sells lots
+  // (R3). The seller's own record is never the client (13.1).
+  const ownClients = new Set(Object.values(world.projects).filter((p) => p.architectOrgId === architectOrgId).map((p) => p.clientOrgId))
+  const found = Object.values(world.orgs).find((o) => named(o.id) && (o.type === 'Developer' || ownClients.has(o.id)))
+  if (found) return { orgId: found.id, create: false }
+  for (let n = 1; ; n++) {
+    const id = `org_${opaque(`client:${key}:${n}`)}`
+    if (!world.orgs[id]) return { orgId: id, create: true }
   }
-  // 13.1: no organisation is both a lot seller and a buying client.
-  const sellsLots = Object.values(world.buildings).some((b) => b.ownerOrgId === found.id)
-  if (found.type === 'Developer' || (found.type === 'Asset owner' && !sellsLots)) return { orgId: found.id, create: false }
-  return { error: V1_ERRORS.clientNotBuyer }
+}
+
+export type NewProjectDraft = Omit<NewProjectInput, 'projectType'> & { projectType: ProjectType | null }
+
+/** Every field error in a new project form at once, in form order. The checks that need the world (a duplicate
+ * name, the client) stay in createProject. */
+export function validateNewProject(input: NewProjectDraft): [keyof NewProjectInput, string][] {
+  const out: [keyof NewProjectInput, string][] = []
+  if (!input.name.trim()) out.push(['name', V1_ERRORS.name])
+  if (!input.clientName.trim()) out.push(['clientName', V1_ERRORS.clientName])
+  if (input.projectType === null || !PROJECT_TYPES.includes(input.projectType)) out.push(['projectType', V1_ERRORS.projectType])
+  if (!(REGIONS as readonly string[]).includes(input.region)) out.push(['region', V1_ERRORS.region])
+  if (!isIsoDate(input.startDate)) out.push(['startDate', V1_ERRORS.badDate])
+  else if (!isOnOrBefore(DEMO_TODAY, input.startDate)) out.push(['startDate', V1_ERRORS.pastDate])
+  return out
 }
 
 /** Brief 09 section 13.6: the architect creates a project with its own empty wish list. */
@@ -187,15 +204,11 @@ export function createProject(world: World, personaId: string, input: NewProject
   const architectOrgId = orgIdOf(world, personaId)!
   const name = input.name.trim()
   const clientName = input.clientName.trim()
-  if (!name) return no(V1_ERRORS.name)
-  if (!clientName) return no(V1_ERRORS.clientName)
-  if (!PROJECT_TYPES.includes(input.projectType)) return no(V1_ERRORS.projectType)
-  if (!(REGIONS as readonly string[]).includes(input.region)) return no(V1_ERRORS.region)
-  if (!isIsoDate(input.startDate)) return no(V1_ERRORS.badDate)
-  if (!isOnOrBefore(DEMO_TODAY, input.startDate)) return no(V1_ERRORS.pastDate)
+  const invalid = validateNewProject(input)
+  if (invalid.length > 0) return no(invalid[0][1])
   const taken = Object.values(world.projects).some((p) => p.architectOrgId === architectOrgId && p.name.trim().toLowerCase() === name.toLowerCase())
   if (taken) return no(V1_ERRORS.duplicateName)
-  const client = clientOrgFor(world, clientName)
+  const client = clientOrgFor(world, architectOrgId, clientName)
   if ('error' in client) return no(client.error)
 
   const w = structuredClone(world)

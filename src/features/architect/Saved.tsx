@@ -9,6 +9,7 @@ import { MarketCard, CardGrid } from '../market/MarketCard'
 import { Button, Note, PageTitle, cx } from '../../components/ui'
 import { Bookmark, Folder } from '../../components/v1'
 import { NotAvailable } from '../../app/params'
+import { LABELS } from '../../domain/reference/labels'
 
 export function Saved() {
   const world = useStore((s) => s.world)
@@ -47,6 +48,9 @@ export function Saved() {
               </li>
             ))}
           </CardGrid>
+          <p className="m-0 text-xs text-mill-text" data-testid="label-L37">
+            {LABELS.L37}
+          </p>
         </>
       )}
     </div>

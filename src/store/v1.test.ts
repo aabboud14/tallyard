@@ -20,6 +20,7 @@ import {
   V1_ERRORS,
   acceptProjectTerms,
   createProject,
+  validateNewProject,
   decideWish,
   editWishNote,
   moveWish,
@@ -152,7 +153,6 @@ describe('createProject (13.6)', () => {
       [P.priya, { ...NEW_PROJECT, startDate: '2027-02-30' }, V1_ERRORS.badDate],
       [P.priya, { ...NEW_PROJECT, startDate: '2026-10-06' }, V1_ERRORS.pastDate],
       [P.priya, { ...NEW_PROJECT, name: 'Sallow Court' }, V1_ERRORS.duplicateName],
-      [P.priya, { ...NEW_PROJECT, clientName: 'Ostlea Estates' }, V1_ERRORS.clientNotBuyer],
       [P.priya, { ...NEW_PROJECT, clientName: 'Studio Oriel' }, V1_ERRORS.clientNotBuyer],
       [P.priya, { ...NEW_PROJECT, projectType: 'bridge' as never }, V1_ERRORS.projectType],
     ]
@@ -164,7 +164,33 @@ describe('createProject (13.6)', () => {
     }
     // A client that buys but sells nothing is accepted.
     expect(createProject(w, P.priya, { ...NEW_PROJECT, clientName: 'Pellory Estates' }).error).toBeNull()
+    // R3: a seller's name behaves exactly like an unknown name. It gives a new client organisation, never the
+    // seller's own record, so the form cannot tell the architect who sells lots.
+    for (const [sellerName, sellerId] of [['Ostlea Estates', ORG_IDS.ostlea], ['Brackwater Estates', ORG_IDS.brackwater]] as const) {
+      const seller = createProject(w, P.priya, { ...NEW_PROJECT, clientName: sellerName })
+      const unknown = createProject(w, P.priya, { ...NEW_PROJECT, clientName: 'sample client' })
+      expect(seller.error).toBeNull()
+      expect(unknown.error).toBeNull()
+      const clientId = seller.world.projects[seller.projectId!]!.clientOrgId
+      expect(clientId).not.toBe(sellerId)
+      expect(w.orgs[clientId]).toBeUndefined()
+      expect(seller.world.orgs[clientId]!.type).toBe('Developer')
+      expect(Object.keys(seller.world.orgs).length).toBe(Object.keys(unknown.world.orgs).length)
+    }
     expect(createProject(w, P.priya, { ...NEW_PROJECT, startDate: DEMO_TODAY }).error).toBeNull()
+  })
+
+  it('validateNewProject reports every field error at once, in form order', () => {
+    const empty = { name: '', clientName: ' ', projectType: null, localAuthority: '', region: '', startDate: '' }
+    expect(validateNewProject(empty)).toEqual([
+      ['name', V1_ERRORS.name],
+      ['clientName', V1_ERRORS.clientName],
+      ['projectType', V1_ERRORS.projectType],
+      ['region', V1_ERRORS.region],
+      ['startDate', V1_ERRORS.badDate],
+    ])
+    expect(validateNewProject({ ...NEW_PROJECT, startDate: '2026-10-06' })).toEqual([['startDate', V1_ERRORS.pastDate]])
+    expect(validateNewProject(NEW_PROJECT)).toEqual([])
   })
 
   it('isIsoDate accepts only real calendar days', () => {
@@ -423,6 +449,17 @@ describe('sharedView', () => {
     const approved = sharedView(must(setOwnerProjectApproval(w1, ORG_IDS.ostlea, SALLOW_ID, true)), P.priya)
     expect(approved.groups[1].cards).toHaveLength(5)
     expect([after.canAccept, after.canSave]).toEqual([true, true])
+  })
+
+  it('says a project is shared with only when an owner has approved it', () => {
+    const w = createSeed()
+    expect(sharedView(w, P.priya).groups.map((g) => [g.project.name, g.hasSharingOwner])).toEqual([
+      ['Merrowgate Wharf', true],
+      ['Sallow Court', false],
+      ['Ferrymoor Yard', false],
+    ])
+    const approved = sharedView(must(setOwnerProjectApproval(w, ORG_IDS.ostlea, SALLOW_ID, true)), P.priya)
+    expect(approved.groups[1].hasSharingOwner).toBe(true)
   })
 
   it('the client sees their own project only; the seller sees no group', () => {

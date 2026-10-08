@@ -6,13 +6,13 @@ import { LABELS } from '../../domain/reference/labels'
 import { Tag } from '../../components/ui'
 
 export function MatchV2() {
-  const { allowed } = useProjectParam()
+  const { allowed, record: project } = useProjectParam()
   const uid = useId()
   if (!allowed) return <NotAvailable />
   return (
-    <div className="mx-auto flex max-w-[860px] flex-col gap-5" data-testid="match-v2">
+    <div className="flex max-w-[1180px] flex-col gap-5" data-testid="match-v2">
       <header>
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Project</p>
+        <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text" data-testid="match-v2-project">{project?.name}</p>
         <h1 className="mt-1 flex items-center gap-3 text-2xl font-semibold leading-tight">
           Match schedule
           <Tag tone="grey" className="text-sm" data-testid="match-v2-tag">
@@ -21,7 +21,7 @@ export function MatchV2() {
         </h1>
       </header>
 
-      <section aria-disabled="true" className="relative overflow-hidden rounded-md border border-dashed border-rule bg-panel/60 px-6 py-8 sm:px-10 sm:py-10" data-testid="match-v2-panel">
+      <section aria-disabled="true" className="relative max-w-[860px] overflow-hidden rounded-md border border-dashed border-rule bg-panel/60 px-6 py-8 sm:px-10 sm:py-10" data-testid="match-v2-panel">
         <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(135deg,transparent_0_14px,rgba(123,138,151,0.06)_14px_15px)]" aria-hidden="true" />
         <div className="relative flex flex-col gap-5 text-mill-text">
           <ScheduleGlyph />

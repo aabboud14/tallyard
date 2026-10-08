@@ -36,6 +36,11 @@ export function MarketCard({ card, canSave, testId, footerExtra }: { card: Marke
           </TagRow>
           <TagRow>
             <SustainabilityBand band={card.band} size="sm" testId={`band-${l.publicId}`} />
+            {l.carbon ? (
+              <span className="text-xs tabular-nums text-ink-soft" data-testid={`card-carbon-${l.publicId}`}>
+                {f.carbon(l.carbon.avoidedT)} avoided
+              </span>
+            ) : null}
             {card.fit ? (
               <Tag tone={fitTone(card.fit.fit)} className="ml-auto" data-testid={`fit-${l.publicId}`} data-fit={card.fit.fit} title={card.fit.text}>
                 {FIT_TAG[card.fit.fit]}

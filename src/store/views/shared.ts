@@ -3,7 +3,8 @@
 import type { PublicListing, World } from '../../domain/types'
 import type { Typology } from '../../domain/v1types'
 import { roleOf, type Role } from '../../domain/access'
-import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
+import { DEFAULT_ASSUMPTIONS as A, parameterRows, type Parameter } from '../../domain/reference/assumptions'
+import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
 import { browseListings } from '../../domain/visibility'
 import { typologyOf } from '../../domain/engines/typology'
 import { ROLE_COPY } from '../../app/workspaces'
@@ -65,4 +66,13 @@ export function landingShowcase(world: World): PublicListing[] {
     if (!picked.includes(l)) picked.push(l)
   }
   return picked.slice(0, 3)
+}
+
+/** Parameters the architect never sees: the negotiation agent works for the client (09 section 13.14, P11). */
+const CLIENT_SIDE_PARAMETERS: ReadonlySet<string> = new Set(['negotiation'])
+
+/** The Assumptions screen's rows for this persona: every parameter, less the client-side ones for the architect. */
+export function assumptionRowsFor(world: World, personaId: string): Parameter[] {
+  const rows = [...parameterRows(), ...V1_PARAMETER_ROWS]
+  return roleOrNull(world, personaId) === 'architect' ? rows.filter((r) => !CLIENT_SIDE_PARAMETERS.has(r.id)) : rows
 }

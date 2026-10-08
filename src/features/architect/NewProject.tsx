@@ -1,9 +1,10 @@
 // New project (brief/09-V1-PRODUCT.md sections 3.3 and 13.6): a short form that calls createProject and opens the
-// new project's wish list. The rules live in createProject; the form shows its message beside the field it concerns.
+// new project's wish list. The rules live in validateNewProject and createProject; the form shows every message beside
+// the field it concerns.
 import { useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useStore } from '../../store/store'
-import { V1_ERRORS } from '../../store/v1actions'
+import { V1_ERRORS, validateNewProject } from '../../store/v1actions'
 import { clientSuggestions, newProjectErrorField, REGION_OPTIONS, type NewProjectField } from '../../store/views/architectProject'
 import type { ProjectType } from '../../domain/v1types'
 import { DEMO_TODAY } from '../../domain/constants'
@@ -26,35 +27,35 @@ export function NewProject() {
   const [localAuthority, setLocalAuthority] = useState('')
   const [region, setRegion] = useState('')
   const [startDate, setStartDate] = useState('')
-  const [error, setError] = useState<{ field: NewProjectField | null; text: string } | null>(null)
+  const [errors, setErrors] = useState<{ field: NewProjectField | null; text: string }[]>([])
   const refs = useRef<Partial<Record<NewProjectField, HTMLElement | null>>>({})
 
-  const fail = (text: string) => {
-    const field = newProjectErrorField(text)
-    setError({ field, text })
-    if (field) refs.current[field]?.focus()
+  const fail = (list: { field: NewProjectField | null; text: string }[]) => {
+    setErrors(list)
+    const first = list.find((e) => e.field)?.field
+    if (first) refs.current[first]?.focus()
   }
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (projectType === null) {
-      // The order matches createProject: name and client are checked before the type.
-      if (!name.trim()) return fail(V1_ERRORS.name)
-      if (!clientName.trim()) return fail(V1_ERRORS.clientName)
-      return fail(V1_ERRORS.projectType)
-    }
+    // Every field error at once; the checks that need the world come from createProject.
+    const invalid = validateNewProject({ name, clientName, projectType, localAuthority, region, startDate })
+    if (invalid.length > 0 || projectType === null) return fail(invalid.map(([field, text]) => ({ field, text })))
     const r = createProject({ name, clientName, projectType, localAuthority, region, startDate })
-    if (r.error || !r.projectId) return fail(r.error ?? V1_ERRORS.noProject)
-    setError(null)
+    if (r.error || !r.projectId) {
+      const text = r.error ?? V1_ERRORS.noProject
+      return fail([{ field: newProjectErrorField(text), text }])
+    }
+    setErrors([])
     navigate(`/projects/${r.projectId}/wishlist`)
   }
 
   const id = (f: NewProjectField) => `${uid}-${f}`
-  const errorFor = (f: NewProjectField) => (error?.field === f ? error.text : null)
+  const errorFor = (f: NewProjectField) => errors.find((e) => e.field === f)?.text ?? null
   const described = (f: NewProjectField, hint: boolean) => [hint ? `${id(f)}-hint` : '', errorFor(f) ? `${id(f)}-error` : ''].filter(Boolean).join(' ') || undefined
 
   return (
-    <div className="mx-auto flex max-w-[720px] flex-col gap-6" data-testid="new-project">
+    <div className="flex max-w-[720px] flex-col gap-6" data-testid="new-project">
       <header>
         <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Projects</p>
         <h1 className="mt-1 text-2xl font-semibold leading-tight">New project</h1>
@@ -62,11 +63,13 @@ export function NewProject() {
       </header>
 
       <form noValidate onSubmit={submit} className="flex flex-col gap-5 rounded-md border border-rule-soft bg-panel px-5 py-6 sm:px-8 sm:py-7" data-testid="new-project-form">
-        {error && error.field === null ? (
-          <p role="alert" className="m-0 rounded-sm border-l-2 border-oxide bg-oxide-tint px-3 py-2 text-sm" data-testid="new-project-error">
-            {error.text}
-          </p>
-        ) : null}
+        {errors
+          .filter((e) => e.field === null)
+          .map((e) => (
+            <p key={e.text} role="alert" className="m-0 rounded-sm border-l-2 border-oxide bg-oxide-tint px-3 py-2 text-sm" data-testid="new-project-error">
+              {e.text}
+            </p>
+          ))}
 
         <Row label="Project name" htmlFor={id('name')} error={errorFor('name')} errorId={`${id('name')}-error`}>
           <input

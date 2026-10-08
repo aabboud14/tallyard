@@ -122,13 +122,18 @@ export function Browse() {
           </Button>
         </div>
       ) : (
-        <CardGrid testId="browse-grid">
-          {v.cards.map((c) => (
-            <li key={c.listing.publicId} className="flex">
-              <MarketCard card={c} canSave={v.canSave} />
-            </li>
-          ))}
-        </CardGrid>
+        <>
+          <CardGrid testId="browse-grid">
+            {v.cards.map((c) => (
+              <li key={c.listing.publicId} className="flex">
+                <MarketCard card={c} canSave={v.canSave} />
+              </li>
+            ))}
+          </CardGrid>
+          <p className="m-0 text-xs text-mill-text" data-testid="label-L37">
+            {LABELS.L37}
+          </p>
+        </>
       )}
 
       <Sheet

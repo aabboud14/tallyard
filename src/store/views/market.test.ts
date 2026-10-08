@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createSeed, FERRYMOOR_ID, MERROWGATE_ID, PERSONA_IDS, SALLOW_ID } from '../../domain/seed/world'
 import { NO_FILTERS } from '../../domain/v1types'
+import { TIMELINE_TEXT } from '../../domain/reference/labels'
 import { acceptProjectTerms, decideWish, saveToWishlist, sendWishlist, V1_ERRORS } from '../v1actions'
 import { browseView, listingDetailView } from '../v1selectors'
 import { anyFilter, FIT_TAG, listingCalc, fitTone, isSavedAnywhere, isSharedLot, moreFilterCount, SAVE_NOTES, saveMenuFor, storageText, stripWindow, typologyCounts } from './market'
@@ -13,6 +14,8 @@ describe('fit words and tones', () => {
     for (const fit of ['now', 'in_time', 'tight', 'late'] as const) {
       expect(FIT_TAG[fit].length).toBeGreaterThan(0)
       expect(FIT_TAG[fit]).not.toMatch(DASHES)
+      // The tag is the start of the fixed phrase (brief 09 section 7), never other wording.
+      expect(TIMELINE_TEXT[fit].startsWith(FIT_TAG[fit])).toBe(true)
     }
     expect(fitTone('now')).toBe('teal')
     expect(fitTone('in_time')).toBe('teal')

@@ -4,7 +4,8 @@ import { NO_FILTERS } from '../v1types'
 import { DEFAULT_ASSUMPTIONS as A } from '../reference/assumptions'
 import { createSeed } from '../seed/world'
 import { browseListings } from '../visibility'
-import { filterListings, filterOptions, nextQuarterStarts, sortListings } from './browse'
+import { filterListings, filterOptions, filterOptionsFor, nextQuarterStarts, sortListings, withTypology } from './browse'
+import { typologyOf } from './typology'
 
 const w = createSeed()
 const open = browseListings(w, A)
@@ -130,5 +131,26 @@ describe('filterOptions', () => {
       { value: '2027-04-01', label: 'Q2 2027' },
       { value: '2027-07-01', label: 'Q3 2027' },
     ])
+  })
+})
+
+describe('typology and family together', () => {
+  const all = browseListings(createSeed(), A)
+
+  it('offers only the families of the chosen typology', () => {
+    const structure = filterOptionsFor(all, 'structure')
+    expect(structure.families.length).toBeGreaterThan(0)
+    for (const id of structure.families) expect(typologyOf(id)).toBe('structure')
+    expect(structure.families).not.toContain('clay_brick')
+    expect(structure.families).not.toContain('curtain_wall')
+    expect(filterOptionsFor(all, null)).toEqual(filterOptions(all))
+    for (const id of structure.families) expect(filterListings(all, { ...NO_FILTERS, typology: 'structure', family: id }).length).toBeGreaterThan(0)
+  })
+
+  it('clears a family outside a newly chosen typology and keeps one inside it', () => {
+    const brick = { ...NO_FILTERS, family: 'clay_brick' as const }
+    expect(withTypology(brick, 'structure')).toEqual({ ...NO_FILTERS, typology: 'structure', family: null })
+    expect(withTypology(brick, 'envelope')).toEqual({ ...NO_FILTERS, typology: 'envelope', family: 'clay_brick' })
+    expect(withTypology(brick, null)).toEqual({ ...NO_FILTERS, typology: null, family: 'clay_brick' })
   })
 })

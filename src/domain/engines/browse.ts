@@ -1,6 +1,6 @@
 // Browse filters, sorts and filter options over public listings (brief/09-V1-PRODUCT.md section 13.9). Pure.
 import type { Condition, FamilyId, PublicListing } from '../types'
-import type { BrowseFilters, BrowseSort } from '../v1types'
+import type { BrowseFilters, BrowseSort, Typology } from '../v1types'
 import { DEMO_TODAY } from '../constants'
 import { addDays, formatQuarter, isOnOrBefore, quarterWindow } from '../dates'
 import { FAMILY_IDS } from '../reference/families'
@@ -70,4 +70,16 @@ export function filterOptions(listings: PublicListing[], today: string = DEMO_TO
   const regions = [...new Set(listings.map((l) => l.location.label))].sort((a, b) => a.localeCompare(b, 'en-GB'))
   const conditions = (['A', 'B', 'C'] as Condition[]).filter((c) => listings.some((l) => l.condition === c))
   return { families, regions, conditions, availability: nextQuarterStarts(today) }
+}
+
+/** Choose a typology: a chosen family outside it is cleared, so the two filters never contradict each other. */
+export function withTypology(f: BrowseFilters, typology: Typology | null): BrowseFilters {
+  const family = f.family !== null && typology !== null && typologyOf(f.family) !== typology ? null : f.family
+  return { ...f, typology, family }
+}
+
+/** The filter options, with the families narrowed to the chosen typology. */
+export function filterOptionsFor(listings: PublicListing[], typology: Typology | null, today: string = DEMO_TODAY): BrowseOptions {
+  const options = filterOptions(listings, today)
+  return typology === null ? options : { ...options, families: options.families.filter((id) => typologyOf(id) === typology) }
 }

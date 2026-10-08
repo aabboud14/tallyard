@@ -54,8 +54,9 @@ function Detail({ v }: { v: ListingDetailView }) {
   const hasPhoto = !!usePublicPhotoSrc(l.photos[0])
   return (
     <article className="flex flex-col gap-8" data-testid="listing-detail">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10">
-        <div className="flex min-w-0 flex-col gap-4">
+      {/* On a phone the name and key figures follow the visual; the drawing comes after them. */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-4">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
           <figure className="m-0 overflow-hidden rounded-md border border-rule-soft bg-panel">
             <div className="aspect-[4/3] w-full [&>*]:h-full [&>*]:w-full">
               <ListingVisual listing={l} testId="listing-visual" className="h-full w-full object-cover" />
@@ -67,16 +68,9 @@ function Detail({ v }: { v: ListingDetailView }) {
             ) : null}
           </figure>
           {l.photos.length > 1 ? <PhotoStrip listing={l} /> : null}
-          <section className="rounded-md border border-rule-soft bg-panel px-4 py-4" aria-label="Dimensioned drawing">
-            <h2 className="m-0 mb-2 text-sm font-semibold">Dimensioned drawing</h2>
-            <div className="flex min-h-[160px] items-center justify-center overflow-x-auto" data-testid="listing-drawing">
-              <ItemDrawing spec={l.spec} box={150} caption={false} />
-            </div>
-            <p className="m-0 mt-2 text-center font-display text-base tracking-wide text-ink-soft">{l.title}</p>
-          </section>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <header className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-1.5">
               <Tag tone="grey">{v.typologyLabel}</Tag>
@@ -133,6 +127,18 @@ function Detail({ v }: { v: ListingDetailView }) {
             <PriceLine listing={l} testPrefix="listing" withCalc />
           </div>
         </div>
+        <section className="min-w-0 rounded-md border border-rule-soft bg-panel px-4 py-4 lg:col-start-1 lg:row-start-2 lg:self-start" aria-label="Dimensioned drawing">
+          <h2 className="m-0 mb-2 text-sm font-semibold">Dimensioned drawing</h2>
+          <div className="flex min-h-[160px] items-center justify-center overflow-x-auto" data-testid="listing-drawing">
+            <ItemDrawing spec={l.spec} box={150} caption={false} />
+          </div>
+          <p className="m-0 mt-2 text-center font-display text-base tracking-wide text-ink-soft">{l.title}</p>
+          {v.geometry.reason ? (
+            <p className="m-0 mt-1 text-center text-xs text-mill-text" data-testid="drawing-reason">
+              {v.geometry.reason}. The outline shows the form only.
+            </p>
+          ) : null}
+        </section>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

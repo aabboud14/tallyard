@@ -26,7 +26,10 @@ export function Match() {
         <Button variant="primary" size="lg" className="text-panel" onClick={() => s.loadSampleSchedule(p.id)} data-testid="load-sample-schedule">
           Load sample schedule
         </Button>
-        <Stub name="Import from a BIM model (IFC or Revit)" would="The real feature would read the member schedule from the model. The CSV import behind the sample schedule is real." testId="stub-bim" />
+        <Stub name="Import from a BIM model (IFC or Revit)" would="The real feature would read the member schedule from the model. The CSV import behind the sample schedule is real." testId="stub-bim" v2 />
+        <span className="text-xs text-mill-text" data-testid="label-L35">
+          {LABELS.L35}
+        </span>
         {p.termsAccepted ? (
           <Tag tone="teal" data-testid="terms-accepted">
             Confidentiality terms accepted

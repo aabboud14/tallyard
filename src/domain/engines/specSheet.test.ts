@@ -58,10 +58,10 @@ describe('listing text helpers (the same output as the marketplace listing view)
     ])
     expect(specFieldRows(L('L-A945G6').spec)).toEqual([
       { label: 'Type', value: 'London stock' },
-      { label: 'Mortar', value: 'lime mortar' },
+      { label: 'Mortar', value: 'Lime mortar' },
     ])
     expect(specFieldRows(L('L-6VWCWH').spec)).toEqual([{ label: 'Panel size', value: '600 by 600 mm' }])
-    expect(specFieldRows(L('L-CJGQP7').spec)).toEqual([{ label: 'Species', value: 'pitch pine' }])
+    expect(specFieldRows(L('L-CJGQP7').spec)).toEqual([{ label: 'Species', value: 'Pitch pine' }])
   })
 })
 
@@ -133,8 +133,13 @@ describe('specSheet', () => {
   })
 
   it('adds the engineer caveat when any item is steel', () => {
-    expect(specSheet(project, [item('L-A945G6', 'approved'), item('L-9F4CQQ', 'pending')]).caveats).toEqual([LABELS.L39, LABELS.L20, LABELS.L4])
-    expect(specSheet(project, [item('L-A945G6', 'approved')]).caveats).toEqual([LABELS.L39, LABELS.L20])
+    expect(specSheet(project, [item('L-A945G6', 'approved'), item('L-9F4CQQ', 'pending')]).caveats).toEqual([LABELS.L39, LABELS.L20, LABELS.L4, LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10])
+    expect(specSheet(project, [item('L-A945G6', 'approved')]).caveats).toEqual([LABELS.L39, LABELS.L20, LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10])
+  })
+
+  it('labels the carbon, band and signal on every sheet with items, and the timeline check only when a fit is shown', () => {
+    const noFit = { listing: L('L-A945G6'), fit: null, status: 'approved' as const }
+    expect(specSheet(project, [noFit]).caveats).toEqual([LABELS.L39, LABELS.L20, LABELS.L11, LABELS.L37, LABELS.L10])
   })
 
   it('puts approved items first, then the rest, each by public ID', () => {

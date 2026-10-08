@@ -9,6 +9,8 @@ import { FolderOpen, Lock } from '../../components/v1'
 import { LABELS } from '../../domain/reference/labels'
 import { formatDate } from '../../domain/dates'
 
+const NOTHING_SHARED_YET = 'No owner has shared lots with this project yet.'
+
 export function Shared() {
   const world = useStore((s) => s.world)
   const personaId = useStore((s) => s.personaId)
@@ -44,10 +46,16 @@ function Group({ group: g, canAccept, canSave }: { group: SharedGroup; canAccept
             </p>
           </div>
         </div>
-        <p className="m-0 flex items-center gap-1.5 text-sm text-ink-soft">
-          <Lock />
-          Shared with this project by the owner, in confidence
-        </p>
+        {g.hasSharingOwner ? (
+          <p className="m-0 flex items-center gap-1.5 text-sm text-ink-soft" data-testid={`shared-claim-${g.project.id}`}>
+            <Lock />
+            Shared with this project by the owner, in confidence
+          </p>
+        ) : (
+          <p className="m-0 text-sm text-mill-text" data-testid={`shared-not-yet-${g.project.id}`}>
+            {NOTHING_SHARED_YET}
+          </p>
+        )}
       </header>
 
       {!g.termsAccepted ? (
@@ -60,7 +68,7 @@ function Group({ group: g, canAccept, canSave }: { group: SharedGroup; canAccept
       ) : g.cards.length === 0 ? (
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-rule px-5 py-5 text-sm text-mill-text" data-testid={`shared-none-${g.project.id}`}>
           <Tag tone="teal">Terms accepted</Tag>
-          No owner has shared lots with this project.
+          {NOTHING_SHARED_YET}
         </div>
       ) : (
         <>
@@ -84,6 +92,10 @@ function Group({ group: g, canAccept, canSave }: { group: SharedGroup; canAccept
               </li>
             ))}
           </CardGrid>
+          <p className="m-0 flex flex-col gap-1 text-xs text-mill-text">
+            <span data-testid="label-L37">{LABELS.L37}</span>
+            <span data-testid="label-L38">{LABELS.L38}</span>
+          </p>
         </>
       )}
     </section>

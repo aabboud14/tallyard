@@ -47,6 +47,7 @@ export function Wishlist() {
   const world = useStore((s) => s.world)
   const personaId = useStore((s) => s.personaId)
   const sendWishlist = useStore((s) => s.sendWishlist)
+  const setBrowseProjectId = useStore((s) => s.setBrowseProjectId)
   const view = useMemo(() => (allowed ? wishlistView(world, personaId, id) : null), [world, personaId, id, allowed])
   const [tab, setTab] = useState<WishTab>('all')
   const [flash, setFlash] = useState<Flash>(null)
@@ -65,7 +66,7 @@ export function Wishlist() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1180px] flex-col gap-6" data-testid="wishlist">
+    <div className="flex max-w-[1180px] flex-col gap-6" data-testid="wishlist">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Wish list</p>
@@ -117,7 +118,7 @@ export function Wishlist() {
         <div className="flex flex-col items-start gap-3">
           <EmptyState hint={TAB_HINTS[tab]} />
           {tab === 'all' ? (
-            <Link to="/market" className="inline-flex min-h-[44px] items-center rounded-sm border border-steel bg-steel px-4 text-sm font-medium text-panel no-underline hover:bg-steel-deep" data-testid="wishlist-browse">
+            <Link to="/market" onClick={() => setBrowseProjectId(p.id)} className="inline-flex min-h-[44px] items-center rounded-sm border border-steel bg-steel px-4 text-sm font-medium text-panel no-underline hover:bg-steel-deep" data-testid="wishlist-browse">
               Browse the marketplace
             </Link>
           ) : null}

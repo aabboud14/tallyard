@@ -53,7 +53,7 @@ function leaves(items: NavItem[]): string[] {
 
 /** Every route the persona can reach in this world, from the rail, the homes and the records behind them. */
 function reachable(world: World, personaId: string): string[] {
-  const out = new Set<string>(['/market', '/assumptions', '/about', '/operator/ledger', '/operator/models', homeFor(world, personaId)])
+  const out = new Set<string>(['/market', '/assumptions', '/about', homeFor(world, personaId)])
   for (const s of railFor(world, personaId)) for (const to of leaves(s.items)) out.add(to)
   for (const p of projectsFor(world, personaId)) {
     out.add(`/projects/${p.id}`)
@@ -108,10 +108,24 @@ describe('every reachable route renders', () => {
   })
 })
 
+describe('operator screens open only for the operator', () => {
+  it('shows "Not available to this role" on the ledger and models to every other persona, after the twelve steps', async () => {
+    await runDemoSteps(1, 12)
+    const world = structuredClone(useStore.getState().world)
+    for (const personaId of PERSONAS.filter((p) => p !== PERSONA_IDS.operator)) {
+      for (const path of ['/operator/ledger', '/operator/models']) {
+        const text = await render(world, personaId, path)
+        expect(text, `${personaId} ${path}`).toContain(NOT_AVAILABLE_TO_ROLE)
+        expect(text, `${personaId} ${path}`).not.toContain('Commission')
+      }
+    }
+  })
+})
+
 describe('P11: no negotiation, mandate, offer or deal on any architect route', () => {
   const BANNED_IDS = ['negotiat', 'mandate', 'buyer-approve', 'offer', 'deal']
   const BANNED_TEXT = ['Negotiation', 'Mandate', 'Deals']
-  const SHARED = new Set(['/assumptions', '/about', '/operator/ledger', '/operator/models'])
+  const SHARED = new Set<string>([])
 
   async function scan(world: World, path: string): Promise<string[]> {
     useStore.setState({ world: structuredClone(world), personaId: PERSONA_IDS.priya })

@@ -12,8 +12,8 @@ import { carbonAvoided, type CarbonResult } from '../../domain/engines/carbon'
 import { guidePrice, type GuidePrice } from '../../domain/engines/pricing'
 import { factorQty } from '../../domain/engines/measures'
 
-/** Short words for the fit tag on a card. The full phrase (TIMELINE_TEXT) stays on the listing and the wish list. */
-export const FIT_TAG: Record<Fit, string> = { now: 'In stock', in_time: 'In time', tight: 'Tight', late: 'Not in time' }
+/** Short words for the fit tag on a card: the start of each fixed phrase (TIMELINE_TEXT), which stays on the listing and the wish list. */
+export const FIT_TAG: Record<Fit, string> = { now: 'Available now', in_time: 'Available in time', tight: 'Tight', late: 'Not available in time' }
 
 export type Tone = 'teal' | 'survey' | 'oxide'
 

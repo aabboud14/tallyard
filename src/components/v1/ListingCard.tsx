@@ -32,7 +32,7 @@ export function ListingCard({ to, visual, title, tags, facts, footer, testId, cl
             {facts.map((f, i) => (
               <div key={i} className="flex min-w-0 flex-col">
                 <dt className="text-xs text-mill-text">{f.label}</dt>
-                <dd className="m-0 truncate font-medium tabular-nums text-ink" data-testid={f.testId}>
+                <dd className="m-0 break-words font-medium tabular-nums text-ink" data-testid={f.testId}>
                   {f.value}
                 </dd>
               </div>

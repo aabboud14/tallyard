@@ -339,6 +339,11 @@ function DecidedRow({ row }: { row: ApprovalRow }) {
               {item.decisionNote}
             </p>
           ) : null}
+          {approved && l.family !== 'steel_section' ? (
+            <p className="m-0 text-xs text-mill-text" data-testid="label-L25">
+              {LABELS.L25}
+            </p>
+          ) : null}
         </div>
       </div>
     </li>

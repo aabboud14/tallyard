@@ -3,11 +3,15 @@ import { Dialog } from 'radix-ui'
 import { Button } from './ui'
 import { LABELS } from '../domain/reference/labels'
 
-export function Stub({ name, would, testId }: { name: string; would: string; testId: string }) {
+/** The trigger is greyed and dashed so it never reads as a live feature; it opens only the explanation. `v2` adds the V2 tag. */
+export function Stub({ name, would, testId, v2 = false }: { name: string; would: string; testId: string; v2?: boolean }) {
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <Button data-testid={testId}>{name}</Button>
+        <Button data-testid={testId} className="gap-2 border-dashed border-mill! bg-paper! text-mill-text! hover:bg-rule-soft!">
+          {name}
+          {v2 ? <span className="rounded-sm border border-mill px-1 font-display text-xs leading-tight tracking-wide text-mill-text">V2</span> : null}
+        </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40" />

@@ -113,7 +113,8 @@ const harrowden: SourceBuilding = {
 
 type HcRow = { id: string; tag: string; publicId: string; spec: Spec; quantity: Quantity; condition: Condition; recoverability: Recoverability; location: string }
 
-const HARROWDEN_AVAILABLE_FROM = '2027-07-05'
+// Expected availability August 2027 (09 section 8), stored as the first of the month (5.1).
+const HARROWDEN_AVAILABLE_FROM = '2027-08-01'
 
 const hcRows: HcRow[] = [
   { id: 'itm_v3gk7p', tag: 'HC-01', publicId: 'L-K3TB7D', spec: { family: 'steel_section', designation: 'UB 356x171x51', lengthM: 6.0 }, quantity: { kind: 'pieces', pieces: 40 }, condition: 'B', recoverability: 'B', location: 'Floor beams, levels 1 to 4' },

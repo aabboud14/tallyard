@@ -102,20 +102,21 @@ export function Note({ children, tone = 'grey', className, testId }: { children:
   )
 }
 
-/** The fixed label for every rule-based step (L2). */
-export function RuleBased({ testId }: { testId?: string }) {
+/** The fixed label for every rule-based step (L2): a quiet footnote, never a banner (09 section 1, principle 1). */
+export function RuleBased({ testId, className }: { testId?: string; className?: string }) {
   return (
-    <Note tone="survey" testId={testId}>
+    <p className={cx('m-0 text-xs text-mill-text', className)} data-testid={testId}>
       {LABELS.L2}
-    </Note>
+    </p>
   )
 }
 
-export function SimulatedAgent({ testId }: { testId?: string }) {
+/** The fixed label for a simulated agent (L3), as a quiet footnote. */
+export function SimulatedAgent({ testId, className }: { testId?: string; className?: string }) {
   return (
-    <Note tone="survey" testId={testId}>
+    <p className={cx('m-0 text-xs text-mill-text', className)} data-testid={testId}>
       {LABELS.L3}
-    </Note>
+    </p>
   )
 }
 

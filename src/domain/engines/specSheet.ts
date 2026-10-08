@@ -24,7 +24,12 @@ export function priceRangeText(l: PublicListing): string {
   return `${f.priceOnly(l.price.low, l.family)} to ${f.unitPrice(l.price.high, l.family)}`
 }
 
-/** The recorded fields of a spec, labelled for display. */
+/** A free-text record value in sentence case: the first letter capitalised, the rest as recorded. */
+function sentence(v: string): string {
+  return v.charAt(0).toUpperCase() + v.slice(1)
+}
+
+/** The recorded fields of a spec, labelled for display. Free-text values read in sentence case. */
 export function specFieldRows(s: Spec): { label: string; value: string }[] {
   switch (s.family) {
     case 'steel_section':
@@ -34,25 +39,25 @@ export function specFieldRows(s: Spec): { label: string; value: string }[] {
       ]
     case 'curtain_wall':
       return [
-        { label: 'System', value: s.system },
+        { label: 'System', value: sentence(s.system) },
         { label: 'Panel', value: `${s.panelWidthM} m by ${s.panelHeightM} m` },
       ]
     case 'precast_cladding':
       return [{ label: 'Thickness', value: `${s.thicknessMm} mm` }]
     case 'stone_cladding':
       return [
-        { label: 'Stone', value: s.stone },
+        { label: 'Stone', value: sentence(s.stone) },
         { label: 'Thickness', value: `${s.thicknessMm} mm` },
       ]
     case 'clay_brick':
       return [
-        { label: 'Type', value: s.brickType },
-        { label: 'Mortar', value: s.mortar },
+        { label: 'Type', value: sentence(s.brickType) },
+        { label: 'Mortar', value: sentence(s.mortar) },
       ]
     case 'raised_floor':
       return [{ label: 'Panel size', value: `${s.panelSize} mm` }]
     case 'timber_joist':
-      return [{ label: 'Species', value: s.species }]
+      return [{ label: 'Species', value: sentence(s.species) }]
   }
 }
 
@@ -111,6 +116,12 @@ export function specSheet(project: SpecSheetProject, items: SpecSheetItem[]): Sp
   const blocks: SpecBlock[] = sorted.map((i) => ({ publicId: i.listing.publicId, title: i.listing.title, status: i.status, rows: specSheetRows(i.listing, i.fit) }))
   const caveats: string[] = [LABELS.L39, LABELS.L20]
   if (kept.some((i) => i.listing.family === 'steel_section')) caveats.push(LABELS.L4)
+  // R4: every block shows avoided carbon, the band and the market signal, so their labels travel with the sheet.
+  if (kept.length > 0) {
+    caveats.push(LABELS.L11, LABELS.L37)
+    if (kept.some((i) => i.fit !== null)) caveats.push(LABELS.L38)
+    caveats.push(LABELS.L10)
+  }
   return {
     title: `Specification schedule, ${project.name}`,
     projectLine: `${project.typeLabel} project. Materials needed on site from ${formatDate(project.startDate)}.`,

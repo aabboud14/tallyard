@@ -9,7 +9,7 @@ import { formatDate } from '../domain/dates'
 import { buildingsFor, clientsFor, engagementsFor, projectsFor, roleOf, type Role } from '../domain/access'
 import { browseListings, listingFor } from '../domain/visibility'
 import { toBlindBuyer, blindBuyerText } from '../domain/privacy/blindBuyer'
-import { filterListings, filterOptions, sortListings, type BrowseOptions } from '../domain/engines/browse'
+import { filterListings, filterOptionsFor, sortListings, type BrowseOptions } from '../domain/engines/browse'
 import { sustainabilityBand } from '../domain/engines/band'
 import { typologyOf } from '../domain/engines/typology'
 import { timelineFit } from '../domain/engines/timeline'
@@ -152,7 +152,7 @@ export function browseView(world: World, personaId: string, filters: BrowseFilte
   return {
     cards: shown.map((l) => ({ ...facts(l, project), savedIn: savedInLists(world, personaId, l.publicId) })),
     total: all.length,
-    filterOptions: filterOptions(all),
+    filterOptions: filterOptionsFor(all, filters.typology),
     project: project ? projectRef(project) : null,
     projects: projects.map(projectRef),
     sort: applied,
@@ -163,7 +163,13 @@ export function browseView(world: World, personaId: string, filters: BrowseFilte
 
 // ---------- Shared with you ----------
 
-export type SharedGroup = { project: ProjectRef; termsAccepted: boolean; cards: BrowseCard[] }
+export type SharedGroup = {
+  project: ProjectRef
+  termsAccepted: boolean
+  /** Whether any owner has approved this project for private sharing. The group says it is shared only when true. */
+  hasSharingOwner: boolean
+  cards: BrowseCard[]
+}
 
 export type SharedView = { groups: SharedGroup[]; canAccept: boolean; canSave: boolean }
 
@@ -179,7 +185,7 @@ export function sharedView(world: World, personaId: string): SharedView {
         .sort((x, y) => (x.publicId < y.publicId ? -1 : x.publicId > y.publicId ? 1 : 0))
       for (const l of listings) cards.push({ ...facts(l, p), savedIn: savedInLists(world, personaId, l.publicId) })
     }
-    return { project: projectRef(p), termsAccepted: p.termsAccepted, cards }
+    return { project: projectRef(p), termsAccepted: p.termsAccepted, hasSharingOwner: p.approvedByOwnerOrgIds.length > 0, cards }
   })
   const role = roleOrNull(world, personaId)
   return { groups, canAccept: role === 'architect' || role === 'client', canSave: role === 'architect' }

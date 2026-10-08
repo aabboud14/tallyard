@@ -33,8 +33,6 @@ export function Priority() {
         <Figure label="Held by the top three" value={f.percent(r.topThreeShare)} testId="priority-top-three" sub="of the recoverable net value" size="lg" />
       </div>
 
-      <RuleBased testId="label-L2" />
-
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_17rem]">
         {r.rows.length === 0 ? (
           <EmptyState hint="Capture items to rank them here." />
@@ -94,6 +92,7 @@ export function Priority() {
         )}
         <Legend steps={v.legend} />
       </div>
+      <RuleBased testId="label-L2" />
     </div>
   )
 }

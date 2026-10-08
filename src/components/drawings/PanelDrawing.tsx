@@ -1,7 +1,8 @@
 // Simple dimensioned drawings for panels, stone, bricks, floor panels and joists.
 import type { Spec } from '../../domain/types'
 
-type Dims = { wLabel: string; hLabel: string; ratio: number; label: string }
+/** `recorded` is false when the record holds no size: the outline then carries no dimensions (timber joists). */
+type Dims = { wLabel: string; hLabel: string; ratio: number; label: string; recorded?: false }
 
 function dimsFor(spec: Spec): Dims {
   switch (spec.family) {
@@ -16,14 +17,15 @@ function dimsFor(spec: Spec): Dims {
     case 'raised_floor':
       return { wLabel: '600 mm', hLabel: '600 mm', ratio: 1, label: 'Panel' }
     case 'timber_joist':
-      return { wLabel: '50 mm', hLabel: '200 mm', ratio: 200 / 50, label: 'Joist section' }
+      return { wLabel: '', hLabel: '', ratio: 3, label: 'Joist section, size not recorded', recorded: false }
     case 'steel_section':
       return { wLabel: '', hLabel: '', ratio: 1, label: '' }
   }
 }
 
-export function PanelDrawing({ spec, box = 110, caption, dims = true, className }: { spec: Spec; box?: number; caption?: string; dims?: boolean; className?: string }) {
+export function PanelDrawing({ spec, box = 110, caption, dims: wantDims = true, className }: { spec: Spec; box?: number; caption?: string; dims?: boolean; className?: string }) {
   const d = dimsFor(spec)
+  const dims = wantDims && d.recorded !== false
   const ratio = Math.max(0.12, Math.min(3.5, d.ratio))
   const w = ratio >= 1 ? box / ratio : box
   const h = ratio >= 1 ? box : box * ratio
@@ -36,7 +38,7 @@ export function PanelDrawing({ spec, box = 110, caption, dims = true, className 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className={className} role="img" aria-label={`Drawing of ${caption ?? d.label}`}>
       <g transform={`translate(${padL} ${top})`}>
-        <rect x={0} y={0} width={w} height={h} fill="#E4EDF4" stroke="#2C5E86" strokeWidth="1.5" />
+        <rect x={0} y={0} width={w} height={h} fill="#E4EDF4" stroke="#2C5E86" strokeWidth="1.5" strokeDasharray={d.recorded === false ? '5 3' : undefined} />
         {spec.family === 'raised_floor' ? <rect x={w * 0.15} y={h * 0.15} width={w * 0.7} height={h * 0.7} fill="none" stroke="#2C5E86" strokeWidth="0.75" strokeDasharray="3 2" /> : null}
         {dims ? (
         <>

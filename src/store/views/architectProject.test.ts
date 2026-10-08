@@ -127,7 +127,7 @@ describe('spec sheet helpers', () => {
     const identity = blockSections(sheet.blocks[0], SPEC_HEADING_LABELS)[0]
     expect(identity.section).toBe('Identity')
     expect(identity.rows.map((r) => r.label)).toEqual(['Typology', 'Family'])
-    expect(sheet.caveats.map(caveatLabelId)).toEqual(['L39', 'L20', 'L4'])
+    expect(sheet.caveats.map(caveatLabelId)).toEqual(['L39', 'L20', 'L4', 'L11', 'L37', 'L38', 'L10'])
     expect(caveatLabelId(LABELS.L20)).toBe('L20')
     expect(caveatLabelId('Something else')).toBeNull()
   })

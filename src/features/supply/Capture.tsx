@@ -162,7 +162,6 @@ function CaptureForm({ building }: { building: SourceBuilding }) {
         </Button>
         <Stub name="Recognise materials from a photo" would="The real feature would read a site photo and propose the family, section and count for the surveyor to confirm." testId="stub-photo" />
       </div>
-      <RuleBased testId="label-L2" />
       {assist ? (
         <div className="rounded-sm border border-rule bg-panel p-3 text-sm" data-testid="assist-evidence">
           <div className="mb-1 font-medium">Assist evidence</div>
@@ -181,6 +180,7 @@ function CaptureForm({ building }: { building: SourceBuilding }) {
           {assist.missing.length ? <p className="mt-1 text-oxide">Not filled: {assist.missing.map((m) => FIELD_LABELS[m] ?? m).join(', ')}. Assist never guesses silently.</p> : null}
         </div>
       ) : null}
+      <RuleBased testId="label-L2" className="-mt-2" />
       <Field label="Photo" htmlFor="capture-photo" hint="Re-encoded through a canvas on capture, so embedded metadata never reaches the store. Private until ticked public.">
         <input id="capture-photo" type="file" accept="image/*" capture="environment" className="min-h-[44px] w-full text-base" onChange={(e) => onPhoto(e.target.files?.[0])} data-testid="capture-photo" />
       </Field>

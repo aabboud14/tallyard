@@ -1,7 +1,8 @@
 // Assumptions (04 section 5.7): read-only grouped tables of every parameter in 06 section A2,
 // with value, unit, source and status.
-import { parameterRows, type Parameter } from '../../domain/reference/assumptions'
-import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
+import type { Parameter } from '../../domain/reference/assumptions'
+import { useStore } from '../../store/store'
+import { assumptionRowsFor } from '../../store/views/shared'
 import { PageTitle, Panel, Table, Tag } from '../../components/ui'
 import type { ReferenceStatus } from '../../domain/types'
 
@@ -26,7 +27,9 @@ function groupRows(rows: Parameter[]): { group: string; rows: Parameter[] }[] {
 }
 
 export function Assumptions() {
-  const groups = groupRows([...parameterRows(), ...V1_PARAMETER_ROWS])
+  const world = useStore((s) => s.world)
+  const personaId = useStore((s) => s.personaId)
+  const groups = groupRows(assumptionRowsFor(world, personaId))
   return (
     <>
       <PageTitle title="Assumptions" sub="Every factor, price, fee, target and weight the prototype uses. Read-only in this run. Distances on the building, hub and project records are record data and are not shown here. The region distances below apply only to projects created in the tool." />
