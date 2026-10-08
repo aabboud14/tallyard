@@ -1,7 +1,7 @@
 import { test, expect, open, go, setPersona, setUpTo, resetDemo, mainText, expectNoHorizontalScroll, assertRoute } from './helpers'
 import ExcelJS from 'exceljs'
 import path from 'node:path'
-import { createSeed, itemByTag, TIVERNE_ID, MERROWGATE_ID } from '../src/domain/seed/world'
+import { createSeed, itemByTag, TIVERNE_ID, MERROWGATE_ID, DURNLEY_ID } from '../src/domain/seed/world'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../src/domain/privacy/privateStrings'
 import { dateFormats } from '../src/domain/dates'
 import { LABELS } from '../src/domain/reference/labels'
@@ -47,7 +47,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   // Step 1. Capture on site (Dana, 390 px)
   await page.setViewportSize({ width: 390, height: 844 })
   await setPersona(page, P.dana)
-  await go(page, '/supply/capture')
+  await go(page, `/buildings/${TIVERNE_ID}/capture`)
   assertRoute(page)
   await label(page, 'L8')
   await page.getByTestId('capture-text').fill('30 no. 203x203x46 UC, 3.2m long, bolted, roof plant room')
@@ -82,7 +82,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   // Step 2. Decide what to recover (Tom)
   await page.setViewportSize({ width: 1440, height: 900 })
   await setPersona(page, P.tom)
-  await go(page, '/supply/priority')
+  await go(page, `/buildings/${TIVERNE_ID}/priority`)
   assertRoute(page)
   await expect(page.locator('[data-testid^="priority-row-"]')).toHaveCount(12)
   await expect(page.getByTestId('priority-tag-text-1')).toHaveText('TH-02')
@@ -103,7 +103,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await page.keyboard.press('Escape')
 
   // Step 3. Publish without leaking (Tom)
-  await go(page, '/supply/listings')
+  await go(page, `/buildings/${TIVERNE_ID}/listings`)
   assertRoute(page)
   await expect(page.locator('[data-testid^="lot-visibility-"]').filter({ hasText: 'Private matching only' })).toHaveCount(5)
   await page.getByTestId('select-lot-TH-01').click()
@@ -173,7 +173,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
 
   // Step 5. Match a schedule (Isla, the client)
   await setPersona(page, P.isla)
-  await go(page, '/project/match')
+  await go(page, `/projects/${MERROWGATE_ID}/match`)
   assertRoute(page)
   await page.getByTestId('load-sample-schedule').click()
   await expect(page.getByTestId('match-lines')).toHaveText('6 lines, 102 members')
@@ -201,7 +201,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await expect(page.getByText('The reuse plan has 1 item.')).toBeVisible()
 
   // Step 6. Bridge the gap (Isla)
-  await go(page, '/project/plan')
+  await go(page, `/projects/${MERROWGATE_ID}/plan`)
   assertRoute(page)
   await expect(page.getByTestId('package-route')).toHaveText('Via storage hub')
   await expect(page.getByTestId('package-facility')).toHaveText('Open yard, Tilbury')
@@ -243,7 +243,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
 
   // Step 8. Seller approves (Tom, then Isla)
   await setPersona(page, P.tom)
-  await go(page, '/supply/offers')
+  await go(page, '/offers')
   assertRoute(page)
   await expect(page.getByTestId('offer-buyer')).toHaveText('Design team, commercial project, Inner London East, needed by Q2 2028')
   await expect(page.getByTestId('offer-price')).toHaveText('£740 per tonne for 48 pieces (24.16 t)')
@@ -268,7 +268,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
     expect(text).not.toContain('21,227.74')
   }
   await setPersona(page, P.isla)
-  await go(page, '/project/deals')
+  await go(page, `/projects/${MERROWGATE_ID}/deals`)
   assertRoute(page)
   await expect(page.getByTestId('buyer-deal-status')).toHaveText('Confirmed')
   await expect(page.getByTestId('buyer-deal-seller')).toHaveText('Ostlea Estates')
@@ -288,7 +288,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await expect(page.getByTestId('browse-card-L-9F4CQQ')).toHaveCount(0)
 
   // Step 9. Logistics (Isla)
-  await go(page, '/project/deals')
+  await go(page, `/projects/${MERROWGATE_ID}/deals`)
   await page.getByTestId('arrange-delivery').click()
   await label(page, 'L3')
   await expect(page.getByTestId('quote-Haulier-A')).toContainText("Haulier A£235.803 days' notice")
@@ -308,7 +308,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
 
   // Step 10. Prove it (Marcus)
   await setPersona(page, P.marcus)
-  await go(page, '/compliance/project')
+  await go(page, `/projects/${MERROWGATE_ID}/compliance`)
   assertRoute(page)
   await expect(page.getByTestId('content-secured')).toHaveText('Reused and recycled content by value: 20.06% secured')
   await expect(page.getByTestId('content-aim')).toHaveText('Aim: at least 20%')
@@ -361,7 +361,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
 
   // Step 11. Ingest a demolition bill (Marcus)
-  await go(page, '/compliance/waste')
+  await go(page, `/engagements/${DURNLEY_ID}/waste`)
   assertRoute(page)
   await page.getByTestId('load-sample-bill').click()
   await label(page, 'L2')
@@ -441,29 +441,29 @@ test('labels off the demo path, P5b, and the three stubs', async ({ page, entry 
   await label(page, 'L25')
   // L27 and L24: after the terms, a shared lot reached from the client's matcher, and a plan item for another seller.
   await setPersona(page, P.isla)
-  await go(page, '/project/match')
+  await go(page, `/projects/${MERROWGATE_ID}/match`)
   await page.getByTestId('load-sample-schedule').click()
   await page.getByTestId('open-terms').click()
   await page.getByTestId('accept-terms').click()
   await page.getByTestId('alloc-link-R2-L-WPX5A6').click()
   await expect(page.locator('main')).toContainText(LABELS.L27)
   await expectNoLotPrivate(page)
-  await go(page, '/project/match')
+  await go(page, `/projects/${MERROWGATE_ID}/match`)
   await page.getByTestId('add-to-plan-R1-L-NHZ32R').click()
-  await go(page, '/project/plan')
+  await go(page, `/projects/${MERROWGATE_ID}/plan`)
   await label(page, 'L24')
   // Stubs: L33 in each panel.
-  await go(page, '/project/match')
+  await go(page, `/projects/${MERROWGATE_ID}/match`)
   await page.getByTestId('stub-bim').click()
   await expect(page.getByTestId('stub-bim-label')).toHaveText(LABELS.L33)
   await page.keyboard.press('Escape')
   await setPersona(page, P.dana)
-  await go(page, '/supply/capture')
+  await go(page, `/buildings/${TIVERNE_ID}/capture`)
   await page.getByTestId('stub-photo').click()
   await expect(page.getByTestId('stub-photo-label')).toHaveText(LABELS.L33)
   await page.keyboard.press('Escape')
   await setPersona(page, P.marcus)
-  await go(page, '/compliance/waste')
+  await go(page, `/engagements/${DURNLEY_ID}/waste`)
   await page.getByTestId('stub-pdf').click()
   await expect(page.getByTestId('stub-pdf-label')).toHaveText(LABELS.L33)
   await page.keyboard.press('Escape')
@@ -483,9 +483,9 @@ test('layout at 1024 and 1440 after the full demo, and reset removes only this a
   await page.evaluate(() => localStorage.setItem('other-app', 'kept'))
   await setUpTo(page, 12)
   const screens: [string, string][] = [
-    [P.tom, '/supply/inventory'], [P.tom, '/supply/inventory/itm_7fk2qa'], [P.tom, '/supply/priority'], [P.tom, '/supply/listings'], [P.tom, '/supply/offers'],
-    [P.priya, '/market'], [P.priya, '/market/L-NHZ32R'], [P.isla, '/project/match'], [P.isla, '/project/plan'], [P.isla, '/project/deals'],
-    [P.marcus, '/compliance/project'], [P.marcus, '/compliance/waste'], [P.operator, '/operator/ledger'], [P.operator, '/operator/models'], [P.operator, '/assumptions'], [P.operator, '/about'],
+    [P.tom, `/buildings/${TIVERNE_ID}/inventory`], [P.tom, `/buildings/${TIVERNE_ID}/inventory/itm_7fk2qa`], [P.tom, `/buildings/${TIVERNE_ID}/priority`], [P.tom, `/buildings/${TIVERNE_ID}/listings`], [P.tom, '/offers'],
+    [P.priya, '/market'], [P.priya, '/market/L-NHZ32R'], [P.isla, `/projects/${MERROWGATE_ID}/match`], [P.isla, `/projects/${MERROWGATE_ID}/plan`], [P.isla, `/projects/${MERROWGATE_ID}/deals`],
+    [P.marcus, `/projects/${MERROWGATE_ID}/compliance`], [P.marcus, `/engagements/${DURNLEY_ID}/waste`], [P.operator, '/operator/ledger'], [P.operator, '/operator/models'], [P.operator, '/assumptions'], [P.operator, '/about'],
   ]
   for (const width of [1024, 1440]) {
     await page.setViewportSize({ width, height: 900 })
@@ -504,7 +504,7 @@ test('layout at 1024 and 1440 after the full demo, and reset removes only this a
   const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name))
   expect(dbs).not.toContain('tallyard-v05-photos')
   await setPersona(page, P.tom)
-  await go(page, '/supply/inventory')
+  await go(page, `/buildings/${TIVERNE_ID}/inventory`)
   await expect(page.getByTestId('inventory-row-TH-12')).toHaveCount(0)
   await expect(page.getByTestId('inventory-row-TH-11')).toBeVisible()
 })

@@ -2,7 +2,7 @@
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { buyerDeals, buyerDealView } from '../../store/selectors'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { useProjectParam, NotAvailable } from '../../app/params'
 import { PageTitle, Panel, Table, Num, Tag, Button, Note, Dl, EmptyState, SimulatedAgent } from '../../components/ui'
 import { LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
@@ -10,10 +10,12 @@ import * as f from '../../domain/format'
 export function Deals() {
   const world = useWorld()
   const s = useStore()
-  const deals = buyerDeals(world, MERROWGATE_ID)
+  const { record: p } = useProjectParam()
+  if (!p) return <NotAvailable />
+  const deals = buyerDeals(world, p.id)
   return (
     <>
-      <PageTitle title="Deals, Merrowgate Wharf" sub="Your half of each deal. The seller's costs and dates stay with the seller." />
+      <PageTitle title={`Deals, ${p.name}`} sub="Your half of each deal. The seller's costs and dates stay with the seller." />
       {deals.length === 0 ? (
         <EmptyState hint="A deal appears here once the seller approves your offer." />
       ) : (

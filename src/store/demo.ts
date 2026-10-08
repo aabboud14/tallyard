@@ -12,17 +12,17 @@ import { captureInputFromAssist } from './capture'
 export type DemoStep = { n: number; title: string; line: string; personaId: string; route: string; width?: number }
 
 export const DEMO_STEPS: DemoStep[] = [
-  { n: 1, title: 'Capture on site', line: 'Dana types a description, Assist fills the fields, she adds a photo and saves TH-12.', personaId: PERSONA_IDS.dana, route: '/supply/capture', width: 390 },
-  { n: 2, title: 'Decide what to recover', line: 'Tom reads the ranked list and opens the score for the first row.', personaId: PERSONA_IDS.tom, route: '/supply/priority' },
-  { n: 3, title: 'Publish without leaking', line: 'Tom watches the disclosure score, resets to defaults and publishes TH-01 to the open marketplace.', personaId: PERSONA_IDS.tom, route: '/supply/listings' },
+  { n: 1, title: 'Capture on site', line: 'Dana types a description, Assist fills the fields, she adds a photo and saves TH-12.', personaId: PERSONA_IDS.dana, route: `/buildings/${TIVERNE_ID}/capture`, width: 390 },
+  { n: 2, title: 'Decide what to recover', line: 'Tom reads the ranked list and opens the score for the first row.', personaId: PERSONA_IDS.tom, route: `/buildings/${TIVERNE_ID}/priority` },
+  { n: 3, title: 'Publish without leaking', line: 'Tom watches the disclosure score, resets to defaults and publishes TH-01 to the open marketplace.', personaId: PERSONA_IDS.tom, route: `/buildings/${TIVERNE_ID}/listings` },
   { n: 4, title: 'Find it', line: 'Priya browses and opens listing L-9F4CQQ.', personaId: PERSONA_IDS.priya, route: '/market' },
-  { n: 5, title: 'Match a schedule', line: 'Isla loads the sample schedule, accepts the confidentiality terms and adds the L-9F4CQQ allocation to the plan.', personaId: PERSONA_IDS.isla, route: '/project/match' },
-  { n: 6, title: 'Bridge the gap', line: 'Isla reads the storage, testing and transport package for the plan item.', personaId: PERSONA_IDS.isla, route: '/project/plan' },
-  { n: 7, title: 'Negotiate through an agent', line: 'Isla starts the negotiation agent with the suggested mandate and approves the outcome.', personaId: PERSONA_IDS.isla, route: '/project/plan' },
-  { n: 8, title: 'Seller approves', line: 'Tom approves the blind offer; both sides see the confirmed deal.', personaId: PERSONA_IDS.tom, route: '/supply/offers' },
-  { n: 9, title: 'Logistics', line: 'Isla arranges delivery through the logistics agent and approves the booking.', personaId: PERSONA_IDS.isla, route: '/project/deals' },
-  { n: 10, title: 'Prove it', line: 'Marcus reads the project compliance dashboard, exports the workbook and prints.', personaId: PERSONA_IDS.marcus, route: '/compliance/project' },
-  { n: 11, title: 'Ingest a demolition bill', line: 'Marcus loads the sample bill, reviews one row and exports the waste and reuse workbook.', personaId: PERSONA_IDS.marcus, route: '/compliance/waste' },
+  { n: 5, title: 'Match a schedule', line: 'Isla loads the sample schedule, accepts the confidentiality terms and adds the L-9F4CQQ allocation to the plan.', personaId: PERSONA_IDS.isla, route: `/projects/${MERROWGATE_ID}/match` },
+  { n: 6, title: 'Bridge the gap', line: 'Isla reads the storage, testing and transport package for the plan item.', personaId: PERSONA_IDS.isla, route: `/projects/${MERROWGATE_ID}/plan` },
+  { n: 7, title: 'Negotiate through an agent', line: 'Isla starts the negotiation agent with the suggested mandate and approves the outcome.', personaId: PERSONA_IDS.isla, route: `/projects/${MERROWGATE_ID}/plan` },
+  { n: 8, title: 'Seller approves', line: 'Tom approves the blind offer; both sides see the confirmed deal.', personaId: PERSONA_IDS.tom, route: '/offers' },
+  { n: 9, title: 'Logistics', line: 'Isla arranges delivery through the logistics agent and approves the booking.', personaId: PERSONA_IDS.isla, route: `/projects/${MERROWGATE_ID}/deals` },
+  { n: 10, title: 'Prove it', line: 'Marcus reads the project compliance dashboard, exports the workbook and prints.', personaId: PERSONA_IDS.marcus, route: `/projects/${MERROWGATE_ID}/compliance` },
+  { n: 11, title: 'Ingest a demolition bill', line: 'Marcus loads the sample bill, reviews one row and exports the waste and reuse workbook.', personaId: PERSONA_IDS.marcus, route: `/engagements/${DURNLEY_ID}/waste` },
   { n: 12, title: 'Run the platform', line: 'The operator reads the ledger and the model comparison for the deal.', personaId: PERSONA_IDS.operator, route: '/operator/ledger' },
 ]
 

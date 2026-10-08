@@ -1,8 +1,7 @@
 import { Link, useParams } from 'react-router'
 import { useWorld, usePersona } from '../shared/hooks'
-import { listingForProject } from '../../store/selectors'
-import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
-import { MERROWGATE_ID, PERSONA_IDS } from '../../domain/seed/world'
+import { useStore } from '../../store/store'
+import { listingDetailView } from '../../store/v1selectors'
 import { PageTitle, Note } from '../../components/ui'
 import { LABELS } from '../../domain/reference/labels'
 import { ListingView } from './ListingView'
@@ -11,9 +10,9 @@ export function Listing() {
   const { publicId } = useParams()
   const world = useWorld()
   const { persona } = usePersona()
-  // Until the project picker lands, the architect and the client of Merrowgate Wharf see its shared lots (terms count for the project).
-  const project = persona.id === PERSONA_IDS.priya || persona.id === PERSONA_IDS.isla ? world.projects[MERROWGATE_ID] : null
-  const listing = publicId ? listingForProject(world, project, publicId, A) : null
+  const browseProjectId = useStore((s) => s.browseProjectId)
+  // Open lots for everyone; a shared lot when one of the persona's projects can see it (terms count for the project).
+  const listing = publicId ? (listingDetailView(world, persona.id, publicId, browseProjectId)?.listing ?? null) : null
   return (
     <>
       <PageTitle

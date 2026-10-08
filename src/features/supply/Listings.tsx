@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { buildingItems, itemView, disclosureFor, previewListing, approvedProjectsBlind } from '../../store/selectors'
-import { TIVERNE_ID, ORG_IDS } from '../../domain/seed/world'
+import { useBuildingParam, NotAvailable } from '../../app/params'
 import { PageTitle, Panel, Table, Num, Tag, Button, Dl, Private, Note, Field, selectClass, inputClass } from '../../components/ui'
 import { ListingView } from '../market/ListingView'
 import { PhotoThumb, HoldingLine } from './ItemDetail'
@@ -16,8 +16,8 @@ import { ticksOf } from '../../domain/money'
 export function Listings() {
   const world = useWorld()
   const s = useStore()
-  const building = world.buildings[TIVERNE_ID]
-  const items = buildingItems(world, TIVERNE_ID)
+  const { id: buildingId, record: building } = useBuildingParam()
+  const items = building ? buildingItems(world, buildingId) : []
   const [selectedId, setSelectedId] = useState<string>(items[0]?.id ?? '')
   const selected = world.items[selectedId] ? itemView(world, selectedId) : null
   const [visibility, setVisibility] = useState<'open' | 'matched_only'>('matched_only')
@@ -33,10 +33,11 @@ export function Listings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, selected?.lot.visibility])
 
+  if (!building) return <NotAvailable />
   if (!selected) return <PageTitle title="Listings and privacy" />
   const fam = FAMILIES[selected.item.family]
   const pending = { lotId: selected.lot.id, visibility }
-  const disclosure = disclosureFor(world, TIVERNE_ID, pending)
+  const disclosure = disclosureFor(world, buildingId, pending)
   const preview = previewListing(world, selected.lot.id, visibility)
   const askN = Number(ask)
   const reserveN = Number(reserve)
@@ -45,23 +46,23 @@ export function Listings() {
   const blocked = visibility === 'open' && disclosure.blocksPublishing
   const alreadyPublished = selected.lot.visibility !== 'private'
   const canPublish = pricesValid && !blocked && !alreadyPublished
-  const blindBuyers = approvedProjectsBlind(world, ORG_IDS.ostlea)
+  const blindBuyers = approvedProjectsBlind(world, building.ownerOrgId ?? '')
 
   return (
     <>
       <PageTitle title={`Listings and privacy, ${building.name}`} sub="Disclosure settings apply to every lot from the building and take effect at once." />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
-          <Panel title="Building disclosure" actions={<Button onClick={() => s.resetDisclosureDefaults(TIVERNE_ID)} data-testid="reset-defaults">Reset to defaults</Button>}>
+          <Panel title="Building disclosure" actions={<Button onClick={() => s.resetDisclosureDefaults(buildingId)} data-testid="reset-defaults">Reset to defaults</Button>}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Location shown as" htmlFor="location-level">
-                <select id="location-level" className={selectClass} value={building.locationLevel} onChange={(e) => s.setDisclosure(TIVERNE_ID, { locationLevel: e.target.value as 'region' | 'local_authority' })} data-testid="location-level">
+                <select id="location-level" className={selectClass} value={building.locationLevel} onChange={(e) => s.setDisclosure(buildingId, { locationLevel: e.target.value as 'region' | 'local_authority' })} data-testid="location-level">
                   <option value="region">Region</option>
                   <option value="local_authority">Local authority</option>
                 </select>
               </Field>
               <Field label="Timing shown as" htmlFor="timing-level">
-                <select id="timing-level" className={selectClass} value={building.timingLevel} onChange={(e) => s.setDisclosure(TIVERNE_ID, { timingLevel: e.target.value as 'quarter' | 'month' })} data-testid="timing-level">
+                <select id="timing-level" className={selectClass} value={building.timingLevel} onChange={(e) => s.setDisclosure(buildingId, { timingLevel: e.target.value as 'quarter' | 'month' })} data-testid="timing-level">
                   <option value="quarter">Quarter</option>
                   <option value="month">Month</option>
                 </select>

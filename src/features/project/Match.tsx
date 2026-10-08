@@ -3,25 +3,24 @@ import { useState } from 'react'
 import { Dialog } from 'radix-ui'
 import { Link } from 'react-router'
 import { useStore } from '../../store/store'
-import { useWorld } from '../shared/hooks'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { useProjectParam, NotAvailable } from '../../app/params'
 import { PageTitle, Panel, Table, Num, Tag, Button, Note, RuleBased, EmptyState } from '../../components/ui'
 import { Stub } from '../../components/Stub'
 import { LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
 
 export function Match() {
-  const world = useWorld()
   const s = useStore()
-  const p = world.projects[MERROWGATE_ID]
-  const r = p.matchResult
+  const { record: p } = useProjectParam()
   const [termsOpen, setTermsOpen] = useState(false)
+  if (!p) return <NotAvailable />
+  const r = p.matchResult
   const inPlan = (publicId: string, ref: string) => p.planItems.some((i) => i.lotPublicId === publicId && i.requirementRef === ref)
   return (
     <>
       <PageTitle title={`Match schedule, ${p.name}`} sub={`RIBA Stage ${p.ribaStage}. Steel needed on site from ${f.date(p.keyDates.steelNeedBy)}.`} />
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" onClick={() => s.loadSampleSchedule(MERROWGATE_ID)} data-testid="load-sample-schedule">
+        <Button variant="primary" onClick={() => s.loadSampleSchedule(p.id)} data-testid="load-sample-schedule">
           Load sample schedule
         </Button>
         <Stub name="Import from a BIM model (IFC or Revit)" would="The real feature would read the member schedule from the model. The CSV import behind the sample schedule is real." testId="stub-bim" />
@@ -49,7 +48,7 @@ export function Match() {
                     variant="primary"
                     data-testid="accept-terms"
                     onClick={() => {
-                      s.acceptTerms(MERROWGATE_ID)
+                      s.acceptTerms(p.id)
                       setTermsOpen(false)
                     }}
                   >
@@ -138,7 +137,7 @@ export function Match() {
                             {inPlan(a.publicId, res.ref) ? (
                               <Tag tone="teal">In plan</Tag>
                             ) : (
-                              <Button onClick={() => s.addToPlan(MERROWGATE_ID, a.publicId, res.ref)} data-testid={`add-to-plan-${res.ref}-${a.publicId}`}>
+                              <Button onClick={() => s.addToPlan(p.id, a.publicId, res.ref)} data-testid={`add-to-plan-${res.ref}-${a.publicId}`}>
                                 Add to reuse plan
                               </Button>
                             )}
@@ -174,7 +173,7 @@ export function Match() {
           </Panel>
           <p className="mt-3 text-sm">
             The reuse plan has {p.planItems.length} {p.planItems.length === 1 ? 'item' : 'items'}.{' '}
-            <Link to="/project/plan" className="text-steel">
+            <Link to={`/projects/${p.id}/plan`} className="text-steel">
               Open the reuse plan
             </Link>
           </p>

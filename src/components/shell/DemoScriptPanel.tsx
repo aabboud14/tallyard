@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import { useStore } from '../../store/store'
 import { DEMO_STEPS, runDemoSteps } from '../../store/demo'
 import { Button } from '../ui'
+import { topControl } from './styles'
 
 export function DemoScriptPanel() {
   const navigate = useNavigate()
@@ -29,9 +30,9 @@ export function DemoScriptPanel() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button variant="quiet" className="text-sm" data-testid="open-demo-script">
+        <button type="button" className={topControl} data-testid="open-demo-script">
           Demo script
-        </Button>
+        </button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40" />
@@ -39,7 +40,9 @@ export function DemoScriptPanel() {
           <div className="mb-2 flex items-start justify-between gap-3">
             <Dialog.Title className="text-lg font-semibold">Demo script</Dialog.Title>
             <Dialog.Close asChild>
-              <Button variant="quiet">Close</Button>
+              <Button variant="quiet" size="lg">
+                Close
+              </Button>
             </Dialog.Close>
           </div>
           <Dialog.Description className="mb-3 text-sm text-mill-text">Twelve steps, about ten minutes. "Go" switches persona and opens the screen. "Set up to here" resets the data, replays the earlier steps, then opens the screen.</Dialog.Description>
@@ -52,10 +55,10 @@ export function DemoScriptPanel() {
                   <div className="text-sm text-ink-soft">{s.line}</div>
                 </div>
                 <div className="flex gap-1">
-                  <Button onClick={() => go(s.n)} data-testid={`demo-go-${s.n}`}>
+                  <Button size="lg" onClick={() => go(s.n)} data-testid={`demo-go-${s.n}`}>
                     Go
                   </Button>
-                  <Button onClick={() => setUp(s.n)} disabled={busy !== null} data-testid={`demo-setup-${s.n}`}>
+                  <Button size="lg" onClick={() => setUp(s.n)} disabled={busy !== null} data-testid={`demo-setup-${s.n}`}>
                     {busy === s.n ? 'Setting up' : 'Set up to here'}
                   </Button>
                 </div>

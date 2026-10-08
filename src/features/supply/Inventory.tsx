@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { useWorld, usePersona } from '../shared/hooks'
 import { buildingItems, itemView } from '../../store/selectors'
-import { TIVERNE_ID } from '../../domain/seed/world'
+import { useBuildingParam, NotAvailable } from '../../app/params'
 import { PageTitle, Table, Num, Tag, EmptyState } from '../../components/ui'
 import { ItemDrawing } from '../../components/drawings/ItemDrawing'
 import { scaleFor } from '../../components/drawings/SectionDrawing'
@@ -12,12 +12,14 @@ import * as f from '../../domain/format'
 export function Inventory() {
   const world = useWorld()
   const { persona } = usePersona()
-  const items = buildingItems(world, TIVERNE_ID)
-  const building = world.buildings[TIVERNE_ID]
+  const { record: building } = useBuildingParam()
+  if (!building) return <NotAvailable />
+  const items = buildingItems(world, building.id)
+  const owner = building.ownerOrgId ? world.orgs[building.ownerOrgId] : undefined
   const scale = scaleFor(items.filter((i) => i.spec.family === 'steel_section').map((i) => (i.spec as { designation: string }).designation), 64)
   return (
     <>
-      <PageTitle title={`Inventory, ${building.name}`} sub={`First survey tranche, surveyed ${f.date(building.surveyedBy!.date)} by ${building.surveyedBy!.personaName}. Viewing as ${persona.name}.`} />
+      <PageTitle title={`Inventory, ${building.name}`} sub={`${owner ? owner.name + '. ' : ''}${building.surveyedBy ? `First survey tranche, surveyed ${f.date(building.surveyedBy.date)} by ${building.surveyedBy.personaName}. ` : ''}Viewing as ${persona.name}.`} />
       {items.length === 0 ? (
         <EmptyState hint="Capture an item on site to add it here." />
       ) : (
@@ -43,7 +45,7 @@ export function Inventory() {
               return (
                 <tr key={item.id} data-testid={`inventory-row-${item.tag}`}>
                   <td>
-                    <Link to={`/supply/inventory/${item.id}`} className="font-display text-base text-steel no-underline">
+                    <Link to={`/buildings/${building.id}/inventory/${item.id}`} className="font-display text-base text-steel no-underline">
                       {item.tag}
                     </Link>
                   </td>

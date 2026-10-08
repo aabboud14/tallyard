@@ -1,4 +1,4 @@
-// 04 section 1: buyer-side feature folders never import private supply types; the supply folder never imports private project types.
+// 04 section 1 and 09 section 13.14: buyer-side feature folders (including the version 1.0 architect and client folders) never import private supply types; the supply folder never imports private project types.
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -26,8 +26,8 @@ const PRIVATE_PROJECT_TYPES = ['Project', 'Requirement', 'PlanItem', 'Negotiatio
 
 describe('feature folder boundaries', () => {
   const root = path.resolve('src/features')
-  it('market, project and compliance never import private supply types or the supply folder', () => {
-    for (const folder of ['market', 'project', 'compliance']) {
+  it('market, project, compliance, architect and client never import private supply types or the supply folder', () => {
+    for (const folder of ['market', 'project', 'compliance', 'architect', 'client']) {
       for (const f of files(path.join(root, folder))) {
         const src = readFileSync(f, 'utf8')
         expect(src, f).not.toMatch(/from '[^']*features\/supply/)

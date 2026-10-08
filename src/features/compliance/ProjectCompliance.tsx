@@ -4,7 +4,8 @@ import { useState } from 'react'
 import './print.css'
 import { useWorld } from '../shared/hooks'
 import { complianceView } from '../../store/selectors'
-import { MERROWGATE_ID, BILL_LINE_NAMES } from '../../domain/seed/world'
+import { BILL_LINE_NAMES } from '../../domain/seed/world'
+import { useProjectParam, NotAvailable } from '../../app/params'
 import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
 import { LABELS, TEST_STATUS_LABELS, SOURCE_TYPE_LABELS } from '../../domain/reference/labels'
 import { CERTIFICATION_ROWS, STAGE_CHECKLIST, RIBA_STAGES } from '../../domain/reference/policy'
@@ -21,15 +22,17 @@ function aimText(ratio: number): string {
 
 export function ProjectCompliance() {
   const world = useWorld()
-  const c = complianceView(world, MERROWGATE_ID)
+  const { record: project } = useProjectParam()
+  const [busy, setBusy] = useState(false)
+  if (!project) return <NotAvailable />
+  const c = complianceView(world, project.id)
   const p = c.project
   const developer = world.orgs[p.developerOrgId]
-  const [busy, setBusy] = useState(false)
 
   const exportWorkbook = async () => {
     setBusy(true)
     try {
-      downloadWorkbook(await buildComplianceWorkbook(world), complianceFileName(world))
+      downloadWorkbook(await buildComplianceWorkbook(world, p.id), complianceFileName(world, p.id))
     } finally {
       setBusy(false)
     }

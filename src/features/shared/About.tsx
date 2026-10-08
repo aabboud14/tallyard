@@ -101,7 +101,7 @@ const QUESTION_GROUPS = OPEN_QUESTIONS.reduce<{ group: string; items: string[]; 
 export function About() {
   return (
     <>
-      <PageTitle title="About" sub={`${PRODUCT_NAME}, prototype v0.5.`} />
+      <PageTitle title="About" sub={`${PRODUCT_NAME}, prototype version 1.0.`} />
       <div className="flex flex-col gap-4">
         <Panel>
           <p className="text-sm">

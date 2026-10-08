@@ -7,6 +7,7 @@ import { createSeed, PERSONA_IDS } from '../domain/seed/world'
 import { safeStorage } from './safeStorage'
 import { clearPhotos } from './photoDb'
 import * as act from './actions'
+import * as v1 from './v1actions'
 import type { Cell } from '../domain/engines/billImport'
 
 export const STORE_KEY = `${STORAGE_PREFIX}-state`
@@ -35,53 +36,96 @@ export type StoreState = {
   loadSampleBillCells: (engagementId: string, cells: Cell[][]) => void
   editBillRow: (engagementId: string, row: number, patch: { stream?: string | null; destination?: Destination | null }) => void
   replaceWorld: (world: World, personaId?: string) => void
+  // Version 1.0 (brief 09). Each acts as the current persona and returns an error string, or null when done.
+  /** The architect's project chosen in the browse picker. Persisted. */
+  browseProjectId: string | null
+  setBrowseProjectId: (projectId: string | null) => void
+  createProject: (input: v1.NewProjectInput) => { projectId: string | null; error: string | null }
+  acceptProjectTerms: (projectId: string) => string | null
+  saveToWishlist: (publicId: string, projectId: string | null) => string | null
+  removeWish: (itemId: string) => string | null
+  moveWish: (itemId: string, toProjectId: string | null) => string | null
+  editWishNote: (itemId: string, note: string) => string | null
+  sendWishlist: (projectId: string) => string | null
+  reopenWish: (itemId: string, note: string) => string | null
+  decideWish: (projectId: string, itemId: string, decision: 'approved' | 'declined', note: string) => string | null
+  setLotAvailability: (lotId: string, isoDate: string) => string | null
+  /** Shares the current owner's lots for private matching with a blind project, or revokes the share. */
+  setOwnerProjectApproval: (projectId: string, approved: boolean) => string | null
 }
 
 export const useStore = create<StoreState>()(
   persist(
-    (set, get) => ({
-      world: createSeed(),
-      personaId: PERSONA_IDS.tom,
-      lastCapturedItemId: null,
-      reset: async () => {
-        await clearPhotos()
-        set({ world: createSeed(), personaId: PERSONA_IDS.tom, lastCapturedItemId: null })
-      },
-      setPersona: (id) => set({ personaId: id }),
-      capture: (input) => {
-        const r = act.captureItem(get().world, input)
-        set({ world: r.world, lastCapturedItemId: r.itemId })
-        return r.itemId
-      },
-      addPhoto: (itemId, photo) => set({ world: act.addPhoto(get().world, itemId, photo) }),
-      setPhotoPublic: (itemId, photoId, isPublic) => set({ world: act.setPhotoPublic(get().world, itemId, photoId, isPublic) }),
-      setDisclosure: (buildingId, patch) => set({ world: act.setDisclosure(get().world, buildingId, patch) }),
-      resetDisclosureDefaults: (buildingId) => set({ world: act.resetDisclosureDefaults(get().world, buildingId) }),
-      publishLot: (lotId, input) => set({ world: act.publishLot(get().world, lotId, input) }),
-      loadSampleSchedule: (projectId) => set({ world: act.loadSampleSchedule(get().world, projectId) }),
-      acceptTerms: (projectId) => set({ world: act.acceptTerms(get().world, projectId) }),
-      addToPlan: (projectId, publicId, ref) => set({ world: act.addToPlan(get().world, projectId, publicId, ref) }),
-      setPlanPackage: (projectId, planItemId, patch) => set({ world: act.setPlanPackage(get().world, projectId, planItemId, patch) }),
-      startNegotiation: (projectId, planItemId, mandate) => set({ world: act.startNegotiation(get().world, projectId, planItemId, mandate) }),
-      buyerApprove: (projectId, planItemId) => set({ world: act.buyerApprove(get().world, projectId, planItemId) }),
-      sellerApprove: (projectId, planItemId) => {
-        const r = act.sellerApprove(get().world, projectId, planItemId)
-        set({ world: r.world })
-        return r.dealId
-      },
-      arrangeDelivery: (dealId) => set({ world: act.arrangeDelivery(get().world, dealId) }),
-      approveBooking: (dealId) => set({ world: act.approveBooking(get().world, dealId) }),
-      loadSampleBillCells: (engagementId, cells) => set({ world: act.loadSampleBillCells(get().world, engagementId, cells) }),
-      editBillRow: (engagementId, row, patch) => set({ world: act.editBillRow(get().world, engagementId, row, patch) }),
-      replaceWorld: (world, personaId) => set({ world, ...(personaId ? { personaId } : {}) }),
-    }),
+    (set, get) => {
+      /** Stores the new world when the action succeeded, and passes its error on. */
+      const apply = (r: v1.V1Result): string | null => {
+        if (!r.error && r.world !== get().world) set({ world: r.world })
+        return r.error
+      }
+      return {
+        world: createSeed(),
+        personaId: PERSONA_IDS.tom,
+        lastCapturedItemId: null,
+        reset: async () => {
+          await clearPhotos()
+          set({ world: createSeed(), personaId: PERSONA_IDS.tom, lastCapturedItemId: null, browseProjectId: null })
+        },
+        setPersona: (id) => set({ personaId: id }),
+        capture: (input) => {
+          const r = act.captureItem(get().world, input)
+          set({ world: r.world, lastCapturedItemId: r.itemId })
+          return r.itemId
+        },
+        addPhoto: (itemId, photo) => set({ world: act.addPhoto(get().world, itemId, photo) }),
+        setPhotoPublic: (itemId, photoId, isPublic) => set({ world: act.setPhotoPublic(get().world, itemId, photoId, isPublic) }),
+        setDisclosure: (buildingId, patch) => set({ world: act.setDisclosure(get().world, buildingId, patch) }),
+        resetDisclosureDefaults: (buildingId) => set({ world: act.resetDisclosureDefaults(get().world, buildingId) }),
+        publishLot: (lotId, input) => set({ world: act.publishLot(get().world, lotId, input) }),
+        loadSampleSchedule: (projectId) => set({ world: act.loadSampleSchedule(get().world, projectId) }),
+        acceptTerms: (projectId) => set({ world: act.acceptTerms(get().world, projectId) }),
+        addToPlan: (projectId, publicId, ref) => set({ world: act.addToPlan(get().world, projectId, publicId, ref) }),
+        setPlanPackage: (projectId, planItemId, patch) => set({ world: act.setPlanPackage(get().world, projectId, planItemId, patch) }),
+        startNegotiation: (projectId, planItemId, mandate) => set({ world: act.startNegotiation(get().world, projectId, planItemId, mandate) }),
+        buyerApprove: (projectId, planItemId) => set({ world: act.buyerApprove(get().world, projectId, planItemId) }),
+        sellerApprove: (projectId, planItemId) => {
+          const r = act.sellerApprove(get().world, projectId, planItemId)
+          set({ world: r.world })
+          return r.dealId
+        },
+        arrangeDelivery: (dealId) => set({ world: act.arrangeDelivery(get().world, dealId) }),
+        approveBooking: (dealId) => set({ world: act.approveBooking(get().world, dealId) }),
+        loadSampleBillCells: (engagementId, cells) => set({ world: act.loadSampleBillCells(get().world, engagementId, cells) }),
+        editBillRow: (engagementId, row, patch) => set({ world: act.editBillRow(get().world, engagementId, row, patch) }),
+        replaceWorld: (world, personaId) => set({ world, ...(personaId ? { personaId } : {}) }),
+        browseProjectId: null,
+        setBrowseProjectId: (projectId) => set({ browseProjectId: projectId }),
+        createProject: (input) => {
+          const r = v1.createProject(get().world, get().personaId, input)
+          if (!r.error) set({ world: r.world })
+          return { projectId: r.projectId, error: r.error }
+        },
+        acceptProjectTerms: (projectId) => apply(v1.acceptProjectTerms(get().world, get().personaId, projectId)),
+        saveToWishlist: (publicId, projectId) => apply(v1.saveToWishlist(get().world, get().personaId, publicId, projectId)),
+        removeWish: (itemId) => apply(v1.removeWish(get().world, get().personaId, itemId)),
+        moveWish: (itemId, toProjectId) => apply(v1.moveWish(get().world, get().personaId, itemId, toProjectId)),
+        editWishNote: (itemId, note) => apply(v1.editWishNote(get().world, get().personaId, itemId, note)),
+        sendWishlist: (projectId) => apply(v1.sendWishlist(get().world, get().personaId, projectId)),
+        reopenWish: (itemId, note) => apply(v1.reopenWish(get().world, get().personaId, itemId, note)),
+        decideWish: (projectId, itemId, decision, note) => apply(v1.decideWish(get().world, get().personaId, projectId, itemId, decision, note)),
+        setLotAvailability: (lotId, isoDate) => apply(v1.setLotAvailability(get().world, get().personaId, lotId, isoDate)),
+        setOwnerProjectApproval: (projectId, approved) => {
+          const orgId = get().world.personas[get().personaId]?.orgId ?? ''
+          return apply(v1.setOwnerProjectApproval(get().world, orgId, projectId, approved))
+        },
+      }
+    },
     {
       name: STORE_KEY,
       // Version 2 (brief 09 section 13.2): a stored version 0.5 world is replaced by a fresh seed.
       version: 2,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ world: s.world, personaId: s.personaId, lastCapturedItemId: s.lastCapturedItemId }),
-      migrate: () => ({ world: createSeed(), personaId: PERSONA_IDS.tom, lastCapturedItemId: null }),
+      partialize: (s) => ({ world: s.world, personaId: s.personaId, lastCapturedItemId: s.lastCapturedItemId, browseProjectId: s.browseProjectId }),
+      migrate: () => ({ world: createSeed(), personaId: PERSONA_IDS.tom, lastCapturedItemId: null, browseProjectId: null }),
     },
   ),
 )

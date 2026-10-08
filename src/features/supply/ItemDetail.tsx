@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router'
 import { useWorld, usePersona, usePhotoSrc } from '../shared/hooks'
 import { itemView, type ItemView } from '../../store/selectors'
-import { PERSONA_IDS } from '../../domain/seed/world'
+import { useBuildingParam } from '../../app/params'
+import { roleFor } from '../../app/nav'
 import { PageTitle, Panel, Dl, Private, Tag, EmptyState, Note } from '../../components/ui'
 import { ItemDrawing } from '../../components/drawings/ItemDrawing'
 import { HowCalculated } from '../../components/HowCalculated'
@@ -40,7 +41,9 @@ export function ItemDetail() {
   const { itemId } = useParams()
   const world = useWorld()
   const { persona } = usePersona()
-  const item = itemId ? world.items[itemId] : undefined
+  const { id: buildingId } = useBuildingParam()
+  const found = itemId ? world.items[itemId] : undefined
+  const item = found && found.buildingId === buildingId ? found : undefined
   if (!item) {
     return (
       <>
@@ -50,7 +53,7 @@ export function ItemDetail() {
     )
   }
   const v = itemView(world, item.id)
-  const isTom = persona.id === PERSONA_IDS.tom
+  const isOwner = roleFor(world, persona.id) === 'seller'
   return (
     <>
       <PageTitle
@@ -61,7 +64,7 @@ export function ItemDetail() {
           </span>
         }
         sub={
-          <Link to="/supply/inventory" className="text-steel">
+          <Link to={`/buildings/${buildingId}/inventory`} className="text-steel">
             Back to inventory
           </Link>
         }
@@ -133,7 +136,7 @@ export function ItemDetail() {
                   </div>
                 </div>
               ) : null}
-              {isTom ? (
+              {isOwner ? (
                 <div className="mt-2 text-sm">
                   <div className="text-mill-text">Suggested mandate</div>
                   <div data-testid="item-mandate">

@@ -1,6 +1,6 @@
 import { useWorld } from '../shared/hooks'
 import { priorityFor } from '../../store/selectors'
-import { TIVERNE_ID } from '../../domain/seed/world'
+import { useBuildingParam, NotAvailable } from '../../app/params'
 import { PageTitle, Table, Num, Tag, RuleBased, Figure, EmptyState } from '../../components/ui'
 import { ScoreBar } from '../../components/charts'
 import { HowCalculated } from '../../components/HowCalculated'
@@ -10,10 +10,12 @@ import * as f from '../../domain/format'
 
 export function Priority() {
   const world = useWorld()
-  const r = priorityFor(world, TIVERNE_ID)
+  const { record: building } = useBuildingParam()
+  if (!building) return <NotAvailable />
+  const r = priorityFor(world, building.id)
   return (
     <>
-      <PageTitle title={`Priority, ${world.buildings[TIVERNE_ID].name}`} sub="What to recover first, ranked by net value, avoided carbon, demand and ease." />
+      <PageTitle title={`Priority, ${building.name}`} sub="What to recover first, ranked by net value, avoided carbon, demand and ease." />
       <div className="mb-4 flex flex-wrap gap-8">
         <Figure label="Recoverable net value" value={f.money(r.recoverableNetValue)} testId="priority-recoverable" sub={`${r.rows.filter((x) => x.route === 'recover').length} items routed to recover`} />
         <Figure label="Held by the top three" value={f.percent(r.topThreeShare)} testId="priority-top-three" sub="of the recoverable net value" />

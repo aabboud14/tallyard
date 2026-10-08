@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { planItemView, type PlanItemView } from '../../store/selectors'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { useProjectParam, NotAvailable } from '../../app/params'
 import { PageTitle, Panel, Table, Num, Tag, Button, Note, Field, Figure, EmptyState, SimulatedAgent, inputClass } from '../../components/ui'
 import { HowCalculated } from '../../components/HowCalculated'
 import { LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
@@ -62,7 +62,7 @@ function Thread({ log, family }: { log: NegotiationEntry[]; family: keyof typeof
   )
 }
 
-function PackagePanel({ v }: { v: PlanItemView }) {
+function PackagePanel({ v, projectId }: { v: PlanItemView; projectId: string }) {
   const s = useStore()
   const item = v.item
   const planned = item.status === 'planned'
@@ -84,7 +84,7 @@ function PackagePanel({ v }: { v: PlanItemView }) {
             <dt className="text-mill-text">Testing</dt>
             <dd>
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="h-4 w-4" checked={item.pkg.testing} disabled={!planned} onChange={(e) => s.setPlanPackage(MERROWGATE_ID, item.id, { testing: e.target.checked })} data-testid="package-testing" />
+                <input type="checkbox" className="h-4 w-4" checked={item.pkg.testing} disabled={!planned} onChange={(e) => s.setPlanPackage(projectId, item.id, { testing: e.target.checked })} data-testid="package-testing" />
                 <span data-testid="package-testing-text">{item.pkg.testing ? 'On' : 'Off'}</span>
               </label>
             </dd>
@@ -149,7 +149,7 @@ function PackagePanel({ v }: { v: PlanItemView }) {
                       {lowest ? <Tag tone="teal">Lowest estimated total</Tag> : null}
                       {c.facilityId === item.pkg.facilityId ? <Tag tone="steel">Chosen</Tag> : null}
                       {planned && !item.pkg.facilityFixed && c.facilityId !== item.pkg.facilityId ? (
-                        <Button className="ml-1" onClick={() => s.setPlanPackage(MERROWGATE_ID, item.id, { facilityId: c.facilityId })}>
+                        <Button className="ml-1" onClick={() => s.setPlanPackage(projectId, item.id, { facilityId: c.facilityId })}>
                           Choose
                         </Button>
                       ) : null}
@@ -165,7 +165,7 @@ function PackagePanel({ v }: { v: PlanItemView }) {
   )
 }
 
-function NegotiationPanel({ v }: { v: PlanItemView }) {
+function NegotiationPanel({ v, projectId }: { v: PlanItemView; projectId: string }) {
   const s = useStore()
   const item = v.item
   const fam = FAMILIES[v.listing.family]
@@ -193,7 +193,7 @@ function NegotiationPanel({ v }: { v: PlanItemView }) {
             <input id="mandate-max" className={inputClass} inputMode="decimal" value={max} onChange={(e) => setMax(e.target.value)} data-testid="mandate-max" />
           </Field>
           <div className="flex items-end">
-            <Button variant="primary" size="lg" disabled={!valid} onClick={() => s.startNegotiation(MERROWGATE_ID, item.id, { open: openN, max: maxN })} data-testid="start-negotiation">
+            <Button variant="primary" size="lg" disabled={!valid} onClick={() => s.startNegotiation(projectId, item.id, { open: openN, max: maxN })} data-testid="start-negotiation">
               Start negotiation agent
             </Button>
           </div>
@@ -203,7 +203,7 @@ function NegotiationPanel({ v }: { v: PlanItemView }) {
           <SimulatedAgent testId="label-L3" />
           <Thread log={item.negotiation.log} family={v.listing.family} />
           {item.status === 'agreed_in_principle' ? (
-            <Button variant="primary" size="lg" onClick={() => s.buyerApprove(MERROWGATE_ID, item.id)} data-testid="buyer-approve">
+            <Button variant="primary" size="lg" onClick={() => s.buyerApprove(projectId, item.id)} data-testid="buyer-approve">
               {LABELS.L21}
             </Button>
           ) : null}
@@ -212,7 +212,7 @@ function NegotiationPanel({ v }: { v: PlanItemView }) {
           {item.status === 'confirmed' ? (
             <Note tone="teal">
               {LABELS.L22}.{' '}
-              <Link to="/project/deals" className="text-steel">
+              <Link to={`/projects/${projectId}/deals`} className="text-steel">
                 Open the deal
               </Link>
             </Note>
@@ -227,9 +227,10 @@ export function Plan() {
   const world = useWorld()
   const { planItemId } = useParams()
   const navigate = useNavigate()
-  const p = world.projects[MERROWGATE_ID]
+  const { record: p } = useProjectParam()
+  if (!p) return <NotAvailable />
   const selectedId = planItemId && p.planItems.some((i) => i.id === planItemId) ? planItemId : p.planItems[0]?.id
-  const v = selectedId ? planItemView(world, MERROWGATE_ID, selectedId) : null
+  const v = selectedId ? planItemView(world, p.id, selectedId) : null
   return (
     <>
       <PageTitle title={`Reuse plan, ${p.name}`} sub="Each plan item is costed on its own, with its own vehicle. There is no plan total." />
@@ -250,7 +251,7 @@ export function Plan() {
             </thead>
             <tbody>
               {p.planItems.map((i) => {
-                const iv = planItemView(world, MERROWGATE_ID, i.id)
+                const iv = planItemView(world, p.id, i.id)
                 return (
                   <tr key={i.id} className={i.id === selectedId ? 'bg-steel-tint' : ''} data-testid={`plan-row-${i.lotPublicId}`}>
                     <td>
@@ -265,7 +266,7 @@ export function Plan() {
                     </td>
                     <Num>{f.money(iv.estimate.total)}</Num>
                     <td>
-                      <Button onClick={() => navigate(`/project/plan/${i.id}`)} data-testid={`open-plan-${i.lotPublicId}`}>
+                      <Button onClick={() => navigate(`/projects/${p.id}/plan/${i.id}`)} data-testid={`open-plan-${i.lotPublicId}`}>
                         Open
                       </Button>
                     </td>
@@ -285,8 +286,8 @@ export function Plan() {
                 {v.listing.sharing === 'in_confidence' ? <Tag tone="steel">{LABELS.L27}</Tag> : null}
               </div>
               <Figure label="Price used" value={f.unitPrice(v.estimate.pricePerUnit, v.listing.family)} sub={v.item.agreedPricePerUnit !== null ? 'agreed price' : 'public guide price until a price is agreed'} testId="plan-price" />
-              <PackagePanel v={v} />
-              <NegotiationPanel v={v} />
+              <PackagePanel v={v} projectId={p.id} />
+              <NegotiationPanel v={v} projectId={p.id} />
             </>
           ) : null}
         </div>

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { wasteView } from '../../store/selectors'
-import { DURNLEY_ID } from '../../domain/seed/world'
+import { useEngagementParam, NotAvailable } from '../../app/params'
 import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
 import { LABELS } from '../../domain/reference/labels'
 import { STREAMS, DESTINATIONS, destinationLabel } from '../../domain/reference/wasteCodes'
@@ -30,16 +30,17 @@ function aimText(ratio: number): string {
 export function Waste() {
   const world = useWorld()
   const s = useStore()
-  const e = world.engagements[DURNLEY_ID]
-  const v = wasteView(world, DURNLEY_ID)
-  const owner = world.orgs[e.ownerOrgId]
+  const { record: e } = useEngagementParam()
   const [busy, setBusy] = useState<'load' | 'export' | null>(null)
+  if (!e) return <NotAvailable />
+  const v = wasteView(world, e.id)
+  const owner = world.orgs[e.ownerOrgId]
 
   const loadSample = async () => {
     setBusy('load')
     try {
       const cells = await cellsFromArrayBuffer(base64ToArrayBuffer(SAMPLE_BILL_XLSX_BASE64))
-      s.loadSampleBillCells(DURNLEY_ID, cells)
+      s.loadSampleBillCells(e.id, cells)
     } finally {
       setBusy(null)
     }
@@ -48,7 +49,7 @@ export function Waste() {
   const exportWorkbook = async () => {
     setBusy('export')
     try {
-      downloadWorkbook(await buildWasteWorkbook(world), wasteFileName(world))
+      downloadWorkbook(await buildWasteWorkbook(world, e.id), wasteFileName(world, e.id))
     } finally {
       setBusy(null)
     }
@@ -128,7 +129,7 @@ export function Waste() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <ReviewRow key={r.row} r={r} onEdit={(patch) => s.editBillRow(DURNLEY_ID, r.row, patch)} />
+                  <ReviewRow key={r.row} r={r} onEdit={(patch) => s.editBillRow(e.id, r.row, patch)} />
                 ))}
               </tbody>
             </Table>

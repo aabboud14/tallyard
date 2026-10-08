@@ -5,7 +5,7 @@ import { useWorld, usePersona } from '../shared/hooks'
 import { itemView } from '../../store/selectors'
 import { captureAssist, type AssistResult } from '../../domain/engines/assist'
 import { captureInputFromAssist, specFromAssist, quantityFromAssist } from '../../store/capture'
-import { TIVERNE_ID } from '../../domain/seed/world'
+import { useBuildingParam, NotAvailable } from '../../app/params'
 import { FAMILIES, FAMILY_IDS } from '../../domain/reference/families'
 import { LABELS } from '../../domain/reference/labels'
 import type { Condition, FamilyId, Photo, Recoverability } from '../../domain/types'
@@ -63,6 +63,7 @@ export function Capture() {
   const world = useWorld()
   const { persona } = usePersona()
   const capture = useStore((s) => s.capture)
+  const { record: building } = useBuildingParam()
   const [text, setText] = useState('')
   const [assist, setAssist] = useState<AssistResult | null>(null)
   const [draft, setDraft] = useState<Draft>(empty)
@@ -95,7 +96,7 @@ export function Capture() {
   const save = () => {
     try {
       const r = toAssist(draft)
-      const input = captureInputFromAssist(r, { buildingId: TIVERNE_ID, condition: draft.condition as Condition, recoverability: (draft.recoverability || undefined) as Recoverability | undefined, capturedBy: persona.name, notes: draft.notes, location: draft.location })
+      const input = captureInputFromAssist(r, { buildingId: building?.id ?? '', condition: draft.condition as Condition, recoverability: (draft.recoverability || undefined) as Recoverability | undefined, capturedBy: persona.name, notes: draft.notes, location: draft.location })
       const id = capture({ ...input, photos })
       setSavedId(id)
       setPhotos([])
@@ -109,9 +110,12 @@ export function Capture() {
   const fam = draft.family ? FAMILIES[draft.family] : null
   const ev = assist?.evidence ?? {}
 
+  if (!building) return <NotAvailable />
+  const client = building.ownerOrgId ? world.orgs[building.ownerOrgId] : undefined
+
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
-      <PageTitle title="Capture" sub={`${world.buildings[TIVERNE_ID].name}, surveyed by ${persona.name}`} />
+      <PageTitle title="Capture" sub={`${building.name}${client ? ', ' + client.name : ''}, surveyed by ${persona.name}`} />
       <Note tone="oxide" testId="label-L8">
         {LABELS.L8}
       </Note>
