@@ -107,3 +107,42 @@ describe('every reachable route renders', () => {
     }
   })
 })
+
+describe('P11: no negotiation, mandate, offer or deal on any architect route', () => {
+  const BANNED_IDS = ['negotiat', 'mandate', 'buyer-approve', 'offer', 'deal']
+  const BANNED_TEXT = ['Negotiation', 'Mandate', 'Deals']
+  const SHARED = new Set(['/assumptions', '/about', '/operator/ledger', '/operator/models'])
+
+  async function scan(world: World, path: string): Promise<string[]> {
+    useStore.setState({ world: structuredClone(world), personaId: PERSONA_IDS.priya })
+    const router = createMemoryRouter(routes, { initialEntries: [path] })
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    root = createRoot(host)
+    await act(async () => root!.render(<RouterProvider router={router} />))
+    const found: string[] = []
+    for (const el of document.querySelectorAll('[data-testid]')) {
+      const id = el.getAttribute('data-testid') ?? ''
+      for (const b of BANNED_IDS) if (id.toLowerCase().includes(b)) found.push(`${path}: test id ${id}`)
+    }
+    const text = document.body.textContent ?? ''
+    for (const t of BANNED_TEXT) if (text.includes(t)) found.push(`${path}: text ${t}`)
+    act(() => root!.unmount())
+    host.remove()
+    root = null
+    host = null
+    return found
+  }
+
+  it.each([
+    ['the fresh seed', false],
+    ['after the twelve demo steps', true],
+  ])('on %s', async (_label, replay) => {
+    if (replay) await runDemoSteps(1, 12)
+    const world = replay ? structuredClone(useStore.getState().world) : createSeed()
+    const found: string[] = []
+    for (const path of reachable(world, PERSONA_IDS.priya).filter((p) => !SHARED.has(p))) found.push(...(await scan(world, path)))
+    expect(found).toEqual([])
+  })
+})
+

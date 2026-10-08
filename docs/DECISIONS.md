@@ -45,5 +45,15 @@ One line per decision where the brief was silent or an instruction had to be rec
 - 2026-10-08. Two redirects not in the route map: a bare `/buildings/:id` opens its inventory and a bare `/engagements/:id` its waste dashboard. Operator routes stay open to every role, as in version 0.5.
 - 2026-10-08. Every building, project and engagement screen reads its record from the route through `src/app/params.ts`; none reads a seed constant. The workbook builders take the project or engagement ID, defaulting to Merrowgate Wharf and Durnley House so the existing export tests are unchanged. The owner's mandate line on the item detail is shown by role, not by persona.
 - 2026-10-08. The listing screen resolves a shared lot through `listingDetailView`: visible when any project the persona works on as architect or client can see it. This replaces the Merrowgate Wharf stopgap.
-- 2026-10-08. Until the version 1.0 showroom is built, `/market` serves the working version 0.5 browse, so demo step 4 keeps working through the UI.
+- 2026-10-08. `/market` serves the version 1.0 showroom (`src/features/architect/Browse.tsx`); the version 0.5 browse is deleted.
 - 2026-10-08. A route sweep test renders every route each seeded persona can reach, on the fresh seed and after the twelve steps, and checks for a page title, no error state, no "Not available to this role" and the record named in the URL.
+- 2026-10-08. The owner's screens use the owner's visibility phrases (`OWNER_VISIBILITY_LABELS`): "Shared privately with selected projects" and "Published to the marketplace"; the end-to-end step 3 expects them.
+- 2026-10-08. Priority and Listings open only for the building's owner; Inventory, item detail and Capture for the owner or the appointed surveyor; Offers only for a selling owner.
+- 2026-10-08. Match schedule, reuse plan and deals open only for the project's paying client; the architect and the consultant see "Not available" there, so no negotiation or deal control reaches the architect.
+- 2026-10-08. L25 and the steel reserve note are reserve copy and show only to the client (section 13.10); the end-to-end labels test now checks that Priya does not see L25 on L-Q23X7N and Isla does.
+- 2026-10-08. The theme defines white, so `text-white` works on primary buttons and pressed chips; `Button` is at least 44 px tall below 640 px and keeps the compact height from 640 px up unless the caller sets its own.
+- 2026-10-08. The listing's key figures sit in two columns below 1280 px and three from 1280 px, so the carbon calculation link never overflows at 1024 px.
+- 2026-10-08. Browse filters and sort live in memory in `src/store/browseUi.ts`, not in the persisted store; Reset demo data clears them.
+- 2026-10-08. The reuse plan's two calculation links read "How the package total is calculated" and "How the avoided carbon is calculated" (`HowCalculated` takes an optional `triggerLabel`).
+- 2026-10-08. P11 is checked by rendering every architect route on the fresh seed and after the twelve steps (`src/app/routes.test.tsx`), not only the rail.
+- 2026-10-08. An approved wish list item stays locked even when its lot is later unshared: it shows no figures and cannot be removed by the architect.

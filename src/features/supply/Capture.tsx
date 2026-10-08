@@ -1,16 +1,18 @@
-// Capture on site: one column, large touch targets, Assist with its evidence (F14).
+// Capture on site: one column, large touch targets, Assist with its evidence (F14), and the month the surveyor
+// expects the material to be free (brief/09-V1-PRODUCT.md sections 3.1 and 13.3).
 import { useMemo, useState } from 'react'
 import { useStore } from '../../store/store'
 import { useWorld, usePersona } from '../shared/hooks'
 import { itemView } from '../../store/selectors'
+import { clientName, expectedDefaultMonth, expectedFromMonth, expectedText, expectedYearOptions, monthKeyOf, MONTH_NAMES, supplyAccess } from '../../store/views/supply'
 import { captureAssist, type AssistResult } from '../../domain/engines/assist'
 import { captureInputFromAssist, specFromAssist, quantityFromAssist } from '../../store/capture'
 import { useBuildingParam, NotAvailable } from '../../app/params'
 import { FAMILIES, FAMILY_IDS } from '../../domain/reference/families'
 import { LABELS } from '../../domain/reference/labels'
-import type { Condition, FamilyId, Photo, Recoverability } from '../../domain/types'
+import type { Condition, FamilyId, Photo, Recoverability, SourceBuilding } from '../../domain/types'
 import { putPhoto, reencodePhoto } from '../../store/photoDb'
-import { PageTitle, Button, Field, Note, RuleBased, Tag, inputClass, selectClass, Private } from '../../components/ui'
+import { Button, Field, Note, RuleBased, Tag, inputClass, selectClass, Private } from '../../components/ui'
 import { Stub } from '../../components/Stub'
 import { PhotoThumb } from './ItemDetail'
 import * as f from '../../domain/format'
@@ -59,11 +61,27 @@ function toAssist(d: Draft): AssistResult {
 
 const FIELD_LABELS: Record<string, string> = { section: 'Section', pieces: 'Pieces', lengthM: 'Length', areaM2: 'Area', volumeM3: 'Volume', thicknessMm: 'Thickness', panelWidthM: 'Panel width', panelHeightM: 'Panel height', recoverability: 'Recoverability', location: 'Location', family: 'Family', panel: 'Panel size' }
 
+/** A random photo ID. Photos live in IndexedDB across reloads, so a counter could collide; the clock is never read. */
+function photoId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(6))
+  return 'pho_' + Array.from(bytes, (b) => (b % 36).toString(36)).join('')
+}
+
 export function Capture() {
+  const world = useWorld()
+  const personaId = useStore((s) => s.personaId)
+  const { id, record: building } = useBuildingParam()
+  if (!building || !supplyAccess(world, personaId, id).capture) return <NotAvailable />
+  return <CaptureForm key={building.id} building={building} />
+}
+
+function CaptureForm({ building }: { building: SourceBuilding }) {
   const world = useWorld()
   const { persona } = usePersona()
   const capture = useStore((s) => s.capture)
-  const { record: building } = useBuildingParam()
+  const defaultMonth = expectedDefaultMonth(building)
+  const [expYear, setExpYear] = useState(Number(defaultMonth.slice(0, 4)))
+  const [expMonth, setExpMonth] = useState(Number(defaultMonth.slice(5, 7)))
   const [text, setText] = useState('')
   const [assist, setAssist] = useState<AssistResult | null>(null)
   const [draft, setDraft] = useState<Draft>(empty)
@@ -85,7 +103,7 @@ export function Capture() {
     if (!file) return
     try {
       const blob = await reencodePhoto(file)
-      const id = `pho_${Date.now().toString(36)}_${photos.length + 1}`
+      const id = photoId()
       await putPhoto(id, blob)
       setPhotos((p) => [...p, { id, kind: 'blob', src: null, isPublic: false }])
     } catch (e) {
@@ -96,7 +114,7 @@ export function Capture() {
   const save = () => {
     try {
       const r = toAssist(draft)
-      const input = captureInputFromAssist(r, { buildingId: building?.id ?? '', condition: draft.condition as Condition, recoverability: (draft.recoverability || undefined) as Recoverability | undefined, capturedBy: persona.name, notes: draft.notes, location: draft.location })
+      const input = captureInputFromAssist(r, { buildingId: building.id, condition: draft.condition as Condition, recoverability: (draft.recoverability || undefined) as Recoverability | undefined, capturedBy: persona.name, notes: draft.notes, location: draft.location, expectedAvailableFrom: expectedFromMonth(building, monthKeyOf(expYear, expMonth)) })
       const id = capture({ ...input, photos })
       setSavedId(id)
       setPhotos([])
@@ -110,12 +128,28 @@ export function Capture() {
   const fam = draft.family ? FAMILIES[draft.family] : null
   const ev = assist?.evidence ?? {}
 
-  if (!building) return <NotAvailable />
-  const client = building.ownerOrgId ? world.orgs[building.ownerOrgId] : undefined
+  const client = clientName(world, building)
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
-      <PageTitle title="Capture" sub={`${building.name}${client ? ', ' + client.name : ''}, surveyed by ${persona.name}`} />
+      <header className="flex flex-col gap-1" data-testid="capture-header">
+        <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Capture</p>
+        <h1 className="text-2xl font-semibold leading-tight" data-testid="capture-building">
+          {building.name}
+        </h1>
+        <dl className="m-0 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          <div className="flex gap-1.5">
+            <dt className="text-mill-text">Client</dt>
+            <dd className="m-0 font-medium" data-testid="capture-client">
+              {client}
+            </dd>
+          </div>
+          <div className="flex gap-1.5">
+            <dt className="text-mill-text">Surveyor</dt>
+            <dd className="m-0 font-medium">{persona.name}</dd>
+          </div>
+        </dl>
+      </header>
       <Note tone="oxide" testId="label-L8">
         {LABELS.L8}
       </Note>
@@ -123,7 +157,7 @@ export function Capture() {
         <textarea id="capture-text" className={`${inputClass} min-h-24 py-2`} value={text} onChange={(e) => setText(e.target.value)} data-testid="capture-text" />
       </Field>
       <div className="flex flex-wrap gap-2">
-        <Button variant="primary" size="lg" onClick={runAssist} data-testid="capture-assist">
+        <Button variant="primary" size="lg" className="text-panel" onClick={runAssist} data-testid="capture-assist">
           Assist
         </Button>
         <Stub name="Recognise materials from a photo" would="The real feature would read a site photo and propose the family, section and count for the surveyor to confirm." testId="stub-photo" />
@@ -216,7 +250,7 @@ export function Capture() {
       <Field label="Condition" htmlFor="capture-condition" hint="Always chosen by the surveyor.">
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Condition">
           {(['A', 'B', 'C'] as Condition[]).map((c) => (
-            <Button key={c} size="lg" variant={draft.condition === c ? 'primary' : 'secondary'} onClick={() => set('condition', c)} data-testid={`capture-condition-${c}`} aria-pressed={draft.condition === c}>
+            <Button key={c} size="lg" variant={draft.condition === c ? 'primary' : 'secondary'} className={draft.condition === c ? 'text-panel' : undefined} onClick={() => set('condition', c)} data-testid={`capture-condition-${c}`} aria-pressed={draft.condition === c}>
               {c}
             </Button>
           ))}
@@ -225,10 +259,28 @@ export function Capture() {
       <Field label="Recoverability" htmlFor="capture-recoverability" hint="A comes out intact, B with care, C unlikely.">
         <div className="grid grid-cols-3 gap-2" role="group" aria-label="Recoverability">
           {(['A', 'B', 'C'] as Recoverability[]).map((c) => (
-            <Button key={c} size="lg" variant={draft.recoverability === c ? 'primary' : 'secondary'} onClick={() => set('recoverability', c)} data-testid={`capture-recoverability-${c}`} aria-pressed={draft.recoverability === c}>
+            <Button key={c} size="lg" variant={draft.recoverability === c ? 'primary' : 'secondary'} className={draft.recoverability === c ? 'text-panel' : undefined} onClick={() => set('recoverability', c)} data-testid={`capture-recoverability-${c}`} aria-pressed={draft.recoverability === c}>
               {c}
             </Button>
           ))}
+        </div>
+      </Field>
+      <Field label="Expected availability" htmlFor="capture-expected-month" hint={<span data-testid="label-L43">{LABELS.L43}</span>}>
+        <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2">
+          <select id="capture-expected-month" aria-label="Expected month" className={selectClass} value={expMonth} onChange={(e) => setExpMonth(Number(e.target.value))} data-testid="capture-expected-month">
+            {MONTH_NAMES.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Expected year" className={selectClass} value={expYear} onChange={(e) => setExpYear(Number(e.target.value))} data-testid="capture-expected-year">
+            {expectedYearOptions(building).map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
       </Field>
       <Private>
@@ -240,7 +292,7 @@ export function Capture() {
         </Field>
       </Private>
       {error ? <Note tone="oxide">{error}</Note> : null}
-      <Button variant="primary" size="lg" disabled={!canSave} onClick={save} data-testid="capture-save">
+      <Button variant="primary" size="lg" className="text-panel" disabled={!canSave} onClick={save} data-testid="capture-save">
         Save
       </Button>
       {saved ? (
@@ -256,6 +308,8 @@ export function Capture() {
             <dd data-testid="saved-carbon">{saved.carbon ? f.carbon(saved.carbon.avoided) : 'none'}</dd>
             <dt className="text-mill-text">Guide price</dt>
             <dd data-testid="saved-guide">{f.unitPrice(saved.guide.guide, saved.item.family)}</dd>
+            <dt className="text-mill-text">Expected</dt>
+            <dd data-testid="saved-expected">{expectedText(saved.item.expectedAvailableFrom)}</dd>
             <dt className="text-mill-text">Photos</dt>
             <dd data-testid="saved-photos">{saved.item.photos.length ? `${saved.item.photos.length} photo${saved.item.photos.length === 1 ? '' : 's'}, ${LABELS.L28}` : 'none'}</dd>
           </dl>

@@ -1,28 +1,37 @@
-// Deals, buyer side: the buyer's view, exchanged identities, the logistics agent and the custody timeline.
+// Deals, the client's side: the buyer's view, exchanged identities, the logistics agent and the custody timeline
+// (brief/09-V1-PRODUCT.md section 3.4; steps 8 and 9 of 02). The seller's costs and dates never appear here.
+import { Link } from 'react-router'
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { buyerDeals, buyerDealView } from '../../store/selectors'
+import { clientCanOpen } from '../../store/views/client'
 import { useProjectParam, NotAvailable } from '../../app/params'
-import { PageTitle, Panel, Table, Num, Tag, Button, Note, Dl, EmptyState, SimulatedAgent } from '../../components/ui'
+import { Panel, Table, Num, Tag, Button, Note, Dl, EmptyState, SimulatedAgent } from '../../components/ui'
 import { LABELS } from '../../domain/reference/labels'
+import { ClientHeader } from './ClientHeader'
 import * as f from '../../domain/format'
 
 export function Deals() {
   const world = useWorld()
   const s = useStore()
   const { record: p } = useProjectParam()
-  if (!p) return <NotAvailable />
+  if (!p || !clientCanOpen(world, s.personaId, p.id)) return <NotAvailable />
   const deals = buyerDeals(world, p.id)
   return (
-    <>
-      <PageTitle title={`Deals, ${p.name}`} sub="Your half of each deal. The seller's costs and dates stay with the seller." />
+    <div className="flex flex-col gap-4" data-testid="client-deals">
+      <ClientHeader eyebrow={p.name} title="Deals" sub="Your half of each deal. The seller's costs and dates stay with the seller." />
       {deals.length === 0 ? (
-        <EmptyState hint="A deal appears here once the seller approves your offer." />
+        <div className="flex flex-col items-start gap-3">
+          <EmptyState hint="A deal appears here once the seller approves your offer from the reuse plan." />
+          <Link to={`/projects/${p.id}/plan`} className="inline-flex min-h-[44px] items-center rounded-sm border border-rule bg-panel px-4 text-sm font-medium text-steel no-underline hover:bg-steel-tint" data-testid="deals-open-plan">
+            Open the reuse plan
+          </Link>
+        </div>
       ) : (
         deals.map((d) => {
           const v = buyerDealView(world, d.id)
           return (
-            <Panel key={d.id} title={`${d.lotPublicId}, ${v.listing.title}, ${d.pieces} pieces`} className="mb-4" data-testid={`buyer-deal-${d.lotPublicId}`}>
+            <Panel key={d.id} title={`${d.lotPublicId}, ${v.listing.title}, ${d.pieces} pieces`} data-testid={`buyer-deal-${d.lotPublicId}`}>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <Tag tone="teal" data-testid="buyer-deal-status">
@@ -34,6 +43,7 @@ export function Deals() {
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Dl
+                    className="content-start gap-y-2"
                     rows={[
                       { label: 'Seller', value: d.exchanged.sellerOrg, testId: 'buyer-deal-seller' },
                       { label: 'Contact', value: d.exchanged.sellerContact, testId: 'buyer-deal-contact' },
@@ -74,7 +84,7 @@ export function Deals() {
                 <div>
                   <h3 className="mb-1 text-sm font-semibold">Delivery from the hub to site</h3>
                   {!d.booking ? (
-                    <Button variant="primary" onClick={() => s.arrangeDelivery(d.id)} data-testid="arrange-delivery">
+                    <Button variant="primary" size="lg" className="text-panel" onClick={() => s.arrangeDelivery(d.id)} data-testid="arrange-delivery">
                       Arrange delivery
                     </Button>
                   ) : (
@@ -102,7 +112,7 @@ export function Deals() {
                       </Table>
                       {!d.booking.deliveryDate ? (
                         <div>
-                          <Button variant="primary" onClick={() => s.approveBooking(d.id)} data-testid="approve-booking">
+                          <Button variant="primary" size="lg" className="text-panel" onClick={() => s.approveBooking(d.id)} data-testid="approve-booking">
                             Approve booking
                           </Button>
                         </div>
@@ -133,6 +143,6 @@ export function Deals() {
           )
         })
       )}
-    </>
+    </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useStore } from '../../store/store'
+import { useBrowseUi } from '../../store/browseUi'
 import { topControl } from './styles'
 
 export function ResetButton() {
@@ -12,6 +13,7 @@ export function ResetButton() {
       data-testid="reset-demo"
       onClick={async () => {
         await reset()
+        useBrowseUi.getState().reset()
         navigate('/')
       }}
     >

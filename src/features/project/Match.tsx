@@ -1,26 +1,29 @@
-// Match schedule: load the sample schedule, accept the confidentiality terms, add allocations to the reuse plan.
+// Match schedule (advanced), the client's working matcher: load the sample schedule, accept the confidentiality
+// terms, add allocations to the reuse plan (brief/09-V1-PRODUCT.md sections 3.4 and 13.5; steps 5 of 02).
 import { useState } from 'react'
 import { Dialog } from 'radix-ui'
 import { Link } from 'react-router'
 import { useStore } from '../../store/store'
 import { useProjectParam, NotAvailable } from '../../app/params'
-import { PageTitle, Panel, Table, Num, Tag, Button, Note, RuleBased, EmptyState } from '../../components/ui'
+import { Panel, Table, Num, Tag, Button, Note, RuleBased, EmptyState } from '../../components/ui'
 import { Stub } from '../../components/Stub'
-import { LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
+import { LABELS } from '../../domain/reference/labels'
+import { clientCanOpen, matchTable } from '../../store/views/client'
+import { ClientHeader } from './ClientHeader'
 import * as f from '../../domain/format'
 
 export function Match() {
   const s = useStore()
   const { record: p } = useProjectParam()
   const [termsOpen, setTermsOpen] = useState(false)
-  if (!p) return <NotAvailable />
+  if (!p || !clientCanOpen(s.world, s.personaId, p.id)) return <NotAvailable />
   const r = p.matchResult
-  const inPlan = (publicId: string, ref: string) => p.planItems.some((i) => i.lotPublicId === publicId && i.requirementRef === ref)
+  const table = matchTable(p)
   return (
-    <>
-      <PageTitle title={`Match schedule, ${p.name}`} sub={`RIBA Stage ${p.ribaStage}. Steel needed on site from ${f.date(p.keyDates.steelNeedBy)}.`} />
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button variant="primary" onClick={() => s.loadSampleSchedule(p.id)} data-testid="load-sample-schedule">
+    <div className="flex flex-col gap-4" data-testid="client-match">
+      <ClientHeader eyebrow={p.name} title="Match schedule (advanced)" sub={`RIBA Stage ${p.ribaStage}. Steel needed on site from ${f.date(p.keyDates.steelNeedBy)}.`} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" size="lg" className="text-panel" onClick={() => s.loadSampleSchedule(p.id)} data-testid="load-sample-schedule">
           Load sample schedule
         </Button>
         <Stub name="Import from a BIM model (IFC or Revit)" would="The real feature would read the member schedule from the model. The CSV import behind the sample schedule is real." testId="stub-bim" />
@@ -31,7 +34,9 @@ export function Match() {
         ) : (
           <Dialog.Root open={termsOpen} onOpenChange={setTermsOpen}>
             <Dialog.Trigger asChild>
-              <Button data-testid="open-terms">Accept the confidentiality terms</Button>
+              <Button size="lg" className="text-sm" data-testid="open-terms">
+                Accept the confidentiality terms
+              </Button>
             </Dialog.Trigger>
             <Dialog.Portal>
               <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40" />
@@ -42,10 +47,14 @@ export function Match() {
                 </Dialog.Description>
                 <div className="mt-4 flex justify-end gap-2">
                   <Dialog.Close asChild>
-                    <Button>Not now</Button>
+                    <Button size="lg" className="text-sm">
+                      Not now
+                    </Button>
                   </Dialog.Close>
                   <Button
                     variant="primary"
+                    size="lg"
+                    className="text-sm text-panel"
                     data-testid="accept-terms"
                     onClick={() => {
                       s.acceptTerms(p.id)
@@ -61,32 +70,45 @@ export function Match() {
         )}
       </div>
       {!p.termsAccepted ? (
-        <Note tone="steel" testId="label-L6" className="mb-3">
+        <Note tone="steel" testId="label-L6">
           {LABELS.L6}
         </Note>
       ) : null}
-      {!r ? (
+      {!r || !table ? (
         <EmptyState hint="Load the sample schedule to match it against the stock the project can see." />
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-            <span className="font-display text-xl" data-testid="match-lines">
-              {r.lines} lines, {r.members} members
-            </span>
-            <span className="font-display text-xl" data-testid="match-matched">
-              {r.matched} of {r.members} members matched ({f.percent(r.coverage)})
-            </span>
-            {r.openOnly !== null ? (
-              <span data-testid="match-open-only">
-                Open market only: {r.openOnly} of {r.members}
+          <section aria-label="Match summary" className="grid gap-px overflow-hidden rounded-md border border-rule-soft bg-rule-soft sm:grid-cols-3">
+            <div className="flex flex-col gap-1 bg-panel px-4 py-3">
+              <span className="text-xs text-mill-text">Schedule</span>
+              <span className="font-display text-2xl leading-none" data-testid="match-lines">
+                {r.lines} lines, {r.members} members
               </span>
-            ) : null}
+            </div>
+            <div className="flex flex-col gap-1 bg-panel px-4 py-3">
+              <span className="text-xs text-mill-text">Matched</span>
+              <span className="font-display text-2xl leading-none text-steel" data-testid="match-matched">
+                {r.matched} of {r.members} members matched ({f.percent(r.coverage)})
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 bg-panel px-4 py-3">
+              <span className="text-xs text-mill-text">Without shared lots</span>
+              {r.openOnly !== null ? (
+                <span className="text-base font-medium" data-testid="match-open-only">
+                  Open market only: {r.openOnly} of {r.members}
+                </span>
+              ) : (
+                <span className="text-sm text-mill-text">Shown once the terms are accepted</span>
+              )}
+            </div>
+          </section>
+          <div className="grid gap-2 lg:grid-cols-2">
+            <RuleBased testId="label-L2" />
+            <Note tone="survey" testId="label-L4">
+              {LABELS.L4}
+            </Note>
           </div>
-          <RuleBased testId="label-L2" />
-          <Note tone="survey" testId="label-L4" className="mt-2">
-            {LABELS.L4}
-          </Note>
-          <Panel title="Results, in reference order" className="mt-3">
+          <Panel title="Results, in reference order">
             <Table data-testid="match-results">
               <thead>
                 <tr>
@@ -103,82 +125,91 @@ export function Match() {
                 </tr>
               </thead>
               <tbody>
-                {r.results.map((res) => {
-                  const req = p.requirements.find((q) => q.ref === res.ref)!
-                  const rows = res.allocations.length ? res.allocations : [null]
-                  return rows.map((a, i) => (
-                    <tr key={`${res.ref}-${i}`} data-testid={a ? `alloc-${res.ref}-${a.publicId}` : `alloc-${res.ref}-none`}>
-                      {i === 0 ? (
+                {table.rows.map((row) => {
+                  const a = row.allocation
+                  return (
+                    <tr key={row.key} data-testid={a ? `alloc-${row.ref}-${a.publicId}` : `alloc-${row.ref}-none`} className="[&>td]:align-middle">
+                      {row.first ? (
                         <>
-                          <td rowSpan={rows.length}>
-                            <Tag>{res.ref}</Tag>
+                          <td rowSpan={row.rowSpan} className="!align-top">
+                            <Tag>{row.ref}</Tag>
                           </td>
-                          <td rowSpan={rows.length}>
-                            {req.designation}, {req.lengthM.toFixed(1)} m, {req.count} off, {req.minGrade}
+                          <td rowSpan={row.rowSpan} className="!align-top min-w-[180px]">
+                            {row.requirementText}
                           </td>
-                          <td rowSpan={rows.length} className="text-right font-display text-base" data-testid={`match-${res.ref}`}>
-                            {res.matched} of {res.required}
+                          <td rowSpan={row.rowSpan} className="!align-top whitespace-nowrap text-right font-display text-base" data-testid={`match-${row.ref}`}>
+                            {row.matchedText}
                           </td>
                         </>
                       ) : null}
                       {a ? (
                         <>
-                          <td>
-                            <Link to={`/market/${a.publicId}`} className="text-steel" data-testid={`alloc-link-${res.ref}-${a.publicId}`}>
+                          <td className="whitespace-nowrap">
+                            <Link to={`/market/${a.publicId}`} className="text-steel" data-testid={`alloc-link-${row.ref}-${a.publicId}`}>
                               {a.publicId}
                             </Link>
                           </td>
-                          <Num testId={`alloc-pieces-${res.ref}-${a.publicId}`}>{a.pieces}</Num>
+                          <Num testId={`alloc-pieces-${row.ref}-${a.publicId}`}>{a.pieces}</Num>
                           <Num>{a.overSpecKgM.toFixed(1)}</Num>
                           <Num>{a.offcutM.toFixed(2)}</Num>
-                          <td data-testid={`alloc-grade-${res.ref}-${a.publicId}`}>{a.gradeFlag ? `Grade ${GRADE_UNKNOWN.toLowerCase()}` : 'Grade known'}</td>
-                          <td data-testid={`alloc-storage-${res.ref}-${a.publicId}`}>{a.storageMin === a.storageMax ? `Storage ${a.storageMin} months` : `Storage ${a.storageMin} to ${a.storageMax} months`}</td>
-                          <td>
-                            {inPlan(a.publicId, res.ref) ? (
+                          <td className="min-w-[150px]" data-testid={`alloc-grade-${row.ref}-${a.publicId}`}>
+                            {row.gradeText}
+                          </td>
+                          <td className="whitespace-nowrap" data-testid={`alloc-storage-${row.ref}-${a.publicId}`}>
+                            {row.storageText}
+                          </td>
+                          <td className="text-right">
+                            {row.inPlan ? (
                               <Tag tone="teal">In plan</Tag>
                             ) : (
-                              <Button onClick={() => s.addToPlan(p.id, a.publicId, res.ref)} data-testid={`add-to-plan-${res.ref}-${a.publicId}`}>
+                              <Button className="min-h-[44px] whitespace-nowrap" onClick={() => s.addToPlan(p.id, a.publicId, row.ref)} data-testid={`add-to-plan-${row.ref}-${a.publicId}`}>
                                 Add to reuse plan
                               </Button>
                             )}
                           </td>
                         </>
                       ) : (
-                        <td colSpan={7} className="text-ink-soft" data-testid={`reason-${res.ref}`}>
-                          {res.reason}
+                        <td colSpan={7} className="text-ink-soft" data-testid={`reason-${row.ref}`}>
+                          {row.reason}
                         </td>
                       )}
                     </tr>
-                  ))
+                  )
                 })}
               </tbody>
             </Table>
-            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <span>Baseline mass of matched members {f.massT(r.baselineMassT)}</span>
-              <span>Stock mass {f.massT(r.stockMassT)}</span>
-              <span>Offcut mass {f.massT(r.offcutMassT)}</span>
-              <span>Avoided carbon {f.carbon(r.avoidedT)}</span>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-soft">
+              <span>
+                Baseline mass of matched members <span className="font-medium text-ink">{f.massT(r.baselineMassT)}</span>
+              </span>
+              <span>
+                Stock mass <span className="font-medium text-ink">{f.massT(r.stockMassT)}</span>
+              </span>
+              <span>
+                Offcut mass <span className="font-medium text-ink">{f.massT(r.offcutMassT)}</span>
+              </span>
+              <span>
+                Avoided carbon <span className="font-medium text-ink">{f.carbon(r.avoidedT)}</span>
+              </span>
             </div>
-            {r.results.some((x) => x.reason && x.matched > 0) ? (
+            {table.partialReasons.length > 0 ? (
               <ul className="mt-2 list-disc pl-5 text-sm text-ink-soft">
-                {r.results
-                  .filter((x) => x.reason && x.matched > 0)
-                  .map((x) => (
-                    <li key={x.ref} data-testid={`reason-${x.ref}`}>
-                      {x.ref}: {x.reason}
-                    </li>
-                  ))}
+                {table.partialReasons.map((x) => (
+                  <li key={x.ref} data-testid={`reason-${x.ref}`}>
+                    {x.ref}: {x.reason}
+                  </li>
+                ))}
               </ul>
             ) : null}
           </Panel>
-          <p className="mt-3 text-sm">
-            The reuse plan has {p.planItems.length} {p.planItems.length === 1 ? 'item' : 'items'}.{' '}
-            <Link to={`/projects/${p.id}/plan`} className="text-steel">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span>{table.planCountText}</span>
+            <Link to={`/projects/${p.id}/plan`} className="inline-flex min-h-[44px] items-center rounded-sm border border-rule bg-panel px-4 font-medium text-steel no-underline hover:bg-steel-tint" data-testid="open-plan">
               Open the reuse plan
             </Link>
-          </p>
+          </div>
         </>
       )}
-    </>
+    </div>
   )
 }

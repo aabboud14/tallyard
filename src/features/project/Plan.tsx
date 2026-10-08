@@ -1,23 +1,23 @@
-// Reuse plan: one row per plan item; the package panel, the mandate and the negotiation thread.
+// Reuse plan, the client's: one row per plan item; the package panel, the mandate and the negotiation thread
+// (brief/09-V1-PRODUCT.md sections 3.4 and 13.5; steps 6 and 7 of 02). Figures come from the selectors.
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { planItemView, type PlanItemView } from '../../store/selectors'
+import { checkMandate, clientCanOpen, facilityRows, packageStorageText, planRows, PLAN_STATUS_LABELS, PLAN_STATUS_TONE } from '../../store/views/client'
 import { useProjectParam, NotAvailable } from '../../app/params'
-import { PageTitle, Panel, Table, Num, Tag, Button, Note, Field, Figure, EmptyState, SimulatedAgent, inputClass } from '../../components/ui'
+import { Panel, Table, Num, Tag, Button, Note, Field, Figure, EmptyState, SimulatedAgent, inputClass } from '../../components/ui'
 import { HowCalculated } from '../../components/HowCalculated'
 import { LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
 import { FAMILIES } from '../../domain/reference/families'
 import { facilityById } from '../../domain/reference/assumptions'
-import { ticksOf } from '../../domain/money'
-import type { NegotiationEntry, PlanStatus } from '../../domain/types'
+import type { NegotiationEntry } from '../../domain/types'
 import { packageSections, carbonSections } from '../shared/calc'
+import { ClientHeader } from './ClientHeader'
 import * as f from '../../domain/format'
 
-export const PLAN_STATUS_LABELS: Record<PlanStatus, string> = { planned: 'Planned', agreed_in_principle: 'Agreed in principle', awaiting_seller: 'Awaiting seller approval', confirmed: 'Confirmed', no_agreement: 'No agreement' }
-
-export function negotiationText(e: NegotiationEntry, family: keyof typeof FAMILIES): string {
+function negotiationText(e: NegotiationEntry, family: keyof typeof FAMILIES): string {
   switch (e.kind) {
     case 'ask':
       return `Ask ${f.priceOnly(e.price!, family)}`
@@ -54,7 +54,7 @@ function Thread({ log, family }: { log: NegotiationEntry[]; family: keyof typeof
         ))}
       </ol>
       {shown < log.length ? (
-        <Button className="mt-2" onClick={() => setShown(log.length)} data-testid="negotiation-skip">
+        <Button className="mt-2 min-h-[44px]" onClick={() => setShown(log.length)} data-testid="negotiation-skip">
           Skip
         </Button>
       ) : null}
@@ -71,7 +71,7 @@ function PackagePanel({ v, projectId }: { v: PlanItemView; projectId: string }) 
   const facility = item.pkg.facilityId ? facilityById(item.pkg.facilityId) : null
   return (
     <Panel title="Storage, testing and transport package" data-testid="package-panel">
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex flex-col gap-3">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-mill-text">Route</dt>
@@ -83,13 +83,13 @@ function PackagePanel({ v, projectId }: { v: PlanItemView; projectId: string }) 
             </dd>
             <dt className="text-mill-text">Testing</dt>
             <dd>
-              <label className="flex items-center gap-2">
+              <label className="-my-2.5 flex min-h-[44px] items-center gap-2">
                 <input type="checkbox" className="h-4 w-4" checked={item.pkg.testing} disabled={!planned} onChange={(e) => s.setPlanPackage(projectId, item.id, { testing: e.target.checked })} data-testid="package-testing" />
                 <span data-testid="package-testing-text">{item.pkg.testing ? 'On' : 'Off'}</span>
               </label>
             </dd>
             <dt className="text-mill-text">Storage</dt>
-            <dd data-testid="package-storage">{confirmed && v.deal ? `Storage ${f.months(v.deal.storageMonths)}` : v.storageRange ? (v.storageRange.min === v.storageRange.max ? `Storage ${f.months(v.storageRange.min)}` : `Storage ${v.storageRange.min} to ${v.storageRange.max} months`) : ''}</dd>
+            <dd data-testid="package-storage">{packageStorageText(v)}</dd>
           </dl>
           {!confirmed ? (
             <Note tone="survey" testId="label-L5">
@@ -122,8 +122,8 @@ function PackagePanel({ v, projectId }: { v: PlanItemView; projectId: string }) 
             <span data-testid="package-carbon">Avoided carbon {f.carbon(v.carbon.avoided)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <HowCalculated title="package total" {...packageSections(total, facility?.name ?? null)} testId="package-calc" />
-            <HowCalculated title="avoided carbon for this item" {...carbonSections(v.carbon)} testId="package-carbon-calc" />
+            <HowCalculated title="package total" {...packageSections(total, facility?.name ?? null)} triggerLabel="How the package total is calculated" testId="package-calc" />
+            <HowCalculated title="avoided carbon for this item" {...carbonSections(v.carbon)} triggerLabel="How the avoided carbon is calculated" testId="package-carbon-calc" />
           </div>
         </div>
         <div>
@@ -138,25 +138,24 @@ function PackagePanel({ v, projectId }: { v: PlanItemView; projectId: string }) 
               </tr>
             </thead>
             <tbody>
-              {v.comparison.map((c) => {
-                const lowest = v.comparison.every((x) => c.total <= x.total)
-                return (
-                  <tr key={c.facilityId} className={c.facilityId === item.pkg.facilityId ? 'bg-steel-tint' : ''} data-testid={`facility-${c.facilityId}`}>
-                    <td>{c.name}</td>
-                    <Num testId={`facility-total-${c.facilityId}`}>{f.money(c.total)}</Num>
-                    <Num>{f.saving(c.saving, c.savingPercent)}</Num>
-                    <td>
-                      {lowest ? <Tag tone="teal">Lowest estimated total</Tag> : null}
-                      {c.facilityId === item.pkg.facilityId ? <Tag tone="steel">Chosen</Tag> : null}
-                      {planned && !item.pkg.facilityFixed && c.facilityId !== item.pkg.facilityId ? (
-                        <Button className="ml-1" onClick={() => s.setPlanPackage(projectId, item.id, { facilityId: c.facilityId })}>
+              {facilityRows(v).map((c) => (
+                <tr key={c.facilityId} className={c.chosen ? 'bg-steel-tint' : ''} data-testid={`facility-${c.facilityId}`}>
+                  <td className="whitespace-nowrap">{c.name}</td>
+                  <Num testId={`facility-total-${c.facilityId}`}>{f.money(c.total)}</Num>
+                  <Num>{f.saving(c.saving, c.savingPercent)}</Num>
+                  <td className="min-w-[150px]">
+                    <span className="flex flex-wrap items-center gap-1">
+                      {c.lowest ? <Tag tone="teal">Lowest estimated total</Tag> : null}
+                      {c.chosen ? <Tag tone="steel">Chosen</Tag> : null}
+                      {c.canChoose ? (
+                        <Button className="min-h-[44px]" onClick={() => s.setPlanPackage(projectId, item.id, { facilityId: c.facilityId })}>
                           Choose
                         </Button>
                       ) : null}
-                    </td>
-                  </tr>
-                )
-              })}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </Table>
         </div>
@@ -178,10 +177,7 @@ function NegotiationPanel({ v, projectId }: { v: PlanItemView; projectId: string
       </Note>
     )
   }
-  const openN = Number(open)
-  const maxN = Number(max)
-  const tick = fam.tick
-  const valid = Number.isFinite(openN) && Number.isFinite(maxN) && openN > 0 && Math.abs(openN / tick - Math.round(openN / tick)) < 1e-9 && Math.abs(maxN / tick - Math.round(maxN / tick)) < 1e-9 && ticksOf(openN, tick) <= ticksOf(maxN, tick)
+  const mandate = checkMandate(open, max, v.listing.family)
   return (
     <Panel title="Negotiation" data-testid="negotiation-panel">
       {!item.negotiation ? (
@@ -193,7 +189,7 @@ function NegotiationPanel({ v, projectId }: { v: PlanItemView; projectId: string
             <input id="mandate-max" className={inputClass} inputMode="decimal" value={max} onChange={(e) => setMax(e.target.value)} data-testid="mandate-max" />
           </Field>
           <div className="flex items-end">
-            <Button variant="primary" size="lg" disabled={!valid} onClick={() => s.startNegotiation(projectId, item.id, { open: openN, max: maxN })} data-testid="start-negotiation">
+            <Button variant="primary" size="lg" className="w-full text-panel sm:w-auto" disabled={!mandate.valid} onClick={() => s.startNegotiation(projectId, item.id, { open: mandate.open, max: mandate.max })} data-testid="start-negotiation">
               Start negotiation agent
             </Button>
           </div>
@@ -203,7 +199,7 @@ function NegotiationPanel({ v, projectId }: { v: PlanItemView; projectId: string
           <SimulatedAgent testId="label-L3" />
           <Thread log={item.negotiation.log} family={v.listing.family} />
           {item.status === 'agreed_in_principle' ? (
-            <Button variant="primary" size="lg" onClick={() => s.buyerApprove(projectId, item.id)} data-testid="buyer-approve">
+            <Button variant="primary" size="lg" className="self-start text-panel" onClick={() => s.buyerApprove(projectId, item.id)} data-testid="buyer-approve">
               {LABELS.L21}
             </Button>
           ) : null}
@@ -225,73 +221,83 @@ function NegotiationPanel({ v, projectId }: { v: PlanItemView; projectId: string
 
 export function Plan() {
   const world = useWorld()
+  const personaId = useStore((st) => st.personaId)
   const { planItemId } = useParams()
   const navigate = useNavigate()
   const { record: p } = useProjectParam()
-  if (!p) return <NotAvailable />
-  const selectedId = planItemId && p.planItems.some((i) => i.id === planItemId) ? planItemId : p.planItems[0]?.id
+  if (!p || !clientCanOpen(world, personaId, p.id)) return <NotAvailable />
+  const rows = planRows(world, p.id)
+  const selectedId = planItemId && rows.some((i) => i.id === planItemId) ? planItemId : rows[0]?.id
   const v = selectedId ? planItemView(world, p.id, selectedId) : null
   return (
-    <>
-      <PageTitle title={`Reuse plan, ${p.name}`} sub="Each plan item is costed on its own, with its own vehicle. There is no plan total." />
-      {p.planItems.length === 0 ? (
-        <EmptyState hint="Add an allocation from the schedule matcher to start the plan." />
+    <div className="flex flex-col gap-4" data-testid="client-plan">
+      <ClientHeader eyebrow={p.name} title="Reuse plan" sub="Each plan item is costed on its own, with its own vehicle. There is no plan total." />
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-start gap-3">
+          <EmptyState hint="Add an allocation from the Match schedule (advanced) to start the plan." />
+          <Link to={`/projects/${p.id}/match`} className="inline-flex min-h-[44px] items-center rounded-sm border border-rule bg-panel px-4 text-sm font-medium text-steel no-underline hover:bg-steel-tint" data-testid="plan-open-match">
+            Open Match schedule (advanced)
+          </Link>
+        </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          <Table data-testid="plan-table">
-            <thead>
-              <tr>
-                <th>Lot</th>
-                <th>Requirement</th>
-                <th className="text-right">Pieces</th>
-                <th>Status</th>
-                <th className="text-right">Estimated total</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.planItems.map((i) => {
-                const iv = planItemView(world, p.id, i.id)
-                return (
-                  <tr key={i.id} className={i.id === selectedId ? 'bg-steel-tint' : ''} data-testid={`plan-row-${i.lotPublicId}`}>
+        <>
+          <Panel>
+            <Table data-testid="plan-table">
+              <thead>
+                <tr>
+                  <th>Lot</th>
+                  <th>Requirement</th>
+                  <th className="text-right">Pieces</th>
+                  <th>Status</th>
+                  <th className="text-right">Estimated total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((i) => (
+                  <tr key={i.id} className={i.id === selectedId ? 'bg-steel-tint [&>td]:align-middle' : '[&>td]:align-middle'} data-testid={`plan-row-${i.lotPublicId}`}>
                     <td>
-                      {i.lotPublicId}: {iv.listing.title}
+                      <span className="font-medium">{i.lotPublicId}</span>: {i.title}
                     </td>
                     <td>{i.requirementRef}</td>
                     <Num>{i.pieces}</Num>
                     <td>
-                      <Tag tone={i.status === 'confirmed' ? 'teal' : i.status === 'no_agreement' ? 'oxide' : 'steel'} data-testid={`plan-status-${i.lotPublicId}`}>
-                        <span data-testid={`plan-status-text-${i.lotPublicId}`}>{PLAN_STATUS_LABELS[i.status]}</span>
+                      <Tag tone={PLAN_STATUS_TONE[i.status]} data-testid={`plan-status-${i.lotPublicId}`}>
+                        <span data-testid={`plan-status-text-${i.lotPublicId}`}>{i.statusLabel}</span>
                       </Tag>
                     </td>
-                    <Num>{f.money(iv.estimate.total)}</Num>
-                    <td>
-                      <Button onClick={() => navigate(`/projects/${p.id}/plan/${i.id}`)} data-testid={`open-plan-${i.lotPublicId}`}>
+                    <Num>{f.money(i.estimateTotal)}</Num>
+                    <td className="text-right">
+                      <Button className="min-h-[44px]" aria-current={i.id === selectedId ? 'true' : undefined} onClick={() => navigate(`/projects/${p.id}/plan/${i.id}`)} data-testid={`open-plan-${i.lotPublicId}`}>
                         Open
                       </Button>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </Table>
+                ))}
+              </tbody>
+            </Table>
+          </Panel>
           {v ? (
             <>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-display text-2xl" data-testid="plan-item-title">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h2 className="m-0 font-display text-2xl font-semibold leading-tight tracking-wide" data-testid="plan-item-title">
                   {v.listing.publicId}, {v.listing.title}, {v.item.pieces} pieces for {v.requirement.ref}
-                </span>
-                <Tag tone="steel">{PLAN_STATUS_LABELS[v.item.status]}</Tag>
+                </h2>
+                <Tag tone={PLAN_STATUS_TONE[v.item.status]}>{PLAN_STATUS_LABELS[v.item.status]}</Tag>
                 {v.listing.grade === 'unknown' ? <Tag tone="survey">Grade {GRADE_UNKNOWN.toLowerCase()}</Tag> : null}
-                {v.listing.sharing === 'in_confidence' ? <Tag tone="steel">{LABELS.L27}</Tag> : null}
+                {v.listing.sharing === 'in_confidence' ? (
+                  <Tag tone="steel" data-testid="label-L27">
+                    {LABELS.L27}
+                  </Tag>
+                ) : null}
               </div>
               <Figure label="Price used" value={f.unitPrice(v.estimate.pricePerUnit, v.listing.family)} sub={v.item.agreedPricePerUnit !== null ? 'agreed price' : 'public guide price until a price is agreed'} testId="plan-price" />
               <PackagePanel v={v} projectId={p.id} />
               <NegotiationPanel v={v} projectId={p.id} />
             </>
           ) : null}
-        </div>
+        </>
       )}
-    </>
+    </div>
   )
 }

@@ -105,7 +105,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   // Step 3. Publish without leaking (Tom)
   await go(page, `/buildings/${TIVERNE_ID}/listings`)
   assertRoute(page)
-  await expect(page.locator('[data-testid^="lot-visibility-"]').filter({ hasText: 'Private matching only' })).toHaveCount(5)
+  await expect(page.locator('[data-testid^="lot-visibility-"]').filter({ hasText: 'Shared privately with selected projects' })).toHaveCount(5)
   await page.getByTestId('select-lot-TH-01').click()
   await page.getByTestId('publish-visibility').selectOption('open')
   await expect(page.getByTestId('disclosure-score')).toHaveText('10')
@@ -132,7 +132,7 @@ test('steps 1 to 12 on fresh seed', async ({ page, entry }, testInfo) => {
   await expect(page.getByTestId('publish-ask')).toHaveValue('800')
   await expect(page.getByTestId('publish-reserve')).toHaveValue('730')
   await page.getByTestId('publish').click()
-  await expect(page.getByTestId('lot-visibility-TH-01')).toHaveText('Open marketplace')
+  await expect(page.getByTestId('lot-visibility-TH-01')).toHaveText('Published to the marketplace')
   await expect(page.getByTestId('lot-public-id-TH-01')).toHaveText('L-9F4CQQ')
   await expect(page.getByTestId('selected-ask')).toContainText('£800 per tonne')
   await expect(page.getByTestId('selected-reserve')).toContainText('£730 per tonne')
@@ -434,13 +434,16 @@ test('labels off the demo path, P5b, and the three stubs', async ({ page, entry 
   // P5b and L26: a matched-only lot before the terms are accepted shows Not available.
   await go(page, '/market/L-WPX5A6')
   await expect(page.getByTestId('listing-not-available')).toHaveText(LABELS.L26)
-  // L14 on unused surplus, L25 on a non-steel listing.
+  // L14 on unused surplus. L25 on a non-steel listing is reserve copy, so only the client sees it (brief 09 section 13.10).
   await go(page, '/market/L-YZ2C7H')
   await expect(page.getByTestId('listing-carbon')).toHaveText(LABELS.L14)
   await go(page, '/market/L-Q23X7N')
+  await expect(page.getByTestId('listing-title')).toBeVisible()
+  await expect(page.getByTestId('label-L25')).toHaveCount(0)
+  await setPersona(page, P.isla)
+  await go(page, '/market/L-Q23X7N')
   await label(page, 'L25')
   // L27 and L24: after the terms, a shared lot reached from the client's matcher, and a plan item for another seller.
-  await setPersona(page, P.isla)
   await go(page, `/projects/${MERROWGATE_ID}/match`)
   await page.getByTestId('load-sample-schedule').click()
   await page.getByTestId('open-terms').click()

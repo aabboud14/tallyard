@@ -1,13 +1,16 @@
+// One item's private record beside the market preview, for the surveyor and the selling owner of its building.
 import { Link, useParams } from 'react-router'
-import { useWorld, usePersona, usePhotoSrc } from '../shared/hooks'
+import { useStore } from '../../store/store'
+import { useWorld, usePhotoSrc } from '../shared/hooks'
 import { itemView, type ItemView } from '../../store/selectors'
-import { useBuildingParam } from '../../app/params'
+import { expectedText, itemPreview, ownerVisibility, quantityText, supplyAccess } from '../../store/views/supply'
+import { useBuildingParam, NotAvailable } from '../../app/params'
 import { roleFor } from '../../app/nav'
 import { PageTitle, Panel, Dl, Private, Tag, EmptyState, Note } from '../../components/ui'
 import { ItemDrawing } from '../../components/drawings/ItemDrawing'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ListingView } from '../market/ListingView'
-import { TEST_STATUS_LABELS, VISIBILITY_LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
+import { LABELS, TEST_STATUS_LABELS, GRADE_UNKNOWN } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
 import { carbonSections, guideSections } from '../shared/calc'
 import type { Photo } from '../../domain/types'
@@ -40,8 +43,9 @@ export function HoldingLine({ v }: { v: ItemView }) {
 export function ItemDetail() {
   const { itemId } = useParams()
   const world = useWorld()
-  const { persona } = usePersona()
-  const { id: buildingId } = useBuildingParam()
+  const personaId = useStore((s) => s.personaId)
+  const { id: buildingId, record: building } = useBuildingParam()
+  if (!building || !supplyAccess(world, personaId, buildingId).inventory) return <NotAvailable />
   const found = itemId ? world.items[itemId] : undefined
   const item = found && found.buildingId === buildingId ? found : undefined
   if (!item) {
@@ -53,7 +57,7 @@ export function ItemDetail() {
     )
   }
   const v = itemView(world, item.id)
-  const isOwner = roleFor(world, persona.id) === 'seller'
+  const isOwner = roleFor(world, personaId) === 'seller'
   return (
     <>
       <PageTitle
@@ -77,7 +81,7 @@ export function ItemDetail() {
               <Dl
                 rows={[
                   { label: 'Family', value: v.listing.title },
-                  { label: 'Quantity', value: item.quantity.kind === 'pieces' ? f.quantity(item.quantity.pieces, item.family === 'clay_brick' ? 'brick' : item.family === 'raised_floor' ? 'panel' : 'pieces') : item.quantity.kind === 'area' ? f.quantity(item.quantity.areaM2, 'm2') : f.quantity(item.quantity.volumeM3, 'm3') },
+                  { label: 'Quantity', value: quantityText(item) },
                   { label: 'Mass', value: f.massT(v.measures.massT), testId: 'item-mass' },
                   { label: 'Condition', value: item.condition },
                   { label: 'Recoverability', value: item.recoverability },
@@ -86,9 +90,13 @@ export function ItemDetail() {
                   { label: 'Location in building', value: item.location || 'not recorded', isPrivate: true, testId: 'item-location' },
                   { label: 'Survey notes', value: item.notes || 'none', isPrivate: true },
                   { label: 'Captured by', value: `${item.capturedBy}, ${f.date(item.capturedOn)}`, isPrivate: true },
+                  { label: 'Expected', value: expectedText(item.expectedAvailableFrom), isPrivate: true, testId: 'item-expected' },
                 ]}
               />
             </div>
+            <p className="m-0 text-xs text-mill-text" data-testid="label-L43">
+              {LABELS.L43}
+            </p>
             <div className="flex flex-wrap gap-6">
               <div>
                 <div className="text-sm text-mill-text">Avoided carbon</div>
@@ -122,7 +130,7 @@ export function ItemDetail() {
               <Dl
                 rows={[
                   { label: 'Public ID', value: v.lot.publicId, testId: 'lot-public-id' },
-                  { label: 'Visibility', value: VISIBILITY_LABELS[v.lot.visibility], testId: 'lot-visibility' },
+                  { label: 'Visibility', value: ownerVisibility(v.lot.visibility), testId: 'lot-visibility' },
                   { label: 'Available from', value: v.lot.availableFrom ? f.date(v.lot.availableFrom) : 'In stock' },
                   ...(v.lot.askPerUnit !== null ? [{ label: 'Ask', value: f.unitPrice(v.lot.askPerUnit, item.family), testId: 'lot-ask' }] : []),
                   ...(v.lot.reservePerUnit !== null ? [{ label: 'Reserve', value: f.unitPrice(v.lot.reservePerUnit, item.family), testId: 'lot-reserve' }] : []),
@@ -150,7 +158,7 @@ export function ItemDetail() {
         <Panel title="As the market sees it">
           {v.lot.visibility === 'private' ? <Note tone="grey">This lot is private. The preview shows what the market would see if it were published.</Note> : null}
           <div className="mt-2">
-            <ListingView listing={v.listing} testPrefix="preview" compact />
+            <ListingView listing={itemPreview(world, v)} testPrefix="preview" compact />
           </div>
         </Panel>
       </div>
