@@ -2,7 +2,7 @@
 import type { AppData, AppNotification, NotificationKind, PlatformRole, Viewer } from '../types'
 import { NOTIFICATION_KINDS } from '../types'
 import { roleOfUser } from '../access'
-import { dayLabel, timeAgo } from './common'
+import { dayLabel, hrefForReader, timeAgo } from './common'
 
 export const NOTIFICATION_KIND_INFO: Record<NotificationKind, { label: string; description: string; roles: PlatformRole[] }> = {
   lots_shared: { label: 'Lots shared with a project', description: 'An asset owner shares lots in confidence with one of your projects.', roles: ['architect', 'client'] },
@@ -36,8 +36,9 @@ function visible(state: AppData, viewer: Viewer): AppNotification[] {
   return state.notifications.filter((n) => n.orgId === u.orgId && u.notificationPrefs[n.kind] !== false)
 }
 
-function item(n: AppNotification, viewer: Viewer): InboxItem {
-  return { id: n.id, kind: n.kind, kindLabel: NOTIFICATION_KIND_INFO[n.kind].label, title: n.title, body: n.body, href: n.href, at: n.at, timeAgo: timeAgo(n.at, viewer.now), unread: !n.readBy.includes(viewer.userId), count: n.count }
+function item(state: AppData, n: AppNotification, viewer: Viewer): InboxItem {
+  const href = hrefForReader(state, viewer.userId, n.href) ?? '/app/home'
+  return { id: n.id, kind: n.kind, kindLabel: NOTIFICATION_KIND_INFO[n.kind].label, title: n.title, body: n.body, href, at: n.at, timeAgo: timeAgo(n.at, viewer.now), unread: !n.readBy.includes(viewer.userId), count: n.count }
 }
 
 export function unreadCount(state: AppData, viewer: Viewer): number {
@@ -45,7 +46,7 @@ export function unreadCount(state: AppData, viewer: Viewer): number {
 }
 
 export function inboxView(state: AppData, viewer: Viewer, filter: InboxFilter = 'all'): InboxView {
-  const all = visible(state, viewer).map((n) => item(n, viewer))
+  const all = visible(state, viewer).map((n) => item(state, n, viewer))
   const shown = all.filter((n) => (filter === 'all' ? true : filter === 'unread' ? n.unread : n.kind === filter))
   const groups: InboxView['groups'] = []
   for (const n of shown) {
@@ -71,7 +72,7 @@ export function inboxView(state: AppData, viewer: Viewer, filter: InboxFilter = 
 
 /** The bell: unread count and the latest few. */
 export function bellView(state: AppData, viewer: Viewer, limit = 8): { unread: number; items: InboxItem[] } {
-  const all = visible(state, viewer).map((n) => item(n, viewer))
+  const all = visible(state, viewer).map((n) => item(state, n, viewer))
   return { unread: all.filter((n) => n.unread).length, items: all.slice(0, limit) }
 }
 

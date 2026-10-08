@@ -19,7 +19,8 @@ export const LABELS = {
   L17: 'Forecast, design stage',
   L18: "Actual, from contractor's bill",
   L19: 'Input to the evidence for this requirement. Confirm with the assessor and the current scheme manual.',
-  L20: 'Prototype output from sample data. Indicative factors. Not a compliant assessment.',
+  // Reworded for the platform (rule P1): the sandbox holds sample data; nothing here is called a prototype.
+  L20: 'Sample data from the sandbox. Indicative factors. Not a compliant assessment.',
   L21: 'Approve as Lantern Quay Developments',
   L22: 'Deposit held (simulated)',
   L23: 'Held by the platform, withheld by seller',

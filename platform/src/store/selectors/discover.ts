@@ -133,6 +133,8 @@ export type DiscoverView = {
   canSave: boolean
   shared: SharedGroup[]
   sharedCount: number
+  /** Lots shared with the viewer's projects that wait behind the confidentiality terms. */
+  pendingSharedCount: number
   empty: 'no_listings' | 'no_results' | null
 }
 
@@ -166,6 +168,7 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     canSave: roleOfUser(state, viewer.userId) === 'architect',
     shared,
     sharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? g.cards.length : 0), 0),
+    pendingSharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? 0 : g.sharedCount), 0),
     empty: all.length === 0 ? 'no_listings' : shown.length === 0 ? 'no_results' : null,
   }
 }

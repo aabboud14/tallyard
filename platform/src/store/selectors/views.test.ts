@@ -3,7 +3,7 @@ import { actor, fresh, must, U, viewer, NOW } from '../../test/fixtures'
 import * as sel from '.'
 import { DEFAULT_DISCOVER_QUERY as Q } from './discover'
 import { acceptTerms } from '../actions/projects'
-import { decideReservation } from '../actions/reservations'
+import { decideReservation, requestReservation } from '../actions/reservations'
 import { saveToProject, sendToClient, decideItem } from '../actions/shortlist'
 import { setDisclosure } from '../actions/owner'
 import { loadWasteBill } from '../actions/consultant'
@@ -63,6 +63,8 @@ describe('Discover', () => {
     const s2 = { ...s, world: { ...s.world, projects: { ...s.world.projects, [MERROWGATE_ID]: { ...s.world.projects[MERROWGATE_ID], termsAccepted: false } } } }
     const g2 = sel.sharedGroups(s2, viewer(U.priya))
     expect(g2.map((x) => [x.sharedCount, x.cards.length, x.canAccept])).toEqual([[5, 0, true]])
+    expect(sel.discoverView(s2, viewer(U.priya), Q).pendingSharedCount).toBe(5)
+    expect(sel.discoverView(s, viewer(U.priya), Q).pendingSharedCount).toBe(0)
     const s3 = must(acceptTerms(s2, actor(U.priya), MERROWGATE_ID)).state
     expect(sel.sharedGroups(s3, viewer(U.priya))[0].cards).toHaveLength(5)
   })
@@ -395,6 +397,25 @@ describe('inbox, navigation, routes and search', () => {
     const tom = sel.searchIndex(s, viewer(U.tom))
     expect(sel.searchEntries(tom, 'th-07')[0]).toMatchObject({ kind: 'item' })
     expect(tom.some((e) => e.kind === 'material' || e.kind === 'project')).toBe(false)
+  })
+
+  it('every activity line and notification leads to a page its reader can open', () => {
+    let s = fresh()
+    s = must(saveToProject(s, actor(U.priya), 'L-9F4CQQ', MERROWGATE_ID)).state
+    const id = projectWishlist(s.world, MERROWGATE_ID)!.items.find((x) => x.publicId === 'L-9F4CQQ')!.id
+    s = must(sendToClient(s, actor(U.priya), MERROWGATE_ID, [id], 'Beams.')).state
+    s = must(decideItem(s, actor(U.isla), MERROWGATE_ID, id, 'approved', '')).state
+    const req = must(requestReservation(s, actor(U.isla), MERROWGATE_ID, id, ''))
+    s = must(decideReservation(req.state, actor(U.tom), req.value, 'accepted', '')).state
+    const broken: string[] = []
+    for (const [who, userId] of Object.entries(U)) {
+      const v = viewer(userId)
+      for (const row of sel.activityFor(s, v)) if (row.href && sel.routeAccess(s, v, row.href.split('?')[0]) !== 'ok') broken.push(`${who} activity ${row.href}`)
+      for (const g of sel.inboxView(s, v).groups) for (const n of g.items) if (sel.routeAccess(s, v, n.href.split('?')[0]) !== 'ok') broken.push(`${who} notification ${n.href}`)
+    }
+    expect(broken).toEqual([])
+    // The architect's line about the client's decision leads to the shortlist.
+    expect(sel.activityFor(s, viewer(U.priya)).some((r) => r.href === `/app/projects/${MERROWGATE_ID}/shortlist`)).toBe(true)
   })
 
   it('a newly sent material reaches the client home', () => {

@@ -13,6 +13,11 @@ describe('B14 formatting', () => {
   it('B14.9 percent', () => expect(f.percent(0.084611)).toBe('8.5%'))
   it('B14.10 content by value', () => expect(f.percent2(0.200593)).toBe('20.06%'))
   it('B14.11 contribution', () => expect(f.contribution(0.001489)).toBe('+0.15'))
+  it('signed points read the same as a contribution', () => {
+    expect(f.signedPoints(0.1489)).toBe('+0.15')
+    expect(f.signedPoints(-2.004)).toBe('-2.00')
+    expect(f.signedPoints(0)).toBe('+0.00')
+  })
   it('B14.12 break-even', () => expect(f.months1(36.2066)).toBe('36.2 months'))
   it('B14.13 intensity', () => expect(f.intensity(0.718671)).toBe('0.72 t per m2 GIA'))
   it('B14.14 score', () => expect(f.score(68.705)).toBe('68.7'))

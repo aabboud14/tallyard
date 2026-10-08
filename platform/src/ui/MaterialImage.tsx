@@ -35,13 +35,13 @@ export type MaterialImageProps = {
   testId?: string
 }
 
-const aspects = { '4/3': 'aspect-[4/3]', '3/2': 'aspect-[3/2]', '16/10': 'aspect-[16/10]', '1/1': 'aspect-square', fill: 'size-full' }
+const aspects = { '4/3': 'aspect-[4/3]', '3/2': 'aspect-[3/2]', '16/10': 'aspect-[16/10]', '1/1': 'aspect-square', fill: 'material-image-fill' }
 const radii = { none: '', md: 'rounded-md', lg: 'rounded-lg', xl: 'rounded-xl' }
 
 export function MaterialImage({ spec, publicId, photo, alt, aspect = '4/3', showKind = false, rounded = 'none', className, eager = false, testId }: MaterialImageProps) {
   const isPhoto = !!photo
   return (
-    <div data-testid={testId} data-kind={isPhoto ? 'photo' : 'illustration'} className={cx('relative isolate w-full overflow-hidden bg-subtle', aspects[aspect], radii[rounded], className)}>
+    <div data-testid={testId} data-kind={isPhoto ? 'photo' : 'illustration'} className={cx('material-image relative isolate overflow-hidden bg-subtle', aspects[aspect], radii[rounded], className)}>
       {isPhoto ? (
         <img src={photo!} alt={alt ?? `Photo of ${FAMILIES[spec.family].label.toLowerCase()}`} loading={eager ? 'eager' : 'lazy'} decoding="async" className="absolute inset-0 size-full object-cover" />
       ) : (

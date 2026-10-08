@@ -15,6 +15,7 @@ import * as f from '../../domain/format'
 import type { ActivityEntry, AppData, ReservationStatus, Viewer } from '../types'
 import { roleForOrgType, orgTypeLabel } from '../../sandbox/accounts'
 import { generalWishlist, projectWishlist } from '../lots'
+import { buildingSide, canOpenEngagement, projectSide, roleOfUser, type BuildingSide, type ProjectSide } from '../access'
 
 // ---------- Time ----------
 
@@ -233,6 +234,46 @@ export function activityRow(e: ActivityEntry, now: string): ActivityRow {
   return { id: e.id, at: e.at, timeAgo: timeAgo(e.at, now), actor: e.actor, text: e.text, href: e.href, initials: initials(e.actor), projectId: e.projectId, buildingId: e.buildingId }
 }
 
+/** The project tabs each side may open (the same tabs the project header shows). */
+const PROJECT_TABS_OF: Record<ProjectSide, string[]> = {
+  architect: ['shortlist', 'specification', 'carbon', 'team', 'activity', 'matching'],
+  client: ['approvals', 'reservations', 'specification', 'carbon', 'team', 'activity'],
+  consultant: ['carbon', 'compliance', 'team', 'activity'],
+}
+const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
+  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing'],
+  surveyor: ['inventory', 'capture'],
+}
+
+/**
+ * Where an activity line or a notification leads for this person. One line is shared by every organisation on a
+ * project, so its address may be another side's page: then it leads to the same thing in their own workspace (the
+ * shortlist for the architect, approvals for the client, otherwise the project or building), or nowhere when they
+ * cannot open it.
+ */
+export function hrefForReader(state: AppData, userId: string, href: string | null): string | null {
+  if (!href) return null
+  const [, section, id, tab, ...rest] = href.split('?')[0].split('/').filter(Boolean)
+  if (section === 'projects' && id) {
+    const side = projectSide(state, userId, id)
+    if (!side) return null
+    const base = `/app/projects/${id}`
+    if (tab === undefined || (rest.length === 0 && PROJECT_TABS_OF[side].includes(tab))) return href
+    if (side === 'architect' && (tab === 'approvals' || tab === 'reservations')) return `${base}/shortlist`
+    if (side === 'client' && tab === 'shortlist') return `${base}/approvals`
+    return base
+  }
+  if (section === 'buildings' && id) {
+    const side = buildingSide(state, userId, id)
+    if (!side) return null
+    if (tab === undefined || BUILDING_TABS_OF[side].includes(tab)) return href
+    return `/app/buildings/${id}`
+  }
+  if (section === 'requests') return roleOfUser(state, userId) === 'owner' ? href : null
+  if (section === 'engagements' && id) return roleOfUser(state, userId) === 'consultant' && canOpenEngagement(state, userId, id) ? href : null
+  return href
+}
+
 /** Activity the viewer's organisation may read, newest first, optionally for one project or building. */
 export function activityFor(state: AppData, viewer: Viewer, scope: { projectId?: string; buildingId?: string } = {}, limit = 50): ActivityRow[] {
   const orgId = state.users[viewer.userId]?.orgId
@@ -241,5 +282,5 @@ export function activityFor(state: AppData, viewer: Viewer, scope: { projectId?:
     .filter((e) => e.orgIds.includes(orgId))
     .filter((e) => (scope.projectId === undefined || e.projectId === scope.projectId) && (scope.buildingId === undefined || e.buildingId === scope.buildingId))
     .slice(0, limit)
-    .map((e) => activityRow(e, viewer.now))
+    .map((e) => ({ ...activityRow(e, viewer.now), href: hrefForReader(state, viewer.userId, e.href) }))
 }

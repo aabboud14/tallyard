@@ -80,6 +80,12 @@ export function contribution(ratio: number): string {
   return (v >= 0 ? '+' : '-') + fixed(Math.abs(v), 2)
 }
 
+/** +0.15 from a figure already in points of 100 */
+export function signedPoints(points: number): string {
+  const v = roundHalfUp(points, 2)
+  return (v >= 0 ? '+' : '-') + fixed(Math.abs(v), 2)
+}
+
 /** 13 months */
 export function months(n: number): string {
   return `${fixed(n, 0)} ${n === 1 ? 'month' : 'months'}`

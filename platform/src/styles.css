@@ -224,6 +224,16 @@
   }
 }
 
+/* Default sizes for MaterialImage, in the components layer so a size passed as a utility class always wins. */
+@layer components {
+  .material-image {
+    width: 100%;
+  }
+  .material-image-fill {
+    height: 100%;
+  }
+}
+
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -235,6 +245,13 @@
   background: linear-gradient(90deg, var(--color-subtle) 0%, var(--color-line-soft) 40%, var(--color-subtle) 80%);
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
+}
+
+/* On phones, toasts sit above a page's fixed bottom action bar (marked data-bottom-bar) instead of covering it. */
+@media (max-width: 639.98px) {
+  body:has([data-bottom-bar]) [data-toast-viewport] {
+    bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -48,13 +48,13 @@ export function Toaster() {
                 {t.action.label}
               </T.Action>
             ) : null}
-            <T.Close aria-label="Dismiss" className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
+            <T.Close aria-label="Dismiss" className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md max-sm:after:absolute max-sm:after:-inset-2.5 text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
               <X aria-hidden="true" className="size-3.5" />
             </T.Close>
           </T.Root>
         )
       })}
-      <T.Viewport className="fixed bottom-0 right-0 z-[100] m-0 flex w-full max-w-[400px] list-none flex-col gap-2 p-4 outline-none sm:bottom-2 sm:right-2" />
+      <T.Viewport data-toast-viewport="" className="fixed bottom-0 right-0 z-[100] m-0 flex w-full max-w-[400px] list-none flex-col gap-2 p-4 outline-none sm:bottom-2 sm:right-2" />
     </T.Provider>
   )
 }

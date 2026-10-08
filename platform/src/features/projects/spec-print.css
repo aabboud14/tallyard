@@ -1,0 +1,33 @@
+/* A4 print layout for the specification. The shell hides its sidebar and top bar in print; this page hides its
+   toolbar, drops the paper's frame and prints each note as text. */
+@page {
+  size: A4;
+  margin: 16mm 14mm;
+}
+
+@media print {
+  html {
+    font-size: 10pt;
+  }
+
+  .spec-paper {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .spec-clause {
+    break-inside: avoid;
+  }
+
+  .spec-sections {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .spec-head {
+    break-after: avoid;
+  }
+}

@@ -7,7 +7,7 @@ import { itemMeasures } from '../engines/measures'
 export const SAMPLE_PHOTO_DATA_URI =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><rect width="640" height="480" fill="#9aa5ae"/><text x="320" y="252" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" fill="#14202b">Sample photo</text></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e7e5e4"/><stop offset="1" stop-color="#c9c5c1"/></linearGradient></defs><rect width="640" height="480" fill="url(#g)"/><g transform="translate(284 168) scale(3)" fill="none" stroke="#78716c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></g><text x="320" y="282" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="500" text-anchor="middle" fill="#57534e">Sample photo</text></svg>',
   )
 
 export const ORG_IDS = {
