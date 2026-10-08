@@ -63,6 +63,9 @@ export const ALLOWED_FACILITIES = [
   'Hazardous waste landfill, Northamptonshire',
 ] as const
 
+// Group 4: fictional names that appear only in the platform's tests (sign-ups, invites, a new project and building).
+export const TEST_ONLY_NAMES = ['Corbel Yard', 'Wexcombe House', '9 Lantry Street', 'Park Studio', 'Reed Holdings', 'Shaw Surveys', 'Jo Park', 'Ash Reed', 'Lee Shaw', 'Alex Moore', 'Ruth Calder', '2 Wharf Lane'] as const
+
 // Real company names that must never be introduced. The scan script fails on any of these.
 export const DENIED_NAMES = [
   'Cleveland Steel',

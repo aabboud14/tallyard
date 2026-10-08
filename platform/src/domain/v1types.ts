@@ -29,6 +29,9 @@ export type WishlistItem = {
   status: WishStatus
   decidedOn: string | null
   decisionNote: string | null
+  /** Platform: when the architect last sent it to the client, and the message that went with it. */
+  sentOn?: string | null
+  sentMessage?: string | null
 }
 
 export type Wishlist = { id: string; orgId: string; projectId: string | null; items: WishlistItem[] }
