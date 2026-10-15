@@ -13,3 +13,7 @@ Each line is one changed assertion, with the spec change behind it. Assertions t
 - `src/store/selectors/projects-timeline.test.ts`, "draws Merrowgate Wharf's whole programme for Priya": each material row `href` expected `/app/discover/${publicId}`, now `/app/marketplace/${publicId}?project=${MERROWGATE_ID}`. BRIEF 14.1 "Its address moves to /app/marketplace" (shell-dashboards.md A3: every href goes through `store/paths.ts`); the programme belongs to one project, so the material page opens checked against it, as every other project link to a material does.
 
 Added, not changed: `src/domain/sketch.test.ts` (the frame from the recorded frame element), `src/store/selectors/homes.test.ts` (owner card kinds and New project cards; the planned stage on architect and consultant cards), and `/app/marketplace` route checks beside the `/app/discover` ones in `owner-surveyor.selectors.test.ts`.
+
+## End-to-end journeys
+
+No assertion changed. After both merges `npm run e2e` passes all four journeys in `e2e/journeys.spec.ts` as stream X left them (the Marketplace address and label, the old Discover redirect, the phone check).
