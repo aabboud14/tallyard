@@ -146,3 +146,61 @@ Contracts every feature uses:
 - Marcus opens the project's Carbon and Compliance and exports the workbook.
 - A new visitor can sign up as an architecture practice, create a project and start saving materials.
 - `npm run check` passes; Playwright covers the journeys above at 1440 px and the capture and discover screens at 390 px; no horizontal scroll; privacy tests prove the architect and client never receive seller-private strings and the owner never receives buyer-private strings before acceptance.
+
+## 14. Round 2: changes from the review of 14 October 2026
+
+The partner's notes are in `feedback/2026-10-14-review.md`. The detailed designs, one per area, are in `feedback/r2-design/` and are part of this spec: `shell-dashboards.md`, `marketplace-material.md`, `projects-timeline.md`, `owner-surveyor.md`, `client-consultant.md`, `visual-qa.md`. Where this section and a design differ, this section wins. Where two designs differ, the resolution below wins.
+
+### 14.1 Decisions on each note
+
+Overall look and dashboards
+- Graphics: a technical drawing style (ink hairlines, flat material fills, no glows, gradients or blur), generated axonometric thumbnails for projects and buildings, colour-coded metric tiles with donuts, rings, bars and target meters. The landing page keeps its structure and gains a drawing of a building coming down beside one going up, a facts band and a product shot of the new dashboard. See `shell-dashboards.md` B and E7, refined by `visual-qa.md`.
+- Every role's home becomes a dashboard with four metric tiles, thumbnails and a collapsible Recent activity panel (collapsed by default).
+- Discover is renamed Marketplace in every label. Its address moves to `/app/marketplace` and `/app/marketplace/:publicId`; `/app/discover...` redirects there, keeping the query string, so stored links keep working. Code identifiers keep the old name.
+- "Waiting on your client" becomes "Waiting for approval" on every architect surface.
+- The architect's "New for your projects" feed moves into the Marketplace; the home keeps a per-project "{n} new materials fit" link.
+- Sidebar projects sort by name A to Z by default, with a menu for client grouping, recent activity and a client filter, kept per person.
+
+Marketplace and material pages
+- The Marketplace opens on three category folders (Structure, Envelope, Finishes) with thumbnail mosaics, then New for your projects (architects), then All materials. Inner tabs: "All listings" and "Shared with you".
+- "Checking against" defaults to no project and becomes a visible strip with fit counts and an "Only show what arrives in time" switch.
+- Quarter labels go: availability reads "Expected January to March 2027", "Expected November 2026" or "Available now", from the disclosed window only. The availability filter becomes a month slider with a histogram.
+- Architects and consultants no longer see the guide price, the price sort or seller details. Clients keep them.
+- Material page order: pictures and 3D, save to project and downloads, availability, sustainability, key facts, specification. A plain white stage, sections divided by hairlines.
+- Spinnable 3D view: a custom SVG renderer (`view3d.ts`, `ModelViewer.tsx`), not three.js. Revit-compatible download: IFC4 generated as text (`ifc.ts`). OBJ and DXF stay.
+
+Project setup and timeline
+- Each project stores RIBA stage 0 to 4 start dates, site start and practical completion; stages 5 to 7 derive from them. New projects get suggested dates (marked Suggested and Indicative) that the architect confirms or edits.
+- The overview leads with a full-width programme chart: stage bands, milestones, a today line labelled with the planned stage, and each shortlisted material's availability coloured by fit. An Indicative pill compares the planned stage with the declared one.
+- Region and local authority are dropdowns (all 33 London authorities by product region, short lists elsewhere, plus "Another local authority"). They pull planning and sustainability requirements from one dataset (`reference/requirements.ts`) to select; optional for architects, with statutory items pre-ticked.
+- Thirteen project types plus "Other" with an optional description that never reaches sellers.
+- New projects show a setup checklist. Draggable availability bars are listed under Help, Version 2.
+- Client linking needs the client organisation's acceptance. Until then the client cannot see the project, the architect sees only the client organisation's name, and nothing can be sent for approval. Clients answer on `/app/projects/requests`.
+
+Donor buildings and surveyors
+- The owner role reads "Donor building owner"; building kinds read "Donor building" and "New project"; "Priorities" becomes "Recovery plan" (the route stays `/priorities`). The stored organisation type stays `Asset owner`.
+- A "New project" is a Project on which the owner organisation is the client and developer, so it gets approvals and reservations. Owners may appoint an architecture practice to it directly.
+- Surveyors get a standalone Capture page (`/app/capture`) with a building picker, and can add a building before any appointment; it links to its owner through a claim addressed to the owner's email, which the owner accepts or declines. Submitting a survey waits for the link.
+- Testing companies are reference data; a testing request records status and results and notifies the other side. Owners or surveyors appoint a deconstruction contractor per building, who sets expected availability dates; the owner applies them to private lots.
+- Share links: an owner creates a revocable link to chosen shared lots of one building; anyone signed in who accepts the confidentiality terms sees them as public listings. The owner sees only how many organisations opened it and their types.
+- Building structure is a list of elements (frame, floor slabs, roof, stability, foundations, facade), each with a material and a system from a fixed table.
+
+Developer and consultant
+- See `client-consultant.md`: client dashboard with cost, savings, carbon, reuse share and certification tracking, a parallel programme timeline across projects and a to-do list; financial metrics on Approvals and Reservations and a carbon summary on Reservations; requirement tracking per project from the shared dataset; a consultant Goals and targets tab with overridable targets, an auto-written circular economy statement, a Sustainability tab in place of Carbon, and an interactive certification map.
+
+### 14.2 Resolutions between designs
+- Route: `/app/marketplace` with redirects (`shell-dashboards.md` A), not the unchanged path in `marketplace-material.md`.
+- New for your projects: one feed function `newForProjectsFeed` in `store/selectors/marketplace.ts`; the row lives in the Marketplace (`marketplace-material.md`); the architect home shows per-project counts (`shell-dashboards.md`).
+- Collapsible panels: one component, `ui/CollapsiblePanel.tsx` with `usePersistentToggle` (browser storage, wrapped in try and catch). The project overview uses it with the id `project-activity`. No `UiState.panels`.
+- One state version bump: `STATE_VERSION` 2 for all of round 2. Stored version 1 sandboxes reseed.
+- Owner organisations can be a project's client only through their own New project. An architect's client picker still lists only client organisations and new names; owners are never found by name.
+- `CollapsibleCard` in `projects-timeline.md` H8 is replaced by `CollapsiblePanel`.
+
+### 14.3 Spec changes that change existing tests (P8)
+These assertions change because the partner changed the product, not to make code pass. Each is recorded in `docs/DECISIONS.md`:
+- The client notification on project creation becomes a link request ("Studio Oriel asked to add you as client on ..."), and the project stays out of the client's workspace until accepted.
+- `checkingProjectFor` defaults to no project.
+- Availability text in the specification export reads "Expected January to March 2027" instead of a quarter.
+- The architect's material view has no price or seller line; the price sort is for clients.
+- The sidebar orders projects by name.
+- Labels "Discover" and "Waiting on" become "Marketplace" and "Waiting for approval"; "Priorities" becomes "Recovery plan".
