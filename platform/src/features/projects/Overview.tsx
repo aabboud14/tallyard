@@ -18,6 +18,7 @@ import { ProgrammeCard } from './ProgrammeCard'
 import { ProgrammeDialog } from './ProgrammeDialog'
 import { RequirementsCard } from './RequirementsCard'
 import { RequirementsDialog } from './RequirementsDialog'
+import { AppointArchitectCard } from './AppointArchitect'
 
 type DialogState = { kind: 'programme' } | { kind: 'requirements' } | { kind: 'client'; mode: ChangeClientMode } | null
 
@@ -61,6 +62,8 @@ export function Overview() {
             footer={inlineLink && view.setup.focusId !== 'client' ? <ClientLinkBanner projectId={projectId} variant="inline" onChangeClient={changeClient} /> : null}
           />
         ) : null}
+
+        {h.canAppointArchitect ? <AppointArchitectCard projectId={projectId} /> : null}
 
         {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
 
@@ -133,7 +136,7 @@ export function Overview() {
                 layout="grid"
                 items={[
                   { label: 'Client', value: clientValue },
-                  { label: 'Architect', value: h.architectName },
+                  { label: 'Architect', value: h.architectText },
                   { label: 'Consultant', value: h.consultantName || 'None yet' },
                   { label: 'Type', value: h.typeLabel },
                   { label: 'Stage', value: h.stageLabel },

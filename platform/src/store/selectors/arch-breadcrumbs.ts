@@ -7,6 +7,7 @@ import { projectTabs } from './project'
 import { buildingTabs } from './owner'
 import { routeAccess } from './nav'
 import { MARKETPLACE_PATH } from '../paths'
+import { linkPageTitle } from './links'
 
 export type AppCrumb = { label: string; href: string | null }
 
@@ -57,7 +58,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   }
   if (!SECTION_LABELS[section] || access === 'not_found') return done([crumb('Page not found')])
   // A share link's address is its token: the page has no section of its own to go back to.
-  if (section === 'links') return done([crumb(sectionLabel)])
+  if (section === 'links') return done([crumb(id ? linkPageTitle(state, viewer, id) : sectionLabel)])
   if (id === undefined || access !== 'ok') return done([crumb(sectionLabel, sectionHref)])
 
   if (section === 'marketplace' || section === 'discover') {

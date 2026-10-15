@@ -3,7 +3,7 @@
 // organisations opened it and their types, never who.
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { Copy, Link2, Link2Off, Plus, Share2 } from 'lucide-react'
+import { Copy, Eye, Link2, Link2Off, Plus, Share2 } from 'lucide-react'
 import { act, useView } from '../../store'
 import { shareLinksView, type ShareLinkRow, type ShareLinksView } from '../../store/selectors/links'
 import { Button, Callout, Card, CardHeader, Checkbox, Dialog, Field, Input, Pill, toast } from '../../ui'
@@ -82,6 +82,11 @@ export function ShareLinks({ buildingId }: { buildingId: string }) {
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button size="sm" icon={Copy} onClick={() => copy(r)} data-testid={`copy-${r.id}`}>
                     Copy link
+                  </Button>
+                  <Button asChild size="sm" variant="ghost" icon={Eye}>
+                    <Link to={r.href} data-testid={`preview-${r.id}`}>
+                      Preview
+                    </Link>
                   </Button>
                   <Button size="sm" variant="ghost" icon={Link2Off} onClick={() => setRevoking(r)} data-testid={`revoke-${r.id}`}>
                     Revoke

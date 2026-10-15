@@ -6,7 +6,7 @@ import { itemByTag, TIVERNE_ID, HARROWDEN_ID } from '../../domain/seed/world'
 import { AMBREY_ID, FENNICK_ID, TIVERNE_TESTING_ID } from '../../sandbox/seed-owner-surveyor'
 import { decideBuildingClaim } from '../actions/claims'
 import { availabilityView } from './contractor'
-import { availabilityDraft, blankElement, buildingSketches, buildingVisual, changedDates, fillBlankMonths, holdsChart, requestsPage, structureForm, testingResultsForm } from './buildings-ui'
+import { availabilityDraft, blankElement, buildingSketches, elementRowLabel, buildingVisual, changedDates, fillBlankMonths, holdsChart, requestsPage, structureForm, testingResultsForm } from './buildings-ui'
 
 describe('the building header drawing', () => {
   it('is drawn for each side of the building and for nobody else', () => {
@@ -55,6 +55,11 @@ describe('the structure form', () => {
     const r = addTestUser(fresh(), { orgId: FENNICK_ID, name: 'Lee Shaw', email: 'lee.shaw@fennick.example' })
     expect(structureForm(r.state, viewer(r.userId), TIVERNE_ID)).toBeNull()
     expect(blankElement('roof')).toEqual({ kind: 'roof', material: null, systemId: null, note: '' })
+  })
+
+  it('numbers repeated elements in the editor: Facade, Facade 2, Facade 3', () => {
+    const rows = [blankElement('frame'), blankElement('facade'), blankElement('facade'), blankElement('roof'), blankElement('facade')]
+    expect(rows.map((_, i) => elementRowLabel(rows, i, i === 0 ? 'Frame' : i === 3 ? 'Roof' : 'Facade'))).toEqual(['Frame', 'Facade', 'Facade 2', 'Roof', 'Facade 3'])
   })
 })
 

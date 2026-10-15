@@ -6,7 +6,7 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { Eye, House, LockKeyhole, ShieldCheck } from 'lucide-react'
 import * as f from '../../domain/format'
 import { act, useSession, useView } from '../../store'
-import { linkView } from '../../store/selectors/links'
+import { LINK_PAGE_TITLES, linkView } from '../../store/selectors/links'
 import type { ListingCard } from '../../store/selectors/common'
 import { Button, Callout, Card, DescriptionList, EmptyState, IndicativeMarker, MaterialCard, MaterialImage, PageHeader, Sheet, SustainabilityBand, toast } from '../../ui'
 import { Page } from '../../app/Page'
@@ -81,7 +81,7 @@ export function LinkPage() {
   const materialLinks = v.state === 'open' && v.materialLinks
   return (
     <Page testId="link-page" width="wide">
-      <PageHeader title={preview ? 'Your share link' : 'Shared with you by link'} subtitle={`${v.count} ${v.count === 1 ? 'lot' : 'lots'}, shared in confidence by a donor building owner.`} />
+      <PageHeader title={preview ? LINK_PAGE_TITLES.preview : LINK_PAGE_TITLES.other} subtitle={`${v.count} ${v.count === 1 ? 'lot' : 'lots'}, shared in confidence by a donor building owner.`} />
       {preview ? (
         <Callout icon={Eye} className="mt-5" role="status">
           This is how people with the link see your lots.
@@ -93,7 +93,14 @@ export function LinkPage() {
         <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-x-5 gap-y-8 p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-testid="link-cards">
           {v.cards.map((c) => (
             <li key={c.publicId} className="min-w-0">
-              {materialLinks ? <ListingTile card={c} canSave={role === 'architect'} /> : <FactsTile card={c} />}
+              {materialLinks ? (
+                <ListingTile card={c} canSave={role === 'architect'} />
+              ) : preview ? (
+                // The same card openers see, badges and short dates included; it opens the facts here, not the marketplace.
+                <ListingTile card={c} canSave={false} href={`?card=${c.publicId}`} />
+              ) : (
+                <FactsTile card={c} />
+              )}
             </li>
           ))}
         </ul>

@@ -2,7 +2,8 @@
 import { describe, it, expect } from 'vitest'
 import { actor, addTestUser, fresh, must, NOW, U, viewer } from '../../test/fixtures'
 import * as sel from './index'
-import { createOwnerProject } from '../actions/owner'
+import { pageLocation } from './arch-breadcrumbs'
+import { appointProjectArchitect, createOwnerProject } from '../actions/owner'
 import { appointContractor, setContractorDates } from '../actions/contractor'
 import { openShareLink, revokeShareLink } from '../actions/links'
 import { setLotVisibility } from '../actions/owner'
@@ -99,6 +100,16 @@ describe('share links', () => {
     expect(sel.linkView(s, viewer(U.priya), 'lnk_nothere')).toEqual({ state: 'inactive' })
   })
 
+  it("titles the link page, and its breadcrumb, as the owner's preview or as shared with you", () => {
+    let s = fresh()
+    const path = `/app/links/${TIVERNE_LINK_ID}`
+    expect(sel.linkPageTitle(s, viewer(U.tom), TIVERNE_LINK_ID)).toBe('Your share link')
+    expect(pageLocation(s, viewer(U.tom), path)).toEqual({ crumbs: [{ label: 'Your share link', href: null }], title: 'Your share link' })
+    expect(pageLocation(s, viewer(U.priya), path).title).toBe('Shared with you by link')
+    s = must(revokeShareLink(s, actor(U.tom), TIVERNE_LINK_ID)).state
+    expect(pageLocation(s, viewer(U.tom), path).title).toBe('Shared with you by link')
+  })
+
   it("the owner's list counts opens by type and offers the shared lots", () => {
     let s = fresh()
     s = must(openShareLink(s, actor(U.priya), TIVERNE_LINK_ID)).state
@@ -169,6 +180,10 @@ describe('the building overview', () => {
     const o = sel.buildingOverview(s, viewer(U.tom), TIVERNE_ID)!
     expect(o.structure.summary).toBe('Bolted steel frame, composite slabs on metal deck, concrete cores, stone cladding, precast concrete panels, unitised curtain wall')
     expect(o.facts.find((f) => f.label === 'Structure')!.value).toBe(o.structure.summary)
+    // The Building card leaves the structure to the Structure card beside it, so the aside stays short.
+    expect(o.cardFacts.map((f) => f.label)).toEqual(o.facts.map((f) => f.label).filter((l) => l !== 'Structure'))
+    expect(o.cardFacts.map((f) => f.label)).toContain('Address')
+    expect(JSON.stringify(o.cardFacts)).not.toContain('Bolted steel frame')
     expect(o.structure.notes).toBe('Composite slabs act as diaphragms; cores at the north and east corners.')
     expect(o.structure.rows[0]).toEqual({ kind: 'frame', label: 'Frame', materialLabel: 'Steel', systemLabel: 'Steel beams and columns, bolted connections', note: '' })
     expect(o.structure.rows.at(-1)!.note).toBe('Added in 2003')
@@ -253,6 +268,41 @@ describe('New projects for the owner', () => {
     expect(home.newProjects.map((p) => p.name)).toEqual(['Wexcombe House'])
     expect(sel.projectHeader(r.state, viewer(U.tom), r.value)!.side).toBe('client')
   })
+
+  it('without an architect, offer the owner to appoint one instead of an empty team', () => {
+    const r = must(createOwnerProject(fresh(), actor(U.tom), { ...WEXCOMBE, architectOrgId: null }))
+    const id = r.value
+    const header = sel.projectHeader(r.state, viewer(U.tom), id)!
+    expect(header).toMatchObject({ architectName: '', architectText: 'Not appointed yet', canAppointArchitect: true })
+    const team = sel.projectTeam(r.state, viewer(U.tom), id)!
+    expect(team.sections.map((x) => [x.roleLabel, x.orgName])).toEqual([['Client', 'Ostlea Estates']])
+    expect(team.appointArchitect).toEqual({ projectId: id, projectName: 'Wexcombe House', options: [{ orgId: ORG_IDS.oriel, name: 'Studio Oriel' }, { orgId: 'org_tessaly', name: 'Tessaly Architects' }] })
+    const overview = sel.projectOverview(r.state, viewer(U.tom), id)!
+    expect(overview.nextSteps[0]).toEqual({ id: 'architect', text: 'Appoint an architect to start sourcing', href: `/app/projects/${id}/team` })
+    expect(overview.requirements).toMatchObject({ noArchitect: true, emptyText: 'Appoint an architect to choose which requirements apply.' })
+
+    // Once a practice is appointed, the team, the header and the next steps follow, and nothing offers to appoint again.
+    const after = must(appointProjectArchitect(r.state, actor(U.tom), id, ORG_IDS.oriel)).state
+    expect(sel.projectHeader(after, viewer(U.tom), id)).toMatchObject({ architectName: 'Studio Oriel', architectText: 'Studio Oriel', canAppointArchitect: false })
+    const team2 = sel.projectTeam(after, viewer(U.tom), id)!
+    expect(team2.sections.map((x) => [x.roleLabel, x.orgName])).toEqual([['Client', 'Ostlea Estates'], ['Architect', 'Studio Oriel']])
+    expect(team2.appointArchitect).toBeNull()
+    expect(sel.appointArchitectView(after, viewer(U.tom), id)).toBeNull()
+    expect(sel.projectOverview(after, viewer(U.tom), id)!.nextSteps.map((x) => x.id)).not.toContain('architect')
+    expect(sel.projectOverview(after, viewer(U.tom), id)!.requirements).toMatchObject({ noArchitect: false, emptyText: 'The architect has not chosen any requirements yet.' })
+    // The architect sees their own empty state, never the owner's.
+    expect(sel.projectOverview(after, viewer(U.priya), id)!.requirements.emptyText).toBe('No requirements chosen yet. Pick the policies and standards to track for this location.')
+    expect(sel.appointArchitectView(after, viewer(U.priya), id)).toBeNull()
+  })
+
+  it('never offers anyone but the owner client to appoint an architect', () => {
+    const s = fresh()
+    expect(sel.projectHeader(s, viewer(U.priya), MERROWGATE_ID)!).toMatchObject({ canAppointArchitect: false, architectText: 'Studio Oriel' })
+    expect(sel.appointArchitectView(s, viewer(U.priya), MERROWGATE_ID)).toBeNull()
+    expect(sel.projectTeam(s, viewer(U.priya), MERROWGATE_ID)!.appointArchitect).toBeNull()
+    const r = must(createOwnerProject(s, actor(U.tom), { ...WEXCOMBE, architectOrgId: null }))
+    expect(sel.appointArchitectView(r.state, viewer(U.dana), r.value)).toBeNull()
+  })
 })
 
 describe('the sidebar', () => {
@@ -266,7 +316,7 @@ describe('the sidebar', () => {
     const clients = nav.sections[1].items
     const unlinked = clients.find((i) => i.label === 'Not yet linked')!
     expect(unlinked.children.map((c) => c.label)).toEqual(['Ambrey House'])
-    expect(unlinked.children[0].children.map((c) => c.label)).toEqual(['Capture', 'Inventory', 'Testing'])
+    expect(unlinked.children[0].children.map((c) => c.label)).toEqual(['Overview', 'Capture', 'Inventory', 'Testing'])
     expect(clients.at(-1)).toMatchObject({ label: 'Add building', href: '/app/buildings?new=1', icon: 'Plus' })
   })
 
@@ -274,11 +324,11 @@ describe('the sidebar', () => {
     let { s, lee } = withLee()
     const nav = sel.navModel(s, viewer(lee))!
     const tiverne = nav.sections[1].items[0].children[0]
-    expect(tiverne.children.map((c) => c.label)).toEqual(['Availability'])
+    expect(tiverne.children.map((c) => c.label)).toEqual(['Overview', 'Availability'])
     // A surveying firm that is also the contractor gets both.
     s = must(appointContractor(s, actor(U.tom), TIVERNE_ID, ORG_IDS.tarnbrook)).state
     const dana = sel.navModel(s, viewer(U.dana))!.sections[1].items[0].children[0]
-    expect(dana.children.map((c) => c.label)).toEqual(['Capture', 'Inventory', 'Testing', 'Availability'])
+    expect(dana.children.map((c) => c.label)).toEqual(['Overview', 'Capture', 'Inventory', 'Testing', 'Availability'])
   })
 
   it('gives the owner Donor buildings with Recovery plan, then New projects and the marketplace once it has one', () => {

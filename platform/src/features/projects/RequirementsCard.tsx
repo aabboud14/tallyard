@@ -33,11 +33,15 @@ export function RequirementsCard({ view, projectId, onEdit }: Props) {
           <span className="inline-flex size-9 items-center justify-center rounded-lg bg-subtle text-muted ring-1 ring-inset ring-line-soft">
             <Scale aria-hidden="true" className="size-4" />
           </span>
-          <p className="m-0 text-sm text-ink-soft">{view.canEdit ? 'No requirements chosen yet. Pick the policies and standards to track for this location.' : 'The architect has not chosen any requirements yet.'}</p>
+          <p className="m-0 text-sm text-ink-soft">{view.emptyText}</p>
           {view.canEdit ? (
             <Button size="sm" variant="primary" onClick={onEdit} data-testid="requirements-choose">
               Choose requirements
             </Button>
+          ) : view.noArchitect ? (
+            <Link to={`/app/projects/${projectId}/team`} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11" data-testid="requirements-appoint">
+              Appoint an architect <ArrowRight aria-hidden="true" className="size-3.5" />
+            </Link>
           ) : null}
         </div>
       ) : (

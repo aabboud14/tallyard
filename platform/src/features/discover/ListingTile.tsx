@@ -9,12 +9,12 @@ import { CardSaveButton } from './SaveMenu'
 import { usePhotoSrc } from './photo'
 import { listingHref } from './links'
 
-export function ListingTile({ card, canSave, projectId = null, size = 'md', eager = false, note, testIdPrefix = '', showFit = true }: { card: ListingCard; /** The fit pill on the picture; off where a caption already says the fit. */ showFit?: boolean; canSave: boolean; projectId?: string | null; size?: 'md' | 'lg'; eager?: boolean; note?: ReactNode; /** Keeps test ids unique when a material shows twice on a page. */ testIdPrefix?: string }) {
+export function ListingTile({ card, canSave, projectId = null, size = 'md', eager = false, note, testIdPrefix = '', showFit = true, href }: { card: ListingCard; /** Where the card opens; the material page by default. */ href?: string; /** The fit pill on the picture; off where a caption already says the fit. */ showFit?: boolean; canSave: boolean; projectId?: string | null; size?: 'md' | 'lg'; eager?: boolean; note?: ReactNode; /** Keeps test ids unique when a material shows twice on a page. */ testIdPrefix?: string }) {
   const photo = usePhotoSrc(card.photo)
   const tile = (
     <MaterialCard
       testId={`${testIdPrefix}card-${card.publicId}`}
-      href={listingHref(card.publicId, projectId)}
+      href={href ?? listingHref(card.publicId, projectId)}
       title={card.title}
       size={size}
       eyebrow={`${card.typologyLabel}, ${card.familyLabel}`}

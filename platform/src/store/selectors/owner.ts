@@ -434,6 +434,8 @@ export type BuildingOverview = {
   surveyorOrgId: string | null
   surveyorOptions: { orgId: string; name: string }[]
   facts: { label: string; value: string }[]
+  /** The overview's Building card: the facts less the structure, which the Structure card beside it records in full. */
+  cardFacts: { label: string; value: string }[]
   programme: { label: string; date: string | null; text: string }[]
   survey: { status: SurveyStatus; label: string; surveyorName: string; submittedAt: string | null; itemCount: number }
   byTypology: { typology: string; label: string; count: number; massT: number }[]
@@ -480,6 +482,7 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
     surveyorOrgId: b.surveyorOrgId,
     surveyorOptions: header.side === 'owner' ? surveyorOptions(state) : [],
     facts,
+    cardFacts: facts.filter((x) => x.label !== 'Structure'),
     programme: [
       { label: 'Strip-out starts', date: b.programme.stripOutStart, text: date(b.programme.stripOutStart) },
       { label: 'Dismantling starts', date: b.programme.dismantlingStart, text: date(b.programme.dismantlingStart) },

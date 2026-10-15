@@ -7,6 +7,7 @@ import { act, useView } from '../../store'
 import { projectTeam, type TeamSection } from '../../store/selectors/project'
 import { Avatar, Badge, Button, Card, CardHeader, Dialog, Field, Input, Select, toast, type AvatarColourName } from '../../ui'
 import { ProjectPage } from './ProjectParts'
+import { AppointArchitectCard } from './AppointArchitect'
 
 function InviteDialog({ orgName }: { orgName: string }) {
   const [open, setOpen] = useState(false)
@@ -152,6 +153,7 @@ export function Team() {
           {view.sections.map((s) => (
             <SectionCard key={s.orgId} s={s} action={s.yours ? <InviteDialog orgName={s.orgName} /> : undefined} />
           ))}
+          {view.appointArchitect ? <AppointArchitectCard projectId={projectId} testId="team-appoint-architect" /> : null}
         </div>
         {view.canSetConsultant ? (
           <Card className="self-start">

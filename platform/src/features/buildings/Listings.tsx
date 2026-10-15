@@ -32,7 +32,7 @@ export function Listings() {
   const reset = () => {
     const r = act.resetDisclosure(buildingId)
     if (!r.ok) return toast.error(r.error ?? 'Could not reset.')
-    toast.success('Back to region, quarter and private photos', { action: { label: 'Undo', onClick: r.undo } })
+    toast.success('Back to region, three-month window and private photos', { action: { label: 'Undo', onClick: r.undo } })
   }
   return (
     <div className="flex flex-col gap-6" data-testid="listings">
@@ -58,9 +58,9 @@ export function Listings() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="m-0 text-base font-medium text-ink">Timing</p>
-                <p className="m-0 text-sm text-muted">Availability shown as a quarter or a month</p>
+                <p className="m-0 text-sm text-muted">Availability shown as a month or a three-month window</p>
               </div>
-              <SegmentedControl label="Timing shown" value={v.timingLevel} onValueChange={(x) => disclose({ timingLevel: x as 'quarter' | 'month' })} items={[{ value: 'quarter', label: 'Quarter' }, { value: 'month', label: 'Month' }]} />
+              <SegmentedControl label="Timing shown" value={v.timingLevel} onValueChange={(x) => disclose({ timingLevel: x as 'quarter' | 'month' })} items={[{ value: 'quarter', label: 'Three-month window' }, { value: 'month', label: 'Month' }]} />
             </div>
           </CardBody>
         </Card>
@@ -81,7 +81,7 @@ export function Listings() {
             ]}
             className="max-w-full overflow-x-auto"
           />
-          <Link to={`/app/buildings/${buildingId}/sharing`} className="inline-flex items-center gap-1 rounded-sm text-sm text-ink-soft hover:text-ink">
+          <Link to={`/app/buildings/${buildingId}/sharing`} className="inline-flex items-center gap-1 rounded-sm text-sm text-ink-soft hover:text-ink max-sm:min-h-11">
             Shared lots are visible to {v.sharedProjectCount} {v.sharedProjectCount === 1 ? 'project' : 'projects'}
             <ArrowRight aria-hidden="true" className="size-3.5" />
           </Link>

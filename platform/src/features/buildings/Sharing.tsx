@@ -49,7 +49,7 @@ export function Sharing() {
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <CalendarClock aria-hidden="true" className="size-3.5 text-faint" />
-                      Needed by {r.needByQuarter}
+                      Needed {r.needByQuarter}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <Users aria-hidden="true" className="size-3.5 text-faint" />
@@ -64,7 +64,7 @@ export function Sharing() {
         </Card>
       )}
       <p className="m-0 text-sm text-muted">
-        Choose which lots are shared in <Link to={`/app/buildings/${buildingId}/listings`} className="font-medium text-ink-soft underline decoration-line-strong underline-offset-4 hover:text-ink">Listings</Link>.
+        Choose which lots are shared in <Link to={`/app/buildings/${buildingId}/listings`} className="relative font-medium text-ink-soft underline decoration-line-strong underline-offset-4 hover:text-ink max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-3.5 max-sm:after:content-['']">Listings</Link>.
       </p>
     </div>
   )
