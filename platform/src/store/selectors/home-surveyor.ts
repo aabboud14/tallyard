@@ -6,12 +6,14 @@ import { formatDate } from '../../domain/dates'
 import type { AppData, SurveyStatus, Viewer } from '../types'
 import { itemsOf } from './owner'
 import { surveyorHome, type SurveyorHome } from './surveyor'
-import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone } from './dashboard'
+import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type TileState } from './dashboard'
 
 export type SurveyorDashboard = SurveyorHome & {
-  metrics: { byStatus: Record<SurveyStatus, number>; lastCaptureText: string | null; openTone: MetricTone }
+  metrics: { byStatus: Record<SurveyStatus, number>; lastCaptureText: string | null; openTone: MetricTone; open: number; openState: TileState | null }
   /** By building ID. */
   extras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
+  /** The same, by building ID, for the firm's own buildings no owner has confirmed yet. */
+  unlinkedExtras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
   activitySummary: ActivitySummary
 }
 
@@ -31,11 +33,19 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
       extras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families) }
     }
   }
+  // The firm's own buildings no owner has confirmed yet are drawn too; they do not count as appointments.
+  const unlinkedExtras: SurveyorDashboard['unlinkedExtras'] = {}
+  for (const row of home.unlinked) {
+    const b = state.world.buildings[row.id]
+    const families = itemsOf(state, row.id).map((i) => i.family)
+    unlinkedExtras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families) }
+  }
   const open = byStatus.not_started + byStatus.in_progress
   return {
     ...home,
-    metrics: { byStatus, lastCaptureText: last ? formatDate(last.slice(0, 10)) : null, openTone: open > 0 ? 'warning' : 'neutral' },
+    metrics: { byStatus, lastCaptureText: last ? formatDate(last.slice(0, 10)) : null, openTone: open > 0 ? 'warning' : 'neutral', open, openState: open > 0 ? { state: 'warning', label: 'In progress' } : null },
     extras,
+    unlinkedExtras,
     activitySummary: activitySummary(home.activity),
   }
 }
