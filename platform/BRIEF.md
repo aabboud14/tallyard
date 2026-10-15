@@ -204,7 +204,7 @@ Developer and consultant
 - The circular economy statement exports to Word through `jszip`, declared as a direct dependency at the version already in the lockfile.
 
 ### 14.3 Spec changes that change existing tests (P8)
-These assertions change because the partner changed the product, not to make code pass. Each is recorded in `docs/DECISIONS.md`:
+These assertions change because the partner changed the product, not to make code pass. Each changed assertion is listed with its reason in `feedback/r2-test-changes-*.md`:
 - The client notification on project creation becomes a link request ("Studio Oriel asked to add you as client on ..."), and the project stays out of the client's workspace until accepted.
 - `checkingProjectFor` defaults to no project.
 - Availability text in the specification export reads "Expected January to March 2027" instead of a quarter.
