@@ -195,6 +195,13 @@ Developer and consultant
 - One state version bump: `STATE_VERSION` 2 for all of round 2. Stored version 1 sandboxes reseed.
 - Owner organisations can be a project's client only through their own New project. An architect's client picker still lists only client organisations and new names; owners are never found by name.
 - `CollapsibleCard` in `projects-timeline.md` H8 is replaced by `CollapsiblePanel`.
+- Colour: the validated data-vis tokens in `visual-qa.md` win over the typology colours in `shell-dashboards.md`: categorical `viz-1` to `viz-6`, the first three slots for Structure, Envelope and Finishes, every chart with a text legend. Metric tiles are coloured by state against a target (good, warning, critical, neutral, each with an icon and a word), from a pure function, not by metric kind.
+- Thumbnails: the axonometric massing drawings of `shell-dashboards.md` B3, drawn in the line and fill rules of `visual-qa.md`. Steel material illustrations become axonometric drawings of the member at its recorded length.
+- Ownership of shared components: the design system stream builds every `src/ui` component named in any design (charts, thumbnails, illustrations, `CollapsiblePanel`, `ModelViewer`, `ProgrammeChart`, the portfolio timeline used by the client home) with its tests, plus the landing and sign-in surfaces. Feature streams compose them.
+- Sustainability tab: `/app/projects/:id/sustainability` for every side, with `/carbon` redirecting there (`client-consultant.md`). The consultant alone gets Goals and targets, Certification, Circular economy and Compliance; Requirements is shared. `effectiveTargets(state, projectId)` is the one source of project targets for every dashboard.
+- Requirements: the architect chooses which apply (`projects-timeline.md`); clients and consultants track status and evidence on the Requirements tab (`client-consultant.md`). The architect reads the tracking.
+- The second Lantern Quay project, Kilnworth Place by Tessaly Architects, is seeded so the client's parallel timeline has more than one row. It carries the round 2 project fields (programme, accepted client link, requirements).
+- The circular economy statement exports to Word through `jszip`, declared as a direct dependency at the version already in the lockfile.
 
 ### 14.3 Spec changes that change existing tests (P8)
 These assertions change because the partner changed the product, not to make code pass. Each is recorded in `docs/DECISIONS.md`:
