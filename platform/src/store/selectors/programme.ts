@@ -13,6 +13,7 @@ import { materialHref } from '../paths'
 import { plural } from '../notifications'
 import { todayOf } from './common'
 import { shortlistRows, type ShortlistRow } from './shortlist'
+import { canOpenMaterial } from './discover'
 
 export type ProgrammeRange = 'whole' | 'ahead'
 
@@ -46,7 +47,8 @@ export type ProgrammeMaterialRow = {
   fitLabel: string
   windowText: string
   storage: { from: number; to: number } | null
-  href: string
+  /** The material page, or null when the viewer cannot open it (a confidential lot, for the consultant). */
+  href: string | null
 }
 
 /**
@@ -150,7 +152,7 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
       fitLabel: FIT_WORDS[fit],
       windowText: card.availabilityText,
       storage: run ? { from: at(run.start), to: at(run.end) } : null,
-      href: materialHref(r.publicId, p.id),
+      href: canOpenMaterial(state, viewer, r.publicId) ? materialHref(r.publicId, p.id) : null,
     }
   })
   const plannedText = plannedStageText(p, today)

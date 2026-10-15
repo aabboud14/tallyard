@@ -4,7 +4,7 @@ import { buildingsOfUser, projectSide, projectsOfUser, roleOfUser } from '../acc
 import { listingOf, marketplaceListings } from '../lots'
 import { familyLabel } from './common'
 import { navModel, ownerHasClientProject, type NavItem } from './nav'
-import { sharedGroups } from './discover'
+import { canOpenMaterial, sharedGroups } from './discover'
 import { itemsOf } from './owner'
 import { titleFor } from '../../domain/reference/families'
 import { materialHref } from '../paths'
@@ -50,7 +50,7 @@ export function searchIndex(state: AppData, viewer: Viewer): SearchEntry[] {
   if (role === 'architect' || role === 'client' || role === 'consultant' || ownerHasClientProject(state, viewer.userId)) {
     const seen = new Set<string>()
     const add = (title: string, publicId: string, family: Parameters<typeof familyLabel>[0], location: string) => {
-      if (seen.has(publicId)) return
+      if (seen.has(publicId) || !canOpenMaterial(state, viewer, publicId)) return
       seen.add(publicId)
       out.push({ id: `material:${publicId}`, kind: 'material', label: title, sublabel: `${familyLabel(family)}, ${location}`, href: materialHref(publicId), keywords: `${title} ${publicId} ${familyLabel(family)} ${location}`.toLowerCase() })
     }

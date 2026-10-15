@@ -13,9 +13,10 @@ export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: 
       <ol className="m-0 flex min-w-0 list-none items-center gap-1 p-0 text-base">
         {items.map((c, i) => {
           const last = i === items.length - 1
-          const cls = 'truncate rounded-sm px-1 py-0.5 text-muted transition-colors hover:bg-hover hover:text-ink max-sm:py-3'
+          // On a phone a parent link keeps a 44 px target: it does not shrink below that, and the current page truncates.
+          const cls = 'truncate rounded-sm px-1 py-0.5 text-muted transition-colors hover:bg-hover hover:text-ink max-sm:inline-block max-sm:min-w-11 max-sm:py-3 max-sm:text-center'
           return (
-            <li key={i} className={cx('flex min-w-0 items-center gap-1', i < items.length - 2 && 'max-sm:hidden')}>
+            <li key={i} className={cx('flex min-w-0 items-center gap-1', i < items.length - 2 && 'max-sm:hidden', !last && 'max-sm:max-w-[60%] max-sm:shrink-0')}>
               {last ? (
                 <span aria-current="page" className="truncate px-1 font-medium text-ink">
                   {c.label}

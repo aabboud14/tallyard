@@ -1,14 +1,15 @@
 // The spinnable 3D view of a material, drawn as flat-shaded SVG polygons from the recorded dimensions
-// (feedback/r2-design/marketplace-material.md section 7.4). The projection, culling, sort and shading come from
+// (feedback/r2-design/marketplace-material.md section 7.4) in the house drawing style: paper-toned flat fills, ink
+// hairlines and no shadow (visual-qa.md rule 2). The projection, culling, sort and shading come from
 // the pure engine in domain/engines/view3d.ts; this component only draws what it returns. Drag to turn it, or
 // use the arrow keys; Home resets. A vertical swipe still scrolls the page on phones.
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { RotateCcw } from 'lucide-react'
 import type { FamilyId } from '../domain/types'
-import { DEFAULT_ANGLES, dragToAngles, projectMesh, shadeHex, stepAngles, type Mesh, type ViewAngles } from '../domain/engines/view3d'
+import { DEFAULT_ANGLES, dragToAngles, faceFill, projectMesh, stepAngles, type Mesh, type ViewAngles } from '../domain/engines/view3d'
 import { cx } from './cx'
 
-/** A flat base tone per family; each face is this tone times its light. */
+/** A base tone per family; faces are this tone lifted towards paper (faceFill), outlined in ink hairlines. */
 const FAMILY_TONE: Record<FamilyId, string> = {
   steel_section: '#6b7a86',
   curtain_wall: '#9fb7c4',
@@ -110,9 +111,9 @@ export function ModelViewer({ mesh, family, title, size = 'stage', angles: contr
 
   const svg = (
     <svg role="img" aria-label={`3D view of ${title}`} viewBox={`0 0 ${frame.width} ${frame.height}`} className="block h-auto w-full select-none" preserveAspectRatio="xMidYMid meet">
-      <ellipse data-part="shadow" cx={projection.shadow.cx} cy={projection.shadow.cy} rx={projection.shadow.rx} ry={projection.shadow.ry} fill="var(--color-ink)" opacity="0.08" />
+      {/* No shadow under the model: drawings carry no drop shadows (visual-qa.md, rule 2). */}
       {projection.faces.map((f) => (
-        <polygon key={f.index} points={f.points.map(([x, y]) => `${x},${y}`).join(' ')} fill={shadeHex(tone, f.light)} stroke={shadeHex(tone, f.light * 0.7)} strokeWidth={size === 'stage' ? 0.75 : 0.5} strokeLinejoin="round" />
+        <polygon key={f.index} data-part="face" points={f.points.map(([x, y]) => `${x},${y}`).join(' ')} fill={faceFill(tone, f.light)} stroke="var(--color-ink)" strokeWidth={size === 'stage' ? 0.75 : 0.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       ))}
     </svg>
   )

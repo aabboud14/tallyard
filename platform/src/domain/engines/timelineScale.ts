@@ -50,22 +50,58 @@ function tickText(iso: string, first: boolean): string {
   return first || iso.slice(5, 7) === '01' ? `${name.slice(0, 3)} ${year}` : name.slice(0, 3)
 }
 
-/** The scale for a strip from today to past the start date and the last availability window. */
-export function timelineScale(today: string, startDate: string, windows: (ScaleWindow | null)[]): TimelineScale {
-  const last = windows.reduce((acc, w) => (w ? maxDate(acc, w.end) : acc), maxDate(today, startDate))
-  const end = addDays(last, TIMELINE_MARGIN_DAYS)
-  const spanDays = Math.max(1, daysBetween(today, end))
-  const starts = monthStarts(today, end)
-  const quarterly = starts.length > QUARTERLY_AFTER
-  const yearly = starts.length > YEARLY_AFTER
+/**
+ * The least gap between two month labels, as a share of the strip, so they never run into each other where the strip
+ * is narrowest (about 358 px on a phone, where a three-letter month needs about 32 px with its padding).
+ */
+export const TICK_LABEL_MIN_SHARE = 0.09
+
+/** A label carrying the year ("Jan 2027") is this many times as wide as a bare month, so it needs a wider gap. */
+export const YEAR_LABEL_FACTOR = 1.7
+
+/** Label every month, every other month, each quarter, each half year or each year; labels sit on aligned months. */
+const LABEL_STEPS = [1, 2, 3, 6, 12] as const
+
+export type TimelineScaleOptions = {
+  /** The least gap between labels as a share of the span; 0 keeps the month, quarter and year rule alone. */
+  minLabelShare?: number
+}
+
+function labelsFor(starts: string[], step: number, today: string): TimelineTick[] {
   let first = true
-  const ticks = starts.map((iso): TimelineTick => {
-    const m = iso.slice(5, 7)
-    const shown = yearly ? m === '01' : quarterly ? ['01', '04', '07', '10'].includes(m) : true
+  return starts.map((iso): TimelineTick => {
+    const shown = (Number(iso.slice(5, 7)) - 1) % step === 0
     const label = shown ? tickText(iso, first) : null
     if (shown) first = false
     return { iso, days: daysBetween(today, iso), label }
   })
+}
+
+/** Whether each pair of neighbouring labels is at least the share apart, wider after a label with a year. */
+function spacedEnough(ticks: TimelineTick[], spanDays: number, minShare: number): boolean {
+  const labelled = ticks.filter((t) => t.label !== null)
+  for (let i = 1; i < labelled.length; i++) {
+    const prev = labelled[i - 1]
+    const need = minShare * (prev.label!.includes(' ') ? YEAR_LABEL_FACTOR : 1)
+    if ((labelled[i].days - prev.days) / spanDays < need) return false
+  }
+  return true
+}
+
+/** The scale for a strip from today to past the start date and the last availability window. */
+export function timelineScale(today: string, startDate: string, windows: (ScaleWindow | null)[], opts: TimelineScaleOptions = {}): TimelineScale {
+  const last = windows.reduce((acc, w) => (w ? maxDate(acc, w.end) : acc), maxDate(today, startDate))
+  const end = addDays(last, TIMELINE_MARGIN_DAYS)
+  const spanDays = Math.max(1, daysBetween(today, end))
+  const starts = monthStarts(today, end)
+  const floor = starts.length > YEARLY_AFTER ? 12 : starts.length > QUARTERLY_AFTER ? 3 : 1
+  const minShare = opts.minLabelShare ?? 0
+  const steps = LABEL_STEPS.filter((k) => k >= floor)
+  let ticks = labelsFor(starts, steps[0], today)
+  for (const k of steps) {
+    ticks = labelsFor(starts, k, today)
+    if (minShare <= 0 || spacedEnough(ticks, spanDays, minShare)) break
+  }
   return { today, end, spanDays, ticks }
 }
 

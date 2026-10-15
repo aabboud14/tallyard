@@ -12,7 +12,7 @@ import { getData, useApp } from '../../store/app'
 import { signOut } from '../../store/session'
 import { setSessionUserId } from '../../store/sessionId'
 import { lotPrivateStrings } from '../../domain/privacy/privateStrings'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { FERRYMOOR_ID, MERROWGATE_ID } from '../../domain/seed/world'
 import { U } from '../../test/fixtures'
 import { routes } from '../../app/router'
 
@@ -136,6 +136,29 @@ describe('material page for an architect', () => {
     expect(byTestId('availability').querySelector('[data-fit]')!.getAttribute('data-fit')).toBe('in_time')
   })
 
+  it('says each thing once: the specification keeps only what is not shown above it, with no unmarked indicative figure', async () => {
+    open('/app/marketplace/L-9F4CQQ')
+    await waitFor(() => document.querySelector('[data-testid="spec-table"]'))
+    const spec = byTestId('spec-table').textContent ?? ''
+    expect(spec).toContain('Material and dimensions')
+    expect(spec).toContain('Designation')
+    for (const said of ['Collection point', 'Location', 'Quantity', 'Mass', 'Test status', 'Timeline check', 'Avoided carbon', 'tCO2e', 'Sustainability band', 'Public ID']) expect(spec, said).not.toContain(said)
+    // Location shows once, in the key facts; architects get no seller section.
+    expect(byTestId('key-facts').textContent).toContain('Central London')
+    expect(document.querySelector('[data-testid="location"]')).toBeNull()
+    const header = byTestId('material-title').nextElementSibling!.textContent ?? ''
+    expect(header).not.toContain('Central London')
+    expect((document.querySelector('[data-testid="material-page"]')!.textContent!.match(/Central London/g) ?? []).length).toBe(1)
+  })
+
+  it('names the checked project when the lot is not shared with it', async () => {
+    open(`/app/marketplace/L-WPX5A6?project=${FERRYMOOR_ID}`)
+    await waitFor(() => document.querySelector('[data-testid="material-title"]'))
+    expect(byTestId('not-shared-with').textContent).toBe('Not shared with Ferrymoor Yard, so it cannot be checked against it. The projects it is shared with:')
+    expect(byTestId('fit-text').textContent).toContain('Merrowgate Wharf')
+    expectClean()
+  })
+
   it('has no close-up toggle for a short element', async () => {
     open('/app/marketplace/L-A945G6')
     await waitFor(() => document.querySelector('[data-testid="model-viewer"]'))
@@ -150,6 +173,7 @@ describe('material page for other roles', () => {
     expect(byTestId('seller-line').textContent).toBe('Listed by a donor building owner in Central London')
     expect(byTestId('guide-price').textContent).toContain('£715 to £825 per tonne')
     expect(document.body.textContent).toContain('Donor building owner')
+    expect(byTestId('location').textContent).toContain('Seller')
     expect(document.querySelector('[data-testid="material-save"]')).toBeNull()
     expectClean()
   })

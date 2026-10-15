@@ -8,6 +8,7 @@ export type Mesh = { vertices: Vec3[]; faces: number[][] }
 export type ViewAngles = { yawDeg: number; pitchDeg: number }
 export type Frame = { width: number; height: number; margin: number }
 export type ProjectedFace = { index: number; points: [number, number][]; depth: number; light: number }
+/** shadow is the footprint ellipse below the model. ModelViewer does not draw it: drawings carry no drop shadows. */
 export type MeshProjection = { faces: ProjectedFace[]; shadow: { cx: number; cy: number; rx: number; ry: number } }
 
 export const DEFAULT_ANGLES: ViewAngles = { yawDeg: -35, pitchDeg: 20 }
@@ -124,6 +125,37 @@ export function stepAngles(a: ViewAngles, key: 'left' | 'right' | 'up' | 'down')
     case 'down':
       return { yawDeg: wrapDeg(a.yawDeg), pitchDeg: clampPitch(a.pitchDeg - KEY_STEP_DEG) }
   }
+}
+
+/** The paper ground the drawings sit on (--color-paper in styles.css). */
+export const PAPER_HEX = '#f7f6f3'
+
+/** How far a family tone is lifted towards paper, so faces read as the flat fills of the drawings beside them. */
+export const PAPER_MIX = 0.6
+
+/** The share of a face's tone that its light sets: faces stay distinct but never go dark. */
+export const FACE_LIGHT_SPAN = 0.16
+
+/** Two colours mixed per channel, t of the way from a to b, rounded, as lower-case #rrggbb. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ca = channels(a)
+  const cb = channels(b)
+  return '#' + ca.map((x, i) => Math.min(255, Math.max(0, Math.round(x + (cb[i] - x) * t))).toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * The fill of a face in the house drawing style: the family tone lifted towards paper by PAPER_MIX, then shaded
+ * gently by the face's light (0.35 to 1 maps to 0.894 to 1), so the model reads as a flat-filled drawing with ink
+ * hairlines rather than a dark render.
+ */
+export function faceFill(baseHex: string, light: number): string {
+  return shadeHex(mixHex(baseHex, PAPER_HEX, PAPER_MIX), 1 - FACE_LIGHT_SPAN + FACE_LIGHT_SPAN * light)
+}
+
+function channels(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) throw new Error('Bad colour: ' + hex)
+  return [0, 2, 4].map((k) => parseInt(m[1].slice(k, k + 2), 16)) as [number, number, number]
 }
 
 /** A colour scaled by a light level: each channel times the light, rounded and clamped, as lower-case #rrggbb. */

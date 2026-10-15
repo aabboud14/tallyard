@@ -42,9 +42,29 @@ export type CategoryFolder = {
   thumbs: CategoryThumb[]
   /** Listings that are available now or in time (not tight, not late) for the checked project; null without one. */
   fitsCount: number | null
+  /** The folder's listings by fit for the checked project, in the checking strip's words; null without one. */
+  fits: FitSummary | null
+  /** For example "10 available now, 1 in time": the same words as the strip's chips. Null without a project. */
+  fitsText: string | null
 }
 
 export type FitSummary = Record<Fit, number>
+
+/** The order and words of fit counts, shared by the checking strip and the category folders. */
+export const FIT_SUMMARY_ORDER: Fit[] = ['now', 'in_time', 'tight', 'late']
+export const FIT_SUMMARY_WORDS: Record<Fit, string> = { now: 'available now', in_time: 'in time', tight: 'tight', late: 'too late' }
+
+/** The non-zero fit counts in order, each with its words ("10 available now"). */
+export function fitSummaryParts(summary: FitSummary | null): { fit: Fit; count: number; text: string }[] {
+  if (!summary) return []
+  return FIT_SUMMARY_ORDER.filter((fit) => summary[fit] > 0).map((fit) => ({ fit, count: summary[fit], text: `${summary[fit]} ${FIT_SUMMARY_WORDS[fit]}` }))
+}
+
+/** "10 available now, 1 in time"; null with no project or nothing counted. */
+export function fitSummaryText(summary: FitSummary | null): string | null {
+  const parts = fitSummaryParts(summary)
+  return parts.length === 0 ? null : parts.map((p) => p.text).join(', ')
+}
 
 export type NewForProjects = ListingCard & { fitsProjects: { id: string; name: string }[] }
 
@@ -75,13 +95,13 @@ export function categoryFolders(state: AppData, viewer: Viewer, project: Project
       .sort((a, b) => Number(b.photos.length > 0) - Number(a.photos.length > 0) || newestFirst(a, b))
       .slice(0, 3)
       .map((l) => ({ publicId: l.publicId, title: l.title, spec: l.spec, photo: l.photos[0] ? { id: l.photos[0].id, src: l.photos[0].src } : null }))
-    const fitsCount = project
-      ? mine.filter((l) => {
-          const fit = timelineFit(l.availability, project.startDate, today).fit
-          return fit === 'now' || fit === 'in_time'
-        }).length
-      : null
-    return { typology, label: CATEGORY_COPY[typology].label, description: CATEGORY_COPY[typology].description, count: mine.length, families, thumbs, fitsCount }
+    let fits: FitSummary | null = null
+    if (project) {
+      fits = { now: 0, in_time: 0, tight: 0, late: 0 }
+      for (const l of mine) fits[timelineFit(l.availability, project.startDate, today).fit] += 1
+    }
+    const fitsCount = fits ? fits.now + fits.in_time : null
+    return { typology, label: CATEGORY_COPY[typology].label, description: CATEGORY_COPY[typology].description, count: mine.length, families, thumbs, fitsCount, fits, fitsText: fitSummaryText(fits) }
   })
 }
 

@@ -44,7 +44,7 @@ test('an architect browses by category, checks a project, filters by month and o
   await page.getByTestId(`pick-${M}`).click()
   await expect(page.getByTestId('checking-bar')).toContainText('Checking against Merrowgate Wharf')
   await expect(page.getByTestId('fit-summary')).toContainText('in time')
-  await expect(page.getByTestId('category-structure')).toContainText('in time for Merrowgate Wharf')
+  await expect(page.getByTestId('category-structure')).toContainText('Merrowgate Wharf: 6 available now, 5 in time')
 
   // A folder is a history entry; Back returns to the folders.
   await page.getByTestId('category-envelope').click()
@@ -135,5 +135,74 @@ test('the Marketplace, a folder, the Filters sheet, a material and Saved fit a p
   expect(choose!.height).toBeGreaterThanOrEqual(44)
   const row = await page.getByTestId('category-row-structure').boundingBox()
   expect(row!.height).toBeGreaterThanOrEqual(44)
+  expect(errors).toEqual([])
+})
+
+test('the checking strip keeps the project name and date whole at 1024 and 1440 px', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'priya')
+  // Ferrymoor Yard has three fit chips (available now, in time, tight), the widest strip.
+  for (const width of [1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/app/marketplace?project=prj_x6dq3n')
+    await expect(page.getByTestId('checking-bar')).toHaveAttribute('data-state', 'checking')
+    await expect(page.getByTestId('fit-summary')).toContainText('tight')
+    const sizes = await page.getByTestId('checking-identity').locator('p').evaluateAll((ps) => ps.map((p) => ({ client: p.clientWidth, scroll: p.scrollWidth, text: p.textContent })))
+    expect(sizes, `${width}`).toHaveLength(2)
+    for (const s of sizes) {
+      expect(s.client, `${width} ${s.text}`).toBeGreaterThan(0)
+      expect(s.scroll, `${width} ${s.text}`).toBeLessThanOrEqual(s.client)
+    }
+    // The drawing does not overlap the chips.
+    const thumb = await page.getByTestId('checking-identity').locator('svg').first().boundingBox()
+    const chips = await page.getByTestId('fit-summary').boundingBox()
+    if (thumb && chips && Math.abs(thumb.y - chips.y) < thumb.height) expect(thumb.x + thumb.width, `${width}`).toBeLessThanOrEqual(chips.x)
+    expect(await horizontalOverflow(page), `${width}`).toBe(0)
+  }
+  expect(errors).toEqual([])
+})
+
+test('the material page has 44 px touch targets on a phone', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signIn(page, 'priya')
+  await page.goto('/app/marketplace/L-9F4CQQ')
+  await expect(page.getByTestId('material-title')).toBeVisible()
+  for (const id of ['download-dxf', 'download-obj', 'download-ifc', 'bim-family']) {
+    const b = (await page.getByTestId(id).boundingBox())!
+    expect(b.width, id).toBeGreaterThanOrEqual(44)
+    expect(b.height, id).toBeGreaterThanOrEqual(44)
+  }
+  const crumb = (await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link', { name: 'Marketplace' }).boundingBox())!
+  expect(crumb.width).toBeGreaterThanOrEqual(44)
+  expect(crumb.height).toBeGreaterThanOrEqual(44)
+  // The Indicative links reach 44 px through their hit area.
+  const hit = await page.getByTestId('availability').getByRole('link', { name: 'Indicative' }).evaluate((a) => {
+    const r = a.getBoundingClientRect()
+    const after = getComputedStyle(a, '::after')
+    return { height: r.height - parseFloat(after.top) - parseFloat(after.bottom), position: after.position }
+  })
+  expect(hit.position).toBe('absolute')
+  expect(hit.height).toBeGreaterThanOrEqual(44)
+  expect(await horizontalOverflow(page)).toBe(0)
+  expect(errors).toEqual([])
+})
+
+test('the consultant follows every material link on his programme charts without a dead end', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signIn(page, 'marcus')
+  await page.goto(`/app/projects/${M}`)
+  await expect(page.getByTestId('programme-chart')).toBeVisible()
+  const hrefs = await page.locator('main a[href*="/app/marketplace/"]').evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute('href')!))])
+  expect(hrefs.length).toBeGreaterThan(0)
+  for (const href of hrefs) {
+    await page.goto(href)
+    await expect(page.getByTestId('material-title'), href).toBeVisible()
+  }
+  // The shared lot he cannot open is listed without a link, and Shared with you says why it is empty.
+  expect(hrefs.some((h) => h.includes('L-WPX5A6'))).toBe(false)
+  await page.goto('/app/marketplace?tab=shared')
+  await expect(page.getByTestId('shared-with-you')).toContainText('Shared lots stay with the architect and client')
   expect(errors).toEqual([])
 })

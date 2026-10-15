@@ -1,8 +1,9 @@
 // A material, from its public listing only, in the order an architect decides: the pictures and the 3D view, then
 // save to a project and the geometry downloads, when it is available (against the chosen project, or every
-// project), the sustainability panel, the key facts, the full specification, where it is and how it is collected,
-// and similar materials. A plain white stage and sections divided by hairlines. The guide price and the seller's
-// details are for clients only; architects and consultants do not get them.
+// project), the sustainability panel, the key facts (with where it is and how it is collected), the rest of the
+// specification (only what is not said above), the geometry files and similar materials. A plain white stage and
+// sections divided by hairlines. The guide price and the seller's details are for clients only; architects and
+// consultants do not get them.
 import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Bookmark, BookmarkCheck, Box, CalendarRange, ChevronDown, Download, FileBox, FileText, Leaf, LockKeyhole, MapPin, PackageCheck, PenLine, ScrollText, Tag, Wallet } from 'lucide-react'
@@ -104,13 +105,13 @@ function FileRow({ icon: Icon, name, format, onGet, disabled, testId, locked = f
       </div>
       {locked ? (
         <Tooltip content={LABELS.L35}>
-          <span tabIndex={0} data-testid={testId} aria-label={`${name}: ${LABELS.L35}`} className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-subtle px-2 text-xs font-medium text-muted ring-1 ring-inset ring-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+          <span tabIndex={0} data-testid={testId} aria-label={`${name}: ${LABELS.L35}`} className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-subtle px-2 text-xs font-medium text-muted ring-1 ring-inset ring-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11">
             <LockKeyhole aria-hidden="true" className="size-3" />
             Coming in version 2
           </span>
         </Tooltip>
       ) : (
-        <Button size="sm" icon={Download} onClick={onGet} disabled={disabled} data-testid={testId} aria-label={`Download ${name}`} className="max-sm:h-11">
+        <Button size="sm" icon={Download} onClick={onGet} disabled={disabled} data-testid={testId} aria-label={`Download ${name}`} className="max-sm:h-11 max-sm:min-w-11">
           <span className="max-sm:sr-only">Download</span>
         </Button>
       )}
@@ -169,22 +170,33 @@ function Availability({ view, today, onProject }: { view: MaterialView; today: s
             testId="material-timeline"
           />
         </div>
-      ) : a.byProject.length > 0 ? (
+      ) : a.byProject.length > 0 || view.notSharedWith ? (
         <div className="mt-4" data-testid="fit-text">
-          <p className="m-0 mb-2 text-sm text-muted">Against your projects</p>
-          <ul className="m-0 flex list-none flex-col divide-y divide-line-soft border-y border-line-soft p-0" aria-label="Against your projects">
-            {a.byProject.map((p) => (
-              <li key={p.projectId} className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-x-3 py-2.5">
-                <span>
-                  <FitPill fit={p.fit} size="sm" />
-                </span>
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-medium text-ink">{p.name}</span>
-                  <span className="text-sm text-muted">needed from {p.startText}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          {view.notSharedWith ? (
+            <p className="m-0 mb-3 flex items-start gap-2 text-sm text-ink-soft" data-testid="not-shared-with">
+              <LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted" />
+              <span>
+                Not shared with {view.notSharedWith}, so it cannot be checked against it.{a.byProject.length > 0 ? ' The projects it is shared with:' : ''}
+              </span>
+            </p>
+          ) : (
+            <p className="m-0 mb-2 text-sm text-muted">Against your projects</p>
+          )}
+          {a.byProject.length > 0 ? (
+            <ul className="m-0 flex list-none flex-col divide-y divide-line-soft border-y border-line-soft p-0" aria-label="Against your projects">
+              {a.byProject.map((p) => (
+                <li key={p.projectId} className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-x-3 py-2.5">
+                  <span>
+                    <FitPill fit={p.fit} size="sm" />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium text-ink">{p.name}</span>
+                    <span className="text-sm text-muted">needed from {p.startText}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </Section>
@@ -269,9 +281,7 @@ export function MaterialPage() {
                 <Tag aria-hidden="true" className="size-3.5" />
                 {card.publicId}
               </span>
-              <span>
-                {card.quantityText}, {card.locationLabel}
-              </span>
+              <span>{card.quantityText}</span>
             </p>
             {view.sellerLine ? (
               <p className="m-0 mt-1 text-sm text-muted" data-testid="seller-line">
@@ -351,20 +361,16 @@ export function MaterialPage() {
       </section>
 
       <div className="mt-12 grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-2">
-        <section aria-labelledby="location-h" className="min-w-0 border-t border-line-soft pt-6">
-          <h2 id="location-h" className="m-0 mb-4 flex items-center gap-2 text-md font-semibold text-ink">
-            <MapPin aria-hidden="true" className="size-4 text-muted" />
-            Location and collection
-          </h2>
-          <DescriptionList
-            items={[
-              { label: 'Location', value: view.location.label },
-              { label: 'Collection point', value: view.location.collectionPoint },
-              ...(view.location.seller ? [{ label: 'Seller', value: sellerTypeText(view.location.seller) }] : []),
-            ]}
-          />
-          {view.location.seller ? <p className="m-0 mt-3 text-sm text-muted">The seller and the exact site are shared with the client once a reservation is accepted.</p> : null}
-        </section>
+        {view.location.seller ? (
+          <section aria-labelledby="location-h" className="min-w-0 border-t border-line-soft pt-6" data-testid="location">
+            <h2 id="location-h" className="m-0 mb-4 flex items-center gap-2 text-md font-semibold text-ink">
+              <MapPin aria-hidden="true" className="size-4 text-muted" />
+              Seller
+            </h2>
+            <DescriptionList items={[{ label: 'Seller', value: sellerTypeText(view.location.seller) }]} />
+            <p className="m-0 mt-3 text-sm text-muted">The seller and the exact site are shared with the client once a reservation is accepted.</p>
+          </section>
+        ) : null}
 
         <section aria-labelledby="downloads-h" className="min-w-0 border-t border-line-soft pt-6" data-testid="downloads">
           <h2 id="downloads-h" className="m-0 mb-1 flex items-center gap-2 text-md font-semibold text-ink">

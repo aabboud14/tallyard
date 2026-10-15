@@ -1,6 +1,9 @@
 // New for your projects (architects, on the Marketplace landing): listed in the last 30 days and in time for at
-// least one of the practice's projects, or for the project being checked. Hidden when there is nothing new.
-import { CalendarCheck, Sparkles } from 'lucide-react'
+// least one of the practice's projects, or for the project being checked. The first four show; "Show all {n}" opens
+// the rest and "Show fewer" folds them again. Hidden when there is nothing new.
+import { useState } from 'react'
+import { CalendarCheck, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { Button } from '../../ui'
 import type { ProjectRef } from '../../store/selectors/common'
 import type { NewForProjects } from '../../store/selectors/marketplace'
 import { ListingTile } from './ListingTile'
@@ -11,8 +14,10 @@ function caption(card: NewForProjects, project: ProjectRef | null): string {
   return `In time for ${card.fitsProjects.length} of your projects`
 }
 
-export function NewForProjectsRow({ cards, project }: { cards: NewForProjects[]; project: ProjectRef | null }) {
+export function NewForProjectsRow({ cards, more = [], total = cards.length, project }: { cards: NewForProjects[]; more?: NewForProjects[]; total?: number; project: ProjectRef | null }) {
+  const [open, setOpen] = useState(false)
   if (cards.length === 0) return null
+  const shown = open ? [...cards, ...more] : cards
   return (
     <section aria-labelledby="new-for-projects-h" data-testid="new-for-projects" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
@@ -23,10 +28,15 @@ export function NewForProjectsRow({ cards, project }: { cards: NewForProjects[];
           </h2>
           <p className="m-0 mt-0.5 text-sm text-muted">{project ? 'Listed in the last 30 days and in time for its start on site.' : 'Listed in the last 30 days and in time for at least one of your projects.'}</p>
         </div>
+        {more.length > 0 ? (
+          <Button variant="ghost" size="sm" trailingIcon={open ? ChevronUp : ChevronDown} aria-expanded={open} onClick={() => setOpen((x) => !x)} data-testid="new-for-projects-more" className="max-sm:h-11">
+            {open ? 'Show fewer' : `Show all ${total}`}
+          </Button>
+        ) : null}
       </div>
       <div className="@container">
         <div className="grid grid-cols-1 gap-x-6 gap-y-8 @lg:grid-cols-2 @4xl:grid-cols-4">
-          {cards.map((c) => (
+          {shown.map((c) => (
             <ListingTile
               key={c.publicId}
               card={c}

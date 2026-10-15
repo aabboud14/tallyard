@@ -223,7 +223,7 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--text-base--line-height);
-    font-feature-settings: 'cv02', 'cv03', 'cv04';
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'calt' 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;

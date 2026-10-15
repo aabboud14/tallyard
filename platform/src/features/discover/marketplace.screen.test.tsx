@@ -96,6 +96,15 @@ describe('Marketplace landing', () => {
     expect(feed.querySelector('[data-testid^="new-card-"]')!.getAttribute('data-testid')).toBe('new-card-L-9F4CQQ')
     expect(byTestId('new-for-L-9F4CQQ').textContent).toMatch(/^In time for /)
     expect(feed.querySelectorAll('[data-testid^="new-card-"]').length).toBeLessThanOrEqual(4)
+    // The rest of the feed opens on request and folds again.
+    const more = byTestId('new-for-projects-more')
+    expect(more.textContent).toBe('Show all 10')
+    expect(more.getAttribute('aria-expanded')).toBe('false')
+    click(more)
+    await waitFor(() => feed.querySelectorAll('[data-testid^="new-card-"]').length === 10)
+    expect(byTestId('new-for-projects-more').textContent).toBe('Show fewer')
+    click(byTestId('new-for-projects-more'))
+    await waitFor(() => feed.querySelectorAll('[data-testid^="new-card-"]').length === 4)
     // Cards read availability as an approximate date, never a quarter.
     expect(byTestId('card-L-9F4CQQ').textContent).toContain('Expected Jan to Mar 2027')
     expect(document.querySelector('[data-testid="discover-grid"]')!.textContent).not.toMatch(/Q[1-4] 20\d\d/)
@@ -151,7 +160,10 @@ describe('checking strip', () => {
     expect(byTestId('fit-summary').textContent).toContain('7 in time')
     expect(byTestId('fit-summary').textContent).not.toContain('tight')
     expect(getData().ui.checkingProjectId[U.priya]).toBe(MERROWGATE_ID)
-    expect(byTestId('category-structure').textContent).toContain('11 in time for Merrowgate Wharf')
+    // The folders count in the strip's words, so they add up to it: 6 + 3 + 1 available now, 5 + 2 in time.
+    expect(byTestId('category-fits-structure').textContent).toBe('Merrowgate Wharf: 6 available now, 5 in time')
+    expect(byTestId('category-fits-envelope').textContent).toBe('Merrowgate Wharf: 3 available now, 2 in time')
+    expect(byTestId('category-fits-finishes').textContent).toBe('Merrowgate Wharf: 1 available now')
     expect(byTestId('new-for-projects').textContent).toContain('New for Merrowgate Wharf')
     expect(byTestId('card-L-9F4CQQ').querySelector('[data-fit]')!.getAttribute('data-fit')).toBe('in_time')
     expectClean()
@@ -169,6 +181,14 @@ describe('checking strip', () => {
     expect(getData().ui.checkingProjectId[U.priya] ?? null).toBeNull()
     expect(router.state.location.search).not.toContain('project=')
     expect(document.querySelector('[data-testid="discover-grid"] [data-fit]')).toBeNull()
+  })
+
+  it('tells the consultant why Shared with you is empty', async () => {
+    open('/app/marketplace?tab=shared', U.marcus)
+    await waitFor(() => document.querySelector('[data-testid="shared-with-you"]'))
+    expect(byTestId('shared-with-you').textContent).toContain('Shared lots stay with the architect and client')
+    expect(byTestId('tab-shared').textContent).toContain('0')
+    expectClean()
   })
 
   it('shows a client the prompt without the architect feed', async () => {
