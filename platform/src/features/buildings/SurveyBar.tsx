@@ -1,4 +1,5 @@
-// The surveyor's hand-over: submit the survey to the building's owner, or reopen it to add more.
+// The surveyor's hand-over: submit the survey to the building's owner, or reopen it to add more. A building the firm
+// added waits for its owner's confirmation first.
 import { useState } from 'react'
 import { CircleCheck, RotateCcw, Send } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
@@ -11,6 +12,7 @@ export function SurveyBar({ buildingId, compact = false }: { buildingId: string;
   const [confirming, setConfirming] = useState(false)
   if (!inv || !o || inv.header.side !== 'surveyor' || inv.rows.length === 0) return null
   const client = inv.header.clientName
+  const unlinked = !!inv.header.claim && inv.header.claim.status !== 'linked'
   const submitted = inv.header.surveyStatus === 'submitted'
   const submit = () => {
     const r = act.submitSurvey(buildingId)
@@ -33,6 +35,10 @@ export function SurveyBar({ buildingId, compact = false }: { buildingId: string;
             {o.survey.submittedAt ? ` on ${formatDate(o.survey.submittedAt.slice(0, 10))}` : ''}. <span className="text-muted">Items you capture now still reach them. Reopen the survey to mark it as in progress.</span>
           </span>
         </p>
+      ) : unlinked ? (
+        <p className="m-0 text-base text-ink" data-testid="submit-hint">
+          <span className="font-medium">{inv.rows.length} {inv.rows.length === 1 ? 'item' : 'items'} captured.</span> <span className="text-muted">Link the building to its owner first. The survey goes to them once they confirm it.</span>
+        </p>
       ) : (
         <p className="m-0 text-base text-ink">
           <span className="font-medium">{inv.rows.length} {inv.rows.length === 1 ? 'item' : 'items'} captured.</span> <span className="text-muted">Submit the survey when the walk-round is done. {client} is told at once.</span>
@@ -43,7 +49,7 @@ export function SurveyBar({ buildingId, compact = false }: { buildingId: string;
           Reopen survey
         </Button>
       ) : (
-        <Button variant="primary" icon={Send} onClick={() => setConfirming(true)} disabled={!inv.canSubmit} data-testid="submit-survey">
+        <Button variant="primary" icon={Send} onClick={() => setConfirming(true)} disabled={!inv.canSubmit} title={unlinked ? 'Link the building to its owner first.' : undefined} data-testid="submit-survey">
           Submit survey
         </Button>
       )}

@@ -1,10 +1,13 @@
-// Sharing: which projects may see the lots you share privately. Each project is a blind line: the kind of team and
-// project, the region and when it needs materials, never who it is. Applies to every building you own.
+// Sharing: revocable share links to chosen lots of this building, then which projects may see the lots you share
+// privately. Each project is a blind line: the kind of team and project, the region and when it needs materials,
+// never who it is. Project access applies to every building you own.
 import { Link, useParams } from 'react-router'
 import { CalendarClock, EyeOff, FolderLock, MapPin, Users } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import { Card, Callout, EmptyState, Switch, toast } from '../../ui'
 import { StatStrip } from '../notifications/kit'
+import { SectionTitle } from '../../app/Page'
+import { ShareLinks } from './ShareLinks'
 
 export function Sharing() {
   const { buildingId = '' } = useParams()
@@ -17,6 +20,8 @@ export function Sharing() {
   }
   return (
     <div className="flex flex-col gap-6" data-testid="sharing">
+      <ShareLinks buildingId={buildingId} />
+      <SectionTitle title="Shared with projects" description="Projects on the platform that may see the lots you share, as blind lines." className="-mb-3 mt-2" />
       <StatStrip
         items={[
           { label: 'Lots shared', value: v.sharedLotCount, sub: 'Across your buildings', href: `/app/buildings/${buildingId}/listings` },

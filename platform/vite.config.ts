@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: { outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 4000 },
-  // Heavy screen and privacy tests render the whole sandbox; under parallel build load they can pass 5 s, so allow 20 s.
-  test: { include: ['src/**/*.test.{ts,tsx}'], environment: 'node', testTimeout: 20_000 },
+  // A longer per-test limit: the heavier privacy and screen tests pass in two to three seconds alone, but exceed
+  // the default five when several checkouts run on the same machine at once. No assertion changes.
+  test: { include: ['src/**/*.test.{ts,tsx}'], environment: 'node', testTimeout: 30_000 },
 })

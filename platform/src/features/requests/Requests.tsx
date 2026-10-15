@@ -1,33 +1,60 @@
-// Reservation requests for the owner's lots. Before a decision the buyer is a blind line; accepting holds the lot
-// for that project, declines any other request for it, and exchanges organisations and contacts.
+// The donor building owner's Requests: reservation requests for their lots, and buildings surveyors ask them to
+// confirm (?tab=buildings). Before a decision the buyer is a blind line; accepting holds the lot for that project,
+// declines any other request for it, and exchanges organisations and contacts.
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { Building2, Check, EyeOff, Inbox, Mail, MessageSquareText, UserRound, X } from 'lucide-react'
 import { formatDate } from '../../domain/dates'
 import * as f from '../../domain/format'
-import { act, selectors, useView } from '../../store'
+import { act, useView } from '../../store'
+import { requestsPage, type RequestsTab } from '../../store/selectors/buildings-ui'
 import type { RequestRow } from '../../store/selectors/owner'
 import { Badge, Button, Card, Dialog, EmptyState, Field, IndicativeMarker, PageHeader, Pill, SegmentedControl, Textarea, toast } from '../../ui'
 import { Page } from '../../app/Page'
 import { Eyebrow } from '../notifications/kit'
+import { BuildingClaims } from './BuildingClaims'
 
 type Deciding = { row: RequestRow; decision: 'accepted' | 'declined' }
 
 export function Requests() {
-  const v = useView(selectors.requestsView)
+  const page = useView(requestsPage)
+  const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState<'pending' | 'decided'>('pending')
   const [deciding, setDeciding] = useState<Deciding | null>(null)
-  if (!v) return null
+  if (!page) return null
+  const v = page.reservations
+  const asked = params.get('tab')
+  const section: RequestsTab = asked === 'buildings' || asked === 'reservations' ? asked : page.defaultTab
+  const choose = (x: string) => {
+    const next = new URLSearchParams(params)
+    next.set('tab', x)
+    setParams(next, { replace: true })
+  }
   const rows = tab === 'pending' ? v.pending : v.decided
   return (
     <Page testId="requests">
-      <PageHeader title="Requests" subtitle="Buyers asking you to reserve a lot. They stay anonymous until you accept." />
-      {v.empty ? (
-        <EmptyState variant="page" icon={Inbox} title="No reservation requests yet" text="When a client asks to reserve one of your shared or published lots, it appears here for you to accept or decline." />
+      <PageHeader title="Requests" subtitle={section === 'buildings' ? 'Buildings surveyors ask you to confirm as yours.' : 'Buyers asking you to reserve a lot. They stay anonymous until you accept.'} />
+      <SegmentedControl
+        label="Requests"
+        value={section}
+        onValueChange={choose}
+        items={[
+          { value: 'reservations', label: `Reservations ${page.counts.reservations}` },
+          { value: 'buildings', label: `Buildings ${page.counts.buildings}` },
+        ]}
+        className="mt-5"
+      />
+      {section === 'buildings' ? (
+        <div className="mt-6">
+          <BuildingClaims waiting={page.claims.waiting} answered={page.claims.answered} />
+        </div>
+      ) : v.empty ? (
+        <EmptyState variant="page" illustration="inbox" title="No reservation requests yet" text="When a client asks to reserve one of your shared or published lots, it appears here for you to accept or decline." />
       ) : (
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="mt-6 flex flex-col gap-4" data-testid="reservation-requests">
           <SegmentedControl
-            label="Requests"
+            label="Reservation requests"
+            size="sm"
             value={tab}
             onValueChange={(x) => setTab(x as 'pending' | 'decided')}
             items={[

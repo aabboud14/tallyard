@@ -3,7 +3,7 @@
 // the item's own page.
 import { useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, Globe, ImagePlus, Inbox, Lock, LoaderCircle, Trash2 } from 'lucide-react'
+import { ArrowRight, CalendarCheck, FlaskConical, Globe, ImagePlus, Inbox, Lock, LoaderCircle, Trash2 } from 'lucide-react'
 import type { Condition, Recoverability } from '../../domain/types'
 import { LABELS } from '../../domain/reference/labels'
 import { FAMILIES } from '../../domain/reference/families'
@@ -26,6 +26,7 @@ export function ItemPanel({ buildingId, itemId, layout = 'sheet' }: { buildingId
     <>
       <Photos d={d} />
       <RecordFacts d={d} />
+      <RequestTestingLink buildingId={buildingId} itemId={itemId} />
       <EditRecord key={`${d.item.condition}${d.item.recoverability}${d.item.expectedAvailableFrom}${d.item.location}${d.item.notes}`} d={d} buildingId={buildingId} />
     </>
   )
@@ -37,6 +38,7 @@ export function ItemPanel({ buildingId, itemId, layout = 'sheet' }: { buildingId
         <div className={cx('flex flex-col gap-6', d.owner && 'border-t border-line-soft pt-6')}>
           {d.owner ? <h3 className="m-0 text-sm font-semibold text-ink">The record</h3> : null}
           <RecordFacts d={d} />
+          <RequestTestingLink buildingId={buildingId} itemId={itemId} />
           <EditRecord key={`${d.item.condition}${d.item.recoverability}${d.item.expectedAvailableFrom}${d.item.location}${d.item.notes}`} d={d} buildingId={buildingId} />
         </div>
       </div>
@@ -131,6 +133,16 @@ function Photos({ d }: { d: ItemDetail }) {
         <input ref={input} type="file" accept="image/*" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={add} />
       </div>
     </section>
+  )
+}
+
+function RequestTestingLink({ buildingId, itemId }: { buildingId: string; itemId: string }) {
+  return (
+    <Button asChild size="sm" variant="secondary" icon={FlaskConical} className="self-start">
+      <Link to={`/app/buildings/${buildingId}/testing?items=${itemId}`} data-testid="item-request-testing">
+        Request testing
+      </Link>
+    </Button>
   )
 }
 
@@ -263,6 +275,43 @@ function OwnerSide({ d, buildingId }: { d: ItemDetail; buildingId: string }) {
         />
       </section>
 
+      <section aria-label="Dates" data-testid="item-dates">
+        <h3 className="m-0 mb-2 text-sm font-semibold text-ink">Dates</h3>
+        <dl className="m-0 flex flex-col divide-y divide-line-soft rounded-lg border border-line-soft">
+          <div className="flex items-baseline justify-between gap-3 px-3 py-2">
+            <dt className="text-sm text-muted">Surveyor expects</dt>
+            <dd className="m-0 text-base text-ink">{o.dates.surveyorText}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 px-3 py-2">
+            <dt className="text-sm text-muted">Contractor expects</dt>
+            <dd className="m-0 text-right text-base text-ink">
+              {o.dates.contractorText}
+              {o.dates.contractorDatedOn ? <span className="block text-xs text-muted">Set {formatDate(o.dates.contractorDatedOn)}</span> : null}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 px-3 py-2">
+            <dt className="text-sm text-muted">Buyers see</dt>
+            <dd className="m-0 text-right text-base font-medium text-ink">{o.dates.buyersSeeText}</dd>
+          </div>
+        </dl>
+        {o.dates.canUseContractor ? (
+          <Button
+            size="sm"
+            icon={CalendarCheck}
+            className="mt-2"
+            onClick={() => {
+              if (!d.item.contractorAvailableFrom) return
+              const r = act.setLotAvailability(d.lotId, d.item.contractorAvailableFrom)
+              if (!r.ok) return toast.error(r.error ?? 'Could not change the date.')
+              toast.success('Contractor date applied', { description: `${d.tag} now reads ${o.dates.contractorText}.`, action: { label: 'Undo', onClick: r.undo } })
+            }}
+            data-testid="use-contractor-date"
+          >
+            Use contractor date
+          </Button>
+        ) : null}
+      </section>
+
       {o.requests.length > 0 ? (
         <section aria-label="Requests">
           <h3 className="m-0 mb-2 text-sm font-semibold text-ink">Requests</h3>
@@ -272,7 +321,7 @@ function OwnerSide({ d, buildingId }: { d: ItemDetail; buildingId: string }) {
                 <div className="min-w-0">
                   <p className="m-0 truncate text-sm font-medium text-ink">{r.buyer.kind === 'blind' ? r.buyer.text : r.buyer.org}</p>
                   <p className="m-0 text-xs text-muted">
-                    {r.statusLabel} · {r.timeAgo}
+                    {r.statusLabel}, {r.timeAgo}
                   </p>
                 </div>
                 <Button asChild size="sm" variant="ghost" icon={Inbox}>
@@ -283,7 +332,7 @@ function OwnerSide({ d, buildingId }: { d: ItemDetail; buildingId: string }) {
           </ul>
         </section>
       ) : null}
-      <Link to={`/app/buildings/${buildingId}/priorities`} className="inline-flex items-center gap-1 self-start rounded-sm text-sm font-medium text-ink-soft hover:text-ink">
+      <Link to={`/app/buildings/${buildingId}/priorities`} className="inline-flex items-center gap-1 self-start rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
         See where it ranks in the recovery plan
         <ArrowRight aria-hidden="true" className="size-3.5" />
       </Link>

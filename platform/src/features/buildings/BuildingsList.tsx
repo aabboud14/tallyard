@@ -1,17 +1,24 @@
-// Buildings. The owner sees their portfolio and adds buildings; the surveyor sees the buildings they are appointed
-// to, grouped by client.
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
-import { Building2, Camera, ClipboardList, Plus } from 'lucide-react'
+// Buildings. The donor building owner sees their donor buildings and their New projects, and adds either; the
+// surveyor sees the buildings they are appointed to (to survey or to set dates), grouped by client, then the
+// buildings the firm added that no owner has confirmed yet.
+import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { CalendarClock, Camera, ClipboardList, HardHat, Plus, UserPlus } from 'lucide-react'
+import type { BuildingSketch } from '../../domain/sketch'
 import { act, selectors, useSession, useView } from '../../store'
-import type { BuildingCard } from '../../store/selectors/owner'
+import type { BuildingCard, BuildingsList as BuildingsListView, OwnerProjectRow } from '../../store/selectors/owner'
+import type { ClaimState } from '../../store/selectors/claims'
+import { buildingSketches } from '../../store/selectors/buildings-ui'
 import { formatDate } from '../../domain/dates'
-import { Button, Card, Dialog, EmptyState, Field, Input, PageHeader, Pill, SegmentedBar, Select, Table, TBody, TD, TH, THead, TR, toast } from '../../ui'
+import { BuildingThumb, Button, Card, Dialog, EmptyState, Field, PageHeader, Pill, SegmentedBar, Select, Table, TBody, TD, TH, THead, TR, toast } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE, visibilitySegments } from './labels'
+import { NewBuildingDialog } from './NewBuildingDialog'
+import { ClaimActions, ClaimPill } from './ClaimDialog'
 
 export function BuildingsList() {
   const v = useView(selectors.buildingsList)
+  const sketches = useView(buildingSketches)
   const { role } = useSession()
   const [params, setParams] = useSearchParams()
   const open = params.get('new') === '1'
@@ -21,15 +28,15 @@ export function BuildingsList() {
     else next.delete('new')
     setParams(next, { replace: true })
   }
-  if (!v) return null
+  if (!v || !sketches) return null
   const owner = role === 'owner'
   return (
     <Page testId="buildings">
       <PageHeader
-        title={owner ? 'Donor buildings' : 'Appointments'}
-        subtitle={owner ? 'What your buildings hold, and what you choose to recover and list.' : 'Buildings you are appointed to survey, by client.'}
+        title={owner ? 'Buildings' : 'Appointments'}
+        subtitle={owner ? 'Donor buildings you recover materials from, and new projects you source them for.' : 'Buildings you survey or date for each client, and the ones you added yourself.'}
         actions={
-          owner && v.canAdd ? (
+          v.canAdd ? (
             <Button variant="primary" icon={Plus} onClick={() => setOpen(true)} data-testid="add-building">
               Add building
             </Button>
@@ -41,9 +48,9 @@ export function BuildingsList() {
           owner ? (
             <EmptyState
               variant="page"
-              icon={Building2}
+              illustration="building"
               title="Add your first building"
-              text="Record a building coming down, appoint a surveyor, and decide what to recover and who may see it."
+              text="Record a building coming down to survey and offer what it holds, or a new project to source reclaimed materials for."
               action={
                 <Button variant="primary" icon={Plus} onClick={() => setOpen(true)}>
                   Add building
@@ -51,12 +58,22 @@ export function BuildingsList() {
               }
             />
           ) : (
-            <EmptyState variant="page" icon={ClipboardList} title="No appointments yet" text="When a donor building owner appoints your firm to survey a building, it appears here with everything you need to capture it." />
+            <EmptyState
+              variant="page"
+              icon={ClipboardList}
+              title="No appointments yet"
+              text="When an owner appoints your firm, buildings appear here. You can also add a building yourself and start capturing now."
+              action={
+                <Button variant="primary" icon={Plus} onClick={() => setOpen(true)} data-testid="add-building-empty">
+                  Add building
+                </Button>
+              }
+            />
           )
         ) : owner ? (
-          <OwnerTable rows={v.rows} />
+          <OwnerSections v={v} sketches={sketches} onAdd={() => setOpen(true)} />
         ) : (
-          <SurveyorGroups rows={v.rows} />
+          <SurveyorGroups v={v} sketches={sketches} />
         )}
       </div>
       {v.canAdd ? <NewBuildingDialog open={open} onOpenChange={setOpen} /> : null}
@@ -64,30 +81,69 @@ export function BuildingsList() {
   )
 }
 
-function OwnerTable({ rows }: { rows: BuildingCard[] }) {
+function OwnerSections({ v, sketches, onAdd }: { v: BuildingsListView; sketches: Record<string, BuildingSketch>; onAdd: () => void }) {
+  return (
+    <div className="flex flex-col gap-10">
+      <section aria-labelledby="donor-title" data-testid="donor-buildings">
+        <SectionTitle id="donor-title" title="Donor buildings" description="Coming down or being stripped out. What each holds, and what you choose to recover and list." />
+        {v.rows.length === 0 ? (
+          <EmptyState variant="inline" icon={ClipboardList} title="No donor buildings yet" text="Add a building that is coming down to survey it and offer what it holds." action={<Button size="sm" icon={Plus} onClick={onAdd}>Add donor building</Button>} />
+        ) : (
+          <OwnerTable rows={v.rows} sketches={sketches} />
+        )}
+      </section>
+      <section aria-labelledby="projects-title" data-testid="new-projects">
+        <SectionTitle id="projects-title" title="New projects" description="Being built or refurbished. Your architect shortlists; you approve and reserve." />
+        {v.projects.length === 0 ? (
+          <Card padding="md" className="flex flex-col gap-3 bg-page/60 sm:flex-row sm:items-center sm:justify-between">
+            <p className="m-0 text-base text-ink-soft">Building something too? Add a new project to source reclaimed materials for it.</p>
+            <Button icon={Plus} onClick={onAdd} className="shrink-0" data-testid="add-new-project">
+              Add new project
+            </Button>
+          </Card>
+        ) : (
+          <ProjectsTable rows={v.projects} />
+        )}
+      </section>
+    </div>
+  )
+}
+
+function OwnerTable({ rows, sketches }: { rows: BuildingCard[]; sketches: Record<string, BuildingSketch> }) {
   return (
     <>
-      <Table className="max-md:hidden" caption="Buildings">
+      <Table className="max-md:hidden" caption="Donor buildings">
         <THead>
           <tr>
             <TH>Building</TH>
+            <TH>Kind</TH>
             <TH>Survey</TH>
             <TH>Surveyor</TH>
             <TH align="right">Items</TH>
-            <TH className="w-[28%]">Visibility</TH>
+            <TH className="w-[26%]">Visibility</TH>
           </tr>
         </THead>
         <TBody>
           {rows.map((b) => (
-            <TR key={b.id} interactive className="relative">
+            <TR key={b.id} interactive className="relative" data-testid={`building-row-${b.id}`}>
               <TD>
-                <Link to={b.href} className="font-medium text-ink outline-none after:absolute after:inset-0 after:content-[''] focus-visible:underline">
-                  {b.name}
-                </Link>
-                <span className="block text-sm text-muted">{b.address}</span>
+                <span className="flex items-center gap-3">
+                  {sketches[b.id] ? <BuildingThumb sketch={sketches[b.id]} size="sm" /> : null}
+                  <span className="min-w-0">
+                    <Link to={b.href} className="font-medium text-ink outline-none after:absolute after:inset-0 after:content-[''] focus-visible:underline">
+                      {b.name}
+                    </Link>
+                    <span className="block text-sm text-muted">{b.address}</span>
+                  </span>
+                </span>
               </TD>
               <TD>
-                <Pill tone={SURVEY_TONE[b.surveyStatus]} dot size="sm">
+                <Pill size="sm" variant="quiet">
+                  {b.kindLabel}
+                </Pill>
+              </TD>
+              <TD>
+                <Pill tone={SURVEY_TONE[b.surveyStatus]} dot size="sm" variant="quiet">
                   {b.surveyStatusLabel}
                 </Pill>
               </TD>
@@ -96,7 +152,7 @@ function OwnerTable({ rows }: { rows: BuildingCard[] }) {
               <TD>
                 <SegmentedBar label="Lots by visibility" segments={visibilitySegments(b.counts)} legend={false} size="sm" />
                 <span className="mt-1 block text-xs text-muted">
-                  {b.counts.open} published · {b.counts.matched_only} shared · {b.counts.private} private
+                  {b.counts.open} published, {b.counts.matched_only} shared, {b.counts.private} private
                 </span>
               </TD>
             </TR>
@@ -106,7 +162,7 @@ function OwnerTable({ rows }: { rows: BuildingCard[] }) {
       <ul className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
         {rows.map((b) => (
           <li key={b.id}>
-            <BuildingTile b={b} />
+            <BuildingTile b={b} sketch={sketches[b.id]} />
           </li>
         ))}
       </ul>
@@ -114,11 +170,124 @@ function OwnerTable({ rows }: { rows: BuildingCard[] }) {
   )
 }
 
-function BuildingTile({ b, surveyor = false }: { b: BuildingCard; surveyor?: boolean }) {
+function ProjectsTable({ rows }: { rows: OwnerProjectRow[] }) {
+  const [appointing, setAppointing] = useState<OwnerProjectRow | null>(null)
   return (
-    <Card interactive padding="md" className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <>
+      <Table className="max-md:hidden" caption="New projects">
+        <THead>
+          <tr>
+            <TH>Project</TH>
+            <TH>Architect</TH>
+            <TH>RIBA stage</TH>
+            <TH>Materials needed from</TH>
+            <TH align="right">Waiting for approval</TH>
+          </tr>
+        </THead>
+        <TBody>
+          {rows.map((p) => (
+            <TR key={p.id} interactive className="relative" data-testid={`project-row-${p.id}`}>
+              <TD>
+                <Link to={p.href} className="font-medium text-ink outline-none after:absolute after:inset-0 after:content-[''] focus-visible:underline">
+                  {p.name}
+                </Link>
+                <span className="block text-sm text-muted">{p.typeLabel}</span>
+              </TD>
+              <TD>
+                {p.architectName ? (
+                  p.architectName
+                ) : (
+                  <span className="relative z-[2] inline-flex items-center gap-2">
+                    <span className="text-muted">No architect yet</span>
+                    <Button size="sm" variant="ghost" icon={UserPlus} onClick={() => setAppointing(p)} data-testid={`appoint-architect-${p.id}`}>
+                      Appoint
+                    </Button>
+                  </span>
+                )}
+              </TD>
+              <TD muted>{p.stageText}</TD>
+              <TD muted className="whitespace-nowrap">
+                {p.startText}
+              </TD>
+              <TD align="right">{p.waitingApprovals > 0 ? <Pill tone="warning" size="sm">{p.waitingApprovals}</Pill> : <span className="text-muted">None</span>}</TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
+        {rows.map((p) => (
+          <li key={p.id}>
+            <Card interactive padding="md" className="flex flex-col gap-2">
+              <h3 className="m-0 text-lg font-semibold text-ink">
+                <Link to={p.href} className="outline-none after:absolute after:inset-0 after:content-['']">
+                  {p.name}
+                </Link>
+              </h3>
+              <p className="m-0 text-sm text-muted">
+                {p.typeLabel}, {p.stageText}
+              </p>
+              <p className="m-0 text-sm text-ink-soft">
+                {p.architectName ?? 'No architect yet'}. Materials needed from {p.startText}.
+              </p>
+              {p.architectName ? null : (
+                <Button size="sm" icon={UserPlus} className="relative z-[2] self-start" onClick={() => setAppointing(p)}>
+                  Appoint an architect
+                </Button>
+              )}
+            </Card>
+          </li>
+        ))}
+      </ul>
+      <AppointArchitectDialog project={appointing} onClose={() => setAppointing(null)} />
+    </>
+  )
+}
+
+function AppointArchitectDialog({ project, onClose }: { project: OwnerProjectRow | null; onClose: () => void }) {
+  const options = useView(selectors.newBuildingOptions)
+  const [value, setValue] = useState('')
+  const close = () => {
+    setValue('')
+    onClose()
+  }
+  const appoint = () => {
+    if (!project) return
+    const r = act.appointProjectArchitect(project.id, value)
+    if (!r.ok) return toast.error(r.error ?? 'Could not appoint the architect.')
+    toast.success('Architect appointed', { description: 'They have been told and can start shortlisting.' })
+    close()
+  }
+  return (
+    <Dialog
+      open={!!project}
+      onOpenChange={(o) => !o && close()}
+      title="Appoint an architect to start sourcing"
+      description={project ? `${project.name}. They shortlist reclaimed materials; you approve what they propose.` : undefined}
+      size="sm"
+      testId="appoint-architect"
+      footer={
+        <>
+          <Button onClick={close}>Cancel</Button>
+          <Button variant="primary" disabled={!value} onClick={appoint} data-testid="appoint-architect-save">
+            Appoint
+          </Button>
+        </>
+      }
+    >
+      <Field label="Architecture practice">
+        <Select value={value} onChange={(e) => setValue(e.target.value)} placeholder="Choose a practice" options={(options?.architects ?? []).map((a) => ({ value: a.orgId, label: a.name }))} data-testid="appoint-architect-select" />
+      </Field>
+    </Dialog>
+  )
+}
+
+function BuildingTile({ b, sketch, claim = null, surveyor = false }: { b: BuildingCard; sketch?: BuildingSketch; claim?: ClaimState | null; surveyor?: boolean }) {
+  const contractorOnly = b.side === 'contractor'
+  return (
+    <Card interactive padding="md" className="flex flex-col gap-4" data-testid={`building-tile-${b.id}`}>
+      <div className="flex items-start gap-3">
+        {sketch ? <BuildingThumb sketch={sketch} size="md" /> : null}
+        <div className="min-w-0 flex-1">
           <h3 className="m-0 text-lg font-semibold text-ink">
             <Link to={b.href} className="outline-none after:absolute after:inset-0 after:content-['']">
               {b.name}
@@ -126,23 +295,37 @@ function BuildingTile({ b, surveyor = false }: { b: BuildingCard; surveyor?: boo
           </h3>
           <p className="m-0 mt-0.5 text-sm text-muted">{b.address}</p>
         </div>
-        <Pill tone={SURVEY_TONE[b.surveyStatus]} dot size="sm">
-          {b.surveyStatusLabel}
-        </Pill>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {claim ? <ClaimPill claim={claim} /> : <Pill tone={SURVEY_TONE[b.surveyStatus]} dot size="sm" variant="quiet">{b.surveyStatusLabel}</Pill>}
+          {b.isContractor ? (
+            <Pill size="sm" icon={HardHat} variant="quiet">
+              Contractor
+            </Pill>
+          ) : null}
+        </div>
       </div>
       {surveyor ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-3">
           <p className="m-0 text-sm text-ink-soft">
             <span className="font-medium tabular-nums text-ink">{b.itemCount}</span> {b.itemCount === 1 ? 'item' : 'items'} captured
-            {b.lastCaptureOn ? <span className="text-muted"> · last {formatDate(b.lastCaptureOn)}</span> : null}
+            {b.lastCaptureOn ? <span className="text-muted">, last on {formatDate(b.lastCaptureOn)}</span> : null}
           </p>
-          <div className="relative z-[2] flex gap-2">
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`${b.href}/inventory`}>Inventory</Link>
-            </Button>
-            <Button asChild size="sm" variant="primary" icon={Camera}>
-              <Link to={`${b.href}/capture`}>Capture</Link>
-            </Button>
+          <div className="relative z-[2] flex flex-wrap gap-2">
+            {contractorOnly ? (
+              <Button asChild size="sm" variant="primary" icon={CalendarClock}>
+                <Link to={`${b.href}/availability`}>Set dates</Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild size="sm" variant="ghost">
+                  <Link to={`${b.href}/inventory`}>Inventory</Link>
+                </Button>
+                {claim ? <ClaimActions buildingId={b.id} buildingName={b.name} claim={claim} size="sm" /> : null}
+                <Button asChild size="sm" variant={claim && claim.status !== 'pending' ? 'secondary' : 'primary'} icon={Camera}>
+                  <Link to={`${b.href}/capture`}>Capture</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -152,147 +335,33 @@ function BuildingTile({ b, surveyor = false }: { b: BuildingCard; surveyor?: boo
   )
 }
 
-function SurveyorGroups({ rows }: { rows: BuildingCard[] }) {
-  const clients = [...new Set(rows.map((r) => r.clientName))]
+function SurveyorGroups({ v, sketches }: { v: BuildingsListView; sketches: Record<string, BuildingSketch> }) {
+  const clients = [...new Set(v.rows.map((r) => r.clientName))]
   return (
-    <div className="flex flex-col gap-8">
+    <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-2">
       {clients.map((c) => (
         <section key={c} aria-label={c}>
           <SectionTitle title={c} description="Client" />
-          <div className="grid gap-3 md:grid-cols-2">
-            {rows
+          <div className="grid gap-3">
+            {v.rows
               .filter((r) => r.clientName === c)
               .map((b) => (
-                <BuildingTile key={b.id} b={b} surveyor />
+                <BuildingTile key={b.id} b={b} sketch={sketches[b.id]} surveyor />
               ))}
           </div>
         </section>
       ))}
+      {v.unlinked.length > 0 ? (
+        <section aria-label="Not yet linked" data-testid="unlinked-buildings">
+          <SectionTitle title="Not yet linked" description="Buildings your firm added. Private to you until each owner confirms it." />
+          <div className="grid gap-3">
+            {v.unlinked.map((b) => (
+              <BuildingTile key={b.id} b={b} sketch={sketches[b.id]} claim={b.claim} surveyor />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
-  )
-}
-
-type Draft = { name: string; address: string; postcodeDistrict: string; localAuthority: string; region: string; yearBuilt: string; storeys: string; giaM2: string; structureType: string; stripOutStart: string; dismantlingStart: string; clearBy: string; surveyorOrgId: string }
-
-const EMPTY: Draft = { name: '', address: '', postcodeDistrict: '', localAuthority: '', region: '', yearBuilt: '', storeys: '', giaM2: '', structureType: '', stripOutStart: '', dismantlingStart: '', clearBy: '', surveyorOrgId: '' }
-
-function intOrNull(s: string): number | null {
-  const t = s.replace(/,/g, '').trim()
-  return t === '' ? null : Number(t)
-}
-
-function NewBuildingDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const options = useView(selectors.newBuildingOptions)
-  const navigate = useNavigate()
-  const [d, setD] = useState<Draft>(EMPTY)
-  const [error, setError] = useState<string | null>(null)
-  const set = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }))
-  const close = () => {
-    setD(EMPTY)
-    setError(null)
-    onOpenChange(false)
-  }
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const r = act.createBuilding({
-      name: d.name,
-      address: d.address,
-      postcodeDistrict: d.postcodeDistrict,
-      localAuthority: d.localAuthority,
-      region: d.region,
-      yearBuilt: intOrNull(d.yearBuilt),
-      storeys: intOrNull(d.storeys),
-      giaM2: intOrNull(d.giaM2),
-      structureType: d.structureType,
-      stripOutStart: d.stripOutStart || null,
-      dismantlingStart: d.dismantlingStart || null,
-      clearBy: d.clearBy || null,
-      surveyorOrgId: d.surveyorOrgId || null,
-    })
-    if (!r.ok || !r.value) {
-      setError(r.error)
-      return
-    }
-    toast.success(`${d.name.trim()} added`, { description: d.surveyorOrgId ? 'The surveyor has been told.' : 'Appoint a surveyor when you are ready.' })
-    close()
-    navigate(`/app/buildings/${r.value}`)
-  }
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => (o ? onOpenChange(true) : close())}
-      title="Add a building"
-      description="Its record is private to your organisation. Nothing is listed until you decide."
-      size="lg"
-      testId="new-building"
-      footer={
-        <>
-          <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" type="submit" form="new-building-form" icon={Plus} data-testid="new-building-save">
-            Add building
-          </Button>
-        </>
-      }
-    >
-      <form id="new-building-form" onSubmit={submit} className="flex flex-col gap-5" noValidate>
-        {error ? (
-          <p role="alert" className="m-0 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Building name" required className="sm:col-span-2">
-            <Input value={d.name} onChange={set('name')} placeholder="For example, Calder House" autoFocus data-testid="nb-name" />
-          </Field>
-          <Field label="Address" required className="sm:col-span-2">
-            <Input value={d.address} onChange={set('address')} placeholder="Street, town" data-testid="nb-address" />
-          </Field>
-          <Field label="Postcode district" optional>
-            <Input value={d.postcodeDistrict} onChange={set('postcodeDistrict')} placeholder="EC2" />
-          </Field>
-          <Field label="Local authority" optional>
-            <Input value={d.localAuthority} onChange={set('localAuthority')} placeholder="City of London" />
-          </Field>
-          <Field label="Region" required className="sm:col-span-2">
-            <Select value={d.region} onChange={set('region')} placeholder="Choose a region" options={(options?.regions ?? []).map((r) => ({ value: r, label: r }))} data-testid="nb-region" />
-          </Field>
-        </div>
-        <fieldset className="m-0 grid gap-4 border-0 p-0 sm:grid-cols-3">
-          <legend className="mb-3 text-sm font-semibold text-ink">
-            The building <span className="font-normal text-muted">Optional</span>
-          </legend>
-          <Field label="Year built">
-            <Input inputMode="numeric" value={d.yearBuilt} onChange={set('yearBuilt')} placeholder="1987" />
-          </Field>
-          <Field label="Storeys">
-            <Input inputMode="numeric" value={d.storeys} onChange={set('storeys')} />
-          </Field>
-          <Field label="Floor area (m2)">
-            <Input inputMode="numeric" value={d.giaM2} onChange={set('giaM2')} />
-          </Field>
-          <Field label="Structure" className="sm:col-span-3">
-            <Input value={d.structureType} onChange={set('structureType')} placeholder="Steel frame with precast floors" />
-          </Field>
-        </fieldset>
-        <fieldset className="m-0 grid gap-4 border-0 p-0 sm:grid-cols-3">
-          <legend className="mb-3 text-sm font-semibold text-ink">
-            Programme <span className="font-normal text-muted">Optional</span>
-          </legend>
-          <Field label="Strip-out starts">
-            <Input type="date" value={d.stripOutStart} onChange={set('stripOutStart')} />
-          </Field>
-          <Field label="Dismantling starts">
-            <Input type="date" value={d.dismantlingStart} onChange={set('dismantlingStart')} />
-          </Field>
-          <Field label="Site clear by">
-            <Input type="date" value={d.clearBy} onChange={set('clearBy')} />
-          </Field>
-        </fieldset>
-        <Field label="Surveyor" optional hint="The firm can capture items as soon as you appoint them. You can do this later.">
-          <Select value={d.surveyorOrgId} onChange={set('surveyorOrgId')} placeholder="Not yet" options={(options?.surveyors ?? []).map((s) => ({ value: s.orgId, label: s.name }))} />
-        </Field>
-      </form>
-    </Dialog>
   )
 }
 

@@ -9,13 +9,13 @@ import * as f from '../../domain/format'
 import { selectors, useView } from '../../store'
 import type { PriorityViewRow } from '../../store/selectors/owner'
 import { scoreParts, scoreWeights, signedMoneyWhole, stacked } from '../../store/selectors/roles-views'
-import { Card, CardBody, CardHeader, cx, EmptyState, IndicativeMarker, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../ui'
+import { Card, CardBody, CardHeader, cx, EmptyState, IndicativeMarker, Pill, Table, TBody, TD, TH, THead, TR, VIZ, type Tone } from '../../ui'
 import { StatStrip } from '../notifications/kit'
 
 const ROUTE_TONE: Record<DecisionRoute, Tone> = { reuse: 'brand', upcycle: 'brand', downcycle: 'warning', recycle: 'info', scrap: 'danger' }
 
-const PART_FILL = ['fill-brand-600', 'fill-brand-400', 'fill-[#4f7fe8]', 'fill-[#d08a2c]'] as const
-const PART_DOT = ['bg-brand-600', 'bg-brand-400', 'bg-[#4f7fe8]', 'bg-[#d08a2c]'] as const
+/** The score parts in their fixed order (net value, carbon, demand, ease) take the first four categorical colours. */
+const PART_COLOUR = [VIZ[0], VIZ[1], VIZ[2], VIZ[3]] as const
 
 export function Priorities() {
   const { buildingId = '' } = useParams()
@@ -26,6 +26,7 @@ export function Priorities() {
   const weights = scoreWeights()
   return (
     <div className="flex flex-col gap-6" data-testid="priorities">
+      <h2 className="sr-only">Recovery plan</h2>
       <StatStrip
         items={[
           { label: 'Recoverable net value', value: f.moneyWhole(v.result.recoverableNetValue), indicative: true, sub: 'Guide price less the cost of careful removal' },
@@ -66,7 +67,7 @@ export function Priorities() {
           <ul className="m-0 flex list-none flex-wrap items-center gap-x-4 gap-y-1 p-0 text-sm text-muted" aria-label="Score weights">
             {weights.map((w, i) => (
               <li key={w.label} className="inline-flex items-center gap-1.5">
-                <span aria-hidden="true" className={cx('size-2 rounded-full', PART_DOT[i])} />
+                <span aria-hidden="true" className="size-2 rounded-full" style={{ background: PART_COLOUR[i] }} />
                 {w.label} <span className="tabular-nums text-ink">{w.max}</span>
               </li>
             ))}
@@ -148,7 +149,7 @@ function ScoreBar({ row }: { row: PriorityViewRow }) {
       <span className="w-9 text-right font-semibold tabular-nums text-ink">{f.score(row.score)}</span>
       <svg viewBox="0 0 100 8" preserveAspectRatio="none" className="h-2 w-28 shrink-0 overflow-hidden rounded-full bg-subtle" role="img" aria-label={`Score ${f.score(row.score)} of 100: ${parts.map((p) => `${p.label} ${p.text}`).join(', ')}`}>
         {parts.map((p, i) => (
-          <rect key={p.key} x={segs[i].at} y="0" width={segs[i].size} height="8" className={PART_FILL[i]} />
+          <rect key={p.key} x={segs[i].at} y="0" width={segs[i].size} height="8" fill={PART_COLOUR[i]} />
         ))}
       </svg>
     </div>
@@ -163,7 +164,7 @@ function Breakdown({ row }: { row: PriorityViewRow }) {
         {parts.map((p, i) => (
           <div key={p.key} className="min-w-0">
             <dt className="flex items-center gap-1.5 text-xs text-muted">
-              <span aria-hidden="true" className={cx('size-2 rounded-full', PART_DOT[i])} />
+              <span aria-hidden="true" className="size-2 rounded-full" style={{ background: PART_COLOUR[i] }} />
               {p.label}
             </dt>
             <dd className="m-0 mt-0.5 text-base font-semibold tabular-nums text-ink">{p.text}</dd>
