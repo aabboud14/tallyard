@@ -1,8 +1,15 @@
 // Small redirects inside the app.
-import { Navigate, useParams } from 'react-router'
+import { Navigate, useLocation, useParams } from 'react-router'
+import { marketplacePathFor } from '../store/paths'
 
 /** /app/engagements/:id opens the engagement's only page, its waste report. */
 export function EngagementIndex() {
   const { engagementId } = useParams()
   return <Navigate to={`/app/engagements/${engagementId}/waste`} replace />
+}
+
+/** The Marketplace used to live at /app/discover: old links land on the same page, keeping the query and hash. */
+export function LegacyMarketplaceRedirect() {
+  const { pathname, search, hash } = useLocation()
+  return <Navigate to={marketplacePathFor(pathname) + search + hash} replace />
 }

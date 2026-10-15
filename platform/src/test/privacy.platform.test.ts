@@ -18,6 +18,15 @@ import { itemsOf } from '../store/selectors/owner'
 
 const LOT_ID = /\blot_[a-z0-9]{6}\b/
 
+/**
+ * An IFC file with its GlobalIds masked. They are hashes of the public ID and a role (ifc.test.ts proves it), so
+ * a short private string such as a postcode district can appear inside one by chance; everything else is scanned.
+ */
+function ifcScanned(file: ReturnType<typeof sel.geometryFile>): unknown {
+  if (!file || file.kind !== 'file') return file
+  return { ...file, text: file.text.replace(/'[0-3][0-9A-Za-z_$]{21}'/g, "'GLOBALID'") }
+}
+
 function allLotStrings(s: AppData): string[] {
   const out = new Set<string>()
   for (const lot of Object.values(s.world.lots)) {
@@ -40,7 +49,10 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   add('architectHome', sel.architectHome(s, v))
   add('clientHome', sel.clientHome(s, v))
   add('consultantHome', sel.consultantHome(s, v))
+  add('consultantDashboard', sel.consultantDashboard(s, v))
   add('discover', sel.discoverView(s, v, DEFAULT_DISCOVER_QUERY))
+  add('discover structure', sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, typology: 'structure' }))
+  add('newForProjects', sel.newForProjectsFeed(s, v, null))
   add('saved', sel.savedView(s, v))
   add('projects', sel.projectsListView(s, v))
   add('newProject', sel.newProjectOptions(s, v))
@@ -56,6 +68,8 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   const publicIds = new Set(marketplaceListings(s).map((l) => l.publicId))
   for (const p of projectsOfUser(s, v.userId)) {
     add(`discover ${p.name}`, sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, projectId: p.id, tab: 'shared', fitsOnly: true }))
+    add(`landing ${p.name}`, sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, projectId: p.id }))
+    add(`newForProjects ${p.name}`, sel.newForProjectsFeed(s, v, p.id))
     add(`header ${p.name}`, sel.projectHeader(s, v, p.id))
     add(`overview ${p.name}`, sel.projectOverview(s, v, p.id))
     add(`board ${p.name}`, sel.shortlistBoard(s, v, p.id))
@@ -71,7 +85,7 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   }
   for (const id of publicIds) {
     for (const p of [null, ...projectsOfUser(s, v.userId).map((x) => x.id)]) add(`material ${id} ${p}`, sel.materialView(s, v, id, p))
-    add(`geometry ${id}`, [sel.geometryFile(s, v, id, 'dxf'), sel.geometryFile(s, v, id, 'obj')])
+    add(`geometry ${id}`, [sel.geometryFile(s, v, id, 'dxf'), sel.geometryFile(s, v, id, 'obj'), ifcScanned(sel.geometryFile(s, v, id, 'ifc'))])
   }
   return out
 }
@@ -81,6 +95,7 @@ function ownerViews(s: AppData, v: Viewer): [string, unknown][] {
   const out: [string, unknown][] = []
   const add = (name: string, x: unknown) => out.push([name, x])
   add('ownerHome', sel.ownerHome(s, v))
+  add('ownerDashboard', sel.ownerDashboard(s, v))
   add('buildings', sel.buildingsList(s, v))
   add('sharing', sel.sharingView(s, v))
   add('requests', sel.requestsView(s, v))
@@ -166,6 +181,27 @@ describe('P3 on the platform: the buyer side never receives a seller-private str
     expectNone(buyerViews(s, viewer(U.marcus)), strings, 'Marcus')
   })
 
+  it('architects and consultants get no guide price and no seller details; the IFC file carries no private string', () => {
+    const s = busy()
+    for (const id of [U.priya, U.marcus]) {
+      const m = sel.materialView(s, viewer(id), 'L-9F4CQQ', null)!
+      expect(m.price).toBeNull()
+      expect(m.sellerLine).toBeNull()
+      expect(m.location.seller).toBeNull()
+      expect(m.listing.sellerType.length).toBeGreaterThan(0)
+      // Outside the public listing objects themselves, nothing carries the seller type.
+      expect(JSON.stringify(m, (k, x) => (k === 'listing' ? undefined : x))).not.toContain('sellerType')
+    }
+    const strings = allLotStrings(s)
+    for (const l of marketplaceListings(s)) {
+      const file = sel.geometryFile(s, viewer(U.priya), l.publicId, 'ifc')!
+      expect(file.kind).toBe(l.family === 'timber_joist' ? 'unavailable' : 'file')
+      const text = JSON.stringify(ifcScanned(file))
+      expect(text).not.toContain('£')
+      for (const x of strings) expect(text.includes(x), `${l.publicId} IFC leaks "${x}"`).toBe(false)
+    }
+  })
+
   it('a material page holds public listing fields only', () => {
     const s = fresh()
     const m = sel.materialView(s, viewer(U.priya), 'L-9F4CQQ', MERROWGATE_ID)!
@@ -191,7 +227,7 @@ describe('P3 on the platform: the seller never receives a buyer-private string b
   it('the surveyor sees no buyer either', () => {
     const s = busy()
     const v = viewer(U.dana)
-    const views: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)]]
+    const views: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['dashboard', sel.surveyorDashboard(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)]]
     for (const b of buildingsOfUser(s, U.dana)) {
       views.push([`inventory ${b.name}`, sel.inventoryView(s, v, b.id)], [`capture ${b.name}`, sel.captureView(s, v, b.id)], [`overview ${b.name}`, sel.buildingOverview(s, v, b.id)])
       for (const item of itemsOf(s, b.id)) views.push([`item ${item.tag}`, sel.itemDetail(s, v, b.id, item.id)])

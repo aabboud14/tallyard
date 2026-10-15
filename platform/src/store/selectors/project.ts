@@ -6,6 +6,7 @@ import { PROJECT_TYPE_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/lab
 import { RIBA_STAGES } from '../../domain/reference/policy'
 import { addDays, daysBetween, formatQuarter, maxDate, quarterWindow } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
+import { marketplaceHref } from '../paths'
 import { projectSide, projectsOfUser, roleOfOrg, roleOfUser, usersOfOrg, type ProjectSide } from '../access'
 import { existingClientOrgIds, PROJECT_TYPES } from '../actions/projects'
 import { orgTypeLabel } from '../../sandbox/accounts'
@@ -201,7 +202,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
   const steps: NextStep[] = []
   const clientName = header.clientName
   if (header.side === 'architect') {
-    if (rows.length === 0) steps.push({ id: 'discover', text: 'Find materials for this project in Discover', href: `/app/discover?project=${projectId}` })
+    if (rows.length === 0) steps.push({ id: 'discover', text: 'Find materials for this project in the Marketplace', href: marketplaceHref(projectId) })
     const sendable = rows.filter((r) => r.canSelect).length
     if (sendable > 0) steps.push({ id: 'send', text: `Send ${plural(sendable, 'shortlisted material')} to ${clientName}`, href: `${base}/shortlist` })
     if (counts.declined > 0) steps.push({ id: 'declined', text: `Review ${plural(counts.declined, 'declined material')}`, href: `${base}/shortlist` })

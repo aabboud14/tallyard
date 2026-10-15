@@ -121,7 +121,7 @@ function SortMenu({ view, onChange }: { view: DiscoverView; onChange: (s: Discov
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Sort by</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={view.sort} onValueChange={(v) => onChange(v as DiscoverQuery['sort'])}>
-          {SORTS.map((s) => (
+          {SORTS.filter((s) => view.sortOptions.includes(s.value)).map((s) => (
             <DropdownMenuRadioItem key={s.value} value={s.value} disabled={s.value === 'price' && !view.priceSortEnabled} className="items-start py-2">
               <span className="flex flex-col">
                 <span>{s.label}</span>
@@ -215,14 +215,14 @@ export function Discover() {
       <header className="flex flex-col gap-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="m-0 text-2xl font-semibold text-ink">Discover</h1>
+            <h1 className="m-0 text-2xl font-semibold text-ink">Marketplace</h1>
             <p className="m-0 mt-1 max-w-xl text-base text-muted">Reclaimed structure, envelope and finishes from buildings coming down across London and the South East.</p>
           </div>
           {shared ? null : <ProjectPicker projects={view.projects} value={view.project} onChange={setProject} className="md:shrink-0" />}
         </div>
-        <nav aria-label="Discover sections" className="-mb-px flex gap-6 border-b border-line">
+        <nav aria-label="Marketplace sections" className="-mb-px flex gap-6 border-b border-line">
           {[
-            { tab: 'all' as const, label: 'Marketplace', count: view.total },
+            { tab: 'all' as const, label: 'All listings', count: view.total },
             { tab: 'shared' as const, label: 'Shared with you', count: view.sharedCount, dot: pendingShared > 0 },
           ].map((t) => {
             const active = view.tab === t.tab

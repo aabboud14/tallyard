@@ -30,7 +30,7 @@ describe('visibility', () => {
     expect(after.listedMonth).toBe('2026-10')
     const n = r.state.notifications.find((x) => x.kind === 'new_fit')!
     expect(n.orgId).toBe(ORG_IDS.oriel)
-    expect(n.href).toBe(`/app/discover/${lot.publicId}`)
+    expect(n.href).toBe(`/app/marketplace/${lot.publicId}`)
     const item = itemByTag(r.state.world, 'TH-07')
     for (const s of lotPrivateStrings(after, item, r.state.world.buildings[TIVERNE_ID], r.state.world)) expect(`${n.title} ${n.body}`).not.toContain(s)
     expect(r.state.activity[0].text).toBe('published TH-07 to the marketplace')

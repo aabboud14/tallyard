@@ -7,6 +7,7 @@ import { navModel, type NavItem } from './nav'
 import { sharedGroups } from './discover'
 import { itemsOf } from './owner'
 import { titleFor } from '../../domain/reference/families'
+import { materialHref } from '../paths'
 
 export type SearchKind = 'page' | 'project' | 'building' | 'material' | 'item'
 
@@ -14,11 +15,14 @@ export type SearchEntry = { id: string; kind: SearchKind; label: string; sublabe
 
 export const SEARCH_KIND_LABELS: Record<SearchKind, string> = { page: 'Pages', project: 'Projects', building: 'Buildings', material: 'Materials', item: 'Inventory' }
 
+/** Extra words a page answers to, by nav item id: the Marketplace was called Discover. */
+export const PAGE_KEYWORDS: Record<string, string> = { marketplace: 'marketplace discover browse materials' }
+
 function flatten(items: NavItem[], parent: string | null, out: SearchEntry[]): void {
   for (const it of items) {
     if (it.soon) continue
     const label = parent ? `${parent}, ${it.label}` : it.label
-    if (!it.id.startsWith('project-') && !it.id.startsWith('building-') && !it.id.startsWith('client-')) out.push({ id: `page:${it.id}`, kind: 'page', label: it.label, sublabel: parent ?? 'Go to', href: it.href, keywords: label.toLowerCase() })
+    if (!it.id.startsWith('project-') && !it.id.startsWith('building-') && !it.id.startsWith('client-')) out.push({ id: `page:${it.id}`, kind: 'page', label: it.label, sublabel: parent ?? 'Go to', href: it.href, keywords: [label.toLowerCase(), PAGE_KEYWORDS[it.id] ?? ''].join(' ').trim() })
     flatten(it.children, it.children.length ? it.label : parent, out)
   }
 }
@@ -48,7 +52,7 @@ export function searchIndex(state: AppData, viewer: Viewer): SearchEntry[] {
     const add = (title: string, publicId: string, family: Parameters<typeof familyLabel>[0], location: string) => {
       if (seen.has(publicId)) return
       seen.add(publicId)
-      out.push({ id: `material:${publicId}`, kind: 'material', label: title, sublabel: `${familyLabel(family)}, ${location}`, href: `/app/discover/${publicId}`, keywords: `${title} ${publicId} ${familyLabel(family)} ${location}`.toLowerCase() })
+      out.push({ id: `material:${publicId}`, kind: 'material', label: title, sublabel: `${familyLabel(family)}, ${location}`, href: materialHref(publicId), keywords: `${title} ${publicId} ${familyLabel(family)} ${location}`.toLowerCase() })
     }
     for (const l of marketplaceListings(state)) add(l.title, l.publicId, l.family, l.location.label)
     for (const g of sharedGroups(state, viewer)) for (const c of g.cards) add(c.title, c.publicId, c.family, c.locationLabel)

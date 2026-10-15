@@ -29,7 +29,7 @@ import { Avatar, AvatarStack, Badge, Button, cx, FitPill, Kbd, Logo, MaterialCar
 import { BANDS, SAMPLE_MATERIALS } from '../../ui/samples'
 
 const ROLES: { icon: typeof Compass; role: string; line: string; tools: string[] }[] = [
-  { icon: Compass, role: 'Architects', line: 'Browse a curated showroom of reclaimed stock, shortlist it per project and export the specification.', tools: ['Discover', 'Shortlist', 'Specification'] },
+  { icon: Compass, role: 'Architects', line: 'Browse a curated showroom of reclaimed stock, shortlist it per project and export the specification.', tools: ['Marketplace', 'Shortlist', 'Specification'] },
   { icon: ClipboardCheck, role: 'Clients and developers', line: 'Approve what your architect proposes and reserve it, with an indicative package for storage, testing and transport.', tools: ['Approvals', 'Reservations'] },
   { icon: Building2, role: 'Asset owners', line: 'Know what your buildings hold and decide what is visible, to whom and from when.', tools: ['Inventory', 'Priorities', 'Sharing'] },
   { icon: Camera, role: 'Site surveyors', line: 'Capture each item on site from a phone: photos, grades, quantities and when it comes out.', tools: ['Capture', 'Inventory'] },
@@ -133,7 +133,7 @@ function ProductShot() {
               </div>
               <div className="flex flex-col gap-0.5">
                 <NavItem icon={House} label="Home" />
-                <NavItem icon={LayoutGrid} label="Discover" active />
+                <NavItem icon={LayoutGrid} label="Marketplace" active />
                 <NavItem icon={Bookmark} label="Saved" count={3} />
               </div>
               <div className="flex flex-col gap-0.5">
@@ -153,7 +153,7 @@ function ProductShot() {
             </aside>
             <div className="min-w-0 flex-1">
               <div className="flex h-12 items-center gap-3 border-b border-line-soft px-4">
-                <span className="text-[13px] font-medium text-ink">Discover</span>
+                <span className="text-[13px] font-medium text-ink">Marketplace</span>
                 <div className="mx-auto hidden h-8 w-full max-w-[340px] items-center gap-2 rounded-lg border border-line bg-page px-2.5 text-[13px] text-faint sm:flex">
                   <Search aria-hidden="true" className="size-3.5" />
                   Search materials, projects and buildings
@@ -170,7 +170,7 @@ function ProductShot() {
               <div className="px-4 pb-6 pt-5 sm:px-6">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div className="text-left">
-                    <div className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Discover</div>
+                    <div className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Marketplace</div>
                     <div className="mt-0.5 text-[13px] text-muted">Reclaimed materials from buildings coming down</div>
                   </div>
                   <div className="flex items-center gap-2">

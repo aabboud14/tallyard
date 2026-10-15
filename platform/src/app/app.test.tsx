@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// The app through its real router: guards, the shell, Discover, the material page's downloads, the shortlist's
+// The app through its real router: guards, the shell, the Marketplace, the material page's downloads, the shortlist's
 // send flow and the read-only specification. Screens show only public listing fields (P3) and no forbidden
 // characters (P6).
 import { act } from 'react'
@@ -100,7 +100,7 @@ describe('helpers', () => {
 
   it('marks the current nav item, with a project overview current only on itself', () => {
     const base = `/app/projects/${MERROWGATE_ID}`
-    expect(isActive('/app/discover/L-9F4CQQ', '/app/discover', null)).toBe(true)
+    expect(isActive('/app/marketplace/L-9F4CQQ', '/app/marketplace', null)).toBe(true)
     expect(isActive(`${base}/shortlist`, base, base)).toBe(false)
     expect(isActive(base, base, base)).toBe(true)
     expect(isActive('/app/home/x', '/app/home', null)).toBe(false)
@@ -131,22 +131,35 @@ describe('guards', () => {
   })
 })
 
-describe('shell and Discover', () => {
-  it('lists the projects as folders and the marketplace as cards, checked against a project', async () => {
-    open('/app/discover')
+describe('shell and Marketplace', () => {
+  it('lists the projects as folders and the marketplace as cards, checked against no project by default', async () => {
+    open('/app/marketplace')
     await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
     expect(byTestId('sidebar').textContent).toContain('Merrowgate Wharf')
     const cards = document.querySelectorAll('[data-testid^="card-"]')
     expect(cards.length).toBe(17)
-    expect(byTestId('results-line').textContent).toContain('Timeline checked against Merrowgate Wharf')
+    expect(byTestId('results-line').textContent).not.toContain('Timeline checked against')
     expect(document.querySelector('[data-testid="saved-badge-L-2MAC36"]')?.textContent).toBe('Merrowgate Wharf')
     expect(allText()).not.toMatch(FORBIDDEN)
     const body = document.body.textContent ?? ''
     for (const p of privateStrings()) expect(body, p).not.toContain(p)
   })
 
+  it('checks the cards against a project named in the address', async () => {
+    open(`/app/marketplace?project=${MERROWGATE_ID}`)
+    await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
+    expect(byTestId('results-line').textContent).toContain('Timeline checked against Merrowgate Wharf')
+  })
+
+  it('sends an old Discover link to the Marketplace, keeping the query', async () => {
+    const router = open(`/app/discover/L-9F4CQQ?project=${MERROWGATE_ID}`)
+    await waitFor(() => document.querySelector('[data-testid="material-title"]'))
+    expect(router.state.location.pathname).toBe('/app/marketplace/L-9F4CQQ')
+    expect(router.state.location.search).toBe(`?project=${MERROWGATE_ID}`)
+  })
+
   it('filters by typology from the tabs', async () => {
-    const router = open('/app/discover')
+    const router = open('/app/marketplace')
     await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
     click(byTestId('typology-envelope'))
     await waitFor(() => router.state.location.search.includes('type=envelope'))
@@ -154,7 +167,7 @@ describe('shell and Discover', () => {
   })
 
   it('searches by word', async () => {
-    open('/app/discover')
+    open('/app/marketplace')
     await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
     typeInto(byTestId('discover-search').querySelector('input') ?? byTestId('discover-search'), 'stone')
     await waitFor(() => document.querySelectorAll('[data-testid^="card-"]').length === 1)
@@ -167,7 +180,7 @@ describe('shared with you', () => {
     const r = setProjectAccess(getData(), { userId: U.tom, now: NOW }, SALLOW_ID, true)
     expect(r.error).toBeNull()
     useApp.getState().commit(r.state)
-    open('/app/discover?tab=shared')
+    open('/app/marketplace?tab=shared')
     await waitFor(() => document.querySelector(`[data-testid="review-terms-${SALLOW_ID}"]`))
     expect(document.querySelector(`[data-testid="shared-group-${SALLOW_ID}"] [data-testid^="card-"]`)).toBeNull()
     click(byTestId(`review-terms-${SALLOW_ID}`))
@@ -185,11 +198,13 @@ describe('shared with you', () => {
 
 describe('material page', () => {
   it('shows public fields, the fit and the band, and downloads the DXF', async () => {
-    open('/app/discover/L-9F4CQQ')
+    open('/app/marketplace/L-9F4CQQ')
     await waitFor(() => document.querySelector('[data-testid="material-title"]'))
     expect(byTestId('material-title').textContent).toBe('UB 457x191x67, 7.5 m')
     expect(byTestId('fit-text').textContent).toContain('Merrowgate Wharf')
-    expect(byTestId('seller-line').textContent).toBe('Listed by an asset owner in Central London')
+    // The architect gets no seller line and no guide price; the client does.
+    expect(document.querySelector('[data-testid="seller-line"]')).toBeNull()
+    expect(document.querySelector('[data-testid="guide-price"]')).toBeNull()
     expect(byTestId('bim-family').textContent).toContain('version 2')
     const created = URL.createObjectURL as unknown as ReturnType<typeof vi.fn>
     created.mockClear()
@@ -200,6 +215,13 @@ describe('material page', () => {
     const body = document.body.textContent ?? ''
     for (const p of privateStrings()) expect(body, p).not.toContain(p)
     expect(allText()).not.toMatch(FORBIDDEN)
+  })
+
+  it('shows the client the seller line and the guide price', async () => {
+    open('/app/marketplace/L-9F4CQQ', U.isla)
+    await waitFor(() => document.querySelector('[data-testid="material-title"]'))
+    expect(byTestId('seller-line').textContent).toBe('Listed by an asset owner in Central London')
+    expect(byTestId('guide-price').textContent).toContain('£715 to £825 per tonne')
   })
 })
 

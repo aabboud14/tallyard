@@ -6,7 +6,8 @@ import { LABELS } from '../reference/labels'
 import { createSeed } from '../seed/world'
 import { listingFor } from '../visibility'
 import { lotPrivateStrings } from '../privacy/privateStrings'
-import { dxfFor, iProfile, NO_SECTION_SIZE, objFor } from './geometry'
+import { dxfFor, geometryFilename, iProfile, meshFor, NO_SECTION_SIZE, objFor, PLACEHOLDER_NOTE, profileOf, type ModelGeometry } from './geometry'
+import type { Mesh } from './view3d'
 
 const w = createSeed()
 const all = Object.values(w.lots).map((lot) => listingFor(w, lot.id, A))
@@ -194,5 +195,93 @@ describe('geometry files', () => {
         }
       }
     }
+  })
+})
+
+function model(id: string): ModelGeometry {
+  const m = meshFor(L(id))
+  if ('unavailable' in m) throw new Error('expected a model, got: ' + m.unavailable)
+  return m
+}
+
+function bounds(m: Mesh): { lo: number[]; hi: number[]; size: number[] } {
+  const lo = [0, 1, 2].map((k) => Math.min(...m.vertices.map((v) => v[k])))
+  const hi = [0, 1, 2].map((k) => Math.max(...m.vertices.map((v) => v[k])))
+  return { lo, hi, size: [0, 1, 2].map((k) => Math.round((hi[k] - lo[k]) * 1000) / 1000) }
+}
+
+/** The sum over fan triangles of a . (b x c) / 6: positive when every face winds outward. */
+function signedVolume(m: Mesh): number {
+  let v = 0
+  for (const f of m.faces) {
+    const a = m.vertices[f[0]]
+    for (let i = 1; i + 1 < f.length; i++) {
+      const b = m.vertices[f[i]]
+      const c = m.vertices[f[i + 1]]
+      v += (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6
+    }
+  }
+  return v
+}
+
+describe('profileOf', () => {
+  it('gives the profile behind every geometry file, or why there is none', () => {
+    const p = profileOf(L('L-9F4CQQ'))
+    if ('unavailable' in p) throw new Error(p.unavailable)
+    expect(p.points).toHaveLength(12)
+    expect(p.depthMm).toBe(7500)
+    expect(profileOf(L('L-CJGQP7'))).toEqual({ unavailable: NO_SECTION_SIZE })
+  })
+})
+
+describe('meshFor', () => {
+  it('builds UB 457x191x67 as the OBJ prism, lying along X with the web upright, plus a 1,000 mm close-up', () => {
+    const m = model('L-9F4CQQ')
+    expect(m.mesh.vertices).toHaveLength(24)
+    expect(m.mesh.faces).toHaveLength(18)
+    const b = bounds(m.mesh)
+    expect(b.size).toEqual([7500, 453.4, 189.9])
+    expect(b.lo[1]).toBe(0)
+    expect(b.lo[0] + b.hi[0]).toBeCloseTo(0, 6)
+    expect(b.lo[2] + b.hi[2]).toBeCloseTo(0, 6)
+    expect(m.lengthMm).toBe(7500)
+    expect(m.closeUpMm).toBe(1000)
+    expect(bounds(m.closeUp!).size).toEqual([1000, 453.4, 189.9])
+    expect(m.closeUp!.faces).toEqual(m.mesh.faces)
+    expect(m.placeholderNote).toBeNull()
+  })
+
+  it('stands panels up, lays floors flat and keeps bricks face on', () => {
+    const cw = model('L-9XXQC3')
+    expect(bounds(cw.mesh).size).toEqual([1500, 3300, 150])
+    expect(cw.closeUp).toBeNull()
+    expect(cw.closeUpMm).toBeNull()
+    expect(cw.placeholderNote).toBe(PLACEHOLDER_NOTE)
+    expect(PLACEHOLDER_NOTE).toBe('Panel depth is a placeholder, not a recorded dimension.')
+    expect(bounds(model('L-J4WX28').mesh).size).toEqual([1000, 1000, 150])
+    expect(bounds(model('L-6VWCWH').mesh).size).toEqual([600, 32, 600])
+    expect(model('L-6VWCWH').placeholderNote).toBe(PLACEHOLDER_NOTE)
+    expect(bounds(model('L-A945G6').mesh).size).toEqual([215, 65, 102.5])
+    expect(model('L-A945G6').placeholderNote).toBeNull()
+    for (const id of ['L-9XXQC3', 'L-J4WX28', 'L-6VWCWH', 'L-A945G6']) expect(bounds(model(id).mesh).lo[1]).toBe(0)
+  })
+
+  it('winds every face outward: the signed volume is positive for every mesh', () => {
+    for (const l of all) {
+      const m = meshFor(l)
+      if ('unavailable' in m) continue
+      expect(signedVolume(m.mesh), l.publicId).toBeGreaterThan(0)
+      if (m.closeUp) expect(signedVolume(m.closeUp), l.publicId).toBeGreaterThan(0)
+    }
+    expect(signedVolume(model('L-9F4CQQ').mesh)).toBeCloseTo((2 * 189.9 * 12.7 + (453.4 - 25.4) * 8.5) * 7500, 0)
+    expect((2 * 189.9 * 12.7 + (453.4 - 25.4) * 8.5) * 7500).toBeCloseTo(63_460_950, 3)
+  })
+
+  it('cannot model timber joists', () => {
+    expect(meshFor(L('L-CJGQP7'))).toEqual({ unavailable: 'No recorded section size' })
+  })
+
+  it('names the IFC file like the others', () => {
+    expect(geometryFilename(L('L-9F4CQQ'), 'ifc')).toBe('L-9F4CQQ-UB-457x191x67.ifc')
   })
 })

@@ -11,6 +11,7 @@ import { typologyOf } from '../../domain/engines/typology'
 import { sustainabilityBand } from '../../domain/engines/band'
 import { timelineFit } from '../../domain/engines/timeline'
 import { availabilityText, priceRangeText, quantityText } from '../../domain/engines/specSheet'
+import { availabilityPhrase } from '../../domain/engines/availability'
 import * as f from '../../domain/format'
 import type { ActivityEntry, AppData, ReservationStatus, Viewer } from '../types'
 import { roleForOrgType, orgTypeLabel } from '../../sandbox/accounts'
@@ -119,6 +120,8 @@ export type ListingCard = {
   quantityText: string
   massT: number
   availabilityText: string
+  /** The short phrase for cards: "Expected Jan to Mar 2027", "Available now". */
+  availabilityShort: string
   locationLabel: string
   collectionPoint: string
   /** The first public photo, or null for the generated illustration. */
@@ -164,6 +167,7 @@ export function listingCard(state: AppData, listing: PublicListing, project: Pro
     quantityText: quantityText(listing),
     massT: listing.massT,
     availabilityText: availabilityText(listing),
+    availabilityShort: availabilityPhrase(listing.availability).short,
     locationLabel: listing.location.label,
     collectionPoint: collectionPointText(listing),
     photo: firstPhoto ? { id: firstPhoto.id, src: firstPhoto.src } : null,

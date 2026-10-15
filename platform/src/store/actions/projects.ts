@@ -10,6 +10,7 @@ import { mint } from '../ids'
 import { listIdFor } from '../lots'
 import { log, notify } from '../notifications'
 import { setTermsAccepted } from '../worldOps'
+import { sharedWithProjectHref } from '../paths'
 import { acting, clean, fail, isIsoDate, ok, withWorld } from './common'
 
 export const PROJECT_ERRORS = {
@@ -203,7 +204,7 @@ export function acceptTerms(state: AppData, actor: Actor, projectId: string): Ac
   if (!isProjectArchitect(state, actor.userId, projectId) && !isProjectClient(state, actor.userId, projectId)) return fail(state, ERRORS.role)
   if (p.termsAccepted) return ok(state)
   let s = withWorld(state, setTermsAccepted(state.world, projectId))
-  s = log(s, { at: a.now, orgIds: projectOrgIds(p), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'accepted the confidentiality terms for shared lots', href: `/app/discover?tab=shared&project=${projectId}` })
+  s = log(s, { at: a.now, orgIds: projectOrgIds(p), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'accepted the confidentiality terms for shared lots', href: sharedWithProjectHref(projectId) })
   return ok(s)
 }
 

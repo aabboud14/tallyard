@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router'
 import { Boxes, Compass, FileSpreadsheet, LockKeyhole, ScanSearch, Upload } from 'lucide-react'
 import { LABELS } from '../../domain/reference/labels'
 import { Button, Card } from '../../ui'
-import { discoverHref } from '../discover/links'
+import { marketplaceHref } from '../discover/links'
 import { ProjectPage } from './ProjectParts'
 
 const STEPS = [
@@ -43,7 +43,7 @@ export function Matching() {
             </ol>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="primary" icon={Compass}>
-                <Link to={discoverHref(projectId)}>Find materials by hand</Link>
+                <Link to={marketplaceHref(projectId)}>Find materials by hand</Link>
               </Button>
             </div>
           </div>

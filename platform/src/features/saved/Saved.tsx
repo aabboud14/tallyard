@@ -5,6 +5,7 @@ import { Bookmark, Compass, FolderInput, Trash2, TriangleAlert } from 'lucide-re
 import * as f from '../../domain/format'
 import { formatDate } from '../../domain/dates'
 import { act, useView } from '../../store'
+import { MARKETPLACE_PATH } from '../../store/paths'
 import { savedView } from '../../store/selectors/shortlist'
 import type { ShortlistRow } from '../../store/selectors/shortlist'
 import { Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, EmptyState, IconButton, IndicativeMarker, toast } from '../../ui'
@@ -83,10 +84,10 @@ export function Saved() {
           variant="page"
           icon={Bookmark}
           title="Nothing saved yet"
-          text="When a material catches your eye but has no project yet, save it here from Discover. It waits until a project comes along."
+          text="When a material catches your eye but has no project yet, save it here from the Marketplace. It waits until a project comes along."
           action={
             <Button asChild variant="primary" icon={Compass}>
-              <Link to="/app/discover">Browse Discover</Link>
+              <Link to={MARKETPLACE_PATH}>Browse the Marketplace</Link>
             </Button>
           }
           className="mt-6"

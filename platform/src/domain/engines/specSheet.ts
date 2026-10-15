@@ -9,9 +9,11 @@ import { formatDate } from '../dates'
 import * as f from '../format'
 import { typologyOf } from './typology'
 import { sustainabilityBand } from './band'
+import { availabilityPhrase } from './availability'
 
+/** "Available now", "Expected November 2026" or "Expected January to March 2027", from the disclosed window only. */
 export function availabilityText(l: PublicListing): string {
-  return l.availability.kind === 'now' ? 'Available now' : `Available from ${l.availability.label}`
+  return availabilityPhrase(l.availability).text
 }
 
 export function quantityText(l: PublicListing): string {

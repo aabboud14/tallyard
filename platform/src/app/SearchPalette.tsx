@@ -3,14 +3,14 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
-import { Bell, Bookmark, Building2, CircleHelp, Compass, FileText, Folder, FolderPlus, House, Inbox, Package, Plus, Settings, Tag } from 'lucide-react'
+import { Bell, Bookmark, Building2, CircleHelp, FileText, Folder, FolderPlus, House, Inbox, Package, Plus, Settings, Store, Tag } from 'lucide-react'
 import { useView } from '../store'
 import { searchResults } from '../store/selectors/arch-search'
 import { CommandPalette, MaterialImage, type CommandGroup } from '../ui'
 
 const PAGE_ICONS: Record<string, LucideIcon> = {
   'page:home': House,
-  'page:discover': Compass,
+  'page:marketplace': Store,
   'page:saved': Bookmark,
   'page:new-project': FolderPlus,
   'page:new-building': Plus,

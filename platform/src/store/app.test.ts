@@ -141,4 +141,25 @@ describe('the store', () => {
     await expect(useApp.persist.rehydrate()).resolves.toBeUndefined()
     expect(Object.keys(getData().users)).toHaveLength(5)
   })
+
+  it('keeps the sidebar project view per person, and does nothing when signed out', async () => {
+    useApp.getState().setNavProjectView({ order: 'client' })
+    expect(getData().ui.navProjects).toEqual({})
+    await signIn('priya.nair@studiooriel.example', 'sandbox', false)
+    useApp.getState().setNavProjectView({ order: 'client' })
+    useApp.getState().setNavProjectView({ clientOrgId: ORG_IDS.lantern })
+    expect(getData().ui.navProjects![U.priya]).toEqual({ order: 'client', clientOrgId: ORG_IDS.lantern })
+    const stored = JSON.parse(readKey('local', STATE_KEY)!)
+    expect(stored.state.ui.navProjects[U.priya].order).toBe('client')
+  })
+
+  it('gives an older stored state the interface fields added since', async () => {
+    const data = getData()
+    const { navProjects, ...olderUi } = data.ui
+    expect(navProjects).toEqual({})
+    writeKey('local', STATE_KEY, JSON.stringify({ state: { ...data, ui: olderUi }, version: STATE_VERSION }))
+    await useApp.persist.rehydrate()
+    expect(getData().ui.navProjects).toEqual({})
+    expect(getData().ui.checkingProjectId).toEqual(olderUi.checkingProjectId)
+  })
 })
