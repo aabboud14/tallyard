@@ -1,6 +1,6 @@
-// The one filter surface (09 section 13.9): a Filters button that opens a popover (a sheet on a phone) with family,
-// availability, condition, location, sustainability band and "fits the project start", plus the active filters
-// as removable chips above the grid.
+// The one filter surface (09 section 13.9): a Filters button that opens a popover (a sheet on a phone) with the
+// availability month slider, family, condition, location and sustainability band, plus the active filters as
+// removable chips above the grid. "Only show what arrives in time" lives on the checking strip.
 import { useState, type ReactNode } from 'react'
 import { SlidersHorizontal, X } from 'lucide-react'
 import type { BrowseOptions } from '../../domain/engines/browse'
@@ -8,25 +8,22 @@ import { FAMILIES } from '../../domain/reference/families'
 import { BAND_WORDS } from '../../domain/reference/labels'
 import type { DiscoverQuery } from '../../store/selectors/discover'
 import type { ProjectRef } from '../../store/selectors/common'
-import { Button, cx, Field, Popover, PopoverContent, PopoverTrigger, SegmentedControl, Select, Sheet, Switch } from '../../ui'
+import type { AvailabilityFilterView } from '../../store/selectors/marketplace'
+import { Button, cx, Field, Popover, PopoverContent, PopoverTrigger, SegmentedControl, Select, Sheet } from '../../ui'
 import { usePhone } from '../../app/media'
+import { AvailabilitySlider } from './AvailabilitySlider'
 
-type FilterProps = { query: DiscoverQuery; options: BrowseOptions; project: ProjectRef | null; today: string; onChange: (patch: Partial<DiscoverQuery>) => void }
+type FilterProps = { query: DiscoverQuery; options: BrowseOptions; availability: AvailabilityFilterView; onChange: (patch: Partial<DiscoverQuery>) => void }
 
 const BAND_OPTIONS = (['high', 'medium', 'low', 'none'] as const).map((b) => ({ value: b, label: BAND_WORDS[b] }))
 
-function availabilityOptions(options: BrowseOptions, today: string) {
-  return [{ value: today, label: 'Available now' }, ...options.availability.map((o) => ({ value: o.value, label: `By ${o.label}` }))]
-}
-
-function FilterFields({ query, options, project, today, onChange }: FilterProps) {
+function FilterFields({ query, options, availability, onChange }: FilterProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      <AvailabilitySlider view={availability} onChange={(availableBy) => onChange({ availableBy })} />
+      <div className="border-t border-line-soft" />
       <Field label="Family">
         <Select value={query.family ?? ''} onChange={(e) => onChange({ family: (e.target.value || null) as DiscoverQuery['family'] })} placeholder="Any family" options={options.families.map((f) => ({ value: f, label: FAMILIES[f].label }))} data-testid="filter-family" />
-      </Field>
-      <Field label="Availability">
-        <Select value={query.availableBy ?? ''} onChange={(e) => onChange({ availableBy: e.target.value || null })} placeholder="Any time" options={availabilityOptions(options, today)} data-testid="filter-availability" />
       </Field>
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-ink">Condition</span>
@@ -44,16 +41,6 @@ function FilterFields({ query, options, project, today, onChange }: FilterProps)
       <Field label="Sustainability band">
         <Select value={query.band ?? ''} onChange={(e) => onChange({ band: (e.target.value || null) as DiscoverQuery['band'] })} placeholder="Any band" options={BAND_OPTIONS} data-testid="filter-band" />
       </Field>
-      <div className="rounded-lg border border-line-soft bg-page px-3 py-2.5">
-        <Switch
-          label={project ? `In time for ${project.name}` : 'In time for a project'}
-          description={project ? `Hide materials that arrive after ${project.startText}.` : 'Choose a project to check against first.'}
-          checked={query.fitsOnly && project !== null}
-          disabled={project === null}
-          onCheckedChange={(v) => onChange({ fitsOnly: v })}
-          data-testid="filter-fits"
-        />
-      </div>
     </div>
   )
 }
@@ -87,7 +74,7 @@ export function FiltersButton(props: FilterProps & { activeCount: number; onClea
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent align="end" className="flex max-h-(--radix-popover-content-available-height) w-[340px] flex-col p-0" data-testid="filters-popover">
+      <PopoverContent align="end" className="flex max-h-(--radix-popover-content-available-height) w-[380px] flex-col p-0" data-testid="filters-popover">
         <div className="flex shrink-0 items-center justify-between border-b border-line-soft px-4 py-3">
           <h2 className="m-0 text-base font-semibold text-ink">Filters</h2>
         </div>
@@ -102,9 +89,9 @@ export function FiltersButton(props: FilterProps & { activeCount: number; onClea
 
 function Chip({ children, onRemove, label }: { children: ReactNode; onRemove: () => void; label: string }) {
   return (
-    <span className="inline-flex h-7 items-center gap-1 rounded-full border border-line bg-surface pl-2.5 pr-1 text-sm text-ink shadow-xs max-sm:h-9">
+    <span className="inline-flex h-7 items-center gap-1 rounded-md border border-line bg-surface pl-2.5 pr-1 text-sm text-ink max-sm:h-11">
       {children}
-      <button type="button" onClick={onRemove} aria-label={`Remove filter: ${label}`} className="inline-flex size-5 items-center justify-center rounded-full text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:size-7">
+      <button type="button" onClick={onRemove} aria-label={`Remove filter: ${label}`} className="inline-flex size-5 items-center justify-center rounded text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:size-9">
         <X aria-hidden="true" className="size-3" />
       </button>
     </span>
@@ -112,10 +99,10 @@ function Chip({ children, onRemove, label }: { children: ReactNode; onRemove: ()
 }
 
 /** The filters in force, each removable, and Clear all. Nothing when no filter is on. */
-export function ActiveFilters({ query, options, project, today, onChange, onClear }: FilterProps & { onClear: () => void }) {
+export function ActiveFilters({ query, availableByLabel, project, onChange, onClear }: { query: DiscoverQuery; availableByLabel: string | null; project: ProjectRef | null; onChange: (patch: Partial<DiscoverQuery>) => void; onClear: () => void }) {
   const chips: { key: string; label: string; remove: Partial<DiscoverQuery> }[] = []
   if (query.family) chips.push({ key: 'family', label: FAMILIES[query.family].label, remove: { family: null } })
-  if (query.availableBy) chips.push({ key: 'by', label: availabilityOptions(options, today).find((o) => o.value === query.availableBy)?.label ?? 'Availability', remove: { availableBy: null } })
+  if (query.availableBy && availableByLabel) chips.push({ key: 'by', label: availableByLabel, remove: { availableBy: null } })
   if (query.condition) chips.push({ key: 'condition', label: `Condition ${query.condition}`, remove: { condition: null } })
   if (query.region) chips.push({ key: 'region', label: query.region, remove: { region: null } })
   if (query.band) chips.push({ key: 'band', label: `Band: ${BAND_WORDS[query.band]}`, remove: { band: null } })
@@ -128,7 +115,7 @@ export function ActiveFilters({ query, options, project, today, onChange, onClea
           {c.label}
         </Chip>
       ))}
-      <button type="button" onClick={onClear} className="ml-1 rounded-sm px-1 text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:min-h-9">
+      <button type="button" onClick={onClear} className="ml-1 rounded-sm px-1 text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:min-h-11">
         Clear all
       </button>
     </div>
