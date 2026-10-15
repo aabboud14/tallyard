@@ -53,7 +53,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
 
       <div className="flex flex-wrap items-center gap-2 px-4 pt-4 sm:px-5" data-testid="programme-status">
         <Tooltip content={view.check.text || 'The stage you declare matches the stage the programme plans for today.'}>
-          <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+          <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
             <Pill tone={CHECK_TONE[view.check.status]} dot data-testid="programme-check" data-status={view.check.status}>
               {view.check.label}
             </Pill>
@@ -61,7 +61,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
         </Tooltip>
         {view.source === 'suggested' ? (
           <Tooltip content="Worked out from your site start and typical stage lengths. Edit to match your plan.">
-            <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+            <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
               <Pill tone="warning" data-testid="programme-suggested">
                 Suggested dates
               </Pill>
@@ -105,7 +105,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
       </div>
 
       <details className="group border-t border-line-soft" data-testid="stage-dates">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-ink-soft outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-ink-soft outline-none hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5 [&::-webkit-details-marker]:hidden">
           <span>Stage dates</span>
           <ChevronDown aria-hidden="true" className="size-4 text-faint transition-transform group-open:rotate-180" />
         </summary>

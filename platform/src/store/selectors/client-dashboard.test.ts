@@ -33,7 +33,9 @@ describe("Isla's dashboard", () => {
     expect(d.metrics.carbon.progress.status).toBe('below')
     closeTo(d.metrics.reuse.reuse!, 0.0236, 4)
     closeTo(d.metrics.reuse.content!, 0.1991, 4)
-    expect(d.metrics.reuse.aim).toBe(0.2)
+    // BRIEF 14.2: the aim is read through effectiveTargets, so it is Merrowgate's 25% override (the only project with a bill), not the 20% default.
+    expect(d.metrics.reuse.aim).toBe(0.25)
+    expect(d.metrics.reuse.progress.status).toBe('below')
   })
 
   it('the to-do list: approve first, then the statement review, then the oldest without a due date', () => {

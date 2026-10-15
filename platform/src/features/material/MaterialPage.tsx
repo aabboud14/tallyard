@@ -104,7 +104,7 @@ function FileRow({ icon: Icon, name, format, onGet, disabled, testId, locked = f
       </div>
       {locked ? (
         <Tooltip content={LABELS.L35}>
-          <span tabIndex={0} data-testid={testId} aria-label={`${name}: ${LABELS.L35}`} className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-subtle px-2 text-xs font-medium text-muted ring-1 ring-inset ring-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+          <span tabIndex={0} data-testid={testId} aria-label={`${name}: ${LABELS.L35}`} className="inline-flex h-6 items-center gap-1 rounded-[5px] bg-subtle px-2 text-xs font-medium text-muted ring-1 ring-inset ring-line focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
             <LockKeyhole aria-hidden="true" className="size-3" />
             Coming in version 2
           </span>
@@ -387,7 +387,7 @@ export function MaterialPage() {
             <h2 id="similar-h" className="m-0 text-lg font-semibold text-ink">
               Similar materials
             </h2>
-            <Link to={MARKETPLACE_PATH} className="rounded-sm text-sm font-medium text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:py-3">
+            <Link to={MARKETPLACE_PATH} className="rounded-sm text-sm font-medium text-ink-soft hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:py-3">
               Browse the Marketplace
             </Link>
           </div>

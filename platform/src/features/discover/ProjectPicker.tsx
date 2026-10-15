@@ -33,7 +33,7 @@ export function ProjectPicker({
         <DropdownMenuTrigger
           data-testid="project-picker"
           className={cx(
-            'group inline-flex h-9 min-w-0 max-w-full items-center gap-2 rounded-md border border-line bg-surface pl-2.5 pr-2 text-sm shadow-xs outline-none transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:border-line-strong max-sm:h-11',
+            'group inline-flex h-9 min-w-0 max-w-full items-center gap-2 rounded-md border border-line bg-surface pl-2.5 pr-2 text-sm shadow-xs outline-none transition-colors hover:border-line-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:border-line-strong max-sm:h-11',
             className,
           )}
         >

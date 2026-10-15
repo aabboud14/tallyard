@@ -26,7 +26,7 @@ export function SurveyBar({ buildingId, compact = false }: { buildingId: string;
     toast.success('Survey reopened', { description: 'Capture more items, then submit again.', action: { label: 'Undo', onClick: r.undo } })
   }
   return (
-    <div className={compact ? 'flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3.5 shadow-sm' : 'flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3.5 shadow-sm sm:flex-row sm:items-center sm:justify-between'} data-testid="survey-bar">
+    <div className={compact ? 'flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3.5' : 'flex flex-col gap-3 rounded-lg border border-line bg-surface px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between'} data-testid="survey-bar">
       {submitted ? (
         <p className="m-0 flex items-start gap-2 text-base text-ink">
           <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-600" />

@@ -40,7 +40,7 @@ export function CollapsiblePanel({ id, title, summary, count, icon: Icon, defaul
           aria-controls={bodyId}
           onClick={toggle}
           data-testid={toggleTestId}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-4 py-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:min-h-12 sm:px-5"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-4 py-2.5 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:min-h-12 sm:px-5"
         >
           {Icon ? <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" /> : null}
           <span className="flex min-w-0 flex-1 flex-col">

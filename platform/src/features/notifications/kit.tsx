@@ -56,7 +56,7 @@ const COLS: Record<number, string> = { 1: 'grid-cols-1!', 2: '', 3: 'sm:grid-col
 export function StatStrip({ items, className }: { items: StripItem[]; className?: string }) {
   const cols = COLS[Math.min(items.length, 6)] ?? COLS[6]
   return (
-    <dl className={cx('m-0 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface shadow-sm', cols, className)}>
+    <dl className={cx('m-0 grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface', cols, className)}>
       {items.map((it, i) => {
         const inner = (
           <>

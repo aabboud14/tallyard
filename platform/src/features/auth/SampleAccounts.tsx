@@ -24,7 +24,7 @@ export function SampleAccounts({ accounts, onSignIn, pendingEmail = null, title 
         </h2>
         <span className="h-px flex-1 bg-line" aria-hidden="true" />
       </div>
-      <ul className="m-0 mt-5 flex list-none flex-col overflow-hidden rounded-xl border border-line bg-surface p-0 shadow-sm">
+      <ul className="m-0 mt-5 flex list-none flex-col overflow-hidden rounded-xl border border-line bg-surface p-0">
         {accounts.map((a) => {
           const pending = pendingEmail === a.email
           return (
@@ -35,7 +35,7 @@ export function SampleAccounts({ accounts, onSignIn, pendingEmail = null, title 
                 disabled={pendingEmail !== null}
                 aria-label={`Sign in as ${a.name}, ${a.roleLabel} at ${a.orgName}`}
                 data-testid={`sample-${a.email}`}
-                className="group flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-page focus-visible:relative focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 disabled:cursor-default disabled:opacity-60"
+                className="group flex min-h-14 w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-page focus-visible:relative focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 disabled:cursor-default disabled:opacity-60"
               >
                 <Avatar name={a.name} colour={a.colour} size="md" decorative />
                 <span className="flex min-w-0 flex-1 flex-col">

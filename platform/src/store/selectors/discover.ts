@@ -179,8 +179,12 @@ export type DiscoverView = {
   familyChips: { family: FamilyId; label: string; count: number; active: boolean }[] | null
   /** The shown cards by fit, only with a project being checked. */
   fitSummary: FitSummary | null
-  /** Architects on the landing view only. */
+  /** Architects on the landing view only: the first NEW_FOR_PROJECTS_ON_LANDING of the feed. */
   newForProjects: NewForProjects[]
+  /** The rest of the feed, shown by the row's Show all control, so every new material the home counts is reachable. */
+  newForProjectsMore: NewForProjects[]
+  /** The whole feed's length: the same figure as the home's per-project count. */
+  newForProjectsTotal: number
   availability: AvailabilityFilterView
   /** The chip label of the availability filter; null with no filter. */
   availableByLabel: string | null
@@ -203,6 +207,8 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
   const shared = sharedGroups(state, viewer)
   const activeFilterCount = [query.family, query.availableBy, query.condition, query.region, query.band].filter((x) => x !== null).length + (query.fitsOnly && project ? 1 : 0)
   const landing = query.tab === 'all' && query.typology === null && !query.q.trim() && activeFilterCount === 0
+  // The whole feed: the home counts every new material that fits a project, so the row must reach all of them.
+  const newFeed = landing && roleOfUser(state, viewer.userId) === 'architect' ? newForProjectsFeed(state, viewer, project?.id ?? null, Number.POSITIVE_INFINITY) : []
   const cards = shown.map((l) => listingCard(state, l, project, today, orgId))
   const projectView = project ? projectRef(state, project) : null
   // Family chips count the searched listings with every filter but the family itself.
@@ -239,7 +245,9 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     folders: categoryFolders(state, viewer, project, all),
     familyChips,
     fitSummary: fitSummary(cards),
-    newForProjects: landing && roleOfUser(state, viewer.userId) === 'architect' ? newForProjectsFeed(state, viewer, project?.id ?? null, NEW_FOR_PROJECTS_ON_LANDING) : [],
+    newForProjects: newFeed.slice(0, NEW_FOR_PROJECTS_ON_LANDING),
+    newForProjectsMore: newFeed.slice(NEW_FOR_PROJECTS_ON_LANDING),
+    newForProjectsTotal: newFeed.length,
     availability: availabilityFilterView(all, query, projectView, today),
     availableByLabel: query.availableBy ? availableByLabel(query.availableBy, today) : null,
   }

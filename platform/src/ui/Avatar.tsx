@@ -58,7 +58,7 @@ export function Avatar({ name, colour, hue, size = 'md', shape = 'circle', decor
         className,
       )}
       style={{
-        background: `linear-gradient(180deg, ${p.top}, ${p.bottom})`,
+        background: p.bottom,
         color: p.ink,
         boxShadow: `inset 0 0 0 1px ${p.ring}`,
         ...style,

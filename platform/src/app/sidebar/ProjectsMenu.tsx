@@ -32,12 +32,12 @@ export function ProjectsMenu({ tools }: { tools: NavProjectTools }) {
           data-testid="nav-projects-menu"
           aria-label="Sort and filter projects"
           className={cx(
-            'relative inline-flex size-6 shrink-0 items-center justify-center rounded text-faint outline-none transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.06] data-[state=open]:text-ink max-lg:size-9',
+            'relative inline-flex size-6 shrink-0 items-center justify-center rounded text-faint outline-none transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.06] data-[state=open]:text-ink max-lg:size-11',
             (filtered || ordered) && 'text-ink-soft',
           )}
         >
           <ListFilter aria-hidden="true" className="size-3.5 max-lg:size-4" />
-          {filtered || ordered ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-brand-600 max-lg:right-1.5 max-lg:top-1.5" /> : null}
+          {filtered || ordered ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-brand-600 max-lg:right-2.5 max-lg:top-2.5" /> : null}
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="start" side="bottom" className="w-60">
@@ -78,14 +78,14 @@ export function ClientFilterChip({ tools }: { tools: NavProjectTools }) {
   if (!client) return null
   return (
     <div className="mb-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-2" data-testid="nav-client-filter">
-      <span className="inline-flex h-6 min-w-0 max-w-full items-center gap-1 rounded-[5px] bg-surface pl-2 pr-0.5 text-xs font-medium text-ink ring-1 ring-inset ring-line max-lg:h-9">
+      <span className="inline-flex h-6 min-w-0 max-w-full items-center gap-1 rounded-[5px] bg-surface pl-2 pr-0.5 text-xs font-medium text-ink ring-1 ring-inset ring-line max-lg:h-11">
         <span className="min-w-0 truncate">{client.name}</span>
         <button
           type="button"
           onClick={() => setView({ clientOrgId: null })}
           aria-label="Show all clients"
           data-testid="nav-client-filter-clear"
-          className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted outline-none transition-colors hover:bg-black/[0.06] hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:size-8"
+          className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted outline-none transition-colors hover:bg-black/[0.06] hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:size-11"
         >
           <X aria-hidden="true" className="size-3" />
         </button>

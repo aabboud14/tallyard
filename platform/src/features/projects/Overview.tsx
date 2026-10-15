@@ -104,7 +104,7 @@ export function Overview() {
               <ul className="m-0 list-none divide-y divide-line-soft p-0">
                 {view.nextSteps.map((s) => (
                   <li key={s.id}>
-                    <Link to={s.href} className="group flex min-h-11 items-center gap-3 px-4 py-3 text-base text-ink transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+                    <Link to={s.href} className="group flex min-h-11 items-center gap-3 px-4 py-3 text-base text-ink transition-colors hover:bg-page focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
                       <span className="min-w-0 flex-1">{s.text}</span>
                       <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
                     </Link>

@@ -111,7 +111,7 @@ export function ClientMetrics({ v }: { v: ClientHomeView }) {
             'Needs the bill of materials'
           ) : (
             <>
-              {`${f.percent(m.reuse.content)} with recycled content, aim ${t.reuse.aimText}`}
+              {t.reuse.aimText === null ? `${f.percent(m.reuse.content)} with recycled content, no aim set` : `${f.percent(m.reuse.content)} with recycled content, aim ${t.reuse.aimText}`}
               {t.reuse.bar ? <NarrowBar bar={t.reuse.bar} state={t.reuse.state} label="Reused and recycled content against the aim" /> : null}
             </>
           )

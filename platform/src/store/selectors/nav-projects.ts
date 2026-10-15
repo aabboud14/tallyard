@@ -40,7 +40,8 @@ export function arrangeNavProjects(projects: NavProjectInput[], view: NavProject
   if (view.order === 'client') {
     groups = clients
       .filter((c) => kept.some((p) => p.clientOrgId === c.orgId))
-      .map((c) => ({ label: c.name, clientOrgId: c.orgId, ids: kept.filter((p) => p.clientOrgId === c.orgId).sort(byName).map((p) => p.id) }))
+      // With one client filtered in, the filter chip already names it, so the group has no subheading.
+      .map((c) => ({ label: clientOrgId === null ? c.name : null, clientOrgId: c.orgId, ids: kept.filter((p) => p.clientOrgId === c.orgId).sort(byName).map((p) => p.id) }))
   } else if (view.order === 'recent') {
     const sorted = [...kept].sort((a, b) => {
       if (a.lastActivityAt !== b.lastActivityAt) {

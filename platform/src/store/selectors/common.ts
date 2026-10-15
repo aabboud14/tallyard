@@ -73,7 +73,7 @@ export function initials(name: string): string {
 
 // ---------- Labels ----------
 
-export const SHORTLIST_STATUS_LABELS: Record<WishStatus, string> = { pending: 'Shortlisted', sent: 'Sent to client', approved: 'Approved', declined: 'Declined' }
+export const SHORTLIST_STATUS_LABELS: Record<WishStatus, string> = { pending: 'Shortlisted', sent: 'Waiting for approval', approved: 'Approved', declined: 'Declined' }
 
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = { pending: 'Awaiting the seller', accepted: 'Reserved', declined: 'Declined', withdrawn: 'Withdrawn' }
 

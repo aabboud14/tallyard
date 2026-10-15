@@ -43,12 +43,12 @@ export function Toaster() {
               <T.Action
                 altText={t.action.label}
                 onClick={t.action.onClick}
-                className="-my-0.5 inline-flex h-7 shrink-0 items-center rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink shadow-xs hover:bg-subtle focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 max-sm:h-10"
+                className="-my-0.5 inline-flex h-7 shrink-0 items-center rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink shadow-xs hover:bg-subtle focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 max-sm:h-10"
               >
                 {t.action.label}
               </T.Action>
             ) : null}
-            <T.Close aria-label="Dismiss" className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md max-sm:after:absolute max-sm:after:-inset-2.5 text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
+            <T.Close aria-label="Dismiss" className="absolute right-2 top-2 inline-flex size-6 items-center justify-center rounded-md max-sm:after:absolute max-sm:after:-inset-2.5 text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600">
               <X aria-hidden="true" className="size-3.5" />
             </T.Close>
           </T.Root>

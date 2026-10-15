@@ -212,7 +212,7 @@ export function Requirements() {
                   onClick={() => setFilter(x.key)}
                   data-testid={`requirements-filter-${x.key}`}
                   className={cx(
-                    'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-inset transition-colors max-sm:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
+                    'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-inset transition-colors max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
                     filter === x.key ? 'bg-ink text-white ring-ink' : 'bg-surface text-ink-soft ring-line hover:text-ink hover:ring-line-strong',
                   )}
                 >

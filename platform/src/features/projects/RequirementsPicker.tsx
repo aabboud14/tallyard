@@ -1,6 +1,6 @@
 // Planning and sustainability requirements to pick from, grouped national, London and local. Used by the new
 // project dialog and the requirements dialog. Every entry is an indicative summary, and the picker says so.
-import { ChevronDown, Eraser, Sparkles } from 'lucide-react'
+import { ChevronDown, Eraser, ListChecks } from 'lucide-react'
 import type { RequirementChoices } from '../../store/selectors/requirements'
 import { PRODUCT_NAME } from '../../domain/constants'
 import { Button, Checkbox, IndicativeMarker, Pill } from '../../ui'
@@ -29,7 +29,7 @@ export function RequirementsPicker({ choices, selected, onChange, selectedText, 
           <span>{choices.note}</span>
         </p>
         <div className="flex shrink-0 gap-2">
-          <Button size="sm" icon={Sparkles} onClick={() => onChange(new Set(choices.suggestedIds))} data-testid="requirements-suggested">
+          <Button size="sm" icon={ListChecks} onClick={() => onChange(new Set(choices.suggestedIds))} data-testid="requirements-suggested">
             Select suggested
           </Button>
           <Button size="sm" variant="ghost" icon={Eraser} onClick={() => onChange(new Set())} data-testid="requirements-clear">

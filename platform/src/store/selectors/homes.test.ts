@@ -78,7 +78,7 @@ describe('consultant dashboard', () => {
     // 20% content default from the requirements that apply to them; with no bill of materials yet they read no_data.
     expect(sallow.content.targetText).toBe('20.0%')
     expect(sallow.content.status).toBe('no_data')
-    expect(sallow.content.statusText).toBe('No bill of materials yet')
+    expect(sallow.content.statusText).toBe('No result yet')
     expect(sallow.carbon.status).toBe('no_target')
     expect(d.metrics.targetsSet).toBe(4)
     expect(d.metrics.withTargets).toBe(3)

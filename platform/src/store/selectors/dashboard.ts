@@ -4,7 +4,8 @@
 import type { FamilyId, Spec } from '../../domain/types'
 import type { Fit, Typology, WishStatus } from '../../domain/v1types'
 import { typologyOf } from '../../domain/engines/typology'
-import { metricReading, type MetricState } from '../../domain/engines/metricState'
+import { metricReading, metricState, METRIC_STATE_WORDS, type MetricState } from '../../domain/engines/metricState'
+import { GOAL_STATUS_TEXT } from '../../domain/reference/sustainabilityCopy'
 import type { ProgrammeStatus } from '../../domain/engines/programme'
 import type { ActivityRow } from './common'
 import type { ShortlistRow } from './shortlist'
@@ -123,12 +124,30 @@ export function targetState(value: number, target: number): TileState | null {
   return { state: r.state, label: r.word }
 }
 
-/** Targets met against targets set: all met is good, any below is a warning, the rest wait for a figure; none set gives null. */
-export function targetsMetState(met: number, below: number, set: number): TileState | null {
-  if (set === 0) return null
-  if (met >= set) return { state: 'good', label: 'All met' }
-  if (below > 0) return { state: 'warning', label: `${below} below target` }
-  return { state: 'neutral', label: 'Waiting for figures' }
+/** Set targets counted by the state of their figure (metricState), plus those with no figure yet. */
+export type TargetCounts = { good: number; warning: number; critical: number; set: number }
+
+/**
+ * The state of a set of targets, in the words of metricState so it reads like each meter and the carbon tile:
+ * any off target is critical, else any near target is a warning, all on target is good, and the rest wait for a
+ * figure (neutral). None set gives null.
+ */
+export function targetsMetState(c: TargetCounts): TileState | null {
+  if (c.set === 0) return null
+  if (c.critical > 0) return { state: 'critical', label: `${c.critical} ${METRIC_STATE_WORDS.critical.toLowerCase()}` }
+  if (c.warning > 0) return { state: 'warning', label: `${c.warning} ${METRIC_STATE_WORDS.warning.toLowerCase()}` }
+  if (c.good >= c.set) return { state: 'good', label: `All ${METRIC_STATE_WORDS.good.toLowerCase()}` }
+  return { state: 'neutral', label: `${c.set - c.good} with ${NO_RESULT_TEXT.toLowerCase()}` }
+}
+
+/** The one phrase for a target whose figure is not known yet (no bill of materials, no result entered). */
+export const NO_RESULT_TEXT = GOAL_STATUS_TEXT.no_data
+
+/** A figure against a target (at least) as one line: no target, no figure yet, or the metricState word. */
+export function targetStatusText(actual: number | null, target: number): string {
+  if (!(target > 0)) return METRIC_STATE_WORDS.neutral
+  if (actual === null) return NO_RESULT_TEXT
+  return METRIC_STATE_WORDS[metricState(actual, target, 'at_least')]
 }
 
 /** Decisions waiting on the viewer: a warning while any wait. */

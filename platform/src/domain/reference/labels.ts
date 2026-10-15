@@ -63,7 +63,7 @@ export const TIMELINE_TEXT = {
   now: 'Available now: storage until the start',
 } as const
 export const BAND_WORDS = { high: 'High', medium: 'Medium', low: 'Low', none: 'Not claimed' } as const
-export const WISH_STATUS_LABELS = { pending: 'Pending', sent: 'Sent to client', approved: 'Approved', declined: 'Declined' } as const
+export const WISH_STATUS_LABELS = { pending: 'Pending', sent: 'Waiting for approval', approved: 'Approved', declined: 'Declined' } as const
 export const TYPOLOGY_LABELS = { structure: 'Structure', envelope: 'Envelope', finishes: 'Finishes' } as const
 export const DECISION_ROUTE_LABELS = { reuse: 'Reuse', upcycle: 'Upcycle', downcycle: 'Downcycle', recycle: 'Recycle', scrap: 'Scrap' } as const
 export { PROJECT_TYPE_LABELS } from './projectTypes'

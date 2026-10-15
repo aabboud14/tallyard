@@ -253,7 +253,7 @@ function CaptureForm_({ buildingId, defaultMonth }: { buildingId: string; defaul
         </p>
       ) : null}
 
-      <div data-bottom-bar="" className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-line bg-surface/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:z-auto sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div data-bottom-bar="" className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-line bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
         <Button size="lg" className="flex-1 sm:flex-none" onClick={() => save(false)} data-testid="capture-save">
           Save
         </Button>

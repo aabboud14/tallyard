@@ -84,7 +84,7 @@ export function CardSaveButton({ card, testId = `save-${card.publicId}` }: { car
           data-testid={testId}
           aria-label={saved ? `Saved to ${where}. Change where ${card.title} is saved` : `Save ${card.title}`}
           className={cx(
-            'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium shadow-xs ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-4',
+            'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium shadow-xs ring-1 transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-4',
             saved ? 'bg-brand-600 text-white ring-brand-700/40 hover:bg-brand-700' : 'bg-surface text-ink ring-line hover:ring-line-strong',
           )}
         >

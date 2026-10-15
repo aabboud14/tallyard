@@ -245,7 +245,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
                     aria-controls="new-project-requirements"
                     onClick={() => setRequirementsOpen((o) => !o)}
                     data-testid="project-requirements-toggle"
-                    className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600"
+                    className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-ink">

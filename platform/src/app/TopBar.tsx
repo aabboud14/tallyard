@@ -29,7 +29,7 @@ export function TopBar({ nav, crumbs, collapsed, onToggleCollapsed, onOpenMenu, 
     navigate('/app/settings/sandbox')
   }
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface/95 px-2 backdrop-blur-md supports-[backdrop-filter]:bg-surface/85 sm:px-3 lg:static lg:bg-surface lg:px-3 print:hidden" data-testid="top-bar">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1.5 border-b border-line-soft bg-surface px-2 sm:px-3 lg:static lg:px-3 print:hidden" data-testid="top-bar">
       <IconButton icon={Menu} label="Open menu" className="lg:hidden" onClick={onOpenMenu} data-testid="open-menu" />
       <IconButton icon={collapsed ? PanelLeftOpen : PanelLeftClose} label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} size="sm" className="text-muted max-lg:hidden" onClick={onToggleCollapsed} data-testid="toggle-sidebar" />
       <span aria-hidden="true" className="mx-1 h-4 w-px bg-line max-lg:hidden" />
@@ -41,7 +41,7 @@ export function TopBar({ nav, crumbs, collapsed, onToggleCollapsed, onOpenMenu, 
           data-testid="search-trigger"
           aria-label="Search"
           aria-keyshortcuts="Meta+K Control+K"
-          className="group hidden h-8 w-60 items-center gap-2 rounded-lg border border-line bg-page pl-2.5 pr-1.5 text-sm text-muted shadow-xs transition-colors hover:border-line-strong hover:bg-surface hover:text-ink-soft focus-visible:outline-2 focus-visible:outline-brand-600 md:flex xl:w-72"
+          className="group hidden h-8 w-60 items-center gap-2 rounded-lg border border-line bg-page pl-2.5 pr-1.5 text-sm text-muted shadow-xs transition-colors hover:border-line-strong hover:bg-surface hover:text-ink-soft focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 xl:flex xl:w-72"
         >
           <Search aria-hidden="true" className="size-3.5 text-faint group-hover:text-muted" />
           <span>Search</span>
@@ -50,7 +50,7 @@ export function TopBar({ nav, crumbs, collapsed, onToggleCollapsed, onOpenMenu, 
             <Kbd>K</Kbd>
           </span>
         </button>
-        <IconButton icon={Search} label="Search" className="md:hidden" onClick={onOpenSearch} />
+        <IconButton icon={Search} label="Search" className="xl:hidden" onClick={onOpenSearch} />
         <span onClick={onBadgeClick} className="mx-1 max-sm:hidden">
           <SandboxBadge href="/app/settings/sandbox" />
         </span>

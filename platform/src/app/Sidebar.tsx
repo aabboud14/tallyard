@@ -17,7 +17,7 @@ function containsActive(pathname: string, item: NavItem): boolean {
 }
 
 const rowBase =
-  'group/row relative flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-base outline-none transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 max-lg:h-10'
+  'group/row relative flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-base outline-none transition-colors duration-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 max-lg:h-11'
 const rowIdle = 'text-ink-soft hover:bg-black/[0.04] hover:text-ink'
 const rowActive = 'bg-surface font-medium text-ink shadow-[0_1px_2px_rgb(28_25_23/0.06),0_0_0_1px_rgb(28_25_23/0.06)]'
 
@@ -50,7 +50,7 @@ function NavRow({ item, depth, parentHref, expanded, toggle, onNavigate }: RowPr
           }}
           aria-current={active || folderExact ? 'page' : undefined}
           data-testid={`nav-${item.id}`}
-          className={cx(rowBase, active ? rowActive : rowIdle, inside && !active && 'text-ink', hasChildren && 'pr-8', item.soon && 'text-muted')}
+          className={cx(rowBase, active ? rowActive : rowIdle, inside && !active && 'text-ink', hasChildren && 'pr-8 max-lg:pr-12', item.soon && 'text-muted')}
           style={depth > 0 && !Icon ? { paddingLeft: 10 } : undefined}
         >
           {Icon ? <Icon aria-hidden="true" className={cx('size-4 shrink-0', active || inside ? 'text-ink' : 'text-muted group-hover/row:text-ink-soft')} /> : null}
@@ -63,7 +63,7 @@ function NavRow({ item, depth, parentHref, expanded, toggle, onNavigate }: RowPr
             onClick={() => toggle(item.id)}
             aria-expanded={open}
             aria-label={open ? `Collapse ${item.label}` : `Expand ${item.label}`}
-            className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-faint transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 max-lg:size-9"
+            className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-faint transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 max-lg:right-0 max-lg:size-11"
           >
             <ChevronRight aria-hidden="true" className={cx('size-3.5 transition-transform duration-150', open && 'rotate-90')} />
           </button>
@@ -94,7 +94,7 @@ function RailRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
           aria-label={item.label}
           aria-current={active ? 'page' : undefined}
           data-testid={`nav-${item.id}`}
-          className={cx('relative mx-auto flex size-9 items-center justify-center rounded-md outline-none transition-colors focus-visible:outline-2 focus-visible:outline-brand-600', active ? rowActive : 'text-muted hover:bg-black/[0.04] hover:text-ink')}
+          className={cx('relative mx-auto flex size-9 items-center justify-center rounded-md outline-none transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600', active ? rowActive : 'text-muted hover:bg-black/[0.04] hover:text-ink')}
         >
           <Icon aria-hidden="true" className="size-[18px]" />
           {item.badge ? <span className="absolute right-0.5 top-0.5 size-2 rounded-full bg-brand-600 ring-2 ring-subtle" /> : null}
@@ -111,17 +111,17 @@ function OrgSwitcher({ nav, collapsed }: { nav: NavModel; collapsed: boolean }) 
     <DropdownMenuTrigger
       data-testid="org-switcher"
       className={cx(
-        'flex min-w-0 items-center gap-2.5 rounded-lg text-left outline-none transition-colors hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.05]',
+        'flex min-w-0 items-center gap-2.5 rounded-lg text-left outline-none transition-colors hover:bg-black/[0.04] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.05]',
         collapsed ? 'mx-auto size-10 justify-center' : 'h-11 w-full px-2',
       )}
-      aria-label={`${nav.org.name}, ${nav.org.typeLabel}. Organisation menu`}
+      aria-label={`${nav.org.name}, ${nav.org.roleLabel}. Organisation menu`}
     >
       <Avatar name={nav.org.name} shape="square" size="md" decorative className="shadow-xs" />
       {collapsed ? null : (
         <>
           <span className="flex min-w-0 flex-1 flex-col leading-tight">
             <span className="truncate text-base font-semibold text-ink">{nav.org.name}</span>
-            <span className="truncate text-xs text-muted">{nav.org.typeLabel}</span>
+            <span className="truncate text-xs text-muted">{nav.org.roleLabel}</span>
           </span>
           <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 text-faint" />
         </>
@@ -137,7 +137,7 @@ function OrgSwitcher({ nav, collapsed }: { nav: NavModel; collapsed: boolean }) 
           <Avatar name={nav.org.name} shape="square" size="md" decorative />
           <div className="min-w-0">
             <div className="truncate font-medium text-ink">{nav.org.name}</div>
-            <div className="truncate text-sm text-muted">{nav.org.typeLabel}</div>
+            <div className="truncate text-sm text-muted">{nav.org.roleLabel}</div>
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -204,13 +204,13 @@ function SectionHeader({ section, pathname, onNavigate }: { section: NavSection;
             to={list}
             onClick={onNavigate}
             aria-current={here ? 'page' : undefined}
-            className={cx('group/title flex h-6 min-w-0 flex-1 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-9', here ? 'text-ink' : 'text-muted')}
+            className={cx('group/title flex h-6 min-w-0 flex-1 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-11', here ? 'text-ink' : 'text-muted')}
           >
             <span className="truncate">{section.title}</span>
             <span className="text-[11px] font-normal text-faint opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-visible/title:opacity-100">View all</span>
           </Link>
         ) : (
-          <div className="flex h-6 min-w-0 flex-1 items-center px-2 text-xs font-medium text-muted max-lg:h-9">
+          <div className="flex h-6 min-w-0 flex-1 items-center px-2 text-xs font-medium text-muted max-lg:h-11">
             <span className="truncate">{section.title}</span>
           </div>
         )}

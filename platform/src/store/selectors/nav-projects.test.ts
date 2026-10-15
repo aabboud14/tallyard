@@ -39,6 +39,11 @@ describe('arrangeNavProjects', () => {
     expect(r.effective).toEqual({ order: 'name', clientOrgId: 'ann' })
   })
 
+  it('leaves out the client subheading when one client is filtered in, as the chip names it', () => {
+    const r = arrangeNavProjects(P, { order: 'client', clientOrgId: 'ann' })
+    expect(r.groups).toEqual([{ label: null, clientOrgId: 'ann', ids: ['a', 'g'] }])
+  })
+
   it('treats an unknown client as no filter', () => {
     const r = arrangeNavProjects(P, { order: 'name', clientOrgId: 'nobody' })
     expect(r.groups[0].ids).toEqual(['a', 'b', 'g'])

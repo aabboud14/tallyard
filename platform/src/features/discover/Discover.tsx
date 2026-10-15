@@ -101,7 +101,7 @@ function TypologyTabs({ view, onChange }: { view: DiscoverView; onChange: (t: Di
             onClick={() => onChange(t.value)}
             data-testid={`typology-${t.key}`}
             className={cx(
-              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11',
+              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11',
               active ? 'bg-ink text-white' : 'text-ink-soft hover:bg-hover hover:text-ink',
             )}
           >
@@ -255,7 +255,7 @@ export function Discover() {
                 onClick={() => update({ tab: t.tab })}
                 data-testid={`tab-${t.tab}`}
                 className={cx(
-                  'relative inline-flex h-11 items-center gap-2 text-base transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600',
+                  'relative inline-flex h-11 items-center gap-2 text-base transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600',
                   active ? 'font-medium text-ink after:bg-ink' : 'text-muted hover:text-ink',
                 )}
               >
@@ -314,7 +314,7 @@ export function Discover() {
           {view.landing && view.empty !== 'no_listings' ? (
             <div className="mt-6 flex flex-col gap-12">
               <CategoryFolders folders={view.folders} project={view.project} onOpen={(typology) => update({ typology, family: null }, { push: true })} />
-              <NewForProjectsRow cards={view.newForProjects} project={view.project} />
+              <NewForProjectsRow cards={view.newForProjects} more={view.newForProjectsMore} total={view.newForProjectsTotal} project={view.project} />
             </div>
           ) : null}
 

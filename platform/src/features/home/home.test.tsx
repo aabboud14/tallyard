@@ -76,10 +76,12 @@ function privateStrings(): string[] {
 }
 
 const HOMES = [
-  { who: 'priya', page: 'architect-home', tiles: ['metric-projects', 'metric-shortlisted', 'metric-waiting', 'metric-carbon'] },
-  { who: 'tom', page: 'owner-home', tiles: ['metric-items', 'metric-listed', 'metric-requests', 'metric-carbon'] },
-  { who: 'dana', page: 'surveyor-home', tiles: ['metric-clients', 'metric-buildings', 'metric-items', 'metric-open'] },
-  { who: 'marcus', page: 'consultant-home', tiles: ['metric-projects', 'metric-carbon', 'metric-targets', 'metric-engagements'] },
+  { who: 'priya', page: 'architect-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-projects', 'metric-shortlisted', 'metric-waiting', 'metric-carbon'] },
+  { who: 'tom', page: 'owner-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-items', 'metric-listed', 'metric-requests', 'metric-carbon'] },
+  { who: 'dana', page: 'surveyor-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-clients', 'metric-buildings', 'metric-items', 'metric-open'] },
+  { who: 'marcus', page: 'consultant-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-projects', 'metric-carbon', 'metric-targets', 'metric-engagements'] },
+  // The client home's tiles keep their own ids; its Recent activity is the same shared panel as the others.
+  { who: 'isla', page: 'client-home', grid: 'client-metrics', prefix: 'client-metric-', tiles: ['client-metric-cost', 'client-metric-saving', 'client-metric-carbon', 'client-metric-reuse'] },
 ] as const
 
 describe('every dashboard', () => {
@@ -88,7 +90,7 @@ describe('every dashboard', () => {
       open('/app/home', U[h.who])
       await waitFor(() => document.querySelector(`[data-testid="${h.page}"]`))
       for (const id of h.tiles) expect(document.querySelector(`[data-testid="${id}"]`), id).not.toBeNull()
-      expect(document.querySelectorAll('[data-testid="home-stats"] [data-testid^="metric-"]').length).toBe(4)
+      expect(document.querySelectorAll(`[data-testid="${h.grid}"] [data-testid^="${h.prefix}"]`).length).toBe(4)
       // Every project or building drawing is a named image, never called a photo.
       const drawings = Array.from(document.querySelectorAll('[data-kind="illustration"] svg[role="img"], span[data-kind="illustration"] svg[role="img"]'))
       expect(drawings.length).toBeGreaterThan(0)
@@ -178,10 +180,11 @@ describe('consultant home', () => {
     const card = byTestId(`consultant-project-${MERROWGATE_ID}`)
     const meters = card.querySelectorAll('[role="meter"]')
     expect(meters.length).toBe(2)
-    expect(meters[0].getAttribute('aria-valuetext')).toBe('19.9%. Aim at least 25%. Below target')
+    expect(meters[0].getAttribute('aria-valuetext')).toBe('19.9%. Aim at least 25%. Off target')
     const links = Array.from(card.querySelectorAll('nav a')).map((a) => a.getAttribute('href'))
     expect(links).toEqual([`/app/projects/${MERROWGATE_ID}/sustainability`, `/app/projects/${MERROWGATE_ID}/targets`, `/app/projects/${MERROWGATE_ID}/certification`])
-    expect(byTestId('metric-targets').textContent).toContain('2 below target')
+    expect(byTestId('metric-targets').textContent).toContain('2 off target')
+    expect(byTestId('metric-projects').textContent).toContain('3 with a content target, 1 with a carbon target')
     const body = document.body.textContent ?? ''
     for (const p of privateStrings()) expect(body, p).not.toContain(p)
   })

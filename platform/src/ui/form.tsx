@@ -136,7 +136,7 @@ export function Checkbox({ label, description, className, id, ...props }: Checkb
     <C.Root
       id={cid}
       className={cx(
-        'peer relative inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] border max-sm:after:absolute max-sm:after:-inset-3.5 border-line-strong bg-surface shadow-xs transition-colors duration-100 hover:border-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand-600 data-[state=checked]:bg-brand-600 data-[state=indeterminate]:border-brand-600 data-[state=indeterminate]:bg-brand-600',
+        'peer relative inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] border max-sm:after:absolute max-sm:after:-inset-3.5 border-line-strong bg-surface shadow-xs transition-colors duration-100 hover:border-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand-600 data-[state=checked]:bg-brand-600 data-[state=indeterminate]:border-brand-600 data-[state=indeterminate]:bg-brand-600',
         !label && className,
       )}
       {...props}
@@ -167,7 +167,7 @@ export function Switch({ label, description, className, id, ...props }: SwitchPr
     <S.Root
       id={sid}
       className={cx(
-        'relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full max-sm:after:absolute max-sm:after:-inset-3 bg-line-strong shadow-[inset_0_1px_2px_rgb(28_25_23/0.10)] transition-colors duration-150 hover:bg-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-brand-600 data-[state=checked]:hover:bg-brand-700',
+        'relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full max-sm:after:absolute max-sm:after:-inset-3 bg-line-strong shadow-[inset_0_1px_2px_rgb(28_25_23/0.10)] transition-colors duration-150 hover:bg-faint focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-brand-600 data-[state=checked]:hover:bg-brand-700',
         !label && className,
       )}
       {...props}
@@ -203,7 +203,7 @@ export function RadioCards({ options, value, onValueChange, columns = 1, classNa
             value={o.value}
             disabled={o.disabled}
             className={cx(
-              'group relative flex w-full items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3 text-left shadow-xs transition-[border-color,box-shadow,background-color] duration-150 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50',
+              'group relative flex w-full items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3 text-left shadow-xs transition-[border-color,box-shadow,background-color] duration-150 hover:border-line-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50',
               'data-[state=checked]:border-brand-600 data-[state=checked]:bg-brand-50/50 data-[state=checked]:shadow-[0_0_0_1px_var(--color-brand-600)]',
             )}
           >

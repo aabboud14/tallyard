@@ -182,7 +182,7 @@ export function PreviewCard({ card, shared }: { card: ListingCard; shared: boole
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
         <div className="relative">
           <MaterialPicture spec={card.listing.spec} publicId={card.publicId} photo={card.photo} aspect="16/10" />
-          {shared ? <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-info-strong shadow-sm">Shared in confidence</span> : null}
+          {shared ? <span className="absolute left-2 top-2 rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-info-strong ring-1 ring-line">Shared in confidence</span> : null}
           {card.fit ? <FitPill fit={card.fit.fit} size="sm" className="absolute bottom-2 left-2" /> : null}
         </div>
         <div className="flex flex-col gap-1 p-3">

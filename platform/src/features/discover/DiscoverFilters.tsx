@@ -91,7 +91,7 @@ function Chip({ children, onRemove, label }: { children: ReactNode; onRemove: ()
   return (
     <span className="inline-flex h-7 items-center gap-1 rounded-md border border-line bg-surface pl-2.5 pr-1 text-sm text-ink max-sm:h-11">
       {children}
-      <button type="button" onClick={onRemove} aria-label={`Remove filter: ${label}`} className="inline-flex size-5 items-center justify-center rounded text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:size-9">
+      <button type="button" onClick={onRemove} aria-label={`Remove filter: ${label}`} className="inline-flex size-5 items-center justify-center rounded text-faint transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:size-9">
         <X aria-hidden="true" className="size-3" />
       </button>
     </span>
@@ -115,7 +115,7 @@ export function ActiveFilters({ query, availableByLabel, project, onChange, onCl
           {c.label}
         </Chip>
       ))}
-      <button type="button" onClick={onClear} className="ml-1 rounded-sm px-1 text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:min-h-11">
+      <button type="button" onClick={onClear} className="ml-1 rounded-sm px-1 text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 max-sm:min-h-11">
         Clear all
       </button>
     </div>

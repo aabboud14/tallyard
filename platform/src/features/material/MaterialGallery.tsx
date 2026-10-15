@@ -37,7 +37,7 @@ function entryLabel(e: StageEntry, i: number): string {
 }
 
 const CONTROL =
-  'inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink-soft shadow-xs hover:border-line-strong hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-3.5'
+  'inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink-soft shadow-xs hover:border-line-strong hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-3.5'
 
 export function MaterialGallery({ entries, spec, family, publicId, title, model }: { entries: GalleryEntry[]; spec: Spec; family: FamilyId; publicId: string; title: string; model: ModelGeometry | null }) {
   const photos = entries.filter((e) => e.kind === 'photo')
@@ -107,7 +107,7 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
                 onClick={() => setIndex(i)}
                 data-testid={`gallery-thumb-${e.kind}`}
                 className={cx(
-                  'relative size-[72px] shrink-0 overflow-hidden rounded-md bg-surface transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:size-16',
+                  'relative size-[72px] shrink-0 overflow-hidden rounded-md bg-surface transition-shadow focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:size-16',
                   active ? 'shadow-[0_0_0_2px_var(--color-ink)]' : 'shadow-[0_0_0_1px_var(--color-line)] hover:shadow-[0_0_0_1px_var(--color-line-strong)]',
                 )}
               >

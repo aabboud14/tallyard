@@ -3,12 +3,12 @@
 // programme across the projects, sustainability tracking per project, the project cards and recent activity.
 // Every figure is indicative and comes from the store; none of it is certification advice.
 import { Link } from 'react-router'
-import { Activity, Handshake, Send } from 'lucide-react'
+import { Handshake, Send } from 'lucide-react'
 import { useView } from '../../store'
 import { clientHomeView } from '../../store/selectors/sustainability-screens'
-import { Button, CollapsiblePanel, MARK, PageHeader, Pill } from '../../ui'
+import { Button, MARK, PageHeader, Pill } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
-import { ActivityFeed } from '../notifications/kit'
+import { ActivityPanel } from './ActivityPanel'
 import { PendingLinkRequests } from '../projects/LinkRequests'
 import { ClientMetrics } from './client/ClientMetrics'
 import { TodoList } from './client/TodoList'
@@ -88,7 +88,6 @@ function ReservationsPanel({ v }: { v: NonNullable<ReturnType<typeof clientHomeV
 export function ClientHome() {
   const v = useView(clientHomeView)
   if (!v) return null
-  const latest = v.activitySummary.latest
   return (
     <Page testId="client-home">
       <div className="flex flex-col gap-8">
@@ -105,17 +104,7 @@ export function ClientHome() {
           <SectionTitle id="projects-title" title="Your projects" description={v.projects.length > 0 ? 'Projects where your organisation is the client.' : undefined} />
           <ProjectCards v={v} />
         </section>
-        <CollapsiblePanel
-          id="home-activity-client"
-          title="Recent activity"
-          icon={Activity}
-          count={v.activitySummary.count}
-          summary={latest ? `Latest, ${latest.timeAgo}: ${latest.actor} ${latest.text}` : 'Nothing yet'}
-          testId="home-activity"
-          toggleTestId="home-activity-toggle"
-        >
-          <ActivityFeed rows={v.activity} compact emptyText="Decisions and reservations on your projects appear here." />
-        </CollapsiblePanel>
+        <ActivityPanel panelId="home-activity-client" rows={v.activity} summary={v.activitySummary} emptyText="Decisions and reservations on your projects appear here." />
       </div>
     </Page>
   )

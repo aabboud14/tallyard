@@ -30,7 +30,7 @@ export function AccountMenu({ nav }: { nav: NavModel }) {
       <DropdownMenuTrigger
         data-testid="account-menu"
         aria-label={`Account menu, signed in as ${nav.user.name}`}
-        className="inline-flex size-9 items-center justify-center rounded-full outline-none transition-shadow hover:shadow-[0_0_0_3px_var(--color-line-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:shadow-[0_0_0_3px_var(--color-line)] max-sm:size-11"
+        className="inline-flex size-9 items-center justify-center rounded-full outline-none transition-shadow hover:shadow-[0_0_0_3px_var(--color-line-soft)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:shadow-[0_0_0_3px_var(--color-line)] max-sm:size-11"
       >
         <Avatar name={nav.user.name} colour={nav.user.colour as AvatarColourName} size="md" decorative />
       </DropdownMenuTrigger>

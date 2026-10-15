@@ -24,7 +24,7 @@ export function PasswordInput({ value, onChange, autoComplete, placeholder }: { 
           onClick={() => setShown((s) => !s)}
           aria-label={shown ? 'Hide password' : 'Show password'}
           aria-pressed={shown}
-          className="inline-flex size-8 items-center justify-center rounded-md text-faint max-sm:-mr-1 max-sm:size-11 transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600"
+          className="inline-flex size-8 items-center justify-center rounded-md text-faint max-sm:-mr-1 max-sm:size-11 transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600"
         >
           {shown ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
         </button>
