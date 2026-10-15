@@ -234,7 +234,7 @@ describe('owner workspace', () => {
     const lot = lotForItem(s.world, itemByTag(s.world, 'TH-07').id)
     const ok = sel.listingDraftView(s, viewer(U.tom), lot.id, { visibility: 'published', ask: '180', reserve: '165', availableFrom: '2027-04-12' })!
     expect(ok.canSubmit).toBe(true)
-    expect(ok.preview.availabilityText).toBe('Available from Q2 2027')
+    expect(ok.preview.availabilityText).toBe('Expected April to June 2027')
     expect(ok.preview.title).toBe('Portland stone cladding, 50 mm')
     const bad = sel.listingDraftView(s, viewer(U.tom), lot.id, { visibility: 'published', ask: '150', reserve: '165', availableFrom: '' })!
     expect(bad.problem).toBe('The reserve cannot be above the ask.')

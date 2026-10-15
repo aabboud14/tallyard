@@ -25,8 +25,8 @@ describe('listing text helpers (the same output as the marketplace listing view)
   })
 
   it('availability', () => {
-    expect(availabilityText(L('L-9F4CQQ'))).toBe('Available from Q1 2027')
-    expect(availabilityText(L('L-6DN4K3'))).toBe('Available from November 2026')
+    expect(availabilityText(L('L-9F4CQQ'))).toBe('Expected January to March 2027')
+    expect(availabilityText(L('L-6DN4K3'))).toBe('Expected November 2026')
     expect(availabilityText(L('L-NHZ32R'))).toBe('Available now')
   })
 
@@ -81,7 +81,7 @@ describe('specSheetRows', () => {
       { section: 'Condition and testing', label: 'Condition', value: 'A' },
       { section: 'Condition and testing', label: 'Test status', value: 'Untested' },
       { section: 'Condition and testing', label: 'Grade', value: GRADE_UNKNOWN },
-      { section: 'Availability and location', label: 'Availability', value: 'Available from Q1 2027' },
+      { section: 'Availability and location', label: 'Availability', value: 'Expected January to March 2027' },
       { section: 'Availability and location', label: 'Timeline check', value: 'Available in time' },
       { section: 'Availability and location', label: 'Storage until the start', value: '7 months' },
       { section: 'Availability and location', label: 'Location', value: 'Central London' },

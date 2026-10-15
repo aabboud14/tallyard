@@ -1,15 +1,17 @@
 // Geometry from the recorded dimensions (brief/09-V1-PRODUCT.md sections 5.7 and 13.8).
 // DXF R12: the 2D profile as one closed polyline. OBJ: the same profile extruded. Millimetres. Public fields only.
-import type { PublicListing } from '../types'
+// meshFor builds the same prism for the 3D view, turned so that Y is up (feedback/r2-design/marketplace-material.md 3.3).
+import type { FamilyId, PublicListing } from '../types'
 import type { GeometryFile } from '../v1types'
 import { FAMILIES } from '../reference/families'
 import { findSection } from '../reference/sections'
 import { LABELS } from '../reference/labels'
+import type { Mesh, Vec3 } from './view3d'
 
 type Pt = [number, number]
 
 /** A closed outline, anticlockwise, with convex cap pieces as indices into the outline. */
-type Profile = { points: Pt[]; caps: number[][]; depthMm: number; notes: string[] }
+export type Profile = { points: Pt[]; caps: number[][]; depthMm: number; notes: string[] }
 
 export const NO_SECTION_SIZE = 'No recorded section size'
 export const UNKNOWN_SECTION = 'Section not in the section table'
@@ -58,7 +60,8 @@ function panelSizeMm(panelSize: string): [number, number] {
   return m ? [Number(m[1]), Number(m[2])] : [600, 600]
 }
 
-function profileFor(l: PublicListing): Profile | { unavailable: string } {
+/** The profile, its extrusion depth and its notes, from the recorded dimensions; or why there is none. */
+export function profileOf(l: PublicListing): Profile | { unavailable: string } {
   const s = l.spec
   switch (s.family) {
     case 'steel_section': {
@@ -94,7 +97,7 @@ function slug(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function geometryFilename(l: PublicListing, ext: 'dxf' | 'obj'): string {
+export function geometryFilename(l: PublicListing, ext: 'dxf' | 'obj' | 'ifc'): string {
   const name = l.spec.family === 'steel_section' ? l.spec.designation : FAMILIES[l.family].label
   return `${slug(l.publicId)}-${slug(name)}.${ext}`
 }
@@ -104,7 +107,7 @@ function commentLines(l: PublicListing, p: Profile): string[] {
 }
 
 export function dxfFor(l: PublicListing): GeometryFile {
-  const p = profileFor(l)
+  const p = profileOf(l)
   if ('unavailable' in p) return { kind: 'unavailable', reason: p.unavailable }
   const out: string[] = []
   const pair = (code: number, value: string) => out.push(String(code), value)
@@ -146,7 +149,7 @@ export function dxfFor(l: PublicListing): GeometryFile {
 }
 
 export function objFor(l: PublicListing): GeometryFile {
-  const p = profileFor(l)
+  const p = profileOf(l)
   if ('unavailable' in p) return { kind: 'unavailable', reason: p.unavailable }
   const n = p.points.length
   const out: string[] = commentLines(l, p).map((c) => `# ${c}`)
@@ -162,4 +165,72 @@ export function objFor(l: PublicListing): GeometryFile {
   for (const cap of p.caps) out.push('f ' + [...cap].reverse().map((i) => i + 1).join(' '))
   for (const cap of p.caps) out.push('f ' + cap.map((i) => n + i + 1).join(' '))
   return { kind: 'file', filename: geometryFilename(l, 'obj'), mime: 'model/obj', text: out.join('\n') + '\n' }
+}
+
+// ---------- The 3D view ----------
+
+export type ModelGeometry = {
+  mesh: Mesh
+  /** Shortened copy for long members, else null. */
+  closeUp: Mesh | null
+  lengthMm: number
+  closeUpMm: number | null
+  /** Placeholder depth note for curtain wall and raised floor, else null. */
+  placeholderNote: string | null
+}
+
+export const PLACEHOLDER_NOTE = 'Panel depth is a placeholder, not a recorded dimension.'
+
+/** Proper rotations (determinant +1, so outward winding survives) that stand each family with Y up. */
+const TURN: Record<FamilyId, (v: Vec3) => Vec3> = {
+  // The member lies along X and the web stands up.
+  steel_section: ([x, y, z]) => [z, y, -x],
+  // The sample panel stands 1,000 mm tall.
+  precast_cladding: ([x, y, z]) => [x, z, -y],
+  stone_cladding: ([x, y, z]) => [x, z, -y],
+  // The panel lies flat.
+  raised_floor: ([x, y, z]) => [x, z, -y],
+  // Face in XY, depth along Z.
+  curtain_wall: (v) => v,
+  clay_brick: (v) => v,
+  timber_joist: (v) => v,
+}
+
+function clean(x: number): number {
+  const r = Math.round(x * 1000) / 1000
+  return r === 0 ? 0 : r
+}
+
+/** The prism exactly as objFor writes it (0-based), turned and moved so it stands on Y 0, centred in X and Z. */
+function prism(family: FamilyId, p: Profile, depthMm: number): Mesh {
+  const n = p.points.length
+  const raw: Vec3[] = [...p.points.map(([x, y]): Vec3 => [x, y, 0]), ...p.points.map(([x, y]): Vec3 => [x, y, depthMm])].map(TURN[family])
+  const faces: number[][] = []
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    faces.push([i, j, n + j, n + i])
+  }
+  for (const cap of p.caps) faces.push([...cap].reverse())
+  for (const cap of p.caps) faces.push(cap.map((i) => n + i))
+  const lo = [0, 1, 2].map((k) => Math.min(...raw.map((v) => v[k])))
+  const hi = [0, 1, 2].map((k) => Math.max(...raw.map((v) => v[k])))
+  const shift: Vec3 = [-(lo[0] + hi[0]) / 2, -lo[1], -(lo[2] + hi[2]) / 2]
+  return { vertices: raw.map((v): Vec3 => [clean(v[0] + shift[0]), clean(v[1] + shift[1]), clean(v[2] + shift[2])]), faces }
+}
+
+/** The 3D model of a listing, with a close-up for long members; built from the same profile as the OBJ and IFC files. */
+export function meshFor(l: PublicListing): ModelGeometry | { unavailable: string } {
+  const p = profileOf(l)
+  if ('unavailable' in p) return p
+  const xs = p.points.map((q) => q[0])
+  const ys = p.points.map((q) => q[1])
+  const extent = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
+  const closeUpMm = p.depthMm > 4 * extent ? Math.ceil((2 * extent) / 100) * 100 : null
+  return {
+    mesh: prism(l.family, p, p.depthMm),
+    closeUp: closeUpMm === null ? null : prism(l.family, p, closeUpMm),
+    lengthMm: p.depthMm,
+    closeUpMm,
+    placeholderNote: l.family === 'curtain_wall' || l.family === 'raised_floor' ? PLACEHOLDER_NOTE : null,
+  }
 }
