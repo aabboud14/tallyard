@@ -119,11 +119,11 @@ function RequirementCard({ row, v, projectId }: { row: RequirementTrackRow; v: R
             {row.heldInTallyard.length === 0 ? (
               <p className="m-0 mt-1 text-sm text-muted">None for this requirement.</p>
             ) : (
-              <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+              <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0 max-sm:gap-2">
                 {row.heldInTallyard.map((h) => (
                   <li key={h.label} className="text-sm">
                     {h.href ? (
-                      <Link to={h.href} className="rounded-sm text-ink-soft hover:text-ink hover:underline">
+                      <Link to={h.href} className="rounded-sm text-ink-soft hover:text-ink hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:flex-wrap max-sm:items-center max-sm:gap-x-1">
                         {h.label}: <span className="font-medium text-ink">{h.value}</span>
                       </Link>
                     ) : (
@@ -149,7 +149,7 @@ function RequirementCard({ row, v, projectId }: { row: RequirementTrackRow; v: R
                       {e.text ? <p className="m-0 text-ink">{e.text}</p> : null}
                       {e.outputLabel ? (
                         e.outputHref ? (
-                          <Link to={e.outputHref} className="mt-0.5 inline-flex items-center gap-1 rounded-sm text-brand-700 hover:underline">
+                          <Link to={e.outputHref} className="mt-0.5 inline-flex items-center gap-1 rounded-sm text-brand-700 hover:underline max-sm:min-h-11">
                             <Link2 aria-hidden="true" className="size-3.5" />
                             {e.outputLabel}
                           </Link>

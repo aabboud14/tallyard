@@ -8,7 +8,7 @@ import type { TrackerSummary } from '../../domain/engines/tracker'
 import type { TrackStatus } from '../../domain/sustainabilityTypes'
 import type { GoalRow } from '../../store/selectors/sustainability'
 import { goalMeter, TRACK_BAR_ORDER } from '../../store/selectors/sustainability-screens'
-import { cx, IndicativeMarker, METHODOLOGY_HREF, SegmentedBar, TargetMeter, TRACK_STATUS, type Segment } from '../../ui'
+import { cx, IndicativeMarker, Legend, MARK, METHODOLOGY_HREF, SegmentedBar, TargetMeter, TRACK_STATUS, type Segment } from '../../ui'
 
 /** The heading of a project tab: the project's own name is the page's h1 in the project header. */
 export function TabHeader({ title, subtitle, actions, children, className }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string }) {
@@ -73,6 +73,12 @@ export function TrackBar({ counts, label, size = 'md', legend = true, withNotApp
   const get = (s: TrackStatus): number => ('evidence_ready' in counts ? (counts as Record<TrackStatus, number>)[s] : (counts as TrackerSummary)[COUNT_OF[s]] as number)
   const segments: Segment[] = TRACK_BAR_ORDER.filter((s) => withNotApplicable || s !== 'not_applicable').map((s) => ({ key: s, label: TRACK_STATUS[s].label, count: get(s), tone: TRACK_STATUS[s].tone }))
   return <SegmentedBar segments={segments} label={label} size={size} legend={legend} total={total} />
+}
+
+/** One word legend for a group of status bars drawn without their own, such as the scheme cards. */
+export function TrackLegend({ className }: { className?: string }) {
+  const items = TRACK_BAR_ORDER.filter((s) => s !== 'not_applicable').map((s) => ({ key: s, label: TRACK_STATUS[s].label, colour: MARK[TRACK_STATUS[s].tone] }))
+  return <Legend label="Status colours" items={items} className={cx('text-sm', className)} />
 }
 
 /** The methodology line under carbon and content figures. */

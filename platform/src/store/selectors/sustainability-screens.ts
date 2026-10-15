@@ -12,6 +12,8 @@ import { projectSketch, type BuildingSketch } from '../../domain/sketch'
 import { formatDateShort } from '../../domain/dates'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
+import type { ProjectSide } from '../access'
+import { inSentence, STATEMENT_STATUS_FOR_CLIENT, STATEMENT_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
 import { activitySummary, type ActivitySummary } from './dashboard'
 import { clientDashboard, type ClientDashboard } from './client-dashboard'
 import { programmeInput } from './portfolio'
@@ -126,7 +128,8 @@ export type ClientHomeView = ClientDashboard & {
   tiles: {
     saving: TileReading & { valueText: string; ring: { value: number; max: number; centre: string } | null }
     carbon: TileReading & { ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
-    reuse: TileReading & { aimText: string | null; ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
+    /** state and stateLabel judge content by value (the line under the reuse figure), not the reuse figure itself. */
+    reuse: TileReading & { aimText: string | null; contentText: string | null; ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
   }
   reservationCounts: { pending: number; reserved: number; toRequest: number }
   timeline: { ticks: { iso: string; at: number; label: string | null }[]; today: number; todayText: string; rows: ClientTimelineRow[] }
@@ -145,6 +148,12 @@ export function reuseStateLabel(content: number | null, state: MetricState): str
   if (content === null) return 'No bill yet'
   if (state === 'neutral') return 'No content aim set'
   return `Recycled content ${METRIC_STATE_WORDS[state].toLowerCase()}`
+}
+
+/** The reuse tile's content line: the measure named as everywhere else, against the project aim. */
+export function reuseContentText(content: number | null, aim: number | null): string | null {
+  if (content === null) return null
+  return aim === null ? `${f.percent(content)} reused and recycled by value, no aim set` : `${f.percent(content)} reused and recycled by value, aim ${f.fixed(aim * 100, 0)}%`
 }
 
 /** The client's dashboard with the state of each tile, the drawn thumbnails and the timeline's marker dates. */
@@ -191,6 +200,7 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
         // The state judges recycled content (the sub line), not the reuse figure above it, so it names what it judges.
         stateLabel: reuseStateLabel(m.reuse.content, reuseState),
         aimText: reuseAim === null ? null : `${f.fixed(reuseAim * 100, 0)}%`,
+        contentText: reuseContentText(m.reuse.content, reuseAim),
         ring: m.reuse.content === null || reuseAim === null ? null : { value: m.reuse.content, max: reuseAim, valueText: `${f.percent(m.reuse.content)} of the ${f.percent(reuseAim)} aim`, centre: ringCentre(m.reuse.content, reuseAim) },
         bar: m.reuse.content === null || reuseAim === null ? null : { value: m.reuse.content, max: meterMax(reuseAim, m.reuse.content), target: reuseAim, valueText: `${f.percent(m.reuse.content)} reused and recycled`, targetText: `Aim at least ${f.fixed(reuseAim * 100, 0)}%` },
       },
@@ -282,11 +292,16 @@ export function readyText(ready: number, targeted: number): string {
   return targeted === 0 ? 'Nothing targeted' : `${ready} of ${targeted} ready`
 }
 
-/** A scheme card's words: the target, the predicted level and the readiness. */
-export function schemeCard(s: SchemeSummaryView): { targetText: string; predictedText: string; readyText: string; atRiskText: string | null } {
+/** A scheme card's words: the target, the latest level (for the circular measures, the statement) and the readiness. */
+export function schemeCard(s: SchemeSummaryView, side: ProjectSide = 'consultant'): { targetText: string; latestLabel: string; predictedText: string; latestLine: string; readyText: string; atRiskText: string | null } {
+  const circular = s.scheme === 'circular' ? s.circular : null
+  const statement = circular ? (circular.statement === null ? 'Not started' : side === 'client' ? STATEMENT_STATUS_FOR_CLIENT[circular.statement] : STATEMENT_STATUS_LABELS[circular.statement]) : null
   return {
-    targetText: s.ratingTarget ?? (s.scheme === 'circular' ? 'Measures under Policy SI 7' : 'Not targeted'),
-    predictedText: s.ratingPredicted ? `Predicted ${s.ratingPredicted}` : s.scheme === 'circular' ? 'No rating' : 'No prediction yet',
+    targetText: circular ? (circular.contentTarget > 0 ? `Content by value at least ${f.fixed(circular.contentTarget * 100, 0)}%` : 'Content by value not targeted') : (s.ratingTarget ?? 'Not targeted'),
+    latestLabel: circular ? 'Statement' : 'Latest',
+    predictedText: statement ?? (s.ratingPredicted ? `Predicted ${s.ratingPredicted}` : 'No prediction yet'),
+    /** The latest in one phrase, for a one-line summary. */
+    latestLine: statement ? `Statement ${inSentence(statement)}` : s.ratingPredicted ? `Predicted ${s.ratingPredicted}` : 'No prediction yet',
     readyText: readyText(s.ready, s.targeted),
     atRiskText: s.atRisk > 0 ? `${s.atRisk} at risk` : null,
   }
@@ -312,11 +327,29 @@ export function requirementFilters(rows: RequirementTrackRow[]): { key: Requirem
 // ---------- Compliance ----------
 
 export type ComplianceFigures = {
-  content: { value: number; withApproved: number; max: number; target: number; valueText: string; withApprovedText: string; targetText: string; state: MetricState; stateText: string; axis: { start: string; end: string } } | null
+  content: {
+    /** "Secured against the project target", or against the policy aim when the project has no target of its own. */
+    label: string
+    value: number
+    withApproved: number
+    max: number
+    target: number
+    valueText: string
+    withApprovedText: string
+    targetText: string
+    /** The policy aim as a second mark, when the project target differs from it. */
+    reference: { value: number; text: string } | null
+    state: MetricState
+    stateText: string
+    axis: { start: string; end: string }
+  } | null
   contribution: { items: { key: string; label: string; value: number; valueText: string }[]; max: number }
 }
 
-/** Content by value against the aim, and each bill line's points from reuse, for the compliance page. */
+/**
+ * Content by value against the project's own target (BRIEF 14.2: effectiveTargets is the one source of project
+ * targets), with the policy aim as a second mark; and each bill line's points from reuse, for the compliance page.
+ */
 export function complianceFigures(c: ComplianceView): ComplianceFigures {
   const lines = c.secured.lines.filter((l) => l.line.family !== null)
   const names = new Map(c.billLines.map((b) => [b.id, b.name]))
@@ -324,17 +357,22 @@ export function complianceFigures(c: ComplianceView): ComplianceFigures {
   const contribution = { items, max: niceMax(Math.max(0, ...items.map((i) => i.value))) }
   if (!c.hasBill) return { content: null, contribution }
   const secured = c.secured.percent
-  const max = meterMax(c.aim, Math.max(secured, c.withApproved.percent))
-  const state = metricState(secured, c.aim, 'at_least')
+  const projectTarget = c.targets.contentByValue > 0 ? c.targets.contentByValue : null
+  const target = projectTarget ?? c.aim
+  const pct = (x: number) => `${f.fixed(x * 100, 0)}%`
+  const max = meterMax(Math.max(target, c.aim), Math.max(secured, c.withApproved.percent))
+  const state = metricState(secured, target, 'at_least')
   return {
     content: {
+      label: projectTarget === null ? 'Secured against the policy aim' : 'Secured against the project target',
       value: secured,
       withApproved: c.withApproved.percent,
       max,
-      target: c.aim,
+      target,
       valueText: f.percent2(secured),
       withApprovedText: f.percent2(c.withApproved.percent),
-      targetText: `Aim at least ${f.fixed(c.aim * 100, 0)}%`,
+      targetText: projectTarget === null ? `Policy aim at least ${pct(c.aim)}` : `Target at least ${pct(projectTarget)}`,
+      reference: projectTarget !== null && Math.abs(projectTarget - c.aim) > 1e-9 ? { value: c.aim, text: `Policy aim ${pct(c.aim)}` } : null,
       state,
       stateText: METRIC_STATE_WORDS[state],
       axis: { start: '0%', end: `${f.fixed(max * 100, 0)}%` },

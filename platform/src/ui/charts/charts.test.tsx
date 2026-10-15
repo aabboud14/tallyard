@@ -75,6 +75,14 @@ describe('TargetMeter', () => {
     expect(document.querySelector('rect[data-part="target"]')).toBeNull()
     expect(byRole('meter', 'Avoided carbon').getAttribute('aria-valuetext')).toBe('4 tCO2e. No bill of materials yet')
   })
+
+  it('draws a second, grey reference tick with its own words, such as the policy aim under a project target', () => {
+    render(<TargetMeter label="Secured against the project target" value={0.1991} max={0.4} target={0.25} valueText="19.91%" targetText="Target at least 25%" state="critical" reference={{ value: 0.2, text: 'Policy aim 20%' }} />)
+    expect(document.querySelector('rect[data-part="reference"]')!.getAttribute('x')).toBe('0.2')
+    expect(document.querySelector('rect[data-part="reference"]')!.getAttribute('fill')).not.toBe(document.querySelector('rect[data-part="target"]')!.getAttribute('fill'))
+    expect(document.querySelector('[data-part="reference-text"]')!.textContent).toBe('Policy aim 20%')
+    expect(byRole('meter', 'Secured against the project target').getAttribute('aria-valuetext')).toBe('19.91%. Target at least 25%. Policy aim 20%. Off target')
+  })
 })
 
 describe('Donut and ProgressRing', () => {

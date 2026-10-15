@@ -1,9 +1,9 @@
 // Tabs for routes (each tab is a link, the active one marked as the current page) and a SegmentedControl
 // for switching a view in place (cards or table, board or list).
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link, useInRouterContext } from 'react-router'
 import { ToggleGroup } from 'radix-ui'
-import type { LucideIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
 import { cx } from './cx'
 
 export type TabItem = {
@@ -21,11 +21,63 @@ export type TabItem = {
   testId?: string
 }
 
-export function Tabs({ items, label, className, size = 'md' }: { items: TabItem[]; label: string; className?: string; size?: 'sm' | 'md' }) {
+/** Which ends of a sideways scroller have more to show. */
+function useOverflowEdges(ref: RefObject<HTMLElement | null>, key: string): { left: boolean; right: boolean } {
+  const [edges, setEdges] = useState({ left: false, right: false })
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => {
+      const left = el.scrollLeft > 1
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      setEdges((e) => (e.left === left && e.right === right ? e : { left, right }))
+    }
+    // The current tab starts in view, however far along the strip it sits.
+    const active = el.querySelector<HTMLElement>('[aria-current]')
+    if (active && el.scrollWidth > el.clientWidth) {
+      const a = active.getBoundingClientRect()
+      const box = el.getBoundingClientRect()
+      if (a.left < box.left || a.right > box.right) el.scrollLeft += a.left - box.left - (box.width - a.width) / 2
+    }
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(read)
+    ro?.observe(el)
+    return () => {
+      el.removeEventListener('scroll', read)
+      ro?.disconnect()
+    }
+  }, [ref, key])
+  return edges
+}
+
+const EDGE = 'absolute inset-y-0 z-[1] flex w-9 items-center justify-center bg-surface text-muted hover:text-ink max-sm:w-11'
+
+/**
+ * Route tabs in one row that scrolls sideways when it is too long, with a chevron at each end that has more.
+ * With wrapOnPhone, the tabs wrap onto a second row below 640 px instead (a short, fixed set such as schemes).
+ */
+export function Tabs({ items, label, className, size = 'md', wrapOnPhone = false }: { items: TabItem[]; label: string; className?: string; size?: 'sm' | 'md'; wrapOnPhone?: boolean }) {
   const inRouter = useInRouterContext()
+  const list = useRef<HTMLUListElement>(null)
+  const edges = useOverflowEdges(list, items.map((t) => `${String(t.href)}:${t.active ? 1 : 0}`).join('|'))
+  const nudge = (dir: -1 | 1) => {
+    const el = list.current
+    if (el) el.scrollBy({ left: dir * Math.max(120, el.clientWidth * 0.6), behavior: 'smooth' })
+  }
   return (
-    <nav aria-label={label} className={cx('-mb-px min-w-0', className)}>
-      <ul className="m-0 flex list-none items-stretch gap-5 overflow-x-auto p-0 scrollbar-none sm:gap-6">
+    <nav aria-label={label} className={cx('relative -mb-px min-w-0', className)}>
+      {edges.left ? (
+        <button type="button" tabIndex={-1} aria-label="Show earlier tabs" onClick={() => nudge(-1)} className={cx(EDGE, 'left-0 border-r border-line-soft')} data-part="tabs-scroll-left">
+          <ChevronLeft aria-hidden="true" className="size-4" />
+        </button>
+      ) : null}
+      {edges.right ? (
+        <button type="button" tabIndex={-1} aria-label="Show more tabs" onClick={() => nudge(1)} className={cx(EDGE, 'right-0 border-l border-line-soft')} data-part="tabs-scroll-right">
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </button>
+      ) : null}
+      <ul ref={list} className={cx('m-0 flex list-none items-stretch gap-5 overflow-x-auto p-0 scrollbar-none sm:gap-6', wrapOnPhone && 'max-sm:flex-wrap max-sm:gap-x-5 max-sm:gap-y-0')}>
         {items.map((t, i) => {
           const Icon = t.icon
           const cls = cx(

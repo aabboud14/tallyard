@@ -1,13 +1,13 @@
 // Sustainability tracking across the client's projects: BREEAM, LEED and WELL targets with the credits ready and at
 // risk, content by value against its target with the statement's status, and the requirements ready. Read from the
 // consultant's records; indicative, and not certification advice.
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { TriangleAlert } from 'lucide-react'
 import type { TrackingRow, TrackingScheme } from '../../../store/selectors/sustainability'
 import { readyText } from '../../../store/selectors/sustainability-screens'
 import { CERT_CAVEAT, inSentence } from '../../../domain/reference/sustainabilityCopy'
 import { Card, IndicativeMarker, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../../ui'
-import { useMediaQuery } from '../../../app/media'
 import { GoalMeterView } from '../../sustainability/parts'
 
 const SCHEMES = [
@@ -19,13 +19,32 @@ const SCHEMES = [
 const TONES: readonly Tone[] = ['neutral', 'brand', 'info', 'warning', 'danger']
 const toneOf = (t: string): Tone => (TONES as readonly string[]).includes(t) ? (t as Tone) : 'neutral'
 
-function SchemeCell({ s, hasConsultant }: { s: TrackingScheme; hasConsultant: boolean }) {
+/** The table needs about 56rem; below that (a phone, or a laptop with the sidebar open) each project is a card. */
+const TABLE_MIN_WIDTH = 896
+
+/** Whether the element is at least min px wide, from its own width rather than the window's. */
+function useWideEnough(ref: RefObject<HTMLElement | null>, min: number): boolean {
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => setWide(el.getBoundingClientRect().width >= min)
+    read()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, min])
+  return wide
+}
+
+const NO_CONSULTANT = 'No consultant appointed. Defaults from the requirements are shown.'
+
+function SchemeCell({ s }: { s: TrackingScheme }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <span className={s.targetText === 'Not targeted' ? 'text-sm text-muted' : 'text-sm font-medium text-ink'}>{s.targetText}</span>
-      {!hasConsultant ? (
-        <span className="text-xs text-muted">No consultant appointed</span>
-      ) : s.targeted > 0 ? (
+      {s.targeted > 0 ? (
         <span className="text-xs text-muted">
           {readyText(s.ready, s.targeted)}
           {s.predictedText ? `. Latest ${s.predictedText}` : ''}
@@ -67,9 +86,10 @@ function RequirementsCell({ r }: { r: TrackingRow }) {
 }
 
 export function TrackingTable({ rows }: { rows: TrackingRow[] }) {
-  const wide = useMediaQuery('(min-width: 768px)')
+  const ref = useRef<HTMLElement>(null)
+  const wide = useWideEnough(ref, TABLE_MIN_WIDTH)
   return (
-    <section aria-labelledby="tracking-title" data-testid="sustainability-tracking" className="flex min-w-0 flex-col gap-3">
+    <section ref={ref} aria-labelledby="tracking-title" data-testid="sustainability-tracking" data-layout={wide ? 'table' : 'cards'} className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
           <h2 id="tracking-title" className="m-0 flex flex-wrap items-center gap-2.5 text-md font-semibold text-ink">
@@ -98,13 +118,19 @@ export function TrackingTable({ rows }: { rows: TrackingRow[] }) {
                   <Link to={r.href} className="rounded-sm font-medium text-ink hover:underline">
                     {r.projectName}
                   </Link>
-                  <span className="block text-xs text-muted">{r.consultantName ?? 'No consultant appointed'}</span>
+                  {r.consultantName ? <span className="block text-xs text-muted">{r.consultantName}</span> : null}
                 </TD>
-                {SCHEMES.map(([id]) => (
-                  <TD key={id}>
-                    <SchemeCell s={r.schemes[id]} hasConsultant={r.consultantName !== null} />
+                {r.consultantName === null ? (
+                  <TD colSpan={SCHEMES.length}>
+                    <span className="text-sm text-muted">{NO_CONSULTANT}</span>
                   </TD>
-                ))}
+                ) : (
+                  SCHEMES.map(([id]) => (
+                    <TD key={id}>
+                      <SchemeCell s={r.schemes[id]} />
+                    </TD>
+                  ))
+                )}
                 <TD className="min-w-48">
                   <CircularCell r={r} />
                 </TD>
@@ -124,18 +150,22 @@ export function TrackingTable({ rows }: { rows: TrackingRow[] }) {
                   <Link to={r.href} className="inline-flex min-h-11 items-center rounded-sm font-semibold text-ink hover:underline">
                     {r.projectName}
                   </Link>
-                  <p className="m-0 text-xs text-muted">{r.consultantName ?? 'No consultant appointed'}</p>
+                  {r.consultantName ? <p className="m-0 text-xs text-muted">{r.consultantName}</p> : null}
                 </div>
-                <dl className="m-0 grid grid-cols-3 gap-3">
-                  {SCHEMES.map(([id, label]) => (
-                    <div key={id} className="min-w-0">
-                      <dt className="text-xs text-muted">{label}</dt>
-                      <dd className="m-0">
-                        <SchemeCell s={r.schemes[id]} hasConsultant={r.consultantName !== null} />
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
+                {r.consultantName === null ? (
+                  <p className="m-0 text-sm text-muted">{NO_CONSULTANT}</p>
+                ) : (
+                  <dl className="m-0 grid grid-cols-3 gap-3">
+                    {SCHEMES.map(([id, label]) => (
+                      <div key={id} className="min-w-0">
+                        <dt className="text-xs text-muted">{label}</dt>
+                        <dd className="m-0">
+                          <SchemeCell s={r.schemes[id]} />
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 <div className="border-t border-line-soft pt-3">
                   <p className="m-0 mb-2 text-xs text-muted">Circular economy</p>
                   <CircularCell r={r} />

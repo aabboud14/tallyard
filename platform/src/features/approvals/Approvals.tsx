@@ -15,6 +15,7 @@ import { MaterialSummary } from './MaterialSummary'
 import { CostPanel } from './CostPanel'
 import { MaterialPicture } from '../buildings/photos'
 import { TabHeader } from '../sustainability/parts'
+import { usePhone } from '../../app/media'
 
 type Decision = { item: ApprovalCard; decision: 'approved' | 'declined' }
 
@@ -22,6 +23,7 @@ function ApprovalsBody() {
   const { projectId = '' } = useParams()
   const v = useView(selectors.approvalsView, projectId)
   const [deciding, setDeciding] = useState<Decision | null>(null)
+  const phone = usePhone()
   if (!v) return null
   const base = `/app/projects/${projectId}`
 
@@ -43,11 +45,38 @@ function ApprovalsBody() {
     <div className="flex flex-col gap-10" data-testid="approvals">
       <div className="flex flex-col gap-5">
         <TabHeader title="Approvals" subtitle={`Materials ${v.architectName || 'your architect'} sent for your decision, with what each would cost against buying new. ${LABELS.L40}`} />
-        <div role="group" aria-label="Approvals in figures" className="grid min-w-0 gap-3 sm:grid-cols-3" data-testid="approvals-finance">
-          <MetricTile label="Waiting for your decision" icon={Hourglass} value={strip.waiting.count} sub={strip.waiting.sub} indicative testId="finance-waiting" />
-          <MetricTile label="Approved" icon={CheckCheck} value={strip.approved.count} sub={strip.approved.sub} indicative testId="finance-approved" />
-          <MetricTile label="Avoided carbon if you approve" icon={Leaf} value={f.number(strip.avoidedIfApprovedT, 1)} unit="tCO2e" sub="The materials waiting, against buying new" indicative testId="finance-carbon" />
-        </div>
+        {phone ? (
+          // On a phone the three figures are one compact list, so the material waiting starts on the first screen.
+          <Card padding="none" role="group" aria-label="Approvals in figures" data-testid="approvals-finance" className="flex flex-col">
+            <ul className="m-0 list-none divide-y divide-line-soft p-0">
+              {[
+                { key: 'waiting', icon: Hourglass, label: 'Waiting for your decision', value: String(strip.waiting.count), sub: strip.waiting.sub },
+                { key: 'approved', icon: CheckCheck, label: 'Approved', value: String(strip.approved.count), sub: strip.approved.sub },
+                { key: 'carbon', icon: Leaf, label: 'Avoided carbon if you approve', value: `${f.number(strip.avoidedIfApprovedT, 1)} tCO2e`, sub: null },
+              ].map((r) => (
+                <li key={r.key} className="flex items-start gap-3 px-4 py-2.5" data-testid={`finance-${r.key}`}>
+                  <r.icon aria-hidden="true" className="mt-1 size-3.5 shrink-0 text-faint" />
+                  <div className="min-w-0 flex-1">
+                    <p className="m-0 flex items-baseline justify-between gap-3 text-sm">
+                      <span className="text-ink-soft">{r.label}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-ink">{r.value}</span>
+                    </p>
+                    {r.sub ? <p className="m-0 text-xs text-muted">{r.sub}</p> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end border-t border-line-soft px-4 py-2">
+              <IndicativeMarker />
+            </div>
+          </Card>
+        ) : (
+          <div role="group" aria-label="Approvals in figures" className="grid min-w-0 gap-3 sm:grid-cols-3" data-testid="approvals-finance">
+            <MetricTile label="Waiting for your decision" icon={Hourglass} value={strip.waiting.count} sub={strip.waiting.sub} indicative testId="finance-waiting" />
+            <MetricTile label="Approved" icon={CheckCheck} value={strip.approved.count} sub={strip.approved.sub} indicative testId="finance-approved" />
+            <MetricTile label="Avoided carbon if you approve" icon={Leaf} value={f.number(strip.avoidedIfApprovedT, 1)} unit="tCO2e" sub="The materials waiting, against buying new" indicative testId="finance-carbon" />
+          </div>
+        )}
       </div>
       <section aria-labelledby="waiting-title">
         <SectionTitle

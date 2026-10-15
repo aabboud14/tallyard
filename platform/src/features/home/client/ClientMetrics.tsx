@@ -1,9 +1,10 @@
 // The four headline figures on the client's home: indicative cost by stage, the saving against buying new, avoided
-// carbon secured against the projects' targets, and reuse by value. Each is indicative; states come from the store.
+// carbon secured against the projects' targets, and reuse by value with content by value against the project aim on
+// its own line. Each is indicative; states come from the store.
 import { Leaf, PiggyBank, Recycle, Wallet } from 'lucide-react'
 import type { ClientHomeView } from '../../../store/selectors/sustainability-screens'
 import * as f from '../../../domain/format'
-import { Donut, Legend, MetricGrid, MetricTile, ProgressBar, ProgressRing, STATE_TONE } from '../../../ui'
+import { Donut, Legend, MetricGrid, MetricTile, ProgressBar, ProgressRing, STATE_TONE, StateLine } from '../../../ui'
 import type { TileBar } from '../../../store/selectors/sustainability-screens'
 import type { MetricState } from '../../../domain/engines/metricState'
 
@@ -40,7 +41,7 @@ export function ClientMetrics({ v }: { v: ClientHomeView }) {
   const t = v.tiles
   const stages = m.cost.byStage.map((s) => ({ key: s.key, label: s.label, value: s.total, colour: STAGE_COLOUR[s.key], valueText: f.moneyWhole(s.total) }))
   return (
-    <MetricGrid label="Your projects in figures" testId="client-metrics">
+    <MetricGrid label="Your projects in figures" testId="client-metrics" stackOnPhone>
       <MetricTile
         label="Indicative cost"
         icon={Wallet}
@@ -104,19 +105,28 @@ export function ClientMetrics({ v }: { v: ClientHomeView }) {
         label="Reuse by value"
         icon={Recycle}
         value={m.reuse.reuse === null ? 'No bill yet' : f.percent(m.reuse.reuse)}
-        state={m.reuse.content === null ? undefined : t.reuse.state}
-        stateLabel={t.reuse.stateLabel}
         sub={
           m.reuse.content === null ? (
             'Needs the bill of materials'
           ) : (
             <>
-              {t.reuse.aimText === null ? `${f.percent(m.reuse.content)} with recycled content, no aim set` : `${f.percent(m.reuse.content)} with recycled content, aim ${t.reuse.aimText}`}
-              {t.reuse.bar ? <NarrowBar bar={t.reuse.bar} state={t.reuse.state} label="Reused and recycled content against the aim" /> : null}
+              <span className="block">Reused items, as a share of the bill</span>
+              {/* Content by value has its own line, meter and state, so the state word never sits on the reuse figure. */}
+              <span className="mt-3 flex items-center gap-3 border-t border-line-soft pt-3" data-testid="client-reuse-content">
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="block text-ink-soft">{t.reuse.contentText}</span>
+                  {t.reuse.bar ? <ProgressBar value={t.reuse.bar.value} max={t.reuse.bar.max} target={t.reuse.bar.target} targetText={t.reuse.bar.targetText} label="Reused and recycled content against the aim" valueText={t.reuse.bar.valueText} tone={STATE_TONE[t.reuse.state]} size="sm" className="@[19rem]:hidden" /> : null}
+                  <StateLine state={t.reuse.state} label={t.reuse.stateLabel} />
+                </span>
+                {t.reuse.ring ? (
+                  <span className="hidden shrink-0 @[19rem]:block">
+                    <ProgressRing value={t.reuse.ring.value} max={t.reuse.ring.max} label="Reused and recycled content against the aim" valueText={t.reuse.ring.valueText} state={t.reuse.state} size={56} centre={t.reuse.ring.centre} />
+                  </span>
+                ) : null}
+              </span>
             </>
           )
         }
-        chart={t.reuse.ring ? <ProgressRing value={t.reuse.ring.value} max={t.reuse.ring.max} label="Reused and recycled content against the aim" valueText={t.reuse.ring.valueText} state={t.reuse.state} size={72} centre={t.reuse.ring.centre} /> : undefined}
         indicative
         testId="client-metric-reuse"
       />

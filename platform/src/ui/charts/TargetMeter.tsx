@@ -19,17 +19,19 @@ export type TargetMeterProps = {
   stateText?: string
   /** Words for the two ends of the bar, for example "0%" and "40%". */
   axis?: { start: string; end: string }
+  /** A second mark on the same scale, drawn as a grey tick with its own words, for example the policy aim under a project target. */
+  reference?: { value: number; text: string } | null
   size?: 'sm' | 'md'
   className?: string
   testId?: string
 }
 
-export function TargetMeter({ label, value, max, target, valueText, targetText, state, stateText, axis, size = 'md', className, testId }: TargetMeterProps) {
+export function TargetMeter({ label, value, max, target, valueText, targetText, state, stateText, axis, reference = null, size = 'md', className, testId }: TargetMeterProps) {
   const m = METRIC_STATE[state]
   const Icon = m.icon
   const word = stateText ?? m.label
   const scale = max > 0 ? max : 1
-  const spoken = [valueText, targetText, word].filter(Boolean).join('. ')
+  const spoken = [valueText, targetText, reference?.text, word].filter(Boolean).join('. ')
   return (
     <div data-testid={testId} data-state={state} className={cx('flex min-w-0 flex-col gap-1.5', className)}>
       <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -47,6 +49,7 @@ export function TargetMeter({ label, value, max, target, valueText, targetText, 
       >
         <svg viewBox={`0 0 ${scale} 1`} preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 block size-full">
           <rect data-part="fill" x="0" y="0" width={value} height="1" fill={MARK[m.tone]} />
+          {reference ? <rect data-part="reference" x={reference.value} y="0" width={scale / 150} height="1" fill="var(--color-muted)" /> : null}
           {target !== null ? <rect data-part="target" x={target} y="0" width={scale / 150} height="1" fill="var(--color-ink)" /> : null}
         </svg>
       </div>
@@ -57,10 +60,20 @@ export function TargetMeter({ label, value, max, target, valueText, targetText, 
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
-        {targetText ? (
-          <span className="inline-flex items-center gap-1.5 text-muted">
-            <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-ink" />
-            {targetText}
+        {targetText || reference ? (
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
+            {targetText ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-ink" />
+                {targetText}
+              </span>
+            ) : null}
+            {reference ? (
+              <span className="inline-flex items-center gap-1.5" data-part="reference-text">
+                <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-muted" />
+                {reference.text}
+              </span>
+            ) : null}
           </span>
         ) : (
           <span />
