@@ -54,3 +54,15 @@ Code at the seams: `MetricState` and the state words now live in `src/domain/eng
 ### End-to-end journeys
 
 No assertion changed. After the merge `npm run e2e` passes all four journeys in `e2e/journeys.spec.ts`.
+
+## Merge of the round 2 review fixes (Marketplace, projects, owner and surveyor) onto the look fixes
+
+No existing assertion changed in these three merges; every test from both sides of each conflict is kept. The client and consultant fixes had no commit of their own yet and were not merged.
+
+- r2-fix-marketplace: conflicts in `Discover.tsx`, `NewForProjectsRow.tsx`, `MaterialPage.tsx`, `store/selectors/discover.ts`, `ui/Badge.tsx` and `ui/Breadcrumbs.tsx`. Both branches had built Show all for New for your projects with the same test id; the look branch's feed and control stand, with the Marketplace branch's 44 px phone height and its reset on a change of project. Breadcrumbs: from sm the current page keeps its width and does not shrink (look test); on a phone the parent link keeps 44 px and the current page truncates (Marketplace e2e).
+- r2-fix-projects: conflicts in `Sidebar.tsx`, `ProgrammeCard.tsx` and `Shortlist.tsx`, all class strings, resolved with both sides' classes. Two seams with the Marketplace fixes failed the gate and were fixed in code: `ProgrammeChart` takes a material `href` of string or null (a lot the viewer cannot open), and the new label-column link and checklist step link carry `focus-visible:outline-solid` (the look test).
+- r2-fix-owner_surveyor: conflicts in `projects/Overview.tsx` (the appoint card and the projects branch's banner rule both kept) and `projects.screen.test.tsx` (both new describe blocks and both sets of imports kept).
+
+### End-to-end journeys
+
+No assertion changed. After the merges `npm run e2e` passes all 28 tests.
