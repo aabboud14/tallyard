@@ -23,7 +23,7 @@ export function PageHeader({ title, subtitle, actions, meta, tabs, breadcrumbs, 
       {breadcrumbs ? <div className="mb-3">{breadcrumbs}</div> : null}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-3.5">
-          {leading ? <div className="shrink-0">{leading}</div> : null}
+          {leading ? <div className="shrink-0 self-start">{leading}</div> : null}
           <div className="min-w-0">
             <h1 className="m-0 text-2xl font-semibold text-ink">{title}</h1>
             {subtitle ? <p className="m-0 mt-1 text-base text-muted">{subtitle}</p> : null}

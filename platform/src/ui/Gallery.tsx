@@ -54,6 +54,7 @@ import { MaterialCard } from './MaterialCard'
 import { Logo, LogoMark } from './Logo'
 import { SandboxBadge } from './SandboxBadge'
 import { BANDS, SAMPLE_MATERIALS } from './samples'
+import { GalleryData } from './GalleryData'
 
 const SECTIONS = [
   ['foundations', 'Foundations'],
@@ -68,6 +69,12 @@ const SECTIONS = [
   ['feedback', 'Feedback'],
   ['materials', 'Materials'],
   ['programme', 'Programme'],
+  ['data', 'Data'],
+  ['programme-chart', 'Programme chart'],
+  ['thumbnails', 'Thumbnails'],
+  ['empty-states', 'Empty states'],
+  ['model', '3D view'],
+  ['tracking', 'Tracking and documents'],
   ['brand', 'Brand'],
 ] as const
 
@@ -112,6 +119,26 @@ const COLOURS: [string, string][] = [
   ['warning soft', 'bg-warning-soft'],
   ['danger', 'bg-danger'],
   ['danger soft', 'bg-danger-soft'],
+  ['canvas', 'bg-canvas'],
+  ['paper', 'bg-paper'],
+  ['night', 'bg-night'],
+]
+
+/** The validated data colours: categorical identity in fixed order, then the status marks. */
+const DATA_COLOURS: [string, string][] = [
+  ['viz 1, structure', 'bg-viz-1'],
+  ['viz 2, envelope', 'bg-viz-2'],
+  ['viz 3, finishes', 'bg-viz-3'],
+  ['viz 4', 'bg-viz-4'],
+  ['viz 5', 'bg-viz-5'],
+  ['viz 6', 'bg-viz-6'],
+  ['viz other', 'bg-viz-other'],
+  ['mark neutral', 'bg-mark-neutral'],
+  ['mark info', 'bg-mark-info'],
+  ['mark good', 'bg-mark-good'],
+  ['mark warning', 'bg-mark-warning'],
+  ['mark critical', 'bg-mark-critical'],
+  ['track', 'bg-track'],
 ]
 
 type Row3 = { id: string; name: string; material: string; qty: number; qtyText: string; status: 'shortlisted' | 'sent' | 'approved' | 'declined' }
@@ -142,7 +169,7 @@ export function Gallery() {
 
   return (
     <div className="min-h-dvh bg-page" data-testid="ui-gallery">
-      <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface">
         <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
@@ -176,6 +203,16 @@ export function Gallery() {
             <Row label="Colour">
               <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
                 {COLOURS.map(([name, cls]) => (
+                  <div key={name} className="flex flex-col gap-1.5">
+                    <div className={cx('h-12 rounded-lg ring-1 ring-inset ring-black/5', cls)} />
+                    <span className="text-xs text-muted">{name}</span>
+                  </div>
+                ))}
+              </div>
+            </Row>
+            <Row label="Data colours">
+              <div className="grid w-full grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
+                {DATA_COLOURS.map(([name, cls]) => (
                   <div key={name} className="flex flex-col gap-1.5">
                     <div className={cx('h-12 rounded-lg ring-1 ring-inset ring-black/5', cls)} />
                     <span className="text-xs text-muted">{name}</span>
@@ -656,7 +693,7 @@ export function Gallery() {
                 {
                   heading: 'Pages',
                   items: [
-                    { id: 'g1', label: 'Discover', icon: LayoutGrid, shortcut: ['G', 'D'], onSelect: () => toast('Opened Discover') },
+                    { id: 'g1', label: 'Marketplace', icon: LayoutGrid, shortcut: ['G', 'M'], onSelect: () => toast('Opened the Marketplace') },
                     { id: 'g2', label: 'Notifications', icon: Inbox, onSelect: () => toast('Opened Notifications') },
                     { id: 'g3', label: 'Settings', icon: Settings, onSelect: () => toast('Opened Settings') },
                   ],
@@ -668,7 +705,7 @@ export function Gallery() {
           <Section id="feedback" title="Feedback">
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <EmptyState icon={Bookmark} title="Nothing shortlisted yet" text="Browse Discover and save materials to this project. They appear here for you to send to your client." action={<Button variant="primary" icon={LayoutGrid}>Browse Discover</Button>} />
+                <EmptyState icon={Bookmark} title="Nothing shortlisted yet" text="Browse the Marketplace and save materials to this project. They appear here for you to send to your client." action={<Button variant="primary" icon={LayoutGrid}>Browse the Marketplace</Button>} />
               </Card>
               <Card>
                 <EmptyState icon={Search} title="No materials match" text="Try fewer filters or a different word." action={<Button>Clear filters</Button>} />
@@ -715,15 +752,15 @@ export function Gallery() {
                   facts={[m.quantity, m.available, m.location]}
                   fit={m.fit}
                   band={m.band}
-                  action={<IconButton icon={Bookmark} label="Save" variant="secondary" size="sm" className="bg-white/90 backdrop-blur-sm" />}
+                  action={<IconButton icon={Bookmark} label="Save" variant="secondary" size="sm" />}
                 />
               ))}
             </div>
-            <Row label="Large" className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-              <MaterialImage spec={SAMPLE_MATERIALS[3].spec} publicId={SAMPLE_MATERIALS[3].publicId} aspect="16/10" rounded="xl" showKind />
+            <Row label="Large, as on the material page" className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+              <MaterialImage spec={SAMPLE_MATERIALS[3].spec} publicId={SAMPLE_MATERIALS[3].publicId} aspect="16/10" rounded="md" showKind view="detail" />
               <div className="grid gap-4">
-                <MaterialImage spec={SAMPLE_MATERIALS[1].spec} publicId={SAMPLE_MATERIALS[1].publicId} aspect="16/10" rounded="xl" showKind />
-                <MaterialImage spec={SAMPLE_MATERIALS[0].spec} publicId={SAMPLE_MATERIALS[0].publicId} aspect="16/10" rounded="xl" showKind />
+                <MaterialImage spec={SAMPLE_MATERIALS[1].spec} publicId={SAMPLE_MATERIALS[1].publicId} aspect="16/10" rounded="md" showKind view="detail" />
+                <MaterialImage spec={SAMPLE_MATERIALS[0].spec} publicId={SAMPLE_MATERIALS[0].publicId} aspect="16/10" rounded="md" showKind view="detail" />
               </div>
             </Row>
             <Row label="Dimensioned drawings">
@@ -764,6 +801,8 @@ export function Gallery() {
               />
             </Card>
           </Section>
+
+          <GalleryData />
 
           <Section id="brand" title="Brand">
             <Row label="Logo">

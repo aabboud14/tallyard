@@ -8,7 +8,7 @@ export type SortDirection = 'asc' | 'desc' | null
 
 export function Table({ density = 'default', className, children, caption, bare = false, ...rest }: ComponentProps<'table'> & { density?: 'default' | 'compact'; caption?: ReactNode; bare?: boolean }) {
   return (
-    <div className={cx('relative w-full min-w-0 overflow-x-auto', !bare && 'rounded-lg border border-line bg-surface shadow-sm', className)} data-density={density}>
+    <div className={cx('relative w-full min-w-0 overflow-x-auto', !bare && 'rounded-lg border border-line bg-surface', className)} data-density={density}>
       <table
         className={cx(
           'w-full border-separate border-spacing-0 text-left text-base tabular-nums',
