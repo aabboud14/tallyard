@@ -1,5 +1,9 @@
 // The client's workspace: home, approvals and reservations. Seller details appear only on an accepted reservation.
-import type { WishStatus } from '../../domain/v1types'
+import type { Band, WishStatus } from '../../domain/v1types'
+import type { CostLine, Project } from '../../domain/types'
+import { financeTotals, type FinanceLine, type FinanceTotals } from '../../domain/engines/finance'
+import { FINANCE_CAVEAT } from '../../domain/reference/sustainabilityCopy'
+import * as f from '../../domain/format'
 import type { AppData, ExchangedContacts, ReservationEstimate, ReservationStatus, Viewer } from '../types'
 import { isProjectClient, projectsOfUser, roleOfUser } from '../access'
 import { estimateForListing } from '../estimate'
@@ -7,6 +11,8 @@ import { listingOf, projectWishlist } from '../lots'
 import { activityFor, firstName, greeting, longDate, projectRef, RESERVATION_STATUS_LABELS, timeAgo, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
 import { shortlistRows, totalsOf, type ShortlistRow, type TotalsByState } from './shortlist'
 import { projectHeader, type ProjectHeader } from './project'
+import { projectMetrics } from './consultant'
+import { goalRows, type GoalRow } from './sustainability'
 
 export type ClientHome = {
   greeting: string
@@ -57,7 +63,25 @@ function titleOfReservation(state: AppData, lotId: string): string {
 
 // ---------- Approvals ----------
 
-export type ApprovalCard = ShortlistRow & { card: ListingCard }
+/** The indicative package for a material: what it costs if approved, against the same new. Clients only. */
+export type CostView = { total: number; costNew: number; saving: number; savingPercent: number; savingText: string; storageMonths: number; facilityName: string; testing: boolean; lines: CostLine[] }
+
+export function costView(e: ReservationEstimate): CostView {
+  return { total: e.total, costNew: e.costNew, saving: e.saving, savingPercent: e.savingPercent, savingText: f.saving(e.saving, e.savingPercent), storageMonths: e.storageMonths, facilityName: e.facilityName, testing: e.testing, lines: e.lines }
+}
+
+/** The request's estimate while a request is open or accepted, otherwise the live one at the guide price. */
+function estimateOf(state: AppData, row: ShortlistRow & { card: ListingCard }, p: Project, today: string): ReservationEstimate {
+  const res = row.reservation ? state.reservations[row.reservation.id] : null
+  const open = !!res && (res.status === 'pending' || res.status === 'accepted')
+  return open ? res!.estimate : estimateForListing(row.card.listing, p, today)
+}
+
+function line(key: string, stage: FinanceLine['stage'], e: ReservationEstimate, card: ListingCard): FinanceLine {
+  return { key, stage, total: e.total, costNew: e.costNew, avoidedT: card.avoidedT, massT: card.massT }
+}
+
+export type ApprovalCard = ShortlistRow & { card: ListingCard; cost: CostView }
 
 export type ApprovalsView = {
   header: ProjectHeader
@@ -66,6 +90,9 @@ export type ApprovalsView = {
   totals: TotalsByState
   architectName: string
   empty: boolean
+  /** Totals of the packages waiting for a decision and approved. Indicative. */
+  finance: { waiting: FinanceTotals; approved: FinanceTotals }
+  caveat: string
 }
 
 /** The client's approvals for a project: items sent to them, and their decisions. Rows no longer visible are left out. */
@@ -73,11 +100,24 @@ export function approvalsView(state: AppData, viewer: Viewer, projectId: string)
   if (!isProjectClient(state, viewer.userId, projectId)) return null
   const header = projectHeader(state, viewer, projectId)!
   const p = state.world.projects[projectId]
+  const today = todayOf(viewer)
   const list = projectWishlist(state.world, projectId)
-  const rows = (list ? shortlistRows(state, viewer, list, p) : []).filter((r): r is ApprovalCard => !!r.card && r.status !== 'pending')
+  const rows = (list ? shortlistRows(state, viewer, list, p) : [])
+    .filter((r): r is ShortlistRow & { card: ListingCard } => !!r.card && r.status !== 'pending')
+    .map((r): ApprovalCard => ({ ...r, cost: costView(estimateOf(state, r, p, today)) }))
   const by = (s: WishStatus) => rows.filter((r) => r.status === s)
   const history = [...by('approved'), ...by('declined')].sort((a, b) => ((a.decidedOn ?? '') < (b.decidedOn ?? '') ? 1 : -1))
-  return { header, waiting: by('sent'), history, totals: totalsOf(rows), architectName: header.architectName, empty: rows.length === 0 }
+  const lines = (s: WishStatus, stage: FinanceLine['stage']) => by(s).map((r) => ({ key: r.publicId, stage, total: r.cost.total, costNew: r.cost.costNew, avoidedT: r.card.avoidedT, massT: r.card.massT }))
+  return {
+    header,
+    waiting: by('sent'),
+    history,
+    totals: totalsOf(rows),
+    architectName: header.architectName,
+    empty: rows.length === 0,
+    finance: { waiting: financeTotals(lines('sent', 'waiting')), approved: financeTotals(lines('approved', 'to_request')) },
+    caveat: FINANCE_CAVEAT,
+  }
 }
 
 // ---------- Reservations ----------
@@ -104,11 +144,35 @@ export type ReservationRow = {
   } | null
   canRequest: boolean
   canWithdraw: boolean
+  /** Avoided carbon against buying new, from the public listing. Indicative. */
+  carbon: { avoidedT: number | null; percentText: string | null; band: Band }
 }
 
-export type ReservationsView = { header: ProjectHeader; rows: ReservationRow[]; empty: boolean }
+export type ReservationGroup = 'reserved' | 'requested' | 'to_request'
 
-export function reservationsView(state: AppData, viewer: Viewer, projectId: string): ReservationsView | null {
+export type ReservationsView = {
+  header: ProjectHeader
+  rows: ReservationRow[]
+  empty: boolean
+  /** Cost and carbon of the reserved, requested and still to request packages; secured carbon against the project's target. */
+  summary: {
+    cost: Record<ReservationGroup, FinanceTotals>
+    total: FinanceTotals
+    carbon: Record<ReservationGroup, FinanceTotals>
+    securedProjectT: number
+    carbonGoal: GoalRow | null
+  }
+  caveat: string
+}
+
+/** Which summary group a reservation row falls in, or null. */
+export function reservationGroup(row: ReservationRow): ReservationGroup | null {
+  if (row.reservation?.status === 'accepted') return 'reserved'
+  if (row.reservation?.status === 'pending') return 'requested'
+  return row.canRequest ? 'to_request' : null
+}
+
+function reservationRows(state: AppData, viewer: Viewer, projectId: string): { header: ProjectHeader; rows: ReservationRow[]; empty: boolean } | null {
   if (!isProjectClient(state, viewer.userId, projectId)) return null
   const header = projectHeader(state, viewer, projectId)!
   const p = state.world.projects[projectId]
@@ -142,8 +206,28 @@ export function reservationsView(state: AppData, viewer: Viewer, projectId: stri
           : null,
         canRequest: !open,
         canWithdraw: res?.status === 'pending',
+        carbon: { avoidedT: r.card.avoidedT, percentText: r.card.listing.carbon ? `${f.percent(r.card.listing.carbon.percent)} less than new` : null, band: r.card.band },
       }
     }),
     empty: rows.length === 0,
+  }
+}
+
+export function reservationsView(state: AppData, viewer: Viewer, projectId: string): ReservationsView | null {
+  const base = reservationRows(state, viewer, projectId)
+  if (!base) return null
+  const groups: ReservationGroup[] = ['reserved', 'requested', 'to_request']
+  const lines: (FinanceLine & { group: ReservationGroup })[] = []
+  for (const r of base.rows) {
+    const g = reservationGroup(r)
+    if (!g) continue
+    lines.push({ ...line(r.publicId, g === 'to_request' ? 'to_request' : g, r.estimate, r.card), group: g })
+  }
+  const byGroup = Object.fromEntries(groups.map((g) => [g, financeTotals(lines.filter((l) => l.group === g))])) as Record<ReservationGroup, FinanceTotals>
+  const m = projectMetrics(state, viewer, projectId)!
+  return {
+    ...base,
+    summary: { cost: byGroup, total: financeTotals(lines), carbon: byGroup, securedProjectT: m.avoidedSecuredT, carbonGoal: goalRows(state, viewer, projectId)?.find((g) => g.id === 'avoided_carbon') ?? null },
+    caveat: FINANCE_CAVEAT,
   }
 }

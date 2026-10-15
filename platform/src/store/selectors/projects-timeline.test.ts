@@ -221,9 +221,10 @@ describe('the client link', () => {
     const items = (s: AppData) => sel.navModel(s, viewer(U.isla))!.sections[1].items
     const req = items(state).find((i) => i.id === 'project-requests')!
     expect(req).toMatchObject({ label: 'Project requests', href: '/app/projects/requests', icon: 'Inbox', badge: 1 })
-    expect(items(state).map((i) => i.label)).toEqual(['Merrowgate Wharf', 'Project requests'])
+    // Round 2 (BRIEF 14.2): Kilnworth Place is seeded as Lantern Quay's second project.
+    expect(items(state).map((i) => i.label)).toEqual(['Merrowgate Wharf', 'Kilnworth Place', 'Project requests'])
     const answered = must(decideClientLink(state, actor(U.isla), id, 'accepted', '')).state
-    expect(items(answered).map((i) => i.label)).toEqual(['Merrowgate Wharf', 'Corbel Yard'])
+    expect(items(answered).map((i) => i.label)).toEqual(['Merrowgate Wharf', 'Kilnworth Place', 'Corbel Yard'])
     expect(sel.routeAccess(state, viewer(U.isla), '/app/projects/requests')).toBe('ok')
     expect(sel.routeAccess(state, viewer(U.isla), '/app/projects/requests/x')).toBe('not_found')
     expect(sel.routeAccess(state, viewer(U.priya), '/app/projects/requests')).toBe('forbidden')

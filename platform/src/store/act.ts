@@ -9,6 +9,7 @@ import * as owner from './actions/owner'
 import * as surveyor from './actions/surveyor'
 import * as team from './actions/team'
 import * as consultant from './actions/consultant'
+import * as sustainability from './actions/sustainability'
 
 function bind<V, A extends unknown[]>(fn: (s: AppData, actor: Actor, ...args: A) => ActionResult<V>): (...args: A) => Outcome<V> {
   return (...args: A) => useApp.getState().run(fn, ...args)
@@ -59,6 +60,22 @@ export const act = {
   loadWasteBill: bind(consultant.loadWasteBill),
   editWasteRow: bind(consultant.editWasteRow),
   clearWasteBill: bind(consultant.clearWasteBill),
+  // Sustainability: targets, results, requirements, certification and the circular economy statement
+  setGoalTarget: bind(sustainability.setGoalTarget),
+  resetGoalTarget: bind(sustainability.resetGoalTarget),
+  setGoalActual: bind(sustainability.setGoalActual),
+  clearGoalActual: bind(sustainability.clearGoalActual),
+  setRequirementStatus: bind(sustainability.setRequirementStatus),
+  addRequirementEvidence: bind(sustainability.addRequirementEvidence),
+  removeRequirementEvidence: bind(sustainability.removeRequirementEvidence),
+  setCreditTargeted: bind(sustainability.setCreditTargeted),
+  setCreditStatus: bind(sustainability.setCreditStatus),
+  setCreditNote: bind(sustainability.setCreditNote),
+  setCreditItem: bind(sustainability.setCreditItem),
+  editStatementSection: bind(sustainability.editStatementSection),
+  resetStatementSection: bind(sustainability.resetStatementSection),
+  sendStatementForReview: bind(sustainability.sendStatementForReview),
+  reviewStatement: bind(sustainability.reviewStatement),
   // Team, profile, organisation and notifications
   createInvite: bind(team.createInvite),
   revokeInvite: bind(team.revokeInvite),

@@ -17,6 +17,8 @@ import { listJoin, log, notify, plural } from '../store/notifications'
 import { mint } from '../store/ids'
 import { SAMPLE_ACCOUNTS, sampleUsers } from './accounts'
 import { shiftWorld } from './shift'
+import { addClientPortfolio } from './seed-portfolio'
+import { seedSustainability } from './seed-sustainability'
 
 /** The date the seed world is written for. */
 export const SEED_REFERENCE_DATE = DEMO_TODAY
@@ -47,6 +49,8 @@ export function referenceWorld(): World {
   let w = publishTh01(createSeed(), SEED_REFERENCE_DATE.slice(0, 7))
   // Priya accepted the confidentiality terms for Merrowgate Wharf when Ostlea Estates shared its lots.
   w = ops.setTermsAccepted(w, MERROWGATE_ID)
+  // Round 2: Lantern Quay's second project, Kilnworth Place, so the client's programme has more than one row.
+  w = addClientPortfolio(w)
   return w
 }
 
@@ -108,6 +112,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
       [HARROWDEN_ID]: { buildingId: HARROWDEN_ID, status: 'in_progress', appointedAt: at(14, 11), submittedAt: null, submittedByUserId: null },
     },
     specs: {},
+    sustainability: {},
     orgProfiles: Object.fromEntries(Object.keys(w.orgs).map((id) => [id, { address: '' }])),
     ui: { ...DEFAULT_UI, checkingProjectId: {} },
   }
@@ -211,6 +216,9 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   }
   s = notify(s, { orgIds: [ORG_IDS.lantern], kind: 'sent_to_client', title: '1 material to approve on Merrowgate Wharf', body: `Priya Nair: ${MERROWGATE_ITEMS[2].message}`, href: `${mgHref}/approvals`, at: at(1, 10), actorUserId: null })
   s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'reservation_requested', title: 'Reservation request for TH-02', body: `${title('L-WPX5A6')}. ${blind}.`, href: '/app/requests', at: hoursAgo(20), actorUserId: null })
+
+  // Sustainability records: Merrowgate Wharf's targets, credits, requirements and statement, with their history.
+  s = seedSustainability(s, todayIso, now)
 
   // Keep everything newest first.
   const byTime = <T extends { at: string }>(xs: T[]) => [...xs].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0))

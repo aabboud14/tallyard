@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
-import { Bell, Building2, Camera, CheckCheck, ClipboardCheck, EyeOff, FolderInput, Handshake, Inbox, PackagePlus, Share2, UserPlus } from 'lucide-react'
+import { Bell, Building2, Camera, CheckCheck, ClipboardCheck, EyeOff, FolderInput, Handshake, Inbox, Leaf, PackagePlus, Share2, UserPlus } from 'lucide-react'
 import type { NotificationKind } from '../../store'
 import type { ActivityRow } from '../../store/selectors/common'
 import { Avatar, cx, EmptyState, IndicativeMarker } from '../../ui'
@@ -100,6 +100,7 @@ const KIND_ICONS: Record<NotificationKind, LucideIcon> = {
   new_fit: PackagePlus,
   appointed: Building2,
   team: UserPlus,
+  sustainability: Leaf,
 }
 
 export function KindIcon({ kind, unread = false, className }: { kind: NotificationKind; unread?: boolean; className?: string }) {

@@ -1,15 +1,17 @@
 // The consultant's workspace: home, project compliance (reused content by value and avoided carbon), and waste.
-import type { FamilyId, WasteBill, WasteEngagement } from '../../domain/types'
+import type { EraBand, FamilyId, TestStatus, WasteBill, WasteEngagement } from '../../domain/types'
 import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
 import { BILL_LINE_NAMES } from '../../domain/seed/world'
 import { contentByValue, type ContentResult } from '../../domain/engines/content'
+import { reuseByValue } from '../../domain/engines/finance'
 import { wasteRates, reuseCarbonBenefit, unresolvedNotice, type WasteRates, type ReuseCarbonRow } from '../../domain/engines/waste'
 import { confidenceCounts, sumOfRows } from '../../domain/engines/billImport'
 import { DESTINATIONS, STREAMS } from '../../domain/reference/wasteCodes'
 import { LABELS } from '../../domain/reference/labels'
 import type { AppData, Viewer } from '../types'
 import { canOpenEngagement, isProjectConsultant, projectSide, projectsOfUser, roleOfUser } from '../access'
-import { listingOf, projectWishlist } from '../lots'
+import { listingOf, lotByPublicId, projectWishlist } from '../lots'
+import { effectiveTargets } from '../sustainabilityRecord'
 import { quantityText } from '../../domain/engines/specSheet'
 import { activityFor, firstName, greeting, longDate, projectRef, todayOf, type ActivityRow, type ProjectRef } from './common'
 import { projectHeader, type ProjectHeader } from './project'
@@ -34,11 +36,83 @@ export type ComplianceView = {
   fileName: string
 }
 
-function slug(s: string): string {
+export function slug(s: string): string {
   return s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+export type ProjectMetricsItem = ReusedItem & { family: FamilyId; eraBand: EraBand | null; testStatus: TestStatus | null }
+
+/** A project's reuse figures for any side of it: content and reuse by value, avoided carbon and the reclaimed items. Indicative, from public listings. */
+export type ProjectMetrics = {
+  hasBill: boolean
+  /** Content by value with what is confirmed or reserved. */
+  secured: ContentResult
+  /** And with the approved materials not yet reserved. */
+  withApproved: ContentResult
+  aim: number
+  reuseSecured: number
+  reuseWithApproved: number
+  avoidedSecuredT: number
+  /** Approved and not reserved only. */
+  avoidedApprovedT: number
+  reclaimedSecuredT: number
+  items: ProjectMetricsItem[]
+}
+
+export function projectMetrics(state: AppData, viewer: Viewer, projectId: string): ProjectMetrics | null {
+  if (!projectSide(state, viewer.userId, projectId)) return null
+  const p = state.world.projects[projectId]
+  const secured: Partial<Record<FamilyId, number>> = {}
+  const add = (into: Partial<Record<FamilyId, number>>, family: FamilyId, q: number) => {
+    into[family] = (into[family] ?? 0) + q
+  }
+  const items: ProjectMetricsItem[] = []
+  let avoidedSecuredT = 0
+  let reclaimedSecuredT = 0
+  for (const d of p.seededDeals) {
+    add(secured, d.family, d.quantityUnits)
+    const lot = lotByPublicId(state.world, d.publicId)
+    const l = lot ? listingOf(state.world, lot) : null
+    items.push({ publicId: d.publicId, description: d.description, quantityLabel: d.quantityLabel, massT: d.massT, status: 'Confirmed', date: d.confirmedOn, avoidedT: d.avoidedT, source: 'earlier deal', family: d.family, eraBand: l?.eraBand ?? null, testStatus: l?.testStatus ?? null })
+    avoidedSecuredT += d.avoidedT
+    reclaimedSecuredT += d.massT
+  }
+  for (const r of Object.values(state.reservations)) {
+    if (r.projectId !== projectId || r.status !== 'accepted') continue
+    const l = listingOf(state.world, state.world.lots[r.lotId])
+    add(secured, l.family, l.quantity.value)
+    items.push({ publicId: l.publicId, description: l.title, quantityLabel: quantityText(l), massT: l.massT, status: 'Reserved', date: r.decidedAt?.slice(0, 10) ?? null, avoidedT: l.carbon?.avoidedT ?? 0, source: 'reservation', family: l.family, eraBand: l.eraBand, testStatus: l.testStatus })
+    avoidedSecuredT += l.carbon?.avoidedT ?? 0
+    reclaimedSecuredT += l.massT
+  }
+  const withApproved: Partial<Record<FamilyId, number>> = { ...secured }
+  const list = projectWishlist(state.world, projectId)
+  const reservedIds = new Set(items.map((i) => i.publicId))
+  let avoidedApprovedT = 0
+  for (const row of list ? shortlistRows(state, viewer, list, p) : []) {
+    if (row.status !== 'approved' || !row.card || reservedIds.has(row.publicId)) continue
+    const l = row.card.listing
+    add(withApproved, row.card.family, l.quantity.value)
+    items.push({ publicId: row.publicId, description: row.title, quantityLabel: row.card.quantityText, massT: row.card.massT, status: 'Approved', date: row.decidedOn, avoidedT: row.card.avoidedT ?? 0, source: 'approval', family: l.family, eraBand: l.eraBand, testStatus: l.testStatus })
+    avoidedApprovedT += row.card.avoidedT ?? 0
+  }
+  const securedResult = contentByValue(p.billOfMaterials, secured)
+  const approvedResult = contentByValue(p.billOfMaterials, withApproved)
+  return {
+    hasBill: p.billOfMaterials.length > 0,
+    secured: securedResult,
+    withApproved: approvedResult,
+    aim: A.contentAim,
+    reuseSecured: reuseByValue(securedResult),
+    reuseWithApproved: reuseByValue(approvedResult),
+    avoidedSecuredT,
+    avoidedApprovedT,
+    reclaimedSecuredT,
+    items,
+  }
 }
 
 /** The project's compliance figures for its consultant; null for anyone else. Indicative, from public listings. */
@@ -46,45 +120,17 @@ export function complianceView(state: AppData, viewer: Viewer, projectId: string
   if (!isProjectConsultant(state, viewer.userId, projectId)) return null
   const header = projectHeader(state, viewer, projectId)!
   const p = state.world.projects[projectId]
-  const secured: Partial<Record<FamilyId, number>> = {}
-  const add = (into: Partial<Record<FamilyId, number>>, family: FamilyId, q: number) => {
-    into[family] = (into[family] ?? 0) + q
-  }
-  const items: ReusedItem[] = []
-  let avoidedT = 0
-  let reclaimedMassT = 0
-  for (const d of p.seededDeals) {
-    add(secured, d.family, d.quantityUnits)
-    items.push({ publicId: d.publicId, description: d.description, quantityLabel: d.quantityLabel, massT: d.massT, status: 'Confirmed', date: d.confirmedOn, avoidedT: d.avoidedT, source: 'earlier deal' })
-    avoidedT += d.avoidedT
-    reclaimedMassT += d.massT
-  }
-  for (const r of Object.values(state.reservations)) {
-    if (r.projectId !== projectId || r.status !== 'accepted') continue
-    const l = listingOf(state.world, state.world.lots[r.lotId])
-    add(secured, l.family, l.quantity.value)
-    items.push({ publicId: l.publicId, description: l.title, quantityLabel: quantityText(l), massT: l.massT, status: 'Reserved', date: r.decidedAt?.slice(0, 10) ?? null, avoidedT: l.carbon?.avoidedT ?? 0, source: 'reservation' })
-    avoidedT += l.carbon?.avoidedT ?? 0
-    reclaimedMassT += l.massT
-  }
-  const withApproved: Partial<Record<FamilyId, number>> = { ...secured }
-  const list = projectWishlist(state.world, projectId)
-  const reservedIds = new Set(items.map((i) => i.publicId))
-  for (const row of list ? shortlistRows(state, viewer, list, p) : []) {
-    if (row.status !== 'approved' || !row.card || reservedIds.has(row.publicId)) continue
-    add(withApproved, row.card.family, row.card.listing.quantity.value)
-    items.push({ publicId: row.publicId, description: row.title, quantityLabel: row.card.quantityText, massT: row.card.massT, status: 'Approved', date: row.decidedOn, avoidedT: row.card.avoidedT ?? 0, source: 'approval' })
-  }
+  const m = projectMetrics(state, viewer, projectId)!
   return {
     header,
-    hasBill: p.billOfMaterials.length > 0,
-    secured: contentByValue(p.billOfMaterials, secured),
-    withApproved: contentByValue(p.billOfMaterials, withApproved),
-    aim: A.contentAim,
-    targets: p.targets,
-    avoidedT,
-    reclaimedMassT,
-    reusedItems: items,
+    hasBill: m.hasBill,
+    secured: m.secured,
+    withApproved: m.withApproved,
+    aim: m.aim,
+    targets: effectiveTargets(state, projectId),
+    avoidedT: m.avoidedSecuredT,
+    reclaimedMassT: m.reclaimedSecuredT,
+    reusedItems: m.items.map(({ family: _f, eraBand: _e, testStatus: _t, ...item }) => item),
     billLines: p.billOfMaterials.map((b) => ({ id: b.id, name: BILL_LINE_NAMES[b.id] ?? b.element, element: b.element, layer: b.layer, massT: b.massT, valueGbp: b.valueGbp, recycledShare: b.recycledShare })),
     caveats: [LABELS.L11, LABELS.L15, LABELS.L16, LABELS.L20],
     fileName: `${slug(p.name)}-compliance-${todayOf(viewer)}.xlsx`,

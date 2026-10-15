@@ -1,6 +1,6 @@
 // An icon for each kind of notification, shared by the bell and the inbox.
 import type { LucideIcon } from 'lucide-react'
-import { CalendarPlus, Camera, ClipboardCheck, Handshake, Inbox, PackagePlus, Send, Share2, SquareCheckBig, Users } from 'lucide-react'
+import { CalendarPlus, Camera, ClipboardCheck, Handshake, Inbox, Leaf, PackagePlus, Send, Share2, SquareCheckBig, Users } from 'lucide-react'
 import type { NotificationKind } from '../store/types'
 
 export const NOTIFICATION_ICONS: Record<NotificationKind, LucideIcon> = {
@@ -14,4 +14,5 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, LucideIcon> = {
   new_fit: PackagePlus,
   appointed: CalendarPlus,
   team: Users,
+  sustainability: Leaf,
 }

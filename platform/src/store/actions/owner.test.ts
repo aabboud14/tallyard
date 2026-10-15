@@ -28,11 +28,13 @@ describe('visibility', () => {
     const after = r.state.world.lots[lot.id]
     expect(after.visibility).toBe('open')
     expect(after.listedMonth).toBe('2026-10')
-    const n = r.state.notifications.find((x) => x.kind === 'new_fit')!
-    expect(n.orgId).toBe(ORG_IDS.oriel)
+    // Round 2 (BRIEF 14.2): Kilnworth Place by Tessaly Architects is seeded and the lot fits it too, so both practices hear of it.
+    const fits = r.state.notifications.filter((x) => x.kind === 'new_fit' && x.at === r.state.notifications[0].at)
+    expect(fits.map((x) => x.orgId).sort()).toEqual([ORG_IDS.oriel, 'org_tessaly'].sort())
+    const n = fits.find((x) => x.orgId === ORG_IDS.oriel)!
     expect(n.href).toBe(`/app/discover/${lot.publicId}`)
     const item = itemByTag(r.state.world, 'TH-07')
-    for (const s of lotPrivateStrings(after, item, r.state.world.buildings[TIVERNE_ID], r.state.world)) expect(`${n.title} ${n.body}`).not.toContain(s)
+    for (const x of fits) for (const s of lotPrivateStrings(after, item, r.state.world.buildings[TIVERNE_ID], r.state.world)) expect(`${x.title} ${x.body}`).not.toContain(s)
     expect(r.state.activity[0].text).toBe('published TH-07 to the marketplace')
     expect(r.state.activity[0].orgIds).toEqual([ORG_IDS.ostlea])
   })

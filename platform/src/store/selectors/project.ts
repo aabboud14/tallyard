@@ -19,6 +19,7 @@ import { BOARD_COLUMNS, shortlistRows, totalsOf, type ShortlistRow, type TotalsB
 import { plannedStageText, programmeView, type ProgrammeView } from './programme'
 import { projectRequirementsView, type ProjectRequirementsView } from './requirements'
 import { projectWishlist } from '../lots'
+import { sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
 import { plural } from '../notifications'
 
 export type ProjectTab = { id: string; label: string; href: string; badge: number | null; soon: boolean }
@@ -35,12 +36,43 @@ function waitingApprovals(state: AppData, p: Project): number {
 export function projectTabs(state: AppData, side: ProjectSide, p: Project): ProjectTab[] {
   const base = `/app/projects/${p.id}`
   const tab = (id: string, label: string, path: string, badge: number | null = null, soon = false): ProjectTab => ({ id, label, href: `${base}${path}`, badge, soon })
-  if (side === 'architect') return [tab('overview', 'Overview', ''), tab('shortlist', 'Shortlist', '/shortlist'), tab('specification', 'Specification', '/specification'), tab('carbon', 'Carbon', '/carbon'), tab('team', 'Team', '/team'), tab('activity', 'Activity', '/activity'), tab('matching', 'Matching', '/matching', null, true)]
+  const badges = sustainabilityBadges(state, p)
+  const atRisk = badges.requirementsAtRisk > 0 ? badges.requirementsAtRisk : null
+  if (side === 'architect')
+    return [
+      tab('overview', 'Overview', ''),
+      tab('shortlist', 'Shortlist', '/shortlist'),
+      tab('specification', 'Specification', '/specification'),
+      tab('sustainability', 'Sustainability', '/sustainability'),
+      tab('requirements', 'Requirements', '/requirements'),
+      tab('team', 'Team', '/team'),
+      tab('activity', 'Activity', '/activity'),
+      tab('matching', 'Matching', '/matching', null, true),
+    ]
   if (side === 'client') {
     const waiting = waitingApprovals(state, p)
-    return [tab('overview', 'Overview', ''), tab('approvals', 'Approvals', '/approvals', waiting > 0 ? waiting : null), tab('reservations', 'Reservations', '/reservations'), tab('specification', 'Specification', '/specification'), tab('carbon', 'Carbon', '/carbon'), tab('team', 'Team', '/team'), tab('activity', 'Activity', '/activity')]
+    return [
+      tab('overview', 'Overview', ''),
+      tab('approvals', 'Approvals', '/approvals', waiting > 0 ? waiting : null),
+      tab('reservations', 'Reservations', '/reservations'),
+      tab('specification', 'Specification', '/specification'),
+      tab('sustainability', 'Sustainability', '/sustainability', badges.statementForReview ? 1 : null),
+      tab('requirements', 'Requirements', '/requirements', atRisk),
+      tab('team', 'Team', '/team'),
+      tab('activity', 'Activity', '/activity'),
+    ]
   }
-  return [tab('overview', 'Overview', ''), tab('carbon', 'Carbon', '/carbon'), tab('compliance', 'Compliance', '/compliance'), tab('team', 'Team', '/team'), tab('activity', 'Activity', '/activity')]
+  return [
+    tab('overview', 'Overview', ''),
+    tab('sustainability', 'Sustainability', '/sustainability'),
+    tab('targets', 'Goals and targets', '/targets'),
+    tab('certification', 'Certification', '/certification'),
+    tab('requirements', 'Requirements', '/requirements', atRisk),
+    tab('statement', 'Circular economy', '/statement'),
+    tab('compliance', 'Compliance', '/compliance'),
+    tab('team', 'Team', '/team'),
+    tab('activity', 'Activity', '/activity'),
+  ]
 }
 
 export type TeamAvatar = { userId: string; name: string; initials: string; colour: string; orgName: string }
@@ -272,7 +304,8 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     const unreserved = rows.filter((r) => r.status === 'approved' && r.card && (!r.reservation || r.reservation.status === 'declined' || r.reservation.status === 'withdrawn')).length
     if (unreserved > 0) steps.push({ id: 'reserve', text: `Request a reservation for ${plural(unreserved, 'approved material')}`, href: `${base}/reservations` })
   } else {
-    steps.push({ id: 'carbon', text: 'Review avoided carbon by status', href: `${base}/carbon` })
+    steps.push({ id: 'targets', text: 'Review targets for this project', href: `${base}/targets` })
+    if ((sustainabilityOf(state, projectId).statement?.status ?? 'draft') === 'draft') steps.push({ id: 'statement', text: 'Send the circular economy statement for review', href: `${base}/statement` })
     steps.push({ id: 'compliance', text: 'Export the compliance workbook', href: `${base}/compliance` })
   }
   return {

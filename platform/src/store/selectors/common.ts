@@ -237,10 +237,12 @@ export function activityRow(e: ActivityEntry, now: string): ActivityRow {
 
 /** The project tabs each side may open (the same tabs the project header shows). */
 const PROJECT_TABS_OF: Record<ProjectSide, string[]> = {
-  architect: ['shortlist', 'specification', 'carbon', 'team', 'activity', 'matching'],
-  client: ['approvals', 'reservations', 'specification', 'carbon', 'team', 'activity'],
-  consultant: ['carbon', 'compliance', 'team', 'activity'],
+  architect: ['shortlist', 'specification', 'sustainability', 'requirements', 'team', 'activity', 'matching'],
+  client: ['approvals', 'reservations', 'specification', 'sustainability', 'requirements', 'team', 'activity'],
+  consultant: ['sustainability', 'targets', 'certification', 'requirements', 'statement', 'compliance', 'team', 'activity'],
 }
+/** The consultant's own sustainability pages: other sides read the same records on the Sustainability tab. */
+const CONSULTANT_SUSTAINABILITY_TABS = ['targets', 'certification', 'compliance', 'statement']
 const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
   owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing'],
   surveyor: ['inventory', 'capture'],
@@ -254,13 +256,17 @@ const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
  */
 export function hrefForReader(state: AppData, userId: string, href: string | null): string | null {
   if (!href) return null
-  const [, section, id, tab, ...rest] = href.split('?')[0].split('/').filter(Boolean)
+  const [, section, id, rawTab, ...rest] = href.split('?')[0].split('#')[0].split('/').filter(Boolean)
+  // The Carbon tab became Sustainability (round 2); older lines still say carbon.
+  const tab = rawTab === 'carbon' ? 'sustainability' : rawTab
   if (section === 'projects' && id === 'requests') return roleOfUser(state, userId) === 'client' ? href : null
   if (section === 'projects' && id) {
     const side = projectSide(state, userId, id)
     if (!side) return null
     const base = `/app/projects/${id}`
-    if (tab === undefined || (rest.length === 0 && PROJECT_TABS_OF[side].includes(tab))) return href
+    if (tab === undefined) return href
+    if (rest.length === 0 && PROJECT_TABS_OF[side].includes(tab)) return rawTab === tab ? href : `${base}/${tab}${href.includes('?') ? href.slice(href.indexOf('?')) : ''}`
+    if (rest.length === 0 && CONSULTANT_SUSTAINABILITY_TABS.includes(tab)) return tab === 'statement' && side === 'client' ? `${base}/sustainability#statement` : `${base}/sustainability`
     if (side === 'architect' && (tab === 'approvals' || tab === 'reservations')) return `${base}/shortlist`
     if (side === 'client' && tab === 'shortlist') return `${base}/approvals`
     return base

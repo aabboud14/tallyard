@@ -191,7 +191,8 @@ describe('client workspace', () => {
   it('home, approvals and reservations', () => {
     const s = fresh()
     const h = sel.clientHome(s, viewer(U.isla))!
-    expect(h.stats).toEqual({ projects: 1, approvalsWaiting: 1, reservationsPending: 1, reserved: 0 })
+    // Round 2 (BRIEF 14.2): Kilnworth Place is Lantern Quay's second project.
+    expect(h.stats).toEqual({ projects: 2, approvalsWaiting: 1, reservationsPending: 1, reserved: 0 })
     const a = sel.approvalsView(s, viewer(U.isla), MERROWGATE_ID)!
     expect(a.waiting.map((r) => r.title)).toEqual(['UC 305x305x97, 4.2 m'])
     expect(a.waiting[0].sentMessage).toBe('Columns for the podium. Tested, in stock and available now.')
@@ -269,6 +270,8 @@ describe('owner workspace', () => {
       ['Design team, commercial project, Inner London East, needed by Q2 2028', true],
       ['Design team, hotel project, Central London, needed by Q1 2028', false],
       ['Design team, residential project, Inner London East, needed by Q2 2027', false],
+      // Round 2 (BRIEF 14.2): Kilnworth Place, seeded for Lantern Quay, is one more project to share with.
+      ['Developer, residential project, Inner London East, needed by Q1 2027', false],
     ])
     expect(v.sharedLotCount).toBe(5)
   })
@@ -342,14 +345,16 @@ describe('inbox, navigation, routes and search', () => {
     const s = fresh()
     const titles = (id: string) => sel.navModel(s, viewer(id))!.sections.map((x) => [x.title, x.items.map((i) => i.label)])
     expect(titles(U.priya)).toEqual([[null, ['Home', 'Discover', 'Saved']], ['Projects', ['Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'New project']]])
-    expect(titles(U.isla)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf']]])
+    // Round 2 (BRIEF 14.2): Kilnworth Place appears in Isla's projects.
+    expect(titles(U.isla)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf', 'Kilnworth Place']]])
     expect(titles(U.tom)).toEqual([[null, ['Home']], ['Buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
     expect(titles(U.dana)).toEqual([[null, ['Home']], ['Clients', ['Ostlea Estates', 'Brackwater Estates']]])
     expect(titles(U.marcus)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard']], ['Engagements', ['Durnley House']]])
     const isla = sel.navModel(s, viewer(U.isla))!
     const mg = isla.sections[1].items[0]
     expect(mg.badge).toBe(1)
-    expect(mg.children.map((c) => [c.label, c.badge])).toEqual([['Overview', null], ['Approvals', 1], ['Reservations', null], ['Specification', null], ['Carbon', null]])
+    // Round 2 (client-consultant design 11): Carbon becomes Sustainability, with the statement waiting for review, and Requirements with one at risk.
+    expect(mg.children.map((c) => [c.label, c.badge])).toEqual([['Overview', null], ['Approvals', 1], ['Reservations', null], ['Specification', null], ['Sustainability', 1], ['Requirements', 1]])
     expect(sel.navModel(s, viewer(U.tom))!.sections[2].items[0].badge).toBe(1)
     const priya = sel.navModel(s, viewer(U.priya))!
     expect(priya.sections[1].items[0].children.find((c) => c.label === 'Matching')!.soon).toBe(true)

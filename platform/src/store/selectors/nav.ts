@@ -129,7 +129,8 @@ const ID = /^[A-Za-z0-9_-]+$/
 export function routeAccess(state: AppData, viewer: Viewer, pathname: string): RouteAccess {
   const role = roleOfUser(state, viewer.userId)
   if (!role) return 'forbidden'
-  const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+  // A link may carry a section of the page (#statement); the page is the same.
+  const parts = pathname.split('#')[0].replace(/\/+$/, '').split('/').filter(Boolean)
   if (parts[0] !== 'app') return 'not_found'
   const [, section, id, tab, sub, ...rest] = parts
   const roles = (...rs: PlatformRole[]): RouteAccess => (rs.includes(role) ? 'ok' : 'forbidden')
@@ -153,8 +154,9 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     if (tab === undefined) return 'ok'
     if (sub !== undefined) return 'not_found'
     const allowed = projectTabs(state, side, state.world.projects[id]).map((t) => t.id)
-    if (!['shortlist', 'specification', 'approvals', 'reservations', 'carbon', 'compliance', 'team', 'activity', 'matching'].includes(tab)) return 'not_found'
-    return allowed.includes(tab) ? 'ok' : 'forbidden'
+    if (!['shortlist', 'specification', 'approvals', 'reservations', 'carbon', 'sustainability', 'targets', 'certification', 'requirements', 'statement', 'compliance', 'team', 'activity', 'matching'].includes(tab)) return 'not_found'
+    // /carbon redirects to /sustainability, so it opens wherever Sustainability does.
+    return allowed.includes(tab === 'carbon' ? 'sustainability' : tab) ? 'ok' : 'forbidden'
   }
   if (section === 'buildings') {
     if (id === undefined) return roles('owner', 'surveyor')

@@ -2,6 +2,7 @@
 // working records of each role. Everything here is plain data so it persists as JSON.
 import type { CostLine, World } from '../domain/types'
 import type { Fit } from '../domain/v1types'
+import type { ProjectSustainability } from '../domain/sustainabilityTypes'
 
 /** The workspace an organisation's type gives its people (BRIEF section 1, principle 2). */
 export type PlatformRole = 'architect' | 'client' | 'owner' | 'surveyor' | 'consultant'
@@ -20,6 +21,7 @@ export const NOTIFICATION_KINDS = [
   'new_fit',
   'appointed',
   'team',
+  'sustainability',
 ] as const
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
 
@@ -145,6 +147,11 @@ export type SpecDoc = { header: string; clauseNotes: Record<string, string>; upd
 
 export type OrgProfile = { address: string }
 
+// Sustainability records (client-consultant design, section 1). The types live in the domain so its engines can use
+// them without reaching into the store.
+export type { TrackStatus, OutputRef, Evidence, RequirementTrack, GoalId, GoalValue, GoalOverride, GoalActual, CreditTrack, StatementSectionId, StatementEdit, StatementStatus, StatementDoc, ProjectSustainability } from '../domain/sustainabilityTypes'
+export { TRACK_STATUSES, OUTPUT_REFS } from '../domain/sustainabilityTypes'
+
 export type UiState = {
   sidebarCollapsed: boolean
   /** The project Discover checks fit against, per person. */
@@ -169,6 +176,8 @@ export type AppData = {
   reservations: Record<string, Reservation>
   surveys: Record<string, SurveyRecord>
   specs: Record<string, SpecDoc>
+  /** Per project: targets, results, requirement tracking, certification credits and the circular economy statement. */
+  sustainability: Record<string, ProjectSustainability>
   orgProfiles: Record<string, OrgProfile>
   ui: UiState
 }

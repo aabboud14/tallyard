@@ -21,6 +21,7 @@ export function useData(): AppData {
       reservations: s.reservations,
       surveys: s.surveys,
       specs: s.specs,
+      sustainability: s.sustainability,
       orgProfiles: s.orgProfiles,
       ui: s.ui,
     })),
