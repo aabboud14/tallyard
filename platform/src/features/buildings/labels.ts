@@ -5,6 +5,9 @@ import type { Visibility } from '../../domain/types'
 import type { SurveyStatus } from '../../store'
 import type { Segment, Tone } from '../../ui'
 
+/** Where a building the surveying firm added stands with its owner: neutral, waiting (warning) or declined (danger). */
+export const CLAIM_TONE: Record<'linked' | 'not_linked' | 'pending' | 'declined', Tone> = { linked: 'brand', not_linked: 'neutral', pending: 'warning', declined: 'danger' }
+
 export const SURVEY_TONE: Record<SurveyStatus, Tone> = { not_started: 'neutral', in_progress: 'warning', submitted: 'brand' }
 
 export const VISIBILITY_SHORT: Record<Visibility, string> = { private: 'Private', matched_only: 'Shared', open: 'Published' }

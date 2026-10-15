@@ -1,13 +1,15 @@
-// The building's inventory: every captured item with its photo, grades, expected availability and (for the owner)
-// visibility. A row opens a side panel to change availability and visibility, or to correct the record.
+// The building's inventory: every captured item with its photo, grades, expected availability, the deconstruction
+// contractor's month when one is appointed and (for the owner) visibility. The owner can apply the contractor's
+// months to private lots in one step. A row opens a side panel to change availability and visibility, or to correct
+// the record.
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { Camera, ExternalLink, PackageOpen, Search, X } from 'lucide-react'
-import { selectors, useView } from '../../store'
+import { CalendarCheck, Camera, ExternalLink, PackageOpen, Search, X } from 'lucide-react'
+import { act, selectors, useView } from '../../store'
 import { filterInventory, inventoryVisuals, type InventoryFilter, type ItemVisual } from '../../store/selectors/roles-views'
 import type { InventoryRow } from '../../store/selectors/owner'
 import * as f from '../../domain/format'
-import { Badge, Button, cx, EmptyState, IconButton, Input, Pill, SegmentedControl, Sheet, Table, TBody, TD, TH, THead, TR, Tooltip } from '../../ui'
+import { Badge, Button, cx, EmptyState, IconButton, Input, Pill, SegmentedControl, Sheet, Table, TBody, TD, TH, THead, TR, toast, Tooltip } from '../../ui'
 import { MaterialPicture, PhotoTile } from './photos'
 import { ItemPanel } from './ItemPanel'
 import { SurveyBar } from './SurveyBar'
@@ -22,6 +24,7 @@ export function Inventory() {
   const shown = useMemo(() => (v ? filterInventory(v.rows, filter) : null), [v, filter])
   if (!v || !shown || !pics) return null
   const owner = v.header.side === 'owner'
+  const contractor = v.contractorName !== ''
   const openId = params.get('item')
   const open = openId ? v.rows.find((r) => r.itemId === openId) : undefined
   const select = (id: string | null) => {
@@ -70,7 +73,10 @@ export function Inventory() {
           trailing={filter.q ? <IconButton icon={X} label="Clear search" size="sm" tooltip={false} onClick={() => setFilter((x) => ({ ...x, q: '' }))} /> : undefined}
           data-testid="inventory-search"
         />
-        {owner ? <SegmentedControl label="Visibility" value={filter.visibility} onValueChange={(x) => setFilter((f0) => ({ ...f0, visibility: x as InventoryFilter['visibility'] }))} items={tabs} className="max-w-full overflow-x-auto" /> : <p className="m-0 text-sm text-muted">{v.rows.length} items, private to the owner</p>}
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+          {v.canApplyContractorDates ? <ApplyContractorDates buildingId={buildingId} count={v.applyCount} name={v.contractorName} /> : null}
+          {owner ? <SegmentedControl label="Visibility" value={filter.visibility} onValueChange={(x) => setFilter((f0) => ({ ...f0, visibility: x as InventoryFilter['visibility'] }))} items={tabs} className="max-w-full overflow-x-auto" /> : <p className="m-0 text-sm text-muted">{v.rows.length} items, private to the owner</p>}
+        </div>
       </div>
 
       {shown.rows.length === 0 ? (
@@ -88,6 +94,7 @@ export function Inventory() {
                 <TH align="center">Condition</TH>
                 <TH align="center">Recovery</TH>
                 <TH>Expected</TH>
+                {contractor ? <TH>Contractor</TH> : null}
                 {owner ? <TH>Visibility</TH> : null}
               </tr>
             </THead>
@@ -121,6 +128,12 @@ export function Inventory() {
                   <TD muted className="whitespace-nowrap">
                     {r.expectedText}
                   </TD>
+                  {contractor ? (
+                    <TD className="whitespace-nowrap">
+                      <span className={r.contractorDiffers ? 'font-medium text-ink' : 'text-muted'}>{r.contractorText}</span>
+                      {r.contractorDiffers && r.availableFrom ? <span className="block text-xs text-warning">Lot reads {f.date(r.availableFrom)}</span> : null}
+                    </TD>
+                  ) : null}
                   {owner ? (
                     <TD>
                       <span className="flex items-center gap-1.5">
@@ -145,7 +158,7 @@ export function Inventory() {
                     <span className="text-xs font-medium tabular-nums text-muted">{r.tag}</span>
                     <span className="truncate font-medium text-ink">{r.title}</span>
                     <span className="truncate text-sm text-muted">
-                      {r.quantityText} · {r.condition}/{r.recoverability} · {r.expectedText}
+                      {r.quantityText}, {r.condition} and {r.recoverability}, {r.expectedText}
                     </span>
                   </span>
                   {owner ? (
@@ -181,6 +194,23 @@ export function Inventory() {
         ) : null}
       </Sheet>
     </div>
+  )
+}
+
+function ApplyContractorDates({ buildingId, count, name }: { buildingId: string; count: number; name: string }) {
+  const apply = () => {
+    const r = act.applyContractorDates(buildingId)
+    if (!r.ok || !r.value) return toast.error(r.error ?? 'Could not apply the dates.')
+    const { applied, skipped } = r.value
+    toast.success(`${applied} ${applied === 1 ? 'date' : 'dates'} applied`, {
+      description: skipped > 0 ? `${skipped} ${skipped === 1 ? 'lot is' : 'lots are'} shared or published. Make them private to change their dates.` : `From ${name}. Buyers see them only when you share or publish.`,
+      action: { label: 'Undo', onClick: r.undo },
+    })
+  }
+  return (
+    <Button icon={CalendarCheck} onClick={apply} className="shrink-0" title={`Set each private lot's date to ${name}'s month`} data-testid="apply-contractor-dates">
+      Use contractor dates ({count})
+    </Button>
   )
 }
 

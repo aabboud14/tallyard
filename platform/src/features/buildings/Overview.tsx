@@ -1,26 +1,35 @@
-// The building's overview: programme, survey, what it holds by typology, the facts and recent activity.
-// The owner can appoint or change the surveyor here.
+// The building's overview: programme, structure, what it holds by typology and recent activity in the main column;
+// the owner link (for a building the surveying firm added), the survey, the deconstruction contractor, testing,
+// visibility and the facts beside it. The owner appoints the surveyor here; the owner or the surveyor invites the
+// contractor; a contractor alone sees the programme and its Availability tab.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowRight, Camera, CalendarRange, ClipboardCheck, Layers, Share2 } from 'lucide-react'
+import { ArrowRight, Activity as ActivityIcon, CalendarClock, Camera, CalendarRange, ClipboardCheck, FlaskConical, Layers, Share2 } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
+import { holdsChart } from '../../store/selectors/buildings-ui'
 import { formatDate } from '../../domain/dates'
-import * as f from '../../domain/format'
-import { Button, Card, CardBody, CardHeader, DescriptionList, Pill, SegmentedBar, Select, toast } from '../../ui'
+import { BarList, Button, Card, CardBody, CardHeader, CollapsiblePanel, DescriptionList, EmptyState, Pill, SegmentedBar, Select, toast, TYPOLOGY_VIZ } from '../../ui'
 import { ActivityFeed } from '../notifications/kit'
 import { SURVEY_TONE, visibilitySegments } from './labels'
+import { StructureCard } from './StructureCard'
+import { ContractorCard } from './ContractorCard'
+import { OwnerLinkCard } from './ClaimDialog'
 
 export function Overview() {
   const { buildingId = '' } = useParams()
   const v = useView(selectors.buildingOverview, buildingId)
-  if (!v) return null
-  const owner = v.header.side === 'owner'
+  const holds = useView(holdsChart, buildingId)
+  if (!v || !holds) return null
+  const side = v.header.side
+  const owner = side === 'owner'
+  const records = side === 'owner' || side === 'surveyor'
   const base = `/app/buildings/${buildingId}`
+  const claim = v.header.claim
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]" data-testid="building-overview">
       <div className="flex min-w-0 flex-col gap-6">
         <Card>
-          <CardHeader title="Programme" icon={CalendarRange} description="The dates materials can come out. Private to you and your surveyor." />
+          <CardHeader title="Programme" icon={CalendarRange} description={side === 'contractor' ? "The owner's dates for the strip-out and dismantling." : 'The dates materials can come out. Private to you and the firms on this building.'} />
           <CardBody>
             <ol className="m-0 grid list-none gap-4 p-0 sm:grid-cols-3 sm:gap-0">
               {v.programme.map((p, i) => (
@@ -39,40 +48,66 @@ export function Overview() {
           </CardBody>
         </Card>
 
+        <StructureCard buildingId={buildingId} />
+
         <Card>
           <CardHeader
             title="What the building holds"
             icon={Layers}
+            description={holds.empty ? undefined : holds.totalText}
             actions={
-              <Button asChild variant="ghost" size="sm" trailingIcon={ArrowRight}>
-                <Link to={`${base}/inventory`}>Inventory</Link>
-              </Button>
+              records ? (
+                <Button asChild variant="ghost" size="sm" trailingIcon={ArrowRight}>
+                  <Link to={`${base}/inventory`}>Inventory</Link>
+                </Button>
+              ) : null
             }
           />
-          <ul className="m-0 list-none divide-y divide-line-soft p-0">
-            {v.byTypology.map((t) => (
-              <li key={t.typology} className="flex items-center justify-between gap-4 px-4 py-3 sm:px-5">
-                <span className="text-base font-medium text-ink">{t.label}</span>
-                <span className="flex items-baseline gap-4 text-sm tabular-nums text-muted">
-                  <span>
-                    <span className="font-medium text-ink">{t.count}</span> {t.count === 1 ? 'item' : 'items'}
-                  </span>
-                  <span className="w-20 text-right">{f.massT(t.massT)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card>
-          <CardHeader title="Activity" />
           <CardBody>
-            <ActivityFeed rows={v.activity} emptyText="Captures, decisions and listings for this building appear here." />
+            {holds.empty ? (
+              <EmptyState
+                variant="inline"
+                icon={Layers}
+                title="Nothing captured yet"
+                text={side === 'contractor' ? 'Items appear here as the surveyor captures them.' : 'Each item the survey records is counted here by typology and mass.'}
+                action={
+                  records ? (
+                    <Button asChild size="sm" icon={Camera}>
+                      <Link to={`${base}/capture`}>Capture</Link>
+                    </Button>
+                  ) : null
+                }
+              />
+            ) : (
+              <BarList label="Mass by typology" max={holds.max} items={holds.items.map((t) => ({ ...t, colour: TYPOLOGY_VIZ[t.key] }))} testId="holds-chart" />
+            )}
           </CardBody>
         </Card>
+
+        <CollapsiblePanel id="building-activity" title="Recent activity" icon={ActivityIcon} count={v.activity.length} testId="building-activity">
+          <div className="px-4 pb-4 sm:px-5">
+            <ActivityFeed rows={v.activity} emptyText="Captures, decisions and listings for this building appear here." />
+          </div>
+        </CollapsiblePanel>
       </div>
 
       <aside className="flex min-w-0 flex-col gap-6">
+        {claim && claim.status !== 'linked' ? <OwnerLinkCard buildingId={buildingId} buildingName={v.header.name} claim={claim} /> : null}
+
+        {side === 'contractor' ? (
+          <Card>
+            <CardHeader title="Your dates" icon={CalendarClock} />
+            <CardBody className="flex flex-col gap-3">
+              <p className="m-0 text-base text-ink-soft">
+                {v.contractor ? `Dates set for ${v.contractor.datedCount} of ${v.contractor.itemCount} items.` : 'Say when each item is expected to come out.'} The owner sees your dates and decides what buyers see.
+              </p>
+              <Button asChild variant="primary" icon={CalendarClock} block>
+                <Link to={`${base}/availability`}>Set availability dates</Link>
+              </Button>
+            </CardBody>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader title="Survey" icon={ClipboardCheck} actions={<Pill tone={SURVEY_TONE[v.survey.status]} dot size="sm">{v.survey.label}</Pill>} />
           <CardBody className="flex flex-col gap-4">
@@ -85,13 +120,29 @@ export function Overview() {
             />
             {owner ? (
               <AppointSurveyor buildingId={buildingId} current={v.surveyorOrgId} options={v.surveyorOptions} />
-            ) : (
+            ) : side === 'surveyor' ? (
               <Button asChild variant="primary" icon={Camera} block>
                 <Link to={`${base}/capture`}>Capture items</Link>
               </Button>
-            )}
+            ) : null}
           </CardBody>
         </Card>
+
+        {records ? <ContractorCard buildingId={buildingId} /> : null}
+
+        {v.testing ? (
+          <Card data-testid="testing-card">
+            <CardHeader title="Testing" icon={FlaskConical} actions={v.testing.open > 0 ? <Pill tone="info" dot size="sm">{v.testing.open} open</Pill> : null} />
+            <CardBody className="flex flex-col gap-3">
+              <p className="m-0 text-base text-ink-soft">
+                {v.testing.open > 0 ? "A testing company is booked or waiting to book. Results update each item's test status." : 'Ask a testing company to confirm grade and condition. Buyers see the test status on each listing.'}
+              </p>
+              <Button asChild size="sm" className="self-start" trailingIcon={ArrowRight}>
+                <Link to={v.testing.href}>{v.testing.open > 0 ? 'Open testing' : 'Request testing'}</Link>
+              </Button>
+            </CardBody>
+          </Card>
+        ) : null}
 
         {owner ? (
           <Card>
