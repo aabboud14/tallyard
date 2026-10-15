@@ -101,7 +101,7 @@ export function PortfolioTimeline({ ticks, today, todayText, rows, emptyText = '
           </div>
           {rows.map((r) => (
             <div key={r.id} data-testid={`portfolio-row-${r.id}`} className="relative">
-              <div className="pt-2 sm:hidden">
+              <div className="relative z-[1] bg-surface pt-2 sm:hidden">
                 <RowName row={r} inRouter={inRouter} />
               </div>
               <div className="relative h-12">

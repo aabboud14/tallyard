@@ -111,7 +111,10 @@ function carbon(i: StatementInput): string {
 
 function targets(i: StatementInput): string {
   if (i.targets.length === 0) return 'No targets are set yet.'
-  return i.targets.map((x) => `${x.label}: target ${x.targetText}, now ${x.actualText}, ${lowerFirst(x.statusText)}.`).join('\n')
+  // A goal with no result yet reads "target 95%, no result yet", not the same words twice.
+  return i.targets
+    .map((x) => (x.actualText.toLowerCase() === x.statusText.toLowerCase() ? `${x.label}: target ${x.targetText}, ${lowerFirst(x.statusText)}.` : `${x.label}: target ${x.targetText}, now ${x.actualText}, ${lowerFirst(x.statusText)}.`))
+    .join('\n')
 }
 
 function certification(i: StatementInput): string {

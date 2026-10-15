@@ -25,7 +25,7 @@ export function MaterialFacts({ card, className }: { card: ListingCard; classNam
       {facts.map(([label, value]) => (
         <div key={label} className="min-w-0">
           <dt className="text-xs text-muted">{label}</dt>
-          <dd className="m-0 mt-0.5 truncate text-base font-medium tabular-nums text-ink">{value}</dd>
+          <dd className="m-0 mt-0.5 break-words text-base font-medium tabular-nums text-ink">{value}</dd>
         </div>
       ))}
     </dl>

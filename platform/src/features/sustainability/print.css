@@ -1,0 +1,30 @@
+/* The circular economy statement on A4: 18 mm margins on its own named page, so other print styles keep theirs.
+   The shell hides its sidebar and top bar in print; the page hides its own controls with print:hidden. */
+@media print {
+  @page statement {
+    size: A4;
+    margin: 18mm;
+  }
+
+  .statement-doc {
+    page: statement;
+    font-size: 10.5pt;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .statement-doc section {
+    break-inside: avoid;
+  }
+
+  .statement-doc h2,
+  .statement-doc h3 {
+    break-after: avoid;
+  }
+
+  .statement-screen-only {
+    display: none !important;
+  }
+}
