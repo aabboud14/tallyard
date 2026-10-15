@@ -34,7 +34,7 @@ const TYPOLOGIES: { value: DiscoverQuery['typology']; key: 'all' | 'structure' |
   { value: 'finishes', key: 'finishes', label: 'Finishes' },
 ]
 
-function SearchBox({ value, onChange }: { value: string; onChange: (q: string) => void }) {
+function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (q: string) => void; placeholder: string }) {
   const [text, setText] = useState(value)
   const ref = useRef<HTMLInputElement>(null)
   const last = useRef(value)
@@ -70,7 +70,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (q: string) =
           setText('')
         }
       }}
-      placeholder="Search beams, brick, stone"
+      placeholder={placeholder}
       aria-label="Search materials"
       data-testid="discover-search"
       className="w-full min-w-0 xl:w-[320px] xl:shrink-0 [&_input::-webkit-search-cancel-button]:hidden"
@@ -89,7 +89,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (q: string) =
 
 function TypologyTabs({ view, onChange }: { view: DiscoverView; onChange: (t: DiscoverQuery['typology']) => void }) {
   return (
-    <div role="group" aria-label="Typology" className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none">
+    <div role="group" aria-label="Typology" className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-none max-sm:gap-0.5">
       {TYPOLOGIES.map((t) => {
         const active = view.query.typology === t.value
         const n = view.typologyCounts[t.key]
@@ -101,7 +101,7 @@ function TypologyTabs({ view, onChange }: { view: DiscoverView; onChange: (t: Di
             onClick={() => onChange(t.value)}
             data-testid={`typology-${t.key}`}
             className={cx(
-              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11',
+              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 max-sm:h-11 max-sm:px-2',
               active ? 'bg-ink text-white' : 'text-ink-soft hover:bg-hover hover:text-ink',
             )}
           >
@@ -150,7 +150,7 @@ function Grid({ children, testId }: { children: ReactNode; testId?: string }) {
   )
 }
 
-function SharedGroupSection({ group }: { group: SharedGroup }) {
+function SharedGroupSection({ group, canSave }: { group: SharedGroup; canSave: boolean }) {
   const p = group.project
   return (
     <section aria-labelledby={`shared-${p.id}`} className="flex flex-col gap-5" data-testid={`shared-group-${p.id}`}>
@@ -172,7 +172,7 @@ function SharedGroupSection({ group }: { group: SharedGroup }) {
         group.cards.length > 0 ? (
           <Grid>
             {group.cards.map((c) => (
-              <ListingTile key={c.publicId} card={c} canSave projectId={p.id} />
+              <ListingTile key={c.publicId} card={c} canSave={canSave} projectId={p.id} />
             ))}
           </Grid>
         ) : (
@@ -186,9 +186,11 @@ function SharedGroupSection({ group }: { group: SharedGroup }) {
               <p className="m-0 font-semibold text-ink">
                 {group.sharedCount} {group.sharedCount === 1 ? 'lot is' : 'lots are'} shared privately with {p.name}
               </p>
-              <p className="m-0 mt-1 text-sm text-muted">Accept the confidentiality terms for this project to see them. They stay out of the open marketplace.</p>
+              <p className="m-0 mt-1 text-sm text-muted">
+                {group.canAccept ? 'Accept the confidentiality terms for this project to see them. They stay out of the open marketplace.' : 'They show here once the architect or the client accepts the confidentiality terms for this project. They stay out of the open marketplace.'}
+              </p>
             </div>
-            <TermsDialog projectId={p.id} projectName={p.name} count={group.sharedCount} trigger={<Button variant="primary" icon={ShieldCheck} data-testid={`review-terms-${p.id}`}>Review terms</Button>} />
+            {group.canAccept ? <TermsDialog projectId={p.id} projectName={p.name} count={group.sharedCount} trigger={<Button variant="primary" icon={ShieldCheck} data-testid={`review-terms-${p.id}`}>Review terms</Button>} /> : null}
           </div>
         </Card>
       )}
@@ -209,6 +211,8 @@ export function Discover() {
   const { query, update, replace, setProject } = useDiscoverQuery()
   const view = useView(discoverView, query)
   const wide = useMediaQuery('(min-width: 1280px)')
+  const phone = useMediaQuery('(max-width: 639px)')
+  const placeholder = phone ? 'Search' : 'Search beams, brick, stone'
   if (!view) return null
   const shared = view.tab === 'shared'
   const clearFilters = () => replace(clearDiscoverFilters(query))
@@ -274,8 +278,8 @@ export function Discover() {
             <EmptyState
               variant="page"
               illustration="inbox"
-              title="Nothing is shared with your projects yet"
-              text="When a donor building owner shares lots privately with one of your projects, they appear here behind the confidentiality terms for that project."
+              title={view.sharedNote ? 'Shared lots stay with the architect and client' : 'Nothing is shared with your projects yet'}
+              text={view.sharedNote ?? 'When a donor building owner shares lots privately with one of your projects, they appear here behind the confidentiality terms for that project.'}
               action={
                 <Button onClick={() => update({ tab: 'all' })} icon={Store}>
                   Browse the Marketplace
@@ -283,7 +287,7 @@ export function Discover() {
               }
             />
           ) : (
-            view.shared.map((g) => <SharedGroupSection key={g.project.id} group={g} />)
+            view.shared.map((g) => <SharedGroupSection key={g.project.id} group={g} canSave={view.canSave} />)
           )}
         </div>
       ) : (
@@ -293,7 +297,7 @@ export function Discover() {
             {view.project ? checking : null}
             {wide ? (
               <div className="flex items-center gap-3">
-                <SearchBox value={query.q} onChange={(q) => update({ q })} />
+                <SearchBox value={query.q} onChange={(q) => update({ q })} placeholder={placeholder} />
                 <TypologyTabs view={view} onChange={(typology) => update({ typology, family: null })} />
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">{controls}</div>
               </div>
@@ -301,7 +305,7 @@ export function Discover() {
               <>
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
-                    <SearchBox value={query.q} onChange={(q) => update({ q })} />
+                    <SearchBox value={query.q} onChange={(q) => update({ q })} placeholder={placeholder} />
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">{controls}</div>
                 </div>
@@ -314,7 +318,7 @@ export function Discover() {
           {view.landing && view.empty !== 'no_listings' ? (
             <div className="mt-6 flex flex-col gap-12">
               <CategoryFolders folders={view.folders} project={view.project} onOpen={(typology) => update({ typology, family: null }, { push: true })} />
-              <NewForProjectsRow cards={view.newForProjects} more={view.newForProjectsMore} total={view.newForProjectsTotal} project={view.project} />
+              <NewForProjectsRow key={view.project?.id ?? 'all'} cards={view.newForProjects} more={view.newForProjectsMore} total={view.newForProjectsTotal} project={view.project} />
             </div>
           ) : null}
 

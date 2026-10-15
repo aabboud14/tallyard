@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import type { Fit } from '../domain/v1types'
 import { formatDateShort, formatMonth, monthKey } from '../domain/dates'
 import { TIMELINE_TEXT } from '../domain/reference/labels'
-import { daysOnScale, storageRun, timelineScale } from '../domain/engines/timelineScale'
+import { daysOnScale, storageRun, TICK_LABEL_MIN_SHARE, timelineScale } from '../domain/engines/timelineScale'
 import { cx } from './cx'
 import { IndicativeMarker } from './Badge'
 import { fitLabel } from './labels'
@@ -51,7 +51,8 @@ export type TimelineStripProps = {
 }
 
 export function TimelineStrip({ today, startDate, items, startLabel = 'Start on site', indicative = true, className, testId }: TimelineStripProps) {
-  const scale = timelineScale(today, startDate, items.map((it) => it.window))
+  // Month labels are thinned to every other month, quarter and so on so they never run into each other.
+  const scale = timelineScale(today, startDate, items.map((it) => it.window), { minLabelShare: TICK_LABEL_MIN_SHARE })
   const left = (iso: string): string => `clamp(0%, calc(${daysOnScale(scale, iso)} / ${scale.spanDays} * 100%), 100%)`
   const right = (iso: string): string => `clamp(0%, calc(100% - ${daysOnScale(scale, iso)} / ${scale.spanDays} * 100%), 100%)`
   const labelled = scale.ticks.filter((t) => t.label !== null)

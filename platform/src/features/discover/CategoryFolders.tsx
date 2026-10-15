@@ -1,5 +1,6 @@
 // The Marketplace's front door: Structure, Envelope and Finishes as folders, each with a mosaic of up to three of
-// its materials, the count, its families and, with a project checked, how many arrive in time. On a narrow screen they
+// its materials, the count, its families and, with a project checked, its fit counts in the checking strip's words
+// ("10 available now, 1 in time"), so the folders add up to the strip. On a narrow screen they
 // are compact rows, so the page never scrolls sideways.
 import { ChevronRight, FolderOpen } from 'lucide-react'
 import type { CategoryFolder, CategoryThumb } from '../../store/selectors/marketplace'
@@ -67,10 +68,12 @@ function FolderCard({ folder, project, onOpen }: { folder: CategoryFolder; proje
         ) : (
           <span className="mt-1 line-clamp-2 text-sm text-ink-soft">{folder.families.map((f) => f.label).join(', ')}</span>
         )}
-        {project && folder.fitsCount !== null && !empty ? (
-          <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand-700">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-mark-good" />
-            <span className="tabular-nums">{folder.fitsCount}</span> in time for {project.name}
+        {project && folder.fitsText && !empty ? (
+          <span className="mt-2 inline-flex items-baseline gap-1.5 text-sm text-ink-soft" data-testid={`category-fits-${folder.typology}`}>
+            <span aria-hidden="true" className="size-1.5 shrink-0 self-center rounded-full bg-mark-good" />
+            <span>
+              <span className="font-medium text-ink">{project.name}:</span> <span className="tabular-nums">{folder.fitsText}</span>
+            </span>
           </span>
         ) : null}
       </div>
@@ -99,11 +102,7 @@ function FolderRow({ folder, project, onOpen }: { folder: CategoryFolder; projec
           <span className={cx('truncate text-md font-semibold', empty ? 'text-muted' : 'text-ink')}>{folder.label}</span>
         </span>
         <span className="truncate text-sm text-muted">{empty ? 'Nothing listed yet' : countText(folder.count)}</span>
-        {project && folder.fitsCount !== null && !empty ? (
-          <span className="truncate text-sm text-brand-700">
-            <span className="tabular-nums">{folder.fitsCount}</span> in time
-          </span>
-        ) : null}
+        {project && folder.fitsText && !empty ? <span className="text-sm tabular-nums text-ink-soft">{folder.fitsText}</span> : null}
       </span>
       <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-faint" />
     </button>

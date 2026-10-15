@@ -350,6 +350,19 @@ describe('ModelViewer', () => {
     )
     expect(byTestId('one').innerHTML).toBe(byTestId('two').innerHTML)
   })
+
+  it('draws in the house style: ink hairlines, paper-toned fills and no shadow', () => {
+    render(<ModelViewer mesh={mesh} family="steel_section" title="A" />)
+    const viewer = byTestId('model-viewer')
+    expect(viewer.querySelector('ellipse, [data-part="shadow"], radialGradient, linearGradient, feGaussianBlur, feDropShadow')).toBeNull()
+    const faces = Array.from(viewer.querySelectorAll('polygon'))
+    expect(faces.length).toBeGreaterThanOrEqual(3)
+    for (const f of faces) {
+      expect(f.getAttribute('stroke')).toBe('var(--color-ink)')
+      expect(f.getAttribute('stroke-width')).toBe('0.75')
+      expect(f.getAttribute('fill')).not.toBe('#6b7a86')
+    }
+  })
 })
 
 describe('CollapsiblePanel', () => {

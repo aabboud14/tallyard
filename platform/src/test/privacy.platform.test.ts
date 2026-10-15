@@ -237,6 +237,51 @@ describe('P3 on the platform: the buyer side never receives a seller-private str
     }
   })
 
+  it('a lot shared in confidence opens for the architect and client only, and no consultant surface links to it', () => {
+    const s = fresh()
+    const lot = Object.values(s.world.lots).find((l) => l.publicId === 'L-WPX5A6')!
+    expect(lot.visibility).toBe('matched_only')
+    expect(s.world.projects[MERROWGATE_ID].termsAccepted).toBe(true)
+    for (const id of [U.priya, U.isla]) {
+      expect(sel.canOpenMaterial(s, viewer(id), 'L-WPX5A6')).toBe(true)
+      expect(sel.materialView(s, viewer(id), 'L-WPX5A6', MERROWGATE_ID)!.listing).toEqual(listingOf(s.world, lot))
+    }
+    expect(sel.canOpenMaterial(s, viewer(U.marcus), 'L-WPX5A6')).toBe(false)
+    for (const p of [null, MERROWGATE_ID]) expect(sel.materialView(s, viewer(U.marcus), 'L-WPX5A6', p)).toBeNull()
+    // The consultant's programme chart lists the shortlisted lot without a link, and search does not offer it.
+    const row = sel.programmeView(s, viewer(U.marcus), MERROWGATE_ID, 'whole')!.materials.find((m) => m.publicId === 'L-WPX5A6')!
+    expect(row.href).toBeNull()
+    expect(sel.programmeView(s, viewer(U.priya), MERROWGATE_ID, 'whole')!.materials.find((m) => m.publicId === 'L-WPX5A6')!.href).toBe(`/app/marketplace/L-WPX5A6?project=${MERROWGATE_ID}`)
+    expect(sel.searchIndex(s, viewer(U.marcus)).some((e) => e.id === 'material:L-WPX5A6')).toBe(false)
+    expect(sel.searchIndex(s, viewer(U.priya)).some((e) => e.id === 'material:L-WPX5A6')).toBe(true)
+    // Shared with you says why it is empty for him.
+    const d = sel.discoverView(s, viewer(U.marcus), { ...DEFAULT_DISCOVER_QUERY, tab: 'shared' })
+    expect(d.sharedCount).toBe(0)
+    expect(d.sharedNote).toContain('stay with the project')
+    expect(sel.discoverView(s, viewer(U.priya), DEFAULT_DISCOVER_QUERY).sharedNote).toBeNull()
+  })
+
+  it('every material link on a programme chart or in search opens for the person it is shown to', () => {
+    for (const s of [fresh(), busy()]) {
+      let links = 0
+      for (const id of [U.priya, U.isla, U.marcus]) {
+        for (const p of projectsOfUser(s, id)) {
+          for (const row of sel.programmeView(s, viewer(id), p.id, 'whole')?.materials ?? []) {
+            if (row.href === null) continue
+            const url = new URL(row.href, 'https://tallyard.example')
+            const publicId = url.pathname.split('/').pop()!
+            expect(sel.materialView(s, viewer(id), publicId, url.searchParams.get('project')), `${id} ${p.name} ${row.href}`).not.toBeNull()
+            links++
+          }
+        }
+        for (const e of sel.searchIndex(s, viewer(id)).filter((x) => x.kind === 'material')) {
+          expect(sel.materialView(s, viewer(id), e.href.split('/').pop()!, null), `${id} search ${e.href}`).not.toBeNull()
+        }
+      }
+      expect(links).toBeGreaterThan(0)
+    }
+  })
+
   it('a material page holds public listing fields only', () => {
     const s = fresh()
     const m = sel.materialView(s, viewer(U.priya), 'L-9F4CQQ', MERROWGATE_ID)!

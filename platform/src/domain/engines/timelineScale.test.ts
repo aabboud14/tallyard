@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { daysOnScale, monthStarts, storageRun, timelineScale, TIMELINE_MARGIN_DAYS } from './timelineScale'
+import { addDays } from '../dates'
+import { daysOnScale, monthStarts, storageRun, TICK_LABEL_MIN_SHARE, timelineScale, TIMELINE_MARGIN_DAYS, YEAR_LABEL_FACTOR } from './timelineScale'
 
 describe('timelineScale', () => {
   it('runs from today to the latest date shown plus the margin', () => {
@@ -36,6 +37,41 @@ describe('timelineScale', () => {
     const y = timelineScale('2026-10-07', '2030-06-01', [])
     expect(y.ticks.length).toBeGreaterThan(36)
     expect(y.ticks.filter((t) => t.label !== null).map((t) => t.label)).toEqual(['Jan 2027', 'Jan 2028', 'Jan 2029', 'Jan 2030'])
+  })
+})
+
+describe('timelineScale label spacing', () => {
+  const opts = { minLabelShare: TICK_LABEL_MIN_SHARE }
+
+  it('labels every other month when monthly labels would run into each other', () => {
+    // Ferrymoor Yard on the material page: monthly labels were about 44 px apart in a 420 px column.
+    const s = timelineScale('2026-10-08', '2027-06-08', [{ start: '2027-01-01', end: '2027-03-31' }], opts)
+    expect(s.ticks.filter((t) => t.label !== null).map((t) => t.label)).toEqual(['Nov 2026', 'Jan 2027', 'Mar', 'May', 'Jul'])
+    expect(s.ticks).toHaveLength(9)
+  })
+
+  it('keeps every month on a short strip where they fit', () => {
+    const s = timelineScale('2026-10-07', '2027-01-15', [], opts)
+    expect(s.ticks.map((t) => t.label)).toEqual(['Nov 2026', 'Dec', 'Jan 2027', 'Feb', 'Mar'])
+  })
+
+  it('keeps labelled ticks at least the minimum share apart, wider after a year, for any strip length', () => {
+    for (let days = 0; days <= 1500; days += 9) {
+      const s = timelineScale('2026-10-07', addDays('2026-10-07', days), [], opts)
+      const labelled = s.ticks.filter((t) => t.label !== null)
+      expect(labelled.length, `${days} days`).toBeGreaterThan(0)
+      for (let i = 1; i < labelled.length; i++) {
+        const need = TICK_LABEL_MIN_SHARE * (labelled[i - 1].label!.includes(' ') ? YEAR_LABEL_FACTOR : 1)
+        // Past four years even yearly labels are the sparsest the strip can do.
+        if (s.ticks.length <= 48) expect((labelled[i].days - labelled[i - 1].days) / s.spanDays, `${days} days, ${labelled[i].label}`).toBeGreaterThanOrEqual(need)
+      }
+    }
+  })
+
+  it('never labels more often than the month, quarter and year rule', () => {
+    const q = timelineScale('2026-10-07', '2028-03-01', [], opts)
+    const labels = q.ticks.filter((t) => t.label !== null).map((t) => t.iso.slice(5, 7))
+    expect(labels.every((m) => ['01', '04', '07', '10'].includes(m))).toBe(true)
   })
 })
 

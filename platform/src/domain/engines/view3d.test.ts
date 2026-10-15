@@ -4,7 +4,7 @@ import { DEFAULT_ASSUMPTIONS as A } from '../reference/assumptions'
 import { createSeed } from '../seed/world'
 import { listingFor } from '../visibility'
 import { meshFor } from './geometry'
-import { DEFAULT_ANGLES, dragToAngles, KEY_STEP_DEG, projectMesh, shadeHex, stepAngles, type Frame, type Mesh } from './view3d'
+import { DEFAULT_ANGLES, dragToAngles, faceFill, KEY_STEP_DEG, mixHex, PAPER_HEX, projectMesh, shadeHex, stepAngles, type Frame, type Mesh } from './view3d'
 
 /** A 2 by 2 by 2 cube centred on the origin, faces wound anticlockwise from outside. */
 const CUBE: Mesh = {
@@ -124,5 +124,29 @@ describe('shadeHex', () => {
     expect(shadeHex('#6b7a86', 1)).toBe('#6b7a86')
     expect(shadeHex('#FFFFFF', 2)).toBe('#ffffff')
     expect(shadeHex('#6b7a86', 0)).toBe('#000000')
+  })
+})
+
+describe('drawing fills', () => {
+  it('mixes two colours per channel', () => {
+    expect(mixHex('#000000', '#ffffff', 0.5)).toBe('#808080')
+    expect(mixHex('#6b7a86', PAPER_HEX, 0)).toBe('#6b7a86')
+    expect(mixHex('#6b7a86', PAPER_HEX, 1)).toBe(PAPER_HEX)
+    expect(mixHex('#6b7a86', '#f7f6f3', 0.6)).toBe('#bfc4c7')
+  })
+
+  it('lifts each family tone towards paper and keeps every face light, so the model reads as a drawing', () => {
+    const luminance = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16) / 255)
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    for (const tone of ['#6b7a86', '#9fb7c4', '#b9b6ae', '#d9cfbb', '#a6553b', '#8d9399', '#a57f55']) {
+      const lit = faceFill(tone, 1)
+      const dim = faceFill(tone, 0.35)
+      expect(lit).toBe(mixHex(tone, PAPER_HEX, 0.6))
+      expect(luminance(dim)).toBeLessThan(luminance(lit))
+      expect(luminance(dim)).toBeGreaterThan(0.4)
+      expect(luminance(lit)).toBeGreaterThan(luminance(shadeHex(tone, 1)))
+    }
   })
 })

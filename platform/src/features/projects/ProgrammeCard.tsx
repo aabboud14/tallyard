@@ -94,10 +94,17 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
           <ul className="m-0 mt-3 flex list-none flex-col gap-1 p-0 text-sm sm:hidden">
             {view.materials.map((m) => (
               <li key={m.itemId}>
-                <Link to={m.href} className="inline-flex min-h-11 items-center gap-2 text-ink-soft hover:text-ink">
-                  <span className="font-medium text-ink">{m.title}</span>
-                  <span className="text-muted">{m.fitLabel}</span>
-                </Link>
+                {m.href ? (
+                  <Link to={m.href} className="inline-flex min-h-11 items-center gap-2 text-ink-soft hover:text-ink">
+                    <span className="font-medium text-ink">{m.title}</span>
+                    <span className="text-muted">{m.fitLabel}</span>
+                  </Link>
+                ) : (
+                  <span className="inline-flex min-h-11 items-center gap-2 text-ink-soft">
+                    <span className="font-medium text-ink">{m.title}</span>
+                    <span className="text-muted">{m.fitLabel}</span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

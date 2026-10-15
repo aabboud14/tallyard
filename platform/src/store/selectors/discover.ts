@@ -170,6 +170,8 @@ export type DiscoverView = {
   sharedCount: number
   /** Lots shared with the viewer's projects that wait behind the confidentiality terms. */
   pendingSharedCount: number
+  /** Why Shared with you is empty for a viewer who does not get confidential lots (the consultant); else null. */
+  sharedNote: string | null
   empty: 'no_listings' | 'no_results' | null
   /** The unfiltered first view: the All listings tab with no typology, search or filters. */
   landing: boolean
@@ -240,6 +242,7 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     shared,
     sharedCount: shared.reduce((n, g) => n + g.cards.length, 0),
     pendingSharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? 0 : g.sharedCount), 0),
+    sharedNote: sharedNoteFor(state, viewer),
     empty: all.length === 0 ? 'no_listings' : shown.length === 0 ? 'no_results' : null,
     landing,
     folders: categoryFolders(state, viewer, project, all),
@@ -286,6 +289,14 @@ export function saveTargets(state: AppData, viewer: Viewer, publicId: string): S
 /** How a material fits one of the viewer's projects. */
 export type ProjectFit = { projectId: string; name: string; startText: string; fit: Fit; fitLabel: string }
 
+/**
+ * Specification rows the material page already shows above the table: the title, public ID and tags in the header,
+ * the key facts, the Availability block (with its timeline check) and the Sustainability block. The table keeps only
+ * what is not shown elsewhere (the material and dimensions, and the steel grade), so nothing is said twice and every
+ * indicative figure sits under its own Indicative marker. The specification export keeps every row.
+ */
+export const SHOWN_ABOVE_SPEC: ReadonlySet<string> = new Set(['Public ID', 'Title', 'Typology', 'Family', 'Quantity', 'Mass', 'Condition', 'Test status', 'Availability', 'Timeline check', 'Storage until the start', 'Location', 'Collection point', 'Avoided carbon', 'Sustainability band'])
+
 /** How many projects the material page checks at once when none is chosen. */
 export const BY_PROJECT_LIMIT = 5
 
@@ -297,6 +308,7 @@ export type MaterialView = {
   gallery: GalleryEntry[]
   tags: string[]
   keyFacts: { label: string; value: string }[]
+  /** The specification rows not already shown above the table (see SHOWN_ABOVE_SPEC). */
   specSections: { section: string; rows: { label: string; value: string }[] }[]
   availability: {
     /** The phrase's text, for the key facts and the large line. */
@@ -318,6 +330,8 @@ export type MaterialView = {
   sellerLine: string | null
   projects: ProjectRef[]
   project: ProjectRef | null
+  /** The project being checked against when it is one of the viewer's but the lot is not shared with it; else null. */
+  notSharedWith: string | null
   saveTargets: SaveTarget[]
   geometry: { dxf: boolean; obj: boolean; ifc: boolean; reason: string | null }
   /** The 3D model built from the recorded dimensions, or null when there are none. */
@@ -329,7 +343,11 @@ export type MaterialView = {
   similar: ListingCard[]
 }
 
-/** The lot behind a public ID, when the viewer may see its listing: open, or shared with one of their projects. */
+/**
+ * The lot behind a public ID, when the viewer may see its listing: open, or shared with one of their projects. A lot
+ * shared in confidence opens for the project's architect and client, who accept the confidentiality terms; the
+ * project's consultant does not get it (one rule for every surface: see canOpenMaterial).
+ */
 function visibleLot(state: AppData, viewer: Viewer, publicId: string): Lot | null {
   const lot = lotByPublicId(state.world, publicId)
   if (!lot || lot.visibility === 'private') return null
@@ -350,14 +368,30 @@ function readsMaterials(state: AppData, viewer: Viewer): boolean {
   return role === 'owner' && pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) === 'client')
 }
 
+/**
+ * Whether the viewer can open a material page. Every surface that links a material (programme chart, search, cards)
+ * asks this first, so no link leads to "You do not have access to this".
+ */
+export function canOpenMaterial(state: AppData, viewer: Viewer, publicId: string): boolean {
+  return readsMaterials(state, viewer) && visibleLot(state, viewer, publicId) !== null
+}
+
+/** The note on Shared with you for a viewer who sees no confidential lots by role (the consultant); else null. */
+function sharedNoteFor(state: AppData, viewer: Viewer): string | null {
+  const consultantOnly = pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) === 'consultant') && !pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) !== 'consultant')
+  return consultantOnly ? 'Lots that donor building owners share in confidence stay with the project\'s architect and client, who accept the confidentiality terms. They do not appear here.' : null
+}
+
 export function materialView(state: AppData, viewer: Viewer, publicId: string, projectId: string | null): MaterialView | null {
   if (!readsMaterials(state, viewer)) return null
   const lot = visibleLot(state, viewer, publicId)
   if (!lot) return null
   const today = todayOf(viewer)
   const listing = listingOf(state.world, lot)
-  const projects = pickerProjects(state, viewer).filter((p) => projectCanSee(state.world, p, lot))
+  const mine = pickerProjects(state, viewer)
+  const projects = mine.filter((p) => projectCanSee(state.world, p, lot))
   const project = projects.find((p) => p.id === projectId) ?? null
+  const unseen = project ? null : (mine.find((p) => p.id === projectId) ?? null)
   const card = listingCard(state, listing, project, today, savedOrg(state, viewer))
   const rows = specSheetRows(listing, card.fit).filter((r) => r.section !== 'Price')
   const held = acceptedReservation(state, lot.id)
@@ -387,7 +421,7 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
       { label: 'Collection point', value: collectionPointText(listing) },
     ],
     specSections: SPEC_SECTIONS.filter((s) => s !== 'Price')
-      .map((section) => ({ section, rows: rows.filter((r) => r.section === section).map((r) => ({ label: r.label, value: r.value })) }))
+      .map((section) => ({ section, rows: rows.filter((r) => r.section === section && !SHOWN_ABOVE_SPEC.has(r.label)).map((r) => ({ label: r.label, value: r.value })) }))
       .filter((s) => s.rows.length > 0),
     availability: {
       text: phrase.text,
@@ -407,6 +441,7 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
     sellerLine: client ? `Listed by ${sellerPhrase(listing.sellerType)} in ${listing.location.label}` : null,
     projects: projects.map((p) => projectRef(state, p)),
     project: project ? projectRef(state, project) : null,
+    notSharedWith: unseen?.name ?? null,
     saveTargets: saveTargets(state, viewer, publicId),
     geometry: { dxf: dxf.kind === 'file', obj: obj.kind === 'file', ifc: ifc.kind === 'file', reason: dxf.kind === 'unavailable' ? dxf.reason : null },
     model: 'unavailable' in mesh ? null : mesh,

@@ -4,7 +4,7 @@ import { FERRYMOOR_ID, MERROWGATE_ID, SALLOW_ID } from '../../domain/seed/world'
 import { marketplaceListings } from '../lots'
 import { DEFAULT_DISCOVER_QUERY as Q, discoverView } from './discover'
 import { projectRef } from './common'
-import { availabilityFilterView, CATEGORY_COPY, categoryFolders, fitSummary, newForProjectsFeed, NEW_LISTING_LIMIT } from './marketplace'
+import { availabilityFilterView, CATEGORY_COPY, categoryFolders, fitSummary, fitSummaryParts, fitSummaryText, newForProjectsFeed, NEW_LISTING_LIMIT } from './marketplace'
 
 describe('category folders', () => {
   it('counts every marketplace listing by typology, families in the reference order', () => {
@@ -32,6 +32,38 @@ describe('category folders', () => {
     expect(ferry.find((f) => f.typology === 'envelope')!.fitsCount).toBe(4)
     const merrow = categoryFolders(s, viewer(U.priya), s.world.projects[MERROWGATE_ID], all)
     expect(merrow.find((f) => f.typology === 'structure')!.fitsCount).toBe(11)
+  })
+
+  it('splits each folder by fit in the strip\'s words, and the folders add up to the strip on the landing view', () => {
+    const s = fresh()
+    const all = marketplaceListings(s)
+    expect(categoryFolders(s, viewer(U.priya), null, all).every((f) => f.fits === null && f.fitsText === null)).toBe(true)
+    for (const id of [MERROWGATE_ID, FERRYMOOR_ID, SALLOW_ID]) {
+      const folders = categoryFolders(s, viewer(U.priya), s.world.projects[id], all)
+      const strip = discoverView(s, viewer(U.priya), { ...Q, projectId: id }).fitSummary!
+      for (const fit of ['now', 'in_time', 'tight', 'late'] as const) expect(folders.reduce((n, f) => n + f.fits![fit], 0), `${id} ${fit}`).toBe(strip[fit])
+      for (const f of folders) {
+        expect(f.fitsCount).toBe(f.fits!.now + f.fits!.in_time)
+        expect(f.fitsText).toBe(fitSummaryText(f.fits))
+      }
+    }
+    const merrow = categoryFolders(s, viewer(U.priya), s.world.projects[MERROWGATE_ID], all)
+    const structure = merrow.find((f) => f.typology === 'structure')!
+    expect(structure.fitsText).toMatch(/^\d+ available now(, \d+ in time)?$/)
+  })
+})
+
+describe('fit summary words', () => {
+  it('lists non-zero counts in fit order with the strip\'s words', () => {
+    expect(fitSummaryParts(null)).toEqual([])
+    expect(fitSummaryText(null)).toBeNull()
+    expect(fitSummaryText({ now: 0, in_time: 0, tight: 0, late: 0 })).toBeNull()
+    expect(fitSummaryParts({ now: 10, in_time: 6, tight: 1, late: 0 }).map((p) => [p.fit, p.text])).toEqual([
+      ['now', '10 available now'],
+      ['in_time', '6 in time'],
+      ['tight', '1 tight'],
+    ])
+    expect(fitSummaryText({ now: 0, in_time: 2, tight: 0, late: 3 })).toBe('2 in time, 3 too late')
   })
 })
 

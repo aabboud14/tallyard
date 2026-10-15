@@ -37,6 +37,7 @@ export function NewForProjectsRow({ cards, more = [], total, project }: { cards:
             aria-expanded={expanded}
             aria-controls="new-for-projects-grid"
             data-testid="new-for-projects-more"
+            className="max-sm:h-11"
           >
             {expanded ? 'Show fewer' : `Show all ${total ?? cards.length + more.length}`}
           </Button>

@@ -98,7 +98,7 @@ export const METHODOLOGY_HREF = '/app/help/methodology'
 export function IndicativeMarker({ href = METHODOLOGY_HREF, label = 'Indicative', className }: { href?: string; label?: ReactNode; className?: string }) {
   const inRouter = useInRouterContext()
   const cls = cx(
-    'relative inline-flex items-center gap-1 rounded-sm text-2xs font-medium text-muted max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-[15px] underline decoration-line-strong decoration-dotted underline-offset-[3px] transition-colors hover:text-ink hover:decoration-muted [&_svg]:size-3',
+    'relative inline-flex items-center gap-1 rounded-sm text-2xs font-medium text-muted max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-4 underline decoration-line-strong decoration-dotted underline-offset-[3px] transition-colors hover:text-ink hover:decoration-muted [&_svg]:size-3',
     className,
   )
   const body = (
