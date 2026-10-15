@@ -31,7 +31,7 @@ def esc(s):
 
 
 def clean(s):
-    return str(s or '').replace('—', ', ').replace('–', ' to ')
+    return str(s or '').replace('\u2014', ', ').replace('\u2013', ' to ')
 
 
 def mermaid_block(src, cls='diagram'):
