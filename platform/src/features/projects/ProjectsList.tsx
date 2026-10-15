@@ -2,11 +2,11 @@
 // are needed, shortlist by status, last activity). Architects create projects here. A new project shows how far
 // its setup has gone and what comes next; one the client has not accepted says so.
 import { Link } from 'react-router'
-import { Clock, FolderPlus, Hourglass, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
+import { Clock, FolderPlus, Hourglass, Inbox, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
 import { formatDateShort } from '../../domain/dates'
 import { useApp, useNow, useView } from '../../store'
 import { projectsListView, type ProjectListRow } from '../../store/selectors/project'
-import { timeAgo } from '../../store/selectors/common'
+import { timeAgoStart } from '../../store/selectors/common'
 import { Button, Card, EmptyState, Pill, ProjectThumbnail, SegmentedControl, Table, TBody, TD, TH, THead, TR } from '../../ui'
 import { projectVisuals, type ProjectVisual } from '../../store/selectors/project-visuals'
 import { Page } from '../../app/Page'
@@ -87,7 +87,7 @@ function ProjectCardLarge({ p, now, visual }: { p: ProjectListRow; now: string; 
             <p className="m-0 flex items-center gap-1.5 truncate text-xs text-muted">
               <Clock aria-hidden="true" className="size-3 shrink-0" />
               <span className="truncate">
-                {timeAgo(p.lastActivityAt, now)}: {p.lastActivity}
+                {timeAgoStart(p.lastActivityAt, now)}: {p.lastActivity}
               </span>
             </p>
           ) : null}
@@ -131,7 +131,7 @@ function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
             <TD align="right">{p.counts.sent}</TD>
             <TD align="right">{p.counts.approved}</TD>
             <TD muted className="whitespace-nowrap">
-              {p.lastActivityAt ? timeAgo(p.lastActivityAt, now) : 'No activity'}
+              {p.lastActivityAt ? timeAgoStart(p.lastActivityAt, now) : 'No activity'}
             </TD>
           </TR>
         ))}
@@ -169,6 +169,13 @@ export function ProjectsList() {
               ]}
               className="max-md:hidden"
             />
+          ) : null}
+          {view.requestsHref ? (
+            <Button asChild icon={Inbox}>
+              <Link to={view.requestsHref} data-testid="projects-requests-link">
+                Project requests
+              </Link>
+            </Button>
           ) : null}
           {view.canCreate ? (
             <Button asChild variant="primary" icon={FolderPlus}>

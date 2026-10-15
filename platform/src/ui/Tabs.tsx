@@ -29,7 +29,7 @@ export function Tabs({ items, label, className, size = 'md' }: { items: TabItem[
         {items.map((t, i) => {
           const Icon = t.icon
           const cls = cx(
-            'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-sm outline-offset-[-2px] transition-colors duration-150',
+            'group relative inline-flex min-w-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm outline-offset-[-2px] transition-colors duration-150',
             size === 'sm' ? 'h-9 text-sm max-sm:h-11' : 'h-11 text-base',
             t.active ? 'font-medium text-ink' : 'text-muted hover:text-ink',
             t.disabled && 'pointer-events-none opacity-50',

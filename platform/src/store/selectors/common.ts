@@ -39,6 +39,16 @@ export function timeAgo(at: string, now: string): string {
   return formatDateShort(at.slice(0, 10))
 }
 
+/** A phrase as the start of a sentence: the first letter capitalised, the rest as written. */
+export function sentenceStart(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** timeAgo where it starts a line or a cell: "Just now", "5 minutes ago", "Yesterday". */
+export function timeAgoStart(at: string, now: string): string {
+  return sentenceStart(timeAgo(at, now))
+}
+
 /** "Today", "Yesterday", or the date, for grouping by day. */
 export function dayLabel(at: string, now: string): string {
   const days = daysBetween(at.slice(0, 10), now.slice(0, 10))

@@ -46,6 +46,8 @@ export type ProgrammeMaterialRow = {
   fit: Fit
   fitLabel: string
   windowText: string
+  /** "Expected Jan to Mar 2027", for the chart's label column. */
+  windowShort: string
   storage: { from: number; to: number } | null
   /** The material page, or null when the viewer cannot open it (a confidential lot, for the consultant). */
   href: string | null
@@ -55,7 +57,7 @@ export type ProgrammeMaterialRow = {
  * The chart's axis as the screen needs it: positions and labels only. Tick dates stay out of the view model, so a
  * first of the month can never coincide with a seller's private date in a buyer's view (P3).
  */
-export type ProgrammeViewAxis = { startText: string; endText: string; spanDays: number; ticks: { at: number; label: string | null; major: boolean }[] }
+export type ProgrammeViewAxis = { startText: string; endText: string; spanDays: number; ticks: { at: number; label: string | null; major: boolean }[]; /** 'Sep 2025' at the left edge when the first tick has no label. */ startLabel: string | null }
 
 export type ProgrammeView = {
   range: ProgrammeRange
@@ -151,6 +153,7 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
       fit,
       fitLabel: FIT_WORDS[fit],
       windowText: card.availabilityText,
+      windowShort: card.availabilityShort,
       storage: run ? { from: at(run.start), to: at(run.end) } : null,
       href: canOpenMaterial(state, viewer, r.publicId) ? materialHref(r.publicId, p.id) : null,
     }
@@ -166,7 +169,7 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
   ].join(' ')
   return {
     range,
-    axis: { startText: formatMonth(start), endText: formatMonth(end), spanDays: axis.spanDays, ticks: axis.ticks.map((t) => ({ at: t.at, label: t.label, major: t.major })) },
+    axis: { startText: formatMonth(start), endText: formatMonth(end), spanDays: axis.spanDays, ticks: axis.ticks.map((t) => ({ at: t.at, label: t.label, major: t.major })), startLabel: axis.startLabel },
     today: { date: today, dateText: formatDate(today), at: at(today) },
     stages,
     plannedStageText: plannedText,

@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest'
 import { actor, fresh, must, NOW, U, viewer } from '../../test/fixtures'
 import * as sel from '.'
-import { createProject, decideClientLink, setProjectProgramme, type NewProjectInput } from '../actions/projects'
+import { createProject, decideClientLink, setProjectProgramme, setProjectRequirements, type NewProjectInput } from '../actions/projects'
 import { saveToProject } from '../actions/shortlist'
 import { signUpState } from '../actions/auth'
 import { pageLocation } from './arch-breadcrumbs'
@@ -39,10 +39,12 @@ describe('programmeView', () => {
       expect(m.to).toBeGreaterThanOrEqual(m.from)
       expect(m.to).toBeLessThanOrEqual(1)
       expect(m.href).toBe(`/app/marketplace/${m.publicId}?project=${MERROWGATE_ID}`)
+      expect(m.windowShort).toMatch(/^(Available now|Expected [A-Z][a-z]{2}( \d{4})?( to [A-Z][a-z]{2})? \d{4})$/)
     }
     expect(v.today.at).toBeCloseTo(402 / 1855, 9)
     expect(v.axis).toMatchObject({ startText: 'September 2025', endText: 'September 2030', spanDays: 1855 })
     expect(v.axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['2026', '2027', '2028', '2029', '2030'])
+    expect(v.axis.startLabel).toBe('Sep 2025')
     expect(v.source).toBe('set')
     expect(v.canEdit).toBe(true)
     expect(v.description).toContain('Today: stage 2, Concept Design')
@@ -51,6 +53,7 @@ describe('programmeView', () => {
   it('from today starts this month', () => {
     const v = sel.programmeView(fresh(), viewer(U.priya), MERROWGATE_ID, 'ahead')!
     expect(v.axis.startText).toBe('October 2026')
+    expect(v.axis.startLabel).toBe('Oct 2026')
     expect(v.stages[0].from).toBe(0)
     expect(v.stages.find((b) => b.state === 'current')!.from).toBe(0)
   })
@@ -141,6 +144,10 @@ describe('projectSetup', () => {
     ])
     expect([setup.done, setup.total, setup.visible]).toEqual([1, 6, true])
     expect(setup.nextText).toBe('Next: check the programme')
+    expect(setup.focusId).toBe('programme')
+    expect(setup.steps.map((x) => x.short)).toEqual(['Programme', 'Client', 'Requirements', 'Consultant', 'Shortlist', 'Send'])
+    // The Indicative marker beside the step says it once; the text does not repeat it.
+    expect(setup.steps[0].text).toBe('Suggested from your site start and typical stage lengths. Confirm the dates or edit them.')
     expect(setup.steps[0].action).toEqual({ label: 'Edit programme', href: null, intent: 'edit_programme' })
     expect(setup.steps[0].secondary).toEqual({ label: 'Keep these dates', intent: 'keep_programme' })
     expect(setup.steps.filter((x) => x.optional).map((x) => x.id)).toEqual(['requirements', 'consultant'])
@@ -149,18 +156,40 @@ describe('projectSetup', () => {
     const after = sel.projectSetup(kept, viewer(U.priya), id)!
     expect(after.steps.find((x) => x.state === 'current')!.id).toBe('requirements')
     expect(after.nextText).toBe('Next: choose planning and sustainability requirements')
+    expect(after.focusId).toBe('requirements')
   })
 
   it('flags a declined client, and hides once programme, client and shortlist are done', () => {
     const { state, id } = corbel()
     const declined = must(decideClientLink(state, actor(U.isla), id, 'declined', '')).state
     expect(sel.projectSetup(declined, viewer(U.priya), id)!.steps[1]).toMatchObject({ state: 'attention', action: { label: 'Ask again', intent: 'change_client' } })
+    // The programme step still comes first, so it leads; the declined client is flagged in its own tile.
+    expect(sel.projectSetup(declined, viewer(U.priya), id)!.focusId).toBe('programme')
     let s = must(decideClientLink(state, actor(U.isla), id, 'accepted', '')).state
     const p = s.world.projects[id]
     s = must(setProjectProgramme(s, actor(U.priya), id, { ribaStage: p.ribaStage, programme: p.programme, startDate: p.startDate })).state
     expect(sel.projectSetup(s, viewer(U.priya), id)!.steps.find((x) => x.id === 'send')!.state).toBe('todo')
     s = must(saveToProject(s, actor(U.priya), 'L-9F4CQQ', id)).state
     expect(sel.projectSetup(s, viewer(U.priya), id)!.visible).toBe(false)
+  })
+
+  it('leads with the waiting client once everything the architect can do is done', () => {
+    const { state, id } = corbel()
+    const p = state.world.projects[id]
+    let s = must(setProjectProgramme(state, actor(U.priya), id, { ribaStage: p.ribaStage, programme: p.programme, startDate: p.startDate })).state
+    s = must(setProjectRequirements(s, actor(U.priya), id, [])).state
+    s = must(saveToProject(s, actor(U.priya), 'L-9F4CQQ', id)).state
+    const setup = sel.projectSetup(s, viewer(U.priya), id)!
+    expect(setup.steps.map((x) => [x.id, x.state])).toEqual([
+      ['programme', 'done'],
+      ['client', 'waiting'],
+      ['requirements', 'done'],
+      ['consultant', 'done'],
+      ['shortlist', 'done'],
+      ['send', 'waiting'],
+    ])
+    expect(setup.visible).toBe(true)
+    expect(setup.focusId).toBe('client')
   })
 
   it('shows on the projects list for the architect while it is visible', () => {
@@ -225,6 +254,11 @@ describe('the client link', () => {
     expect(items(state).map((i) => i.label)).toEqual(['Kilnworth Place', 'Merrowgate Wharf', 'Project requests'])
     const answered = must(decideClientLink(state, actor(U.isla), id, 'accepted', '')).state
     expect(items(answered).map((i) => i.label)).toEqual(['Corbel Yard', 'Kilnworth Place', 'Merrowgate Wharf'])
+    // With nothing waiting, the answered request is still a click away from the projects list.
+    expect(sel.projectsListView(fresh(), viewer(U.isla)).requestsHref).toBeNull()
+    expect(sel.projectsListView(state, viewer(U.isla)).requestsHref).toBe('/app/projects/requests')
+    expect(sel.projectsListView(answered, viewer(U.isla)).requestsHref).toBe('/app/projects/requests')
+    expect(sel.projectsListView(answered, viewer(U.priya)).requestsHref).toBeNull()
     expect(sel.routeAccess(state, viewer(U.isla), '/app/projects/requests')).toBe('ok')
     expect(sel.routeAccess(state, viewer(U.isla), '/app/projects/requests/x')).toBe('not_found')
     expect(sel.routeAccess(state, viewer(U.priya), '/app/projects/requests')).toBe('forbidden')

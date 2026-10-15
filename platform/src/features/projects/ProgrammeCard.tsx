@@ -53,7 +53,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
 
       <div className="flex flex-wrap items-center gap-2 px-4 pt-4 sm:px-5" data-testid="programme-status">
         <Tooltip content={view.check.text || 'The stage you declare matches the stage the programme plans for today.'}>
-          <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+          <span tabIndex={0} className="inline-flex items-center rounded-[5px] outline-none max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
             <Pill tone={CHECK_TONE[view.check.status]} dot data-testid="programme-check" data-status={view.check.status}>
               {view.check.label}
             </Pill>
@@ -61,7 +61,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
         </Tooltip>
         {view.source === 'suggested' ? (
           <Tooltip content="Worked out from your site start and typical stage lengths. Edit to match your plan.">
-            <span tabIndex={0} className="inline-flex rounded-[5px] outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+            <span tabIndex={0} className="inline-flex items-center rounded-[5px] outline-none max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
               <Pill tone="warning" data-testid="programme-suggested">
                 Suggested dates
               </Pill>
@@ -74,7 +74,7 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
 
       <div className="px-4 pb-2 pt-5 sm:px-5">
         <ProgrammeChart
-          axis={{ ticks: view.axis.ticks.map((t, i) => ({ ...t, iso: `tick-${i}` })) }}
+          axis={{ ticks: view.axis.ticks.map((t, i) => ({ ...t, iso: `tick-${i}` })), startLabel: view.axis.startLabel }}
           today={view.today}
           todayLabel={view.plannedStageText}
           stages={view.stages.map((s) => ({ ...s, open: s.end === null }))}

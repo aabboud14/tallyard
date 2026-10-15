@@ -5,13 +5,14 @@ import { describe, expect, it } from 'vitest'
 import { actor, fresh, must, U, viewer } from '../../test/fixtures'
 import { createProject, decideClientLink, type NewProjectInput } from '../actions/projects'
 import { saveToProject } from '../actions/shortlist'
-import { MERROWGATE_ID, ORG_IDS } from '../../domain/seed/world'
+import { MERROWGATE_ID, ORG_IDS, SALLOW_ID } from '../../domain/seed/world'
 import { PROGRAMME_ERRORS } from '../../domain/engines/programme'
 import { REQUIREMENTS_NOTE } from '../../domain/reference/requirements'
 import { FORBIDDEN } from '../../ui/testing'
 import type { AppData } from '../types'
 import { programmeDraftView, programmeForm, suggestedStageStarts, type ProgrammeDraft } from './programme'
-import { projectRequirementsView, requirementChoiceSummary, requirementChoices, requirementsPreview } from './requirements'
+import { projectRequirementsView, requirementChoiceSummary, requirementChoices, requirementsAfterMove, requirementsPreview } from './requirements'
+import { timeAgoStart } from './common'
 import { changeClientOptions } from './project'
 import { projectVisual, projectVisuals } from './project-visuals'
 import { goalDefaultRows, methodologyNotes } from './help'
@@ -90,6 +91,9 @@ describe('requirements summary and preview', () => {
     expect(p.moreText).toBe(`${v.selected.length - 4} more`)
     expect(requirementsPreview(v.selected.slice(0, 3)).moreText).toBeNull()
     expect(v.note).toBe(REQUIREMENTS_NOTE)
+    // After the Indicative marker in the picker, the note does not say the word again.
+    expect(v.choices.markerNote).toBe('Summaries as at October 2026. Check the current published documents before you rely on them.')
+    expect(REQUIREMENTS_NOTE.toLowerCase()).toBe(`indicative ${v.choices.markerNote.toLowerCase()}`)
   })
 })
 
@@ -151,5 +155,31 @@ describe('methodology notes', () => {
     expect(n.references.every((r) => r.status === 'Indicative summary')).toBe(true)
     expect(n.localNote).toBe('Local authority entries name the adopted plan to check; they do not summarise every policy.')
     expect(JSON.stringify(n)).not.toMatch(FORBIDDEN)
+  })
+})
+
+describe('requirementsAfterMove', () => {
+  it('says which chosen requirements stop applying and offers the new local suggestions', () => {
+    const p = fresh().world.projects[SALLOW_ID]
+    expect([p.region, p.localAuthority]).toEqual(['Central London', 'Camden'])
+    const m = requirementsAfterMove(p.planningRequirementIds, p, { region: 'Inner London East', localAuthority: 'Hackney' })
+    expect(m).toMatchObject({ moved: true, dropped: 2, newSuggested: 1 })
+    expect(m.text).toBe('2 chosen requirements no longer apply to Hackney, Inner London East. 1 more is suggested there.')
+    // Camden's two local items go; what still applies stays, and Hackney's local plan is offered.
+    expect(m.preselect).toEqual(['nppf', 'breeam-nc', 'lp-si2', 'lp-si7', 'gla-ces', 'la-hackney-lp33'])
+    expect(m.text).not.toMatch(FORBIDDEN)
+  })
+
+  it('says nothing when the location stays the same', () => {
+    const p = fresh().world.projects[SALLOW_ID]
+    expect(requirementsAfterMove(p.planningRequirementIds, p, { region: p.region, localAuthority: ` ${p.localAuthority}` })).toEqual({ moved: false, dropped: 0, newSuggested: 0, preselect: p.planningRequirementIds, text: null })
+  })
+})
+
+describe('timeAgoStart', () => {
+  it('starts a line with a capital', () => {
+    expect(timeAgoStart('2026-10-08T10:00:00Z', '2026-10-08T10:00:30Z')).toBe('Just now')
+    expect(timeAgoStart('2026-10-08T09:55:00Z', '2026-10-08T10:00:00Z')).toBe('5 minutes ago')
+    expect(timeAgoStart('2026-10-07T09:00:00Z', '2026-10-08T10:00:00Z')).toBe('Yesterday')
   })
 })

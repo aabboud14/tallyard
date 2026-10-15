@@ -153,6 +153,18 @@ describe('programmeRange and programmeAxis', () => {
     const axis = programmeAxis('2026-10-01', '2028-09-30')
     expect(axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['Q4 2026', 'Q1 2027', 'Q2 2027', 'Q3 2027', 'Q4 2027', 'Q1 2028', 'Q2 2028', 'Q3 2028'])
   })
+
+  it('names the month at the left edge when the first tick has no label', () => {
+    // Merrowgate Wharf's whole programme labels only Januaries, so September 2025 needs its own label.
+    expect(programmeAxis('2025-09-01', '2030-09-30').startLabel).toBe('Sep 2025')
+    // Corbel Yard style: a programme that starts in July.
+    expect(programmeAxis('2026-07-01', '2030-03-31').startLabel).toBe('Jul 2026')
+    expect(programmeAxis('2026-11-01', '2028-09-30').startLabel).toBe('Nov 2026')
+    // The first tick already carries a label: nothing to add.
+    expect(programmeAxis('2027-01-01', '2031-06-30').startLabel).toBeNull()
+    expect(programmeAxis('2026-10-01', '2027-09-30').startLabel).toBeNull()
+    expect(programmeAxis('2026-10-01', '2028-09-30').startLabel).toBeNull()
+  })
 })
 
 describe('PROGRAMME_PARAMETER_ROWS', () => {

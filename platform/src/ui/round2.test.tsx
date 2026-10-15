@@ -301,6 +301,22 @@ describe('ProgrammeChart', () => {
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 
+  it('names the start month and links each material, with its window, outside the image', () => {
+    const materials = SAMPLE_PROGRAMME.materials.map((m) => ({ ...m, href: `/app/marketplace/${m.itemId}`, fitLabel: 'In time' }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} materials={materials} />)
+    const chart = byTestId('programme-chart')
+    expect(chart.querySelector('[data-part="start-label"]')!.textContent).toBe('Sep 2025')
+    const links = Array.from(chart.querySelectorAll('a[data-part="material-link"]'))
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/app/marketplace/m1', '/app/marketplace/m2', '/app/marketplace/m3', '/app/marketplace/m4'])
+    expect(links[0].textContent).toBe('UB 457x191x67, 7.5 mExpected January to March 2027')
+    expect(links[0].closest('[role="img"]')).toBeNull()
+    expect(links[0].getAttribute('title')).toBe('UB 457x191x67, 7.5 m, Expected January to March 2027, in time')
+    // The today line sits under the stage names.
+    const today = chart.querySelector('[data-part="today"]')!
+    expect(today.className).toContain('z-[1]')
+    expect(chart.querySelector('[data-part="stage-band"] > span')!.className).toContain('z-[2]')
+  })
+
   it('shows the empty text and action outside the image when there are no materials', () => {
     render(<ProgrammeChart {...SAMPLE_PROGRAMME} materials={[]} emptyText="No materials on the programme yet." emptyAction={<button type="button">Find materials</button>} />)
     expect(document.body.textContent).toContain('No materials on the programme yet.')

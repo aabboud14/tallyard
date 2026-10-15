@@ -1,8 +1,10 @@
 // The project programme as the visual anchor of the overview: a tick row, a lane of RIBA stage bands, a lane
 // of milestones and one row per shortlisted material coloured by its fit, with a today line through all lanes.
 // Every position comes in as a fraction from 0 to 1 (the programme selector works them out with axisAt); the
-// browser turns fractions into widths. The figure is one image with a full description in words.
+// browser turns fractions into widths. The plot is one image with a full description in words. From 640 px each
+// material's name in the label column is a link to the material, with its availability window under it.
 import type { ReactNode } from 'react'
+import { Link, useInRouterContext } from 'react-router'
 import { cx } from './cx'
 import { FIT, MARK } from './labels'
 import { HATCH_STYLE } from './charts/tones'
@@ -33,11 +35,18 @@ export type ProgrammeMaterialView = {
   fit: 'in_time' | 'tight' | 'late' | 'now'
   /** For example "Expected January to March 2027". */
   windowText: string
+  /** For example "Expected Jan to Mar 2027": shown under the name in the label column when given. */
+  windowShort?: string
+  /** For example "Tight". */
+  fitLabel?: string
   storage: { from: number; to: number } | null
+  /** The material's page. The name in the label column links to it. */
+  href?: string | null
 }
 
 export type ProgrammeChartProps = {
-  axis: { ticks: readonly ProgrammeTick[] }
+  /** startLabel names the month at the left edge when the first tick has no label, for example "Sep 2025". */
+  axis: { ticks: readonly ProgrammeTick[]; startLabel?: string | null }
   today: { at: number }
   /** For example "Today: stage 2, Concept Design". */
   todayLabel: string
@@ -63,8 +72,46 @@ const BAND: Record<ProgrammeStageBandView['state'], string> = {
   future: 'bg-surface text-ink-soft ring-1 ring-inset ring-line-soft',
 }
 
+/** The band's own fill behind its number and name. */
+const BAND_TEXT: Record<ProgrammeStageBandView['state'], string> = { past: 'bg-subtle', current: 'bg-brand-50', future: 'bg-surface' }
+
 function LaneLabel({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('flex items-center truncate text-sm text-ink-soft', className)}>{children}</div>
+  return (
+    <div aria-hidden="true" className={cx('flex items-center truncate text-sm text-ink-soft', className)}>
+      {children}
+    </div>
+  )
+}
+
+/** "UB 457x191x67, Expected January to March 2027, tight": the hover text on a bar and its label. */
+function materialTitle(m: ProgrammeMaterialView): string {
+  return [m.title, m.windowText, m.fitLabel ? m.fitLabel.toLowerCase() : null].filter((x) => x).join(', ')
+}
+
+/** A material's name and window in the label column: a link when it has a page. */
+function MaterialLabel({ m }: { m: ProgrammeMaterialView }) {
+  const inRouter = useInRouterContext()
+  const body = (
+    <>
+      <span className="size-2 shrink-0 rounded-full" style={{ background: MARK[FIT[m.fit].tone] }} />
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="truncate text-sm text-ink">{m.title}</span>
+        <span className="truncate text-2xs text-muted">{m.windowShort ?? m.windowText}</span>
+      </span>
+    </>
+  )
+  const cls = 'flex h-11 min-w-0 items-center gap-2 rounded-sm'
+  if (!m.href) return <div className={cls}>{body}</div>
+  const linkCls = cx(cls, 'outline-none hover:[&_span>span:first-child]:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600')
+  return inRouter ? (
+    <Link to={m.href} className={linkCls} title={materialTitle(m)} data-part="material-link">
+      {body}
+    </Link>
+  ) : (
+    <a href={m.href} className={linkCls} title={materialTitle(m)} data-part="material-link">
+      {body}
+    </a>
+  )
 }
 
 export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, materials, description, emptyText, emptyAction, className, testId = 'programme-chart' }: ProgrammeChartProps) {
@@ -72,22 +119,32 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
   const milestoneRows = Math.max(1, milestones.length)
   return (
     <div data-testid={testId} className={cx('flex min-w-0 flex-col gap-3', className)}>
-      <div role="img" aria-label={description} className="grid min-w-0 gap-x-5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+      {axis.startLabel ? (
+        <p aria-hidden="true" className="m-0 text-2xs tabular-nums text-muted sm:hidden">
+          From {axis.startLabel}
+        </p>
+      ) : null}
+      <div className="grid min-w-0 gap-x-5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
         {/* Lane names, from 640 px. On phones each lane's name sits above it. */}
-        <div aria-hidden="true" className="max-sm:hidden">
-          <div className="h-12" />
+        <div className="max-sm:hidden">
+          <div aria-hidden="true" className="flex h-12 items-start justify-end pt-6 text-2xs tabular-nums text-muted" data-part="start-label">
+            {axis.startLabel}
+          </div>
           <LaneLabel className="h-12">RIBA stages</LaneLabel>
           <LaneLabel className="h-6 pt-3">Milestones</LaneLabel>
           <div style={{ height: `${milestoneRows * 22}px` }} />
           {materials.length > 0 ? <LaneLabel className="h-6 pt-3">Materials</LaneLabel> : null}
-          {materials.map((m) => (
-            <div key={m.itemId} className="flex h-8 min-w-0 items-center gap-2 text-sm text-ink-soft">
-              <span className="size-2 shrink-0 rounded-full" style={{ background: MARK[FIT[m.fit].tone] }} />
-              <span className="truncate">{m.title}</span>
-            </div>
-          ))}
+          {materials.length > 0 ? (
+            <ul aria-label="Materials on the programme" className="m-0 list-none p-0">
+              {materials.map((m) => (
+                <li key={m.itemId}>
+                  <MaterialLabel m={m} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
-        <div aria-hidden="true" className="relative min-w-0 overflow-x-clip">
+        <div role="img" aria-label={description} className="relative min-w-0 overflow-x-clip">
           {/* Grid lines at the ticks, stronger on major ticks. */}
           <div className="pointer-events-none absolute inset-0">
             {axis.ticks.map((t) => (
@@ -102,7 +159,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               </span>
             ))}
           </div>
-          <div className="relative w-fit bg-surface pr-1 pt-1 text-xs text-muted sm:hidden">RIBA stages</div>
+          <div className="relative z-[2] w-fit bg-surface pr-1 pt-1 text-xs text-muted sm:hidden">RIBA stages</div>
           <div className="relative h-12">
             {stages.map((s) => (
               <div
@@ -112,12 +169,15 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
                 className={cx('absolute inset-y-1 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-2xs font-medium', BAND[s.state], s.open && 'border-r border-dashed border-line-strong')}
                 style={span(s.from, s.to)}
               >
-                <span className="whitespace-nowrap tabular-nums">{s.stage}</span>
-                {s.to - s.from >= 0.12 ? <span className="ml-1 truncate max-lg:hidden">{s.name}</span> : null}
+                {/* Above the today line, on the band's own colour, so the line never runs through the words. */}
+                <span className={cx('relative z-[2] flex min-w-0 items-center rounded-[2px] px-0.5', BAND_TEXT[s.state])}>
+                  <span className="whitespace-nowrap tabular-nums">{s.stage}</span>
+                  {s.to - s.from >= 0.12 ? <span className="ml-1 truncate max-lg:hidden">{s.name}</span> : null}
+                </span>
               </div>
             ))}
           </div>
-          <div className="relative w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Milestones</div>
+          <div className="relative z-[2] w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Milestones</div>
           <div className="h-6 max-sm:hidden" />
           <div className="relative" style={{ height: `${milestoneRows * 22}px` }}>
             {milestones.map((m, i) => {
@@ -125,7 +185,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               return (
                 <div key={m.id} data-part="milestone" className="absolute h-[22px]" style={{ top: `${i * 22}px`, left: pos(m.at) }}>
                   <span className="absolute left-0 top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-ink ring-2 ring-surface" />
-                  <span className={cx('absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-2xs text-ink-soft max-sm:hidden', right ? 'right-2.5' : 'left-2.5')}>
+                  <span className={cx('absolute top-1/2 z-[2] -translate-y-1/2 whitespace-nowrap rounded-[2px] bg-surface px-0.5 text-2xs text-ink-soft max-sm:hidden', right ? 'right-2' : 'left-2')}>
                     <span className="font-medium text-ink">{m.label}</span> {m.dateText}
                   </span>
                 </div>
@@ -134,7 +194,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
           </div>
           {materials.length > 0 ? (
             <>
-              <div className="relative w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Materials</div>
+              <div className="relative z-[2] w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Materials</div>
               <div className="h-6 max-sm:hidden" />
             </>
           ) : null}
@@ -142,8 +202,8 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
             const fill = MARK[FIT[m.fit].tone]
             return (
               <div key={m.itemId} data-part="material" data-fit={m.fit}>
-                <div className="relative w-fit max-w-full truncate bg-surface pr-1 pt-1 text-xs text-ink-soft sm:hidden">{m.title}</div>
-                <div className="relative h-8">
+                <div className="relative z-[2] w-fit max-w-full truncate bg-surface pr-1 pt-1 text-xs text-ink-soft sm:hidden">{m.title}</div>
+                <div className="relative h-8 sm:h-11" title={materialTitle(m)}>
                   {m.storage ? <div className="absolute top-1/2 border-t-[1.5px] border-dashed border-mark-neutral" style={span(m.storage.from, m.storage.to)} /> : null}
                   {m.kind === 'window' ? (
                     <div data-part="window" className="absolute top-1/2 h-3 min-w-1.5 -translate-y-1/2 overflow-hidden rounded-[3px]" style={{ ...span(m.from, m.to), background: fill }}>
@@ -157,8 +217,8 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
             )
           })}
           {/* Today runs through every lane, labelled at the top. */}
-          <div data-part="today" className="pointer-events-none absolute bottom-0 top-4 w-0.5 -translate-x-1/2 bg-brand-600" style={{ left: pos(today.at) }} />
-          <div className={cx('pointer-events-none absolute top-0 whitespace-nowrap rounded-[3px] bg-brand-600 px-1.5 py-px text-2xs font-medium text-white', today.at > 0.5 ? '-translate-x-full' : null)} style={{ left: pos(today.at) }}>
+          <div data-part="today" className="pointer-events-none absolute bottom-0 top-4 z-[1] w-0.5 -translate-x-1/2 bg-brand-600" style={{ left: pos(today.at) }} />
+          <div className={cx('pointer-events-none absolute top-0 z-[3] whitespace-nowrap rounded-[3px] bg-brand-600 px-1.5 py-px text-2xs font-medium text-white', today.at > 0.5 ? '-translate-x-full' : null)} style={{ left: pos(today.at) }}>
             {todayLabel}
           </div>
         </div>

@@ -77,6 +77,7 @@ export const SAMPLE_PROGRAMME = {
       { iso: '2030-04-01', at: 0.9019, label: null, major: true },
       { iso: '2030-07-01', at: 0.9509, label: null, major: true },
     ],
+    startLabel: 'Sep 2025',
   },
   today: { at: 0.2162 },
   todayLabel: 'Today: stage 2, Concept Design',

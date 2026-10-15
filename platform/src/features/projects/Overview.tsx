@@ -1,5 +1,6 @@
-// The project overview, for everyone on the project. The architect of a new project sees the setup checklist and,
-// until the client accepts, the client link banner. Then the programme leads, full width: RIBA stages, milestones,
+// The project overview, for everyone on the project. The architect of a new project sees a compact setup checklist
+// with the waiting client folded into it (a decline gets the full client link banner), so the programme still
+// starts on the first screen. The programme leads, full width: RIBA stages, milestones,
 // today and each shortlisted material against them. Below it the shortlist, avoided carbon and the planning and
 // sustainability requirements, the next steps and details, and the recent activity, collapsed by default.
 import { useState } from 'react'
@@ -39,6 +40,10 @@ export function Overview() {
   }
 
   const clientValue = link ? `${link.clientName}, ${link.status === 'declined' ? 'declined' : 'waiting to accept'}` : h.clientName
+  const changeClient = (mode: ChangeClientMode) => setDialog({ kind: 'client', mode })
+  // While the client has not answered, the link folds into the checklist; when the checklist already leads with the
+  // client step, that step says it.
+  const inlineLink = !!view.setup?.visible && link?.status === 'pending'
 
   return (
     <ProjectPage testId="project-overview">
@@ -53,10 +58,11 @@ export function Overview() {
               else if (intent === 'requirements') setDialog({ kind: 'requirements' })
               else if (intent === 'change_client') setDialog({ kind: 'client', mode: link?.status === 'declined' ? 'ask_again' : 'another' })
             }}
+            footer={inlineLink && view.setup.focusId !== 'client' ? <ClientLinkBanner projectId={projectId} variant="inline" onChangeClient={changeClient} /> : null}
           />
         ) : null}
 
-        {link ? <ClientLinkBanner projectId={projectId} onChangeClient={(mode) => setDialog({ kind: 'client', mode })} /> : null}
+        {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
 
         <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} />
 
@@ -130,7 +136,7 @@ export function Overview() {
                   { label: 'Architect', value: h.architectName },
                   { label: 'Consultant', value: h.consultantName || 'None yet' },
                   { label: 'Type', value: h.typeLabel },
-                  { label: 'RIBA stage', value: h.stageLabel },
+                  { label: 'Stage', value: h.stageLabel },
                   { label: 'Region', value: h.region },
                   { label: 'Local authority', value: h.localAuthority || 'Not set' },
                   { label: 'Site start', value: h.siteStartText },
