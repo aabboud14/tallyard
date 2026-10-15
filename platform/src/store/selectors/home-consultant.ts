@@ -1,5 +1,5 @@
 // The sustainability consultant's dashboard: each project against the targets set at inception (reused content
-// by value and avoided carbon), drawn from its shortlist's public cards, plus waste engagements. Indicative.
+// by value and avoided carbon, read through effectiveTargets), drawn from its shortlist's public cards, plus waste engagements. Indicative.
 import * as f from '../../domain/format'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
 import { stageOn } from '../../domain/engines/programme'
@@ -9,6 +9,7 @@ import { todayOf } from './common'
 import { shortlistRows } from './shortlist'
 import { consultantHome, type ConsultantHome } from './consultant'
 import { projectTabs } from './project'
+import { effectiveTargets } from './sustainability'
 import { activitySummary, targetProgress, type ActivitySummary, type TargetProgress } from './dashboard'
 
 export type TargetRowView = TargetProgress & { actualText: string; targetText: string | null; statusText: string }
@@ -31,6 +32,9 @@ export type ConsultantDashboard = ConsultantHome & {
   activitySummary: ActivitySummary
 }
 
+/** The tabs a project card links to; the sidebar folder shows all of them (client-consultant design, open questions). */
+const CARD_LINKS: string[] = ['sustainability', 'targets', 'certification']
+
 const STATUS_TEXT: Record<TargetProgress['status'], string> = { met: 'Target met', below: 'Below target', no_target: 'No target set', no_data: 'No bill of materials yet' }
 
 function targetRow(actual: number | null, target: number, format: (x: number) => string): TargetRowView {
@@ -49,7 +53,8 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
   let targetsMet = 0
   const rows = home.projects.map((c) => {
     const p = state.world.projects[c.id]
-    const targets = p.targets
+    // The consultant's overrides, or the defaults from the requirements (client-consultant design: the one source of targets).
+    const targets = effectiveTargets(state, p.id)
     const content = targetRow(c.contentPercent, targets.contentByValue, f.percent)
     const carbon = targetRow(c.avoidedApprovedT, targets.avoidedCarbonT, f.carbon)
     if (targets.contentByValue > 0 || targets.avoidedCarbonT > 0) withTargets += 1
@@ -74,7 +79,7 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
       href: c.href,
       sketch: projectSketch(p, families),
       links: projectTabs(state, 'consultant', p)
-        .filter((t) => t.id !== 'overview' && t.id !== 'team' && t.id !== 'activity')
+        .filter((t) => CARD_LINKS.includes(t.id))
         .map((t) => ({ id: t.id, label: t.label, href: t.href })),
       content,
       carbon,

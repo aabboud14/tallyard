@@ -13,7 +13,8 @@ import { StatStrip } from '../notifications/kit'
 
 const STATUS_FILL: Record<string, string> = { pending: 'fill-[#cdc8c4]', sent: 'fill-[#4f7fe8]', approved: 'fill-brand-600', declined: 'fill-[#e4b4b0]', structure: 'fill-brand-600', envelope: 'fill-brand-400', finishes: 'fill-brand-300' }
 
-function ProjectCarbonBody() {
+/** Carbon by status and by typology, kept under the test id project-carbon. The Sustainability tab shows it. */
+export function CarbonSection() {
   const { projectId = '' } = useParams()
   const v = useView(selectors.projectCarbon, projectId)
   if (!v) return null
@@ -74,7 +75,7 @@ function LinesCard({ title, description, lines, testId }: { title: string; descr
 export function ProjectCarbon() {
   return (
     <Page className="lg:pt-7">
-      <ProjectCarbonBody />
+      <CarbonSection />
     </Page>
   )
 }

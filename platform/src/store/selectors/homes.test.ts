@@ -70,13 +70,18 @@ describe('consultant dashboard', () => {
     expect(merrow.content.targetText).toBe('25.0%')
     expect(['met', 'below']).toContain(merrow.content.status)
     expect(['met', 'below']).toContain(merrow.carbon.status)
-    expect(merrow.links.map((l) => l.id)).toEqual(['carbon', 'compliance'])
+    // Round 2 (client-consultant design 11 and open questions): Carbon is now Sustainability, and the card links to Sustainability, Goals and targets and Certification.
+    expect(merrow.links.map((l) => l.id)).toEqual(['sustainability', 'targets', 'certification'])
     expect(merrow.sketch.state).toBe('proposed')
     const sallow = d.rows.find((r) => r.id === SALLOW_ID)!
-    expect(sallow.content.status).toBe('no_target')
-    expect(sallow.content.statusText).toBe('No target set')
-    expect(d.metrics.targetsSet).toBe(2)
-    expect(d.metrics.withTargets).toBe(1)
+    // Round 2 (client-consultant design 1 and 12): targets come from effectiveTargets, so Sallow Court and Ferrymoor Yard carry the
+    // 20% content default from the requirements that apply to them; with no bill of materials yet they read no_data.
+    expect(sallow.content.targetText).toBe('20.0%')
+    expect(sallow.content.status).toBe('no_data')
+    expect(sallow.content.statusText).toBe('No bill of materials yet')
+    expect(sallow.carbon.status).toBe('no_target')
+    expect(d.metrics.targetsSet).toBe(4)
+    expect(d.metrics.withTargets).toBe(3)
     expect(d.metrics.carbonTargetT).toBe(150)
     expect(d.metrics.billsReviewed).toBe(d.engagements.filter((e) => e.hasBill).length)
     expect(consultantDashboard(fresh(), viewer(U.priya))).toBeNull()

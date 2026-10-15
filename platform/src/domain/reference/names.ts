@@ -14,11 +14,13 @@ export const ALLOWED_ORGANISATIONS = [
   'Meridale Partners',
   // Round 2: the deconstruction contractor on Tiverne House.
   'Fennick Dismantling',
+  // Round 2: the architect of Lantern Quay's second project.
+  'Tessaly Architects',
 ] as const
 
 export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Isla Brennan', 'Marcus Lindqvist'] as const
 
-export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House', 'Ambrey House', '6 Quarrel Lane'] as const
+export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House', 'Ambrey House', '6 Quarrel Lane', 'Kilnworth Place'] as const
 
 export const ALLOWED_PARTNERS = [
   'Open yard, Barking',

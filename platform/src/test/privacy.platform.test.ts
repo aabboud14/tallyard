@@ -21,6 +21,8 @@ import { setLotVisibility, setProjectAccess } from '../store/actions/owner'
 import { captureItem } from '../store/actions/surveyor'
 import { draftFromText } from '../store/capture'
 import { itemsOf } from '../store/selectors/owner'
+import { SCHEME_IDS } from '../domain/reference/certification'
+import { addRequirementEvidence, reviewStatement, sendStatementForReview, setCreditStatus, setGoalTarget, setRequirementStatus } from '../store/actions/sustainability'
 
 const LOT_ID = /\blot_[a-z0-9]{6}\b/
 
@@ -72,6 +74,8 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   add('notificationSettings', sel.notificationSettings(s, v))
   add('engagements', sel.engagementsOf(s, v).map((e) => sel.wasteView(s, v, e.id)))
   add('linkRequests', sel.clientLinkRequests(s, v))
+  add('clientDashboard', sel.clientDashboard(s, v))
+  add('clientProgramme', sel.clientProgramme(s, v))
   const publicIds = new Set(marketplaceListings(s).map((l) => l.publicId))
   for (const p of projectsOfUser(s, v.userId)) {
     add(`discover ${p.name}`, sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, projectId: p.id, tab: 'shared', fitsOnly: true }))
@@ -90,6 +94,7 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
     add(`approvals ${p.name}`, sel.approvalsView(s, v, p.id))
     add(`reservations ${p.name}`, sel.reservationsView(s, v, p.id))
     add(`compliance ${p.name}`, sel.complianceView(s, v, p.id))
+    for (const [name, view] of sustainabilityViews(s, v, p.id)) add(`${name} ${p.name}`, view)
     for (const it of projectWishlist(s.world, p.id)?.items ?? []) publicIds.add(it.publicId)
     for (const g of sel.sharedGroups(s, v)) for (const c of g.cards) publicIds.add(c.publicId)
   }
@@ -98,6 +103,22 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
     add(`geometry ${id}`, [sel.geometryFile(s, v, id, 'dxf'), sel.geometryFile(s, v, id, 'obj'), ifcScanned(sel.geometryFile(s, v, id, 'ifc'))])
   }
   return out
+}
+
+/** The round 2 sustainability view models for one project (client-consultant design, section 10). */
+function sustainabilityViews(s: AppData, v: Viewer, projectId: string): [string, unknown][] {
+  return [
+    ['sustainability', sel.sustainabilityView(s, v, projectId)],
+    ['goalRows', sel.goalRows(s, v, projectId)],
+    ['goals', sel.goalsView(s, v, projectId)],
+    ['requirementsTracking', sel.requirementsView(s, v, projectId)],
+    ['statement', sel.statementView(s, v, projectId)],
+    ['certificationSummary', sel.certificationSummary(s, v, projectId)],
+    ...SCHEME_IDS.map((id): [string, unknown] => [`certification ${id}`, sel.certificationView(s, v, projectId, id)]),
+    ['complianceWorkbook', sel.complianceWorkbook(s, v, projectId)],
+    ['tracking', sel.sustainabilityTracking(s, v, projectId)],
+    ['projectMetrics', sel.projectMetrics(s, v, projectId)],
+  ]
 }
 
 /** Every view model an asset owner can open, as named JSON. */
@@ -361,5 +382,59 @@ describe('P3 on the platform, round 2: share links, contractors and New projects
     const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)], ['capture', sel.captureTargets(s, v)]]
     for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)], [`inventory ${b.name}`, sel.inventoryView(s, v, b.id)], [`testing ${b.name}`, sel.testingView(s, v, b.id)])
     expectNone(dana, ['Wexcombe House', ...dateFormats(s.world.projects[r.value].startDate)], 'Dana')
+  })
+})
+
+describe('P3 and money, round 2: the sustainability records', () => {
+  /** The busy sandbox, with the sustainability records changed by both sides. */
+  function withRecords(): AppData {
+    let s = busy()
+    s = must(setGoalTarget(s, actor(U.marcus), MERROWGATE_ID, 'content_by_value', 0.3, 'Raised with the client.')).state
+    s = must(setRequirementStatus(s, actor(U.isla), MERROWGATE_ID, 'gla-ces', 'at_risk')).state
+    s = must(addRequirementEvidence(s, actor(U.isla), MERROWGATE_ID, 'gla-ces', { text: 'Board approved the approach.', output: 'specification' })).state
+    s = must(setCreditStatus(s, actor(U.marcus), MERROWGATE_ID, 'breeam-mat03', 'at_risk')).state
+    s = must(reviewStatement(s, actor(U.isla), MERROWGATE_ID, 'Happy with the approach.')).state
+    s = must(sendStatementForReview(s, actor(U.marcus), MERROWGATE_ID)).state
+    return s
+  }
+
+  it('the architect and the consultant never see a money figure in these views', () => {
+    for (const s of [fresh(), withRecords()])
+      for (const [who, id] of [['Priya', U.priya], ['Marcus', U.marcus]] as const) {
+        const v = viewer(id)
+        for (const p of projectsOfUser(s, id)) {
+          for (const [name, view] of sustainabilityViews(s, v, p.id)) {
+            if (name === 'complianceWorkbook') continue
+            expect(JSON.stringify(view).includes('£'), `${who}, ${name} ${p.name} holds money`).toBe(false)
+          }
+        }
+      }
+  })
+
+  it('the client sees money, from the package engine', () => {
+    expect(JSON.stringify(sel.approvalsView(fresh(), viewer(U.isla), MERROWGATE_ID))).toContain('£')
+    expect(JSON.stringify(sel.clientDashboard(fresh(), viewer(U.isla)))).toContain('£')
+  })
+
+  it('the buyer side still receives no seller-private string with the records in place', () => {
+    const s = withRecords()
+    const strings = allLotStrings(s)
+    for (const [who, id] of [['Priya', U.priya], ['Isla', U.isla], ['Marcus', U.marcus]] as const) {
+      const views = buyerViews(s, viewer(id))
+      expectNone(views, strings, who)
+      expectNoInternalIds(views, who)
+    }
+  })
+
+  it("the owner's inbox and activity hold nothing of the records, and the views return nothing", () => {
+    const s = withRecords()
+    const v = viewer(U.tom)
+    const inbox = sel.inboxView(s, v)
+    expect(inbox.groups.flatMap((g) => g.items).some((n) => n.kind === 'sustainability')).toBe(false)
+    const text = JSON.stringify([inbox, sel.activityFor(s, v, {}, 500), sel.bellView(s, v)])
+    for (const x of ['circular economy statement', 'Circular economy statement', 'Board approved the approach.', 'Happy with the approach.', 'Raised with the client.', 'Lantern Quay has asked']) expect(text).not.toContain(x)
+    for (const fn of [sel.sustainabilityView, sel.goalRows, sel.requirementsView, sel.statementView, sel.certificationSummary, sel.sustainabilityTracking, sel.complianceWorkbook]) expect(fn(s, v, MERROWGATE_ID)).toBeNull()
+    expect(sel.clientDashboard(s, v)).toBeNull()
+    expectNone(ownerViews(s, v), allProjectStrings(s), 'Tom')
   })
 })

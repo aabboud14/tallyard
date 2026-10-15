@@ -13,7 +13,7 @@ import { GuestOnly, RequireAuth } from './guards'
 import { RouteError } from './RouteError'
 import { AppNotFound } from './NoAccess'
 import { lazyPage } from './pages'
-import { EngagementIndex, LegacyMarketplaceRedirect } from './redirects'
+import { EngagementIndex, LegacyMarketplaceRedirect, ProjectTabRedirect } from './redirects'
 
 const handle = (title: string): RouteHandle => ({ title })
 
@@ -65,7 +65,13 @@ export const routes: RouteObject[] = [
                   { path: 'team', lazy: lazyPage(() => import('../features/projects/Team'), 'Team') },
                   { path: 'activity', lazy: lazyPage(() => import('../features/projects/Activity'), 'Activity') },
                   { path: 'matching', lazy: lazyPage(() => import('../features/projects/Matching'), 'Matching') },
-                  { path: 'carbon', lazy: lazyPage(() => import('../features/carbon/ProjectCarbon'), 'ProjectCarbon') },
+                  // Round 2: Carbon became Sustainability; stored links keep working.
+                  { path: 'carbon', element: <ProjectTabRedirect to="sustainability" /> },
+                  { path: 'sustainability', lazy: lazyPage(() => import('../features/sustainability/Sustainability'), 'Sustainability') },
+                  { path: 'targets', lazy: lazyPage(() => import('../features/sustainability/Targets'), 'Targets') },
+                  { path: 'certification', lazy: lazyPage(() => import('../features/sustainability/Certification'), 'Certification') },
+                  { path: 'requirements', lazy: lazyPage(() => import('../features/sustainability/Requirements'), 'Requirements') },
+                  { path: 'statement', lazy: lazyPage(() => import('../features/sustainability/Statement'), 'Statement') },
                   { path: 'approvals', lazy: lazyPage(() => import('../features/approvals/Approvals'), 'Approvals') },
                   { path: 'reservations', lazy: lazyPage(() => import('../features/reservations/Reservations'), 'Reservations') },
                   { path: 'compliance', lazy: lazyPage(() => import('../features/compliance/Compliance'), 'Compliance') },

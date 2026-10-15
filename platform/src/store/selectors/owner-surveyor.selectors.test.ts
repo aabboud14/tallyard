@@ -239,7 +239,8 @@ describe('New projects for the owner', () => {
     const opts = sel.newBuildingOptions(s0, viewer(U.tom))!
     expect(opts.mode).toBe('owner')
     expect(opts.kinds.map((k) => k.label)).toEqual(['Donor building', 'New project'])
-    expect(opts.architects).toEqual([{ orgId: ORG_IDS.oriel, name: 'Studio Oriel' }])
+    // Round 2 (BRIEF 14.2): Tessaly Architects is seeded with Kilnworth Place, so the owner may appoint it too.
+    expect(opts.architects).toEqual([{ orgId: ORG_IDS.oriel, name: 'Studio Oriel' }, { orgId: 'org_tessaly', name: 'Tessaly Architects' }])
     expect(opts.projectTypes).toHaveLength(13)
     expect(opts.structure).toHaveLength(6)
     expect(sel.newBuildingOptions(s0, viewer(U.dana))).toMatchObject({ mode: 'surveyor', surveyors: [], architects: [], projectTypes: [] })
@@ -290,7 +291,12 @@ describe('the sidebar', () => {
     const after = sel.navModel(r.state, viewer(U.tom))!
     expect(after.sections.map((x) => x.title)).toEqual([null, 'Donor buildings', 'New projects', null])
     expect(after.sections[0].items.map((i) => i.label)).toEqual(['Home', 'Marketplace'])
-    expect(after.sections[2].items[0].children.map((c) => c.label)).toEqual(['Overview', 'Approvals', 'Reservations', 'Specification', 'Carbon'])
+    // Round 2 (client-consultant design 11): the owner is the client of its New project, so it gets the client's tabs, with Sustainability in place of Carbon and Requirements.
+    expect(after.sections[2].items[0].children.map((c) => c.label)).toEqual(['Overview', 'Approvals', 'Reservations', 'Specification', 'Sustainability', 'Requirements'])
+    for (const tab of ['sustainability', 'requirements', 'carbon']) expect(sel.routeAccess(r.state, viewer(U.tom), `/app/projects/${r.value}/${tab}`)).toBe('ok')
+    for (const tab of ['targets', 'certification', 'statement', 'compliance']) expect(sel.routeAccess(r.state, viewer(U.tom), `/app/projects/${r.value}/${tab}`)).toBe('forbidden')
+    expect(sel.sustainabilityView(r.state, viewer(U.tom), r.value)).not.toBeNull()
+    expect(sel.requirementsView(r.state, viewer(U.tom), r.value)).not.toBeNull()
   })
 })
 

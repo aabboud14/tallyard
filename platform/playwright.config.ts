@@ -14,7 +14,8 @@ function findChromium(): string | undefined {
   return undefined
 }
 const executablePath = findChromium()
-const PORT = 4175
+// PW_PORT lets a second checkout on the same machine run its journeys at the same time.
+const PORT = Number(process.env.PW_PORT ?? 4175)
 
 export default defineConfig({
   testDir: 'e2e',

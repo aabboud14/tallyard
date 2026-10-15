@@ -13,3 +13,10 @@ export function LegacyMarketplaceRedirect() {
   const { pathname, search, hash } = useLocation()
   return <Navigate to={marketplacePathFor(pathname) + search + hash} replace />
 }
+
+/** A project tab that moved: /app/projects/:id/carbon opens Sustainability, keeping the query and the section. */
+export function ProjectTabRedirect({ to }: { to: string }) {
+  const { projectId } = useParams()
+  const { search, hash } = useLocation()
+  return <Navigate to={`/app/projects/${projectId}/${to}${search}${hash}`} replace />
+}

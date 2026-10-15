@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { FAMILY_IDS } from '../../domain/reference/families'
 import { fresh, U, viewer, TODAY } from '../../test/fixtures'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { MERROWGATE_ID, ORG_IDS } from '../../domain/seed/world'
 import { projectWishlist } from '../lots'
 import { shortlistRows, type ShortlistRow } from './shortlist'
 import type { ActivityRow } from './common'
@@ -27,7 +27,9 @@ describe('dashboard helpers', () => {
 
   it('finds the next start on site, ties by name', () => {
     const s = fresh()
-    expect(earliestStart(Object.values(s.world.projects), TODAY)!.name).toBe('Ferrymoor Yard')
+    // Round 2 (BRIEF 14.2): Kilnworth Place, seeded for Lantern Quay, starts on site before Ferrymoor Yard; among Studio Oriel's projects Ferrymoor Yard is still next.
+    expect(earliestStart(Object.values(s.world.projects), TODAY)!.name).toBe('Kilnworth Place')
+    expect(earliestStart(Object.values(s.world.projects).filter((p) => p.architectOrgId === ORG_IDS.oriel), TODAY)!.name).toBe('Ferrymoor Yard')
     expect(earliestStart([{ name: 'Beta', startDate: '2027-01-01' }, { name: 'alpha', startDate: '2027-01-01' }], TODAY)!.name).toBe('alpha')
     expect(earliestStart([{ name: 'Past', startDate: '2026-01-01' }], TODAY)).toBeNull()
   })

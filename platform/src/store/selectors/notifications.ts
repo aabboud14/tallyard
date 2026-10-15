@@ -19,6 +19,7 @@ export const NOTIFICATION_KIND_INFO: Record<NotificationKind, { label: string; d
   testing: { label: 'Testing', description: 'Testing is requested, booked or has results.', roles: ['owner', 'surveyor'] },
   availability_set: { label: 'Availability dates', description: 'A deconstruction contractor is invited or sets expected dates.', roles: ['owner'] },
   link_opened: { label: 'Share links', description: 'Someone opens a link you shared.', roles: ['owner'] },
+  sustainability: { label: 'Sustainability and compliance', description: 'Targets, certification credits, requirements and the circular economy statement change on one of your projects.', roles: ['client', 'owner', 'consultant'] },
 }
 
 export type InboxItem = { id: string; kind: NotificationKind; kindLabel: string; title: string; body: string; href: string; at: string; timeAgo: string; unread: boolean; count: number }

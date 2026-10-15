@@ -32,7 +32,7 @@ export type AppStore = AppData & {
   resetSandbox: () => Promise<void>
 }
 
-const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'orgProfiles', 'buildingClaims', 'testingRequests', 'ui'] as const satisfies readonly (keyof AppData)[]
+const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'sustainability', 'orgProfiles', 'buildingClaims', 'testingRequests', 'ui'] as const satisfies readonly (keyof AppData)[]
 
 /** The data part of the store, without the functions. */
 export function dataOf(s: AppData): AppData {
@@ -42,7 +42,7 @@ export function dataOf(s: AppData): AppData {
 function looksValid(x: unknown): x is AppData {
   if (!x || typeof x !== 'object') return false
   const d = x as Partial<AppData>
-  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.buildingClaims && !!d.testingRequests && !!d.ui
+  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.sustainability && !!d.buildingClaims && !!d.testingRequests && !!d.ui
 }
 
 function fresh(): AppData {

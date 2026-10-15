@@ -79,6 +79,14 @@ const SCREENS: [string, string, string][] = [
   ['reservations', U.isla, `/app/projects/${MERROWGATE_ID}/reservations`],
   ['project-carbon', U.marcus, `/app/projects/${MERROWGATE_ID}/carbon`],
   ['compliance', U.marcus, `/app/projects/${MERROWGATE_ID}/compliance`],
+  // Round 2: the Sustainability tab for every side, Requirements for all three, and the consultant's own tabs.
+  ['sustainability for the client', U.isla, `/app/projects/${MERROWGATE_ID}/sustainability`],
+  ['sustainability for the architect', U.priya, `/app/projects/${MERROWGATE_ID}/sustainability`],
+  ['requirements for the client', U.isla, `/app/projects/${MERROWGATE_ID}/requirements`],
+  ['requirements for the architect', U.priya, `/app/projects/${MERROWGATE_ID}/requirements`],
+  ['goals and targets', U.marcus, `/app/projects/${MERROWGATE_ID}/targets`],
+  ['certification', U.marcus, `/app/projects/${MERROWGATE_ID}/certification`],
+  ['circular economy statement', U.marcus, `/app/projects/${MERROWGATE_ID}/statement`],
   ['buildings', U.tom, '/app/buildings'],
   ['building-overview', U.tom, `/app/buildings/${TIVERNE_ID}`],
   ['inventory', U.tom, `/app/buildings/${TIVERNE_ID}/inventory`],
@@ -99,6 +107,13 @@ const TEST_IDS: Record<string, string> = {
   'surveyor home': 'surveyor-home',
   'consultant home': 'consultant-home',
   'building-overview': 'building-overview',
+  'sustainability for the client': 'sustainability-page',
+  'sustainability for the architect': 'sustainability-page',
+  'requirements for the client': 'requirements-page',
+  'requirements for the architect': 'requirements-page',
+  'goals and targets': 'targets-page',
+  certification: 'certification-page',
+  'circular economy statement': 'statement-page',
 }
 
 describe('screens', () => {
@@ -109,6 +124,23 @@ describe('screens', () => {
       expectClean()
     })
   }
+})
+
+describe('the Carbon tab moved to Sustainability', () => {
+  it('/carbon opens Sustainability, keeping the query and the carbon section', async () => {
+    const router = open(`/app/projects/${MERROWGATE_ID}/carbon?from=bookmark`, U.marcus)
+    await waitFor(() => document.querySelector('[data-testid="sustainability-page"]'))
+    expect(router.state.location.pathname).toBe(`/app/projects/${MERROWGATE_ID}/sustainability`)
+    expect(router.state.location.search).toBe('?from=bookmark')
+    expect(document.querySelector('[data-testid="project-carbon"]')).not.toBeNull()
+    expectClean()
+  })
+
+  it("the consultant's tabs stay with the consultant", async () => {
+    open(`/app/projects/${MERROWGATE_ID}/targets`, U.isla)
+    await waitFor(() => document.querySelector('[data-testid="no-access"]'))
+    expect(document.querySelector('[data-testid="targets-page"]')).toBeNull()
+  })
 })
 
 describe('blind until accepted', () => {
