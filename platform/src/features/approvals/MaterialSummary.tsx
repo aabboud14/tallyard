@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { ArrowUpRight } from 'lucide-react'
 import { TEST_STATUS_LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
+import { materialHref } from '../../store/paths'
 import { fitText, storageText, type ListingCard } from '../../store/selectors/common'
 import { cx, FitPill, IndicativeMarker, SustainabilityBand } from '../../ui'
 import { MaterialPicture } from '../buildings/photos'
@@ -73,7 +74,7 @@ export function MaterialSummary({ card, title, eyebrow, children, aside, testId 
         <div className="min-w-0">
           <p className="m-0 text-sm text-muted">{eyebrow ?? `${card.typologyLabel} · ${card.familyLabel}`}</p>
           <h3 className="m-0 mt-0.5 text-xl font-semibold text-ink">{title}</h3>
-          <Link to={`/app/discover/${card.publicId}`} className="mt-1 inline-flex items-center gap-1 rounded-sm text-sm text-muted hover:text-ink">
+          <Link to={materialHref(card.publicId)} className="mt-1 inline-flex items-center gap-1 rounded-sm text-sm text-muted hover:text-ink">
             {card.publicId}
             <ArrowUpRight aria-hidden="true" className="size-3.5" />
             <span className="sr-only">Open the material page</span>

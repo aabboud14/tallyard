@@ -1,7 +1,7 @@
 // Discover's query in the address bar: read it back safely (anything unknown falls back to the default) and write
 // only what differs from the default, so links stay short and the back button restores every filter.
-// Also the project Discover checks fit against: the one in the address, else the person's last choice, else the
-// first project they work on.
+// Also the project the Marketplace checks fit against: the one in the address, else the person's last choice, else
+// none. There is no fallback to a first project: a person chooses one, or follows a link that names one.
 import type { Condition, FamilyId } from '../../domain/types'
 import type { BandLevel, BrowseSort, Typology } from '../../domain/v1types'
 import { FAMILIES } from '../../domain/reference/families'
@@ -72,13 +72,12 @@ export function clearDiscoverFilters(q: DiscoverQuery): DiscoverQuery {
 
 /**
  * The project the viewer checks fit against. A project in the address wins when the viewer works on it; then
- * their stored choice (null means they chose none); with no stored choice, their first project.
+ * their stored choice when they still work on it; otherwise no project.
  */
 export function checkingProjectFor(state: AppData, viewer: Viewer, fromAddress: string | null): string | null {
   const mine = projectsOfUser(state, viewer.userId).map((p) => p.id)
   if (fromAddress && mine.includes(fromAddress)) return fromAddress
   const stored = state.ui.checkingProjectId[viewer.userId]
-  if (stored === null) return null
-  if (stored !== undefined && mine.includes(stored)) return stored
-  return mine[0] ?? null
+  if (stored && mine.includes(stored)) return stored
+  return null
 }

@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router'
 import { ArrowRight, Clock, Compass, FolderKanban, FolderOpen, FolderPlus, Hourglass, Layers, Leaf, Send, Sparkle } from 'lucide-react'
 import * as f from '../../domain/format'
 import { useView } from '../../store'
+import { MARKETPLACE_PATH } from '../../store/paths'
 import { architectHome, type ProjectCardView, type WaitingItem } from '../../store/selectors/architect'
 import { Button, Card, CardHeader, cx, EmptyState, PageHeader, Stat } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
@@ -53,11 +54,11 @@ function sentText(w: WaitingItem): string {
 function Waiting({ items }: { items: WaitingItem[] }) {
   return (
     <Card>
-      <CardHeader title="Waiting on your client" icon={Hourglass} titleAs="h2" actions={items.length > 0 ? <span className="text-sm tabular-nums text-muted">{items.length}</span> : undefined} />
+      <CardHeader title="Waiting for approval" icon={Hourglass} titleAs="h2" actions={items.length > 0 ? <span className="text-sm tabular-nums text-muted">{items.length}</span> : undefined} />
       {items.length === 0 ? (
-        <p className="m-0 px-5 py-6 text-sm text-muted">Nothing is waiting. Materials you send for approval appear here until the client decides.</p>
+        <p className="m-0 px-5 py-6 text-sm text-muted">Nothing is waiting. Materials you send for approval appear here until your client decides.</p>
       ) : (
-        <ul className="m-0 list-none divide-y divide-line-soft p-0" data-testid="waiting-on-client">
+        <ul className="m-0 list-none divide-y divide-line-soft p-0" data-testid="waiting-for-approval">
           {items.map((w) => (
             <li key={w.itemId}>
               <Link to={w.href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
@@ -83,7 +84,7 @@ function Waiting({ items }: { items: WaitingItem[] }) {
 function Welcome({ onCreate }: { onCreate: () => void }) {
   const steps = [
     { icon: FolderPlus, title: 'Create your first project', text: 'Name it, add the client and the date materials are needed on site.' },
-    { icon: Compass, title: 'Find materials in Discover', text: 'Every material is checked against your start date.' },
+    { icon: Compass, title: 'Find materials in the Marketplace', text: 'Every material is checked against your start date.' },
     { icon: Send, title: 'Send your shortlist to the client', text: 'They approve; you export the specification.' },
   ]
   return (
@@ -102,7 +103,7 @@ function Welcome({ onCreate }: { onCreate: () => void }) {
               Create a project
             </Button>
             <Button asChild icon={Compass}>
-              <Link to="/app/discover">Browse materials first</Link>
+              <Link to={MARKETPLACE_PATH}>Browse the Marketplace</Link>
             </Button>
           </div>
         </div>
@@ -142,7 +143,7 @@ export function ArchitectHome() {
         actions={
           <>
             <Button asChild icon={Compass}>
-              <Link to="/app/discover">Discover materials</Link>
+              <Link to={MARKETPLACE_PATH}>Marketplace</Link>
             </Button>
             <Button variant="primary" icon={FolderPlus} onClick={() => setCreating(true)} data-testid="home-new-project">
               New project
@@ -171,7 +172,7 @@ export function ArchitectHome() {
           </dl>
           <div className="mt-8 grid grid-cols-1 gap-4 max-sm:hidden sm:grid-cols-3" data-testid="home-stats">
             <Stat label="Active projects" value={view.stats.activeProjects} icon={FolderKanban} sub="Where you are the architect" />
-            <Stat label="Materials shortlisted" value={view.stats.shortlisted} icon={Layers} sub="Shortlisted, with the client or approved" />
+            <Stat label="Materials shortlisted" value={view.stats.shortlisted} icon={Layers} sub="Shortlisted, waiting or approved" />
             <Stat label="Carbon avoided" value={f.number(view.stats.avoidedApprovedT, 1)} unit="tCO2e" icon={Leaf} indicative sub="On approved materials, against buying new" />
           </div>
 
@@ -201,8 +202,8 @@ export function ArchitectHome() {
             title="New for your projects"
             description="Listed in the last 30 days and in time for at least one of your projects."
             actions={
-              <Link to="/app/discover" className="inline-flex items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink">
-                Discover <ArrowRight aria-hidden="true" className="size-3.5" />
+              <Link to={MARKETPLACE_PATH} className="inline-flex items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink">
+                Marketplace <ArrowRight aria-hidden="true" className="size-3.5" />
               </Link>
             }
           />
@@ -225,7 +226,7 @@ export function ArchitectHome() {
         </section>
         {first ? null : (
           <div className="flex min-w-0 flex-col gap-6">
-            <Waiting items={view.waitingOnClient} />
+            <Waiting items={view.waitingForApproval} />
             <Card>
               <CardHeader title="Recent activity" titleAs="h2" />
               <ActivityFeed rows={view.activity.slice(0, 6)} />

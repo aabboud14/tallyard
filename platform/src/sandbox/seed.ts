@@ -10,6 +10,7 @@ import { blindBuyerText, toBlindBuyer } from '../domain/privacy/blindBuyer'
 import { createSeed, FERRYMOOR_ID, HARROWDEN_ID, itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, PERSONA_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
 import type { AppData, Reservation } from '../store/types'
 import { DEFAULT_UI } from '../store/types'
+import { materialHref, sharedWithProjectHref } from '../store/paths'
 import * as ops from '../store/worldOps'
 import { estimateForLot } from '../store/estimate'
 import { lotByPublicId, listingOf, projectWishlist } from '../store/lots'
@@ -154,7 +155,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   s = log(s, { at: at(30, 10), orgIds: [ORG_IDS.ostlea, ORG_IDS.tarnbrook], projectId: null, buildingId: TIVERNE_ID, actorUserId: TOM, actor: 'Tom Ashby', text: 'appointed Tarnbrook Deconstruction to survey the building', href: `/app/buildings/${TIVERNE_ID}` })
   s = log(s, { at: at(23, 16, 40), orgIds: [ORG_IDS.ostlea, ORG_IDS.tarnbrook], projectId: null, buildingId: TIVERNE_ID, actorUserId: DANA, actor: 'Dana Kowalski', text: `submitted the survey: ${surveyed}`, href: `/app/buildings/${TIVERNE_ID}/inventory` })
   s = log(s, { at: at(21, 11), orgIds: [ORG_IDS.ostlea], projectId: null, buildingId: null, actorUserId: TOM, actor: 'Tom Ashby', text: `shared lots with ${blind}`, href: `/app/buildings/${TIVERNE_ID}/sharing` })
-  project(20, 14, PRIYA, 'accepted the confidentiality terms for shared lots', `/app/discover?tab=shared&project=${MERROWGATE_ID}`)
+  project(20, 14, PRIYA, 'accepted the confidentiality terms for shared lots', sharedWithProjectHref(MERROWGATE_ID))
   s = log(s, { at: at(20, 15), orgIds: [ORG_IDS.oriel], projectId: null, buildingId: null, actorUserId: PRIYA, actor: 'Priya Nair', text: `saved ${title('L-CJGQP7')}`, href: '/app/saved' })
   s = log(s, { at: at(15, 10), orgIds: [ORG_IDS.oriel, ORG_IDS.quillon, ORG_IDS.halewick], projectId: FERRYMOOR_ID, buildingId: null, actorUserId: PRIYA, actor: 'Priya Nair', text: `shortlisted ${title('L-6VWCWH')}`, href: `/app/projects/${FERRYMOOR_ID}/shortlist` })
   s = log(s, { at: at(14, 9, 30), orgIds: [ORG_IDS.oriel, ORG_IDS.quillon, ORG_IDS.halewick], projectId: FERRYMOOR_ID, buildingId: null, actorUserId: PRIYA, actor: 'Priya Nair', text: `sent ${title('L-6VWCWH')} to the client for approval`, href: `/app/projects/${FERRYMOOR_ID}/shortlist` })
@@ -185,7 +186,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'survey_submitted', title: 'Tarnbrook Deconstruction submitted the survey of Tiverne House', body: `${surveyed} captured by Dana Kowalski. Review the inventory and decide what to recover.`, href: `/app/buildings/${TIVERNE_ID}/priorities`, at: at(23, 16, 40), actorUserId: null })
   read(TOM)
   for (const [orgId, userId] of [[ORG_IDS.oriel, PRIYA], [ORG_IDS.lantern, ISLA]] as const) {
-    s = notify(s, { orgIds: [orgId], kind: 'lots_shared', title: `${sharedWithMerrowgate} shared with ${merrowgate.name}`, body: 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.', href: `/app/discover?tab=shared&project=${MERROWGATE_ID}`, at: at(21, 11), actorUserId: null })
+    s = notify(s, { orgIds: [orgId], kind: 'lots_shared', title: `${sharedWithMerrowgate} shared with ${merrowgate.name}`, body: 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.', href: sharedWithProjectHref(MERROWGATE_ID), at: at(21, 11), actorUserId: null })
     read(userId)
   }
   s = notify(s, { orgIds: [ORG_IDS.tarnbrook], kind: 'appointed', title: 'Brackwater Estates appointed you to survey Harrowden Court', body: 'Harrowden Court, 31 Brindle Road, London W13.', href: `/app/buildings/${HARROWDEN_ID}/capture`, at: at(14, 11), actorUserId: null })
@@ -204,7 +205,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
     .filter((p) => p.architectOrgId === ORG_IDS.oriel && timelineFit(th01.availability, p.startDate, todayIso).fit !== 'late')
     .map((p) => p.name)
   if (fits.length > 0) {
-    s = notify(s, { orgIds: [ORG_IDS.oriel], kind: 'new_fit', title: `New material for ${fits.length === 1 ? fits[0] : `${fits.length} of your projects`}`, body: `${th01.title} is available in time for ${listJoin(fits)}.`, href: `/app/discover/${th01.publicId}`, at: at(2, 9, 15), actorUserId: null })
+    s = notify(s, { orgIds: [ORG_IDS.oriel], kind: 'new_fit', title: `New material for ${fits.length === 1 ? fits[0] : `${fits.length} of your projects`}`, body: `${th01.title} is available in time for ${listJoin(fits)}.`, href: materialHref(th01.publicId), at: at(2, 9, 15), actorUserId: null })
   }
   for (const orgId of [ORG_IDS.oriel, ORG_IDS.halewick]) {
     s = notify(s, { orgIds: [orgId], kind: 'client_decision', title: `Lantern Quay Developments approved ${title('L-NHZ32R')}`, body: `Isla Brennan: ${MERROWGATE_ITEMS[1].decisionNote}`, href: `${mgHref}/shortlist`, at: at(2, 14), actorUserId: null })

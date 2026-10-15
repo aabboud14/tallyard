@@ -36,14 +36,14 @@ describe('Discover query in the address bar', () => {
 })
 
 describe('checkingProjectFor', () => {
-  it('defaults to the first project the viewer works on', () => {
-    expect(checkingProjectFor(fresh(), viewer(U.priya), null)).toBe(MERROWGATE_ID)
+  it('defaults to no project', () => {
+    expect(checkingProjectFor(fresh(), viewer(U.priya), null)).toBeNull()
   })
 
   it('takes a project in the address only when the viewer works on it', () => {
     const s = fresh()
     expect(checkingProjectFor(s, viewer(U.priya), FERRYMOOR_ID)).toBe(FERRYMOOR_ID)
-    expect(checkingProjectFor(s, viewer(U.isla), FERRYMOOR_ID)).toBe(MERROWGATE_ID)
+    expect(checkingProjectFor(s, viewer(U.isla), FERRYMOOR_ID)).toBeNull()
   })
 
   it('keeps a stored choice, including choosing none', () => {
@@ -74,8 +74,13 @@ describe('pageLocation', () => {
   })
 
   it('names a material from its public listing', () => {
-    const loc = pageLocation(s, priya, '/app/discover/L-9F4CQQ')
-    expect(loc.crumbs.map((c) => c.label)).toEqual(['Discover', 'UB 457x191x67, 7.5 m'])
+    const loc = pageLocation(s, priya, '/app/marketplace/L-9F4CQQ')
+    expect(loc.crumbs.map((c) => c.label)).toEqual(['Marketplace', 'UB 457x191x67, 7.5 m'])
+    expect(loc.crumbs[0].href).toBe('/app/marketplace')
+    const legacy = pageLocation(s, priya, '/app/discover/L-9F4CQQ')
+    expect(legacy.crumbs.map((c) => c.label)).toEqual(['Marketplace', 'UB 457x191x67, 7.5 m'])
+    expect(legacy.crumbs[0].href).toBe('/app/marketplace')
+    expect(pageLocation(s, priya, '/app/marketplace').title).toBe('Marketplace')
   })
 
   it('never names a project the viewer does not work on', () => {
@@ -135,7 +140,7 @@ describe('searchResults', () => {
     const materials = groups.find((g) => g.kind === 'material')
     expect(materials?.heading).toBe('Materials')
     expect(materials?.results[0].thumb?.publicId).toBe('L-Q23X7N')
-    expect(materials?.results[0].href).toBe('/app/discover/L-Q23X7N')
+    expect(materials?.results[0].href).toBe('/app/marketplace/L-Q23X7N')
   })
 
   it('offers pages and projects before anything is typed, and no materials to an owner', () => {

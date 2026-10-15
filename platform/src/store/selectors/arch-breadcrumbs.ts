@@ -6,6 +6,7 @@ import { listingOf, lotByPublicId } from '../lots'
 import { projectTabs } from './project'
 import { buildingTabs } from './owner'
 import { routeAccess } from './nav'
+import { MARKETPLACE_PATH } from '../paths'
 
 export type AppCrumb = { label: string; href: string | null }
 
@@ -17,7 +18,9 @@ export const HELP_TOPIC_LABELS: Record<string, string> = { 'getting-started': 'G
 
 const SECTION_LABELS: Record<string, string> = {
   home: 'Home',
-  discover: 'Discover',
+  marketplace: 'Marketplace',
+  // The Marketplace's old address, which redirects.
+  discover: 'Marketplace',
   saved: 'Saved',
   projects: 'Projects',
   buildings: 'Buildings',
@@ -44,7 +47,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   const [, section = 'home', id, tab, sub] = parts
   const access = routeAccess(state, viewer, pathname)
   const sectionLabel = SECTION_LABELS[section] ?? slugLabel(section)
-  const sectionHref = section === 'engagements' ? null : `/app/${section}`
+  const sectionHref = section === 'engagements' ? null : section === 'discover' ? MARKETPLACE_PATH : `/app/${section}`
   const done = (crumbs: AppCrumb[]): PageLocation => {
     const last = crumbs[crumbs.length - 1]
     const shown = crumbs.map((c, i) => (i === crumbs.length - 1 ? { ...c, href: null } : c))
@@ -53,7 +56,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   if (!SECTION_LABELS[section] || access === 'not_found') return done([crumb('Page not found')])
   if (id === undefined || access !== 'ok') return done([crumb(sectionLabel, sectionHref)])
 
-  if (section === 'discover') {
+  if (section === 'marketplace' || section === 'discover') {
     const lot = lotByPublicId(state.world, id)
     return done([crumb(sectionLabel, sectionHref), crumb(lot ? listingOf(state.world, lot).title : id)])
   }

@@ -70,7 +70,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
     }
     onOpenChange(false)
     reset()
-    toast.success(`${name.trim()} created`, { description: 'Find materials for it in Discover.' })
+    toast.success(`${name.trim()} created`, { description: 'Find materials for it in the Marketplace.' })
     navigate(`/app/projects/${r.value}`)
   }
 

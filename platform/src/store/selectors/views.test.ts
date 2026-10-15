@@ -38,20 +38,45 @@ describe('Discover', () => {
     expect(sel.discoverView(s, viewer(U.priya), { ...Q, q: 'granite' }).empty).toBe('no_results')
   })
 
-  it('filters by typology, family, condition, band and fit, and sorts by price only within a family', () => {
+  it('filters by typology, family, condition, band and fit, and sorts by price only within a family, for clients', () => {
     const s = fresh()
     const v = sel.discoverView(s, viewer(U.priya), { ...Q, typology: 'finishes' })
     expect(v.cards.map((c) => c.publicId)).toEqual(['L-6VWCWH'])
     const late = sel.discoverView(s, viewer(U.priya), { ...Q, projectId: FERRYMOOR_ID, fitsOnly: true })
     expect(late.cards.every((c) => c.fit!.fit !== 'late')).toBe(true)
     expect(late.activeFilterCount).toBe(1)
-    const price = sel.discoverView(s, viewer(U.priya), { ...Q, sort: 'price' })
+    const price = sel.discoverView(s, viewer(U.isla), { ...Q, sort: 'price' })
     expect(price.sort).toBe('newest')
     expect(price.priceSortHint).not.toBeNull()
-    const steel = sel.discoverView(s, viewer(U.priya), { ...Q, sort: 'price', family: 'steel_section' })
+    const steel = sel.discoverView(s, viewer(U.isla), { ...Q, sort: 'price', family: 'steel_section' })
     expect(steel.sort).toBe('price')
+    expect(steel.sortOptions).toEqual(['newest', 'carbon', 'price'])
+    // Architects get no price sort: a price query falls back to newest.
+    const priya = sel.discoverView(s, viewer(U.priya), { ...Q, sort: 'price', family: 'steel_section' })
+    expect(priya.sortOptions).toEqual(['newest', 'carbon'])
+    expect(priya.sort).toBe('newest')
+    expect(priya.priceSortEnabled).toBe(false)
     const guides = steel.cards.map((c) => c.listing.price.guide)
     expect([...guides].sort((a, b) => a - b)).toEqual(guides)
+  })
+
+  it('opens on the category folders and the new materials, with no project checked', () => {
+    const s = fresh()
+    const v = sel.discoverView(s, viewer(U.priya), Q)
+    expect(v.landing).toBe(true)
+    expect(v.folders.map((f) => f.typology)).toEqual(['structure', 'envelope', 'finishes'])
+    expect(v.fitSummary).toBeNull()
+    expect(v.newForProjects[0].publicId).toBe('L-9F4CQQ')
+    expect(v.newForProjects.length).toBeLessThanOrEqual(4)
+    expect(v.availableByLabel).toBeNull()
+    expect(v.cards.every((c) => c.availabilityShort.length > 0)).toBe(true)
+    const envelope = sel.discoverView(s, viewer(U.priya), { ...Q, typology: 'envelope' })
+    expect(envelope.landing).toBe(false)
+    expect(envelope.newForProjects).toEqual([])
+    expect(envelope.familyChips!.reduce((n, c) => n + c.count, 0)).toBe(5)
+    expect(sel.discoverView(s, viewer(U.priya), Q).familyChips).toBeNull()
+    expect(sel.discoverView(s, viewer(U.isla), Q).newForProjects).toEqual([])
+    expect(sel.discoverView(s, viewer(U.priya), { ...Q, availableBy: '2027-01-31' }).availableByLabel).toBe('By the end of January 2027')
   })
 
   it('lists shared lots per project once the terms are accepted', () => {
@@ -85,14 +110,31 @@ describe('material page', () => {
   it('shows public facts, availability against the project, the seller line and geometry', () => {
     const s = fresh()
     const m = sel.materialView(s, viewer(U.priya), 'L-9F4CQQ', MERROWGATE_ID)!
-    expect(m.sellerLine).toBe('Listed by an asset owner in Central London')
+    expect(m.sellerLine).toBeNull()
+    expect(m.price).toBeNull()
+    expect(m.location.seller).toBeNull()
+    expect(m.showPurchaseNote).toBe(true)
+    const isla = sel.materialView(s, viewer(U.isla), 'L-9F4CQQ', MERROWGATE_ID)!
+    expect(isla.sellerLine).toBe('Listed by an asset owner in Central London')
+    expect(isla.price!.range).toBe('£715 to £825 per tonne')
+    expect(isla.location.seller).toBe('Asset owner')
+    expect(isla.showPurchaseNote).toBe(false)
     expect(m.availability.fitText).toBe('Available in time')
-    expect(m.price.range).toBe('£715 to £825 per tonne')
-    expect(m.geometry).toEqual({ dxf: true, obj: true, reason: null })
+    expect(m.availability.phrase.text).toBe('Expected January to March 2027')
+    expect(m.geometry).toEqual({ dxf: true, obj: true, ifc: true, reason: null })
+    expect(m.model!.lengthMm).toBe(7500)
+    const none = sel.materialView(s, viewer(U.priya), 'L-9F4CQQ', null)!
+    expect(none.availability.byProject.map((p) => [p.name, p.fit])).toEqual([
+      ['Merrowgate Wharf', 'in_time'],
+      ['Sallow Court', 'in_time'],
+      ['Ferrymoor Yard', 'in_time'],
+    ])
     expect(m.gallery.map((g) => g.kind)).toEqual(['illustration', 'drawing'])
     expect(m.similar.every((c) => c.publicId !== 'L-9F4CQQ')).toBe(true)
     const timber = sel.materialView(s, viewer(U.priya), 'L-CJGQP7', null)!
     expect(timber.geometry.dxf).toBe(false)
+    expect(timber.geometry.ifc).toBe(false)
+    expect(timber.model).toBeNull()
     expect(timber.geometry.reason).not.toBeNull()
   })
 
@@ -107,7 +149,7 @@ describe('material page', () => {
 })
 
 describe('architect workspace', () => {
-  it('home: projects, new materials, waiting on the client, activity', () => {
+  it('home: projects, new materials, waiting for approval, activity', () => {
     const h = sel.architectHome(fresh(), viewer(U.priya))!
     expect(h.greeting).toBe('Good morning, Priya')
     expect(h.dateText).toBe('Thursday 8 October 2026')
@@ -116,9 +158,37 @@ describe('architect workspace', () => {
     expect(h.newForProjects[0].publicId).toBe('L-9F4CQQ')
     expect(h.newForProjects.length).toBeLessThanOrEqual(6)
     expect(h.newForProjects.every((c) => c.savedIn.length === 0)).toBe(true)
-    expect(h.waitingOnClient.map((w) => w.projectName)).toEqual(['Ferrymoor Yard', 'Merrowgate Wharf'])
+    expect(h.waitingForApproval.map((w) => w.projectName)).toEqual(['Ferrymoor Yard', 'Merrowgate Wharf'])
     expect(h.activity[0].timeAgo).toBe('Yesterday')
+    expect(h.activitySummary).toEqual({ count: h.activity.length, latest: h.activity[0] })
     expect(sel.architectHome(fresh(), viewer(U.isla))).toBeNull()
+  })
+
+  it('home dashboard: figures, project cards with drawings, fits and carbon', () => {
+    const s = fresh()
+    const h = sel.architectHome(s, viewer(U.priya))!
+    const rows = h.projects.reduce((n, p) => n + p.total, 0)
+    expect(Object.values(h.metrics.byStatus).reduce((a, b) => a + b, 0)).toBe(rows)
+    expect(h.metrics.byStatus.declined + h.stats.shortlisted).toBe(rows)
+    expect(h.metrics.nextStart!.projectName).toBe('Ferrymoor Yard')
+    expect(h.metrics.waiting.count).toBe(h.waitingForApproval.length)
+    expect(h.metrics.carbon.approvedT).toBe(h.stats.avoidedApprovedT)
+    expect(h.metrics.carbon.share).toBeGreaterThan(0)
+    expect(h.metrics.carbon.share).toBeLessThanOrEqual(1)
+    for (const p of h.projects) {
+      expect(p.materials.length).toBeLessThanOrEqual(3)
+      expect(p.sketch.state).toBe('proposed')
+      expect(p.sketch.label).toMatch(/^Illustration of/)
+      expect(p.marketplaceHref).toBe(`/app/marketplace?project=${p.id}`)
+      expect(p.liveT).toBeGreaterThanOrEqual(p.approvedT)
+      expect(Object.values(p.fits).reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(p.total)
+    }
+    expect(h.carbonByProject.map((c) => c.name)).toEqual(h.projects.map((p) => p.name))
+    expect(h.carbonScaleMax).toBe(Math.max(...h.projects.map((p) => p.liveT)))
+    // Each project's count of new materials comes from the Marketplace feed.
+    const feed = sel.newForProjectsFeed(s, viewer(U.priya), null, 100)
+    for (const p of h.projects) expect(p.newFits).toBe(feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id)).length)
+    expect(h.waitingForApproval.every((w) => w.card === null || w.card.publicId === w.publicId)).toBe(true)
   })
 
   it('shortlist board: columns, totals over visible rows, what can be sent', () => {
@@ -341,11 +411,11 @@ describe('inbox, navigation, routes and search', () => {
   it('builds each role sidebar with badges', () => {
     const s = fresh()
     const titles = (id: string) => sel.navModel(s, viewer(id))!.sections.map((x) => [x.title, x.items.map((i) => i.label)])
-    expect(titles(U.priya)).toEqual([[null, ['Home', 'Discover', 'Saved']], ['Projects', ['Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'New project']]])
+    expect(titles(U.priya)).toEqual([[null, ['Home', 'Marketplace', 'Saved']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court', 'New project']]])
     expect(titles(U.isla)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf']]])
     expect(titles(U.tom)).toEqual([[null, ['Home']], ['Buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
     expect(titles(U.dana)).toEqual([[null, ['Home']], ['Clients', ['Ostlea Estates', 'Brackwater Estates']]])
-    expect(titles(U.marcus)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard']], ['Engagements', ['Durnley House']]])
+    expect(titles(U.marcus)).toEqual([[null, ['Home']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court']], ['Engagements', ['Durnley House']]])
     const isla = sel.navModel(s, viewer(U.isla))!
     const mg = isla.sections[1].items[0]
     expect(mg.badge).toBe(1)
@@ -360,6 +430,10 @@ describe('inbox, navigation, routes and search', () => {
     const s = fresh()
     const r = (id: string, path: string) => sel.routeAccess(s, viewer(id), path)
     expect(r(U.priya, '/app/home')).toBe('ok')
+    expect(r(U.priya, '/app/marketplace')).toBe('ok')
+    expect(r(U.priya, '/app/marketplace/L-9F4CQQ')).toBe('ok')
+    expect(r(U.priya, '/app/marketplace/L-DAXNV3')).toBe('forbidden')
+    // The old address answers the same, so its redirect is reached.
     expect(r(U.priya, '/app/discover/L-9F4CQQ')).toBe('ok')
     expect(r(U.priya, '/app/discover/L-DAXNV3')).toBe('forbidden')
     expect(r(U.priya, `/app/projects/${MERROWGATE_ID}/shortlist`)).toBe('ok')
@@ -378,6 +452,7 @@ describe('inbox, navigation, routes and search', () => {
     expect(r(U.tom, `/app/buildings/${TIVERNE_ID}/inventory/${itemByTag(s.world, 'TH-01').id}`)).toBe('ok')
     expect(r(U.tom, `/app/buildings/${TIVERNE_ID}/inventory/${itemByTag(s.world, 'HC-01').id}`)).toBe('forbidden')
     expect(r(U.tom, '/app/discover')).toBe('forbidden')
+    expect(r(U.tom, '/app/marketplace')).toBe('forbidden')
     expect(r(U.dana, `/app/buildings/${HARROWDEN_ID}/capture`)).toBe('ok')
     expect(r(U.dana, `/app/buildings/${TIVERNE_ID}/priorities`)).toBe('forbidden')
     expect(r(U.marcus, `/app/projects/${MERROWGATE_ID}/compliance`)).toBe('ok')
@@ -391,9 +466,10 @@ describe('inbox, navigation, routes and search', () => {
     const s = fresh()
     const priya = sel.searchIndex(s, viewer(U.priya))
     expect(sel.searchEntries(priya, 'merrow')[0]).toMatchObject({ kind: 'project', label: 'Merrowgate Wharf' })
-    expect(sel.searchEntries(priya, 'discover')[0]).toMatchObject({ kind: 'page', href: '/app/discover' })
-    expect(priya.some((e) => e.href === '/app/discover/L-MNY55K')).toBe(true)
-    expect(priya.some((e) => e.href === '/app/discover/L-DAXNV3')).toBe(false)
+    expect(sel.searchEntries(priya, 'discover')[0]).toMatchObject({ kind: 'page', href: '/app/marketplace' })
+    expect(sel.searchEntries(priya, 'marketplace')[0]).toMatchObject({ kind: 'page', label: 'Marketplace' })
+    expect(priya.some((e) => e.href === '/app/marketplace/L-MNY55K')).toBe(true)
+    expect(priya.some((e) => e.href === '/app/marketplace/L-DAXNV3')).toBe(false)
     const tom = sel.searchIndex(s, viewer(U.tom))
     expect(sel.searchEntries(tom, 'th-07')[0]).toMatchObject({ kind: 'item' })
     expect(tom.some((e) => e.kind === 'material' || e.kind === 'project')).toBe(false)

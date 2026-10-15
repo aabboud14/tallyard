@@ -1,19 +1,26 @@
-// Discover: the marketplace as a showroom, plus lots shared in confidence with the viewer's projects, and the
-// material page. Built from public listings only.
+// The Marketplace (code name Discover): category folders, the showroom grid, lots shared in confidence with the
+// viewer's projects, and the material page. Built from public listings only. The guide price, the price sort and
+// the seller's details are for the client side; architects and consultants do not get them (a display decision,
+// as price is a public listing field).
 import type { Lot, Project, PublicListing, Spec } from '../../domain/types'
-import type { BandLevel, BrowseFilters, BrowseSort, Typology } from '../../domain/v1types'
+import type { BandLevel, BrowseFilters, BrowseSort, Fit, Typology } from '../../domain/v1types'
 import type { Condition, FamilyId } from '../../domain/types'
 import { filterListings, filterOptionsFor, sortListings, type BrowseOptions } from '../../domain/engines/browse'
 import { specSheetRows, SPEC_SECTIONS } from '../../domain/engines/specSheet'
 import { typologyOf } from '../../domain/engines/typology'
-import { dxfFor, objFor } from '../../domain/engines/geometry'
+import { dxfFor, meshFor, objFor, type ModelGeometry } from '../../domain/engines/geometry'
+import { ifcFor } from '../../domain/engines/ifc'
+import { timelineFit } from '../../domain/engines/timeline'
+import { availabilityPhrase, availableByLabel, type AvailabilityPhrase } from '../../domain/engines/availability'
+import { FAMILY_IDS } from '../../domain/reference/families'
 import { SIGNAL_LABELS, TEST_STATUS_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/labels'
 import { sustainabilityBand } from '../../domain/engines/band'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { projectSide, projectsOfUser, roleOfUser } from '../access'
 import { acceptedReservation, generalWishlist, isLotAvailable, listingOf, lotByPublicId, marketplaceListings, projectCanSee, projectWishlist, saveBlock } from '../lots'
-import { familyLabel, listingCard, projectRef, sellerPhrase, storageText, todayOf, collectionPointText, type ListingCard, type ProjectRef, fitText, SHORTLIST_STATUS_LABELS } from './common'
+import { familyLabel, listingCard, projectRef, sellerPhrase, storageText, todayOf, collectionPointText, type ListingCard, type ProjectRef, fitText, FIT_LABELS, SHORTLIST_STATUS_LABELS } from './common'
+import { availabilityFilterView, categoryFolders, fitSummary, newForProjectsFeed, type AvailabilityFilterView, type CategoryFolder, type FitSummary, type NewForProjects } from './marketplace'
 
 export type DiscoverTab = 'all' | 'shared'
 
@@ -72,6 +79,19 @@ function pickerProjects(state: AppData, viewer: Viewer): Project[] {
   return projectsOfUser(state, viewer.userId)
 }
 
+/** Whether the viewer buys: clients see the guide price, the price sort and the seller's details. */
+function isClientSide(state: AppData, viewer: Viewer): boolean {
+  return roleOfUser(state, viewer.userId) === 'client'
+}
+
+/** The sorts each role is offered: lowest guide price is for clients only. */
+export function sortOptionsFor(state: AppData, viewer: Viewer): BrowseSort[] {
+  return isClientSide(state, viewer) ? ['newest', 'carbon', 'price'] : ['newest', 'carbon']
+}
+
+/** How many architects' new materials the Marketplace landing shows. */
+export const NEW_FOR_PROJECTS_ON_LANDING = 4
+
 function savedOrg(state: AppData, viewer: Viewer): string | null {
   return roleOfUser(state, viewer.userId) === 'architect' ? (state.users[viewer.userId]?.orgId ?? null) : null
 }
@@ -126,8 +146,10 @@ export type DiscoverView = {
   filterOptions: BrowseOptions
   /** Filters set in the Filters popover (everything but the typology tabs and search). */
   activeFilterCount: number
-  /** The sort applied: lowest guide price needs one family, as prices are per family unit. */
+  /** The sort applied: lowest guide price is for clients and needs one family, as prices are per family unit. */
   sort: BrowseSort
+  /** The sorts offered to this viewer. */
+  sortOptions: BrowseSort[]
   priceSortEnabled: boolean
   priceSortHint: string | null
   canSave: boolean
@@ -136,6 +158,19 @@ export type DiscoverView = {
   /** Lots shared with the viewer's projects that wait behind the confidentiality terms. */
   pendingSharedCount: number
   empty: 'no_listings' | 'no_results' | null
+  /** The unfiltered first view: the All listings tab with no typology, search or filters. */
+  landing: boolean
+  /** Structure, Envelope and Finishes, counted over the whole marketplace. */
+  folders: CategoryFolder[]
+  /** The families of the chosen typology as chips; null with no typology. */
+  familyChips: { family: FamilyId; label: string; count: number; active: boolean }[] | null
+  /** The shown cards by fit, only with a project being checked. */
+  fitSummary: FitSummary | null
+  /** Architects on the landing view only. */
+  newForProjects: NewForProjects[]
+  availability: AvailabilityFilterView
+  /** The chip label of the availability filter; null with no filter. */
+  availableByLabel: string | null
 }
 
 export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuery): DiscoverView {
@@ -146,30 +181,52 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
   const searched = all.filter((l) => matchesSearch(l, query.q))
   const filters = filtersOf(query, project)
   const count = (typology: Typology | null) => filterListings(searched, { ...filters, typology }, today).length
-  const priceSortEnabled = query.family !== null
+  const client = isClientSide(state, viewer)
+  const sortOptions = sortOptionsFor(state, viewer)
+  const priceSortEnabled = client && query.family !== null
   const sort: BrowseSort = query.sort === 'price' && !priceSortEnabled ? 'newest' : query.sort
   const shown = sortListings(filterListings(searched, filters, today), sort)
   const orgId = savedOrg(state, viewer)
   const shared = sharedGroups(state, viewer)
   const activeFilterCount = [query.family, query.availableBy, query.condition, query.region, query.band].filter((x) => x !== null).length + (query.fitsOnly && project ? 1 : 0)
+  const landing = query.tab === 'all' && query.typology === null && !query.q.trim() && activeFilterCount === 0
+  const cards = shown.map((l) => listingCard(state, l, project, today, orgId))
+  const projectView = project ? projectRef(state, project) : null
+  // Family chips count the searched listings with every filter but the family itself.
+  const familyChips = query.typology
+    ? FAMILY_IDS.filter((f) => typologyOf(f) === query.typology).map((family) => ({
+        family,
+        label: familyLabel(family),
+        count: filterListings(searched, { ...filters, family }, today).length,
+        active: query.family === family,
+      }))
+    : null
   return {
     tab: query.tab,
     query,
     projects: projects.map((p) => projectRef(state, p)),
     project: project ? projectRef(state, project) : null,
     typologyCounts: { all: count(null), structure: count('structure'), envelope: count('envelope'), finishes: count('finishes') },
-    cards: shown.map((l) => listingCard(state, l, project, today, orgId)),
+    cards,
     total: all.length,
     filterOptions: filterOptionsFor(all, query.typology, today),
     activeFilterCount,
     sort,
+    sortOptions,
     priceSortEnabled,
-    priceSortHint: priceSortEnabled ? null : 'Choose a family to sort by price: prices are per tonne, per m2 or per piece.',
+    priceSortHint: client && !priceSortEnabled ? 'Choose a family to sort by price: prices are per tonne, per m2 or per piece.' : null,
     canSave: roleOfUser(state, viewer.userId) === 'architect',
     shared,
     sharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? g.cards.length : 0), 0),
     pendingSharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? 0 : g.sharedCount), 0),
     empty: all.length === 0 ? 'no_listings' : shown.length === 0 ? 'no_results' : null,
+    landing,
+    folders: categoryFolders(state, viewer, project, all),
+    familyChips,
+    fitSummary: fitSummary(cards),
+    newForProjects: landing && roleOfUser(state, viewer.userId) === 'architect' ? newForProjectsFeed(state, viewer, project?.id ?? null, NEW_FOR_PROJECTS_ON_LANDING) : [],
+    availability: availabilityFilterView(all, query, projectView, today),
+    availableByLabel: query.availableBy ? availableByLabel(query.availableBy, today) : null,
   }
 }
 
@@ -203,6 +260,12 @@ export function saveTargets(state: AppData, viewer: Viewer, publicId: string): S
   })
 }
 
+/** How a material fits one of the viewer's projects. */
+export type ProjectFit = { projectId: string; name: string; startText: string; fit: Fit; fitLabel: string }
+
+/** How many projects the material page checks at once when none is chosen. */
+export const BY_PROJECT_LIMIT = 5
+
 export type GalleryEntry = { kind: 'photo'; id: string; src: string | null } | { kind: 'illustration'; caption: string } | { kind: 'drawing'; caption: string }
 
 export type MaterialView = {
@@ -212,15 +275,32 @@ export type MaterialView = {
   tags: string[]
   keyFacts: { label: string; value: string }[]
   specSections: { section: string; rows: { label: string; value: string }[] }[]
-  availability: { text: string; windowStart: string | null; windowEnd: string | null; fitText: string | null; storageText: string | null }
+  availability: {
+    /** The phrase's text, for the key facts and the large line. */
+    text: string
+    phrase: AvailabilityPhrase
+    windowStart: string | null
+    windowEnd: string | null
+    fitText: string | null
+    storageText: string | null
+    /** The fit against each of the viewer's projects that can see the lot, in order, at most 5. */
+    byProject: ProjectFit[]
+  }
   sustainability: { avoidedT: number | null; percent: number | null; bandWord: string; claimed: boolean }
-  price: { guide: string; range: string; signal: string }
-  location: { label: string; collectionPoint: string }
-  sellerLine: string
+  /** Null unless the viewer is on the client side. */
+  price: { guide: string; range: string; signal: string } | null
+  /** The seller is named (by type) for clients only. */
+  location: { label: string; collectionPoint: string; seller: string | null }
+  /** Null unless the viewer is on the client side. */
+  sellerLine: string | null
   projects: ProjectRef[]
   project: ProjectRef | null
   saveTargets: SaveTarget[]
-  geometry: { dxf: boolean; obj: boolean; reason: string | null }
+  geometry: { dxf: boolean; obj: boolean; ifc: boolean; reason: string | null }
+  /** The 3D model built from the recorded dimensions, or null when there are none. */
+  model: ModelGeometry | null
+  /** Architects see that approval and purchase sit with the client. */
+  showPurchaseNote: boolean
   /** Held for one of the viewer's projects by an accepted reservation. */
   reservedFor: string | null
   similar: ListingCard[]
@@ -251,6 +331,10 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
   const held = acceptedReservation(state, lot.id)
   const dxf = dxfFor(listing)
   const obj = objFor(listing)
+  const ifc = ifcFor(listing, today)
+  const mesh = meshFor(listing)
+  const client = role === 'client'
+  const phrase = availabilityPhrase(listing.availability)
   const band = sustainabilityBand(listing.carbon)
   const similar = marketplaceListings(state)
     .filter((l) => l.publicId !== listing.publicId && (l.family === listing.family || typologyOf(l.family) === typologyOf(listing.family)))
@@ -274,29 +358,37 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
       .map((section) => ({ section, rows: rows.filter((r) => r.section === section).map((r) => ({ label: r.label, value: r.value })) }))
       .filter((s) => s.rows.length > 0),
     availability: {
-      text: card.availabilityText,
+      text: phrase.text,
+      phrase,
       windowStart: listing.availability.kind === 'window' ? listing.availability.windowStart : null,
       windowEnd: listing.availability.kind === 'window' ? listing.availability.windowEnd : null,
       fitText: fitText(card.fit),
       storageText: storageText(card.fit),
+      byProject: projects.slice(0, BY_PROJECT_LIMIT).map((p) => {
+        const fit = timelineFit(listing.availability, p.startDate, today).fit
+        return { projectId: p.id, name: p.name, startText: projectRef(state, p).startText, fit, fitLabel: FIT_LABELS[fit] }
+      }),
     },
     sustainability: { avoidedT: listing.carbon?.avoidedT ?? null, percent: listing.carbon && Number.isFinite(listing.carbon.percent) ? listing.carbon.percent : null, bandWord: band.word, claimed: listing.carbon !== null },
-    price: { guide: f.unitPrice(listing.price.guide, listing.family), range: card.priceRange, signal: SIGNAL_LABELS[listing.price.signal] },
-    location: { label: listing.location.label, collectionPoint: collectionPointText(listing) },
-    sellerLine: `Listed by ${sellerPhrase(listing.sellerType)} in ${listing.location.label}`,
+    price: client ? { guide: f.unitPrice(listing.price.guide, listing.family), range: card.priceRange, signal: SIGNAL_LABELS[listing.price.signal] } : null,
+    location: { label: listing.location.label, collectionPoint: collectionPointText(listing), seller: client ? listing.sellerType : null },
+    sellerLine: client ? `Listed by ${sellerPhrase(listing.sellerType)} in ${listing.location.label}` : null,
     projects: projects.map((p) => projectRef(state, p)),
     project: project ? projectRef(state, project) : null,
     saveTargets: saveTargets(state, viewer, publicId),
-    geometry: { dxf: dxf.kind === 'file', obj: obj.kind === 'file', reason: dxf.kind === 'unavailable' ? dxf.reason : null },
+    geometry: { dxf: dxf.kind === 'file', obj: obj.kind === 'file', ifc: ifc.kind === 'file', reason: dxf.kind === 'unavailable' ? dxf.reason : null },
+    model: 'unavailable' in mesh ? null : mesh,
+    showPurchaseNote: role === 'architect',
     reservedFor: held ? (state.world.projects[held.projectId]?.name ?? null) : null,
     similar,
   }
 }
 
 /** A geometry file for a listing the viewer may see; null otherwise. */
-export function geometryFile(state: AppData, viewer: Viewer, publicId: string, kind: 'dxf' | 'obj') {
+export function geometryFile(state: AppData, viewer: Viewer, publicId: string, kind: 'dxf' | 'obj' | 'ifc') {
   const lot = visibleLot(state, viewer, publicId)
   if (!lot) return null
   const listing = listingOf(state.world, lot)
+  if (kind === 'ifc') return ifcFor(listing, todayOf(viewer))
   return kind === 'dxf' ? dxfFor(listing) : objFor(listing)
 }

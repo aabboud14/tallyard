@@ -3,7 +3,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { World } from '../domain/types'
-import type { ActionResult, Actor, AppData, UiState } from './types'
+import { DEFAULT_NAV_PROJECT_VIEW, DEFAULT_UI, type ActionResult, type Actor, type AppData, type NavProjectView, type UiState } from './types'
 import { firstRun } from '../sandbox/seed'
 import { nowIso, today } from '../sandbox/clock'
 import { safeStorage, STATE_KEY } from './storage'
@@ -25,6 +25,8 @@ export type AppStore = AppData & {
   setUi: (patch: Partial<UiState>) => void
   /** The project Discover checks fit against, for the signed-in person. */
   setCheckingProject: (projectId: string | null) => void
+  /** The sidebar's project order and client filter, for the signed-in person. */
+  setNavProjectView: (patch: Partial<NavProjectView>) => void
   resetSandbox: () => Promise<void>
 }
 
@@ -81,6 +83,13 @@ export const useApp = create<AppStore>()(
         if (!userId) return
         set({ ui: { ...get().ui, checkingProjectId: { ...get().ui.checkingProjectId, [userId]: projectId } } })
       },
+      setNavProjectView: (patch) => {
+        const userId = getSessionUserId()
+        if (!userId) return
+        const ui = get().ui
+        const all = ui.navProjects ?? {}
+        set({ ui: { ...ui, navProjects: { ...all, [userId]: { ...DEFAULT_NAV_PROJECT_VIEW, ...all[userId], ...patch } } } })
+      },
       resetSandbox: async () => {
         await clearPhotos()
         const next = fresh()
@@ -96,7 +105,8 @@ export const useApp = create<AppStore>()(
       partialize: (s) => dataOf(s),
       // Any other version, or a damaged record, starts a fresh sandbox.
       migrate: () => fresh(),
-      merge: (persisted, current) => (looksValid(persisted) ? { ...current, ...dataOf(persisted) } : current),
+      // Older stored states get any interface fields added since, with their defaults.
+      merge: (persisted, current) => (looksValid(persisted) ? { ...current, ...dataOf(persisted), ui: { ...DEFAULT_UI, ...persisted.ui } } : current),
     },
   ),
 )

@@ -145,12 +145,22 @@ export type SpecDoc = { header: string; clauseNotes: Record<string, string>; upd
 
 export type OrgProfile = { address: string }
 
+/** How the sidebar orders its projects: by name, grouped under each client, or by recent activity. */
+export type NavProjectOrder = 'name' | 'client' | 'recent'
+
+/** The sidebar's project order and client filter, kept per person. */
+export type NavProjectView = { order: NavProjectOrder; clientOrgId: string | null }
+
+export const DEFAULT_NAV_PROJECT_VIEW: NavProjectView = { order: 'name', clientOrgId: null }
+
 export type UiState = {
   sidebarCollapsed: boolean
   /** The project Discover checks fit against, per person. */
   checkingProjectId: Record<string, string | null>
   shortlistLayout: 'board' | 'list'
   projectsLayout: 'cards' | 'table'
+  /** The sidebar's project order and client filter, per person. Optional so older stored states still read. */
+  navProjects?: Record<string, NavProjectView>
 }
 
 export type AppData = {
@@ -181,4 +191,4 @@ export type Viewer = { userId: string; now: string }
 
 export type ActionResult<V = null> = { state: AppData; error: string | null; value: V | null }
 
-export const DEFAULT_UI: UiState = { sidebarCollapsed: false, checkingProjectId: {}, shortlistLayout: 'board', projectsLayout: 'cards' }
+export const DEFAULT_UI: UiState = { sidebarCollapsed: false, checkingProjectId: {}, shortlistLayout: 'board', projectsLayout: 'cards', navProjects: {} }

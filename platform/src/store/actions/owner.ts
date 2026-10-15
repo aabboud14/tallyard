@@ -14,6 +14,7 @@ import { mint } from '../ids'
 import { acceptedReservation, listingOf } from '../lots'
 import { listJoin, log, notify, plural } from '../notifications'
 import * as ops from '../worldOps'
+import { materialHref, sharedWithProjectHref } from '../paths'
 import { acting, clean, fail, isIsoDate, ok, withWorld } from './common'
 
 export const OWNER_ERRORS = {
@@ -266,7 +267,7 @@ export function setLotVisibility(state: AppData, actor: Actor, lotId: string, in
       fits.set(p.architectOrgId, [...(fits.get(p.architectOrgId) ?? []), p.name])
     }
     for (const [orgId, names] of fits) {
-      s = notify(s, { orgIds: [orgId], kind: 'new_fit', title: `New material for ${names.length === 1 ? names[0] : `${names.length} of your projects`}`, body: `${listing.title} is available in time for ${listJoin(names)}.`, href: `/app/discover/${listing.publicId}`, at: a.now, actorUserId: null })
+      s = notify(s, { orgIds: [orgId], kind: 'new_fit', title: `New material for ${names.length === 1 ? names[0] : `${names.length} of your projects`}`, body: `${listing.title} is available in time for ${listJoin(names)}.`, href: materialHref(listing.publicId), at: a.now, actorUserId: null })
     }
   } else {
     for (const p of Object.values(s.world.projects)) {
@@ -276,7 +277,7 @@ export function setLotVisibility(state: AppData, actor: Actor, lotId: string, in
         kind: 'lots_shared',
         title: `New lot shared with ${p.name}`,
         body: p.termsAccepted ? `${listing.title}, shared in confidence by an asset owner.` : 'An asset owner shared a lot in confidence. Accept the confidentiality terms to see it.',
-        href: `/app/discover?tab=shared&project=${p.id}`,
+        href: sharedWithProjectHref(p.id),
         at: a.now,
         actorUserId: null,
       })
@@ -355,8 +356,8 @@ export function setProjectAccess(state: AppData, actor: Actor, projectId: string
       orgIds: [p.architectOrgId, p.clientOrgId],
       kind: 'lots_shared',
       title: `${plural(shared, 'lot')} shared with ${p.name}`,
-      body: p.termsAccepted ? 'Shared in confidence by an asset owner. They are in Discover, under Shared with you.' : 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.',
-      href: `/app/discover?tab=shared&project=${p.id}`,
+      body: p.termsAccepted ? 'Shared in confidence by an asset owner. They are in the Marketplace, under Shared with you.' : 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.',
+      href: sharedWithProjectHref(p.id),
       at: a.now,
       actorUserId: null,
     })

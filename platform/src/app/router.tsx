@@ -13,7 +13,7 @@ import { GuestOnly, RequireAuth } from './guards'
 import { RouteError } from './RouteError'
 import { AppNotFound } from './NoAccess'
 import { lazyPage } from './pages'
-import { EngagementIndex } from './redirects'
+import { EngagementIndex, LegacyMarketplaceRedirect } from './redirects'
 
 const handle = (title: string): RouteHandle => ({ title })
 
@@ -46,8 +46,11 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <Navigate to="/app/home" replace /> },
               { path: 'home', lazy: lazyPage(() => import('../features/home/Home'), 'Home') },
-              { path: 'discover', lazy: lazyPage(() => import('../features/discover/Discover'), 'Discover') },
-              { path: 'discover/:publicId', lazy: lazyPage(() => import('../features/material/MaterialPage'), 'MaterialPage') },
+              { path: 'marketplace', lazy: lazyPage(() => import('../features/discover/Discover'), 'Discover') },
+              { path: 'marketplace/:publicId', lazy: lazyPage(() => import('../features/material/MaterialPage'), 'MaterialPage') },
+              // The Marketplace's old address, kept for links already stored in notifications, activity and bookmarks.
+              { path: 'discover', element: <LegacyMarketplaceRedirect /> },
+              { path: 'discover/*', element: <LegacyMarketplaceRedirect /> },
               { path: 'saved', lazy: lazyPage(() => import('../features/saved/Saved'), 'Saved') },
               { path: 'projects', lazy: lazyPage(() => import('../features/projects/ProjectsList'), 'ProjectsList') },
               { path: 'projects/new', lazy: lazyPage(() => import('../features/projects/NewProject'), 'NewProject') },

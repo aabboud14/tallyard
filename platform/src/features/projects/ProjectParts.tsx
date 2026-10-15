@@ -8,7 +8,7 @@ import { Page } from '../../app/Page'
 
 const PROGRESS = [
   { key: 'pending', label: 'shortlisted', name: 'Shortlisted', tone: 'neutral' },
-  { key: 'sent', label: 'with client', name: 'With client', tone: 'info' },
+  { key: 'sent', label: 'waiting for approval', name: 'Waiting for approval', tone: 'info' },
   { key: 'approved', label: 'approved', name: 'Approved', tone: 'brand' },
   { key: 'declined', label: 'declined', name: 'Declined', tone: 'danger' },
 ] as const

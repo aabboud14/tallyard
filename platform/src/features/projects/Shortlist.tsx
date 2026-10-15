@@ -40,7 +40,7 @@ import {
   toast,
   TR,
 } from '../../ui'
-import { discoverHref, listingHref } from '../discover/links'
+import { marketplaceHref, listingHref } from '../discover/links'
 import { usePhotoSrc } from '../discover/photo'
 import { ProjectPage } from './ProjectParts'
 
@@ -48,7 +48,7 @@ type DialogState = { kind: 'note' | 'reopen'; row: ShortlistRow } | { kind: 'sen
 
 const COLUMN_LINES: Record<WishStatus, (client: string) => string> = {
   pending: () => 'Not yet sent to the client',
-  sent: (client) => `Waiting on ${client}`,
+  sent: (client) => `Waiting for approval from ${client}`,
   approved: () => 'Ready to specify',
   declined: () => 'Reopen one to send it again',
 }
@@ -434,7 +434,7 @@ export function Shortlist() {
             className="max-md:hidden"
           />
           <Button asChild icon={Compass}>
-            <Link to={discoverHref(projectId)}>Add materials</Link>
+            <Link to={marketplaceHref(projectId)}>Add materials</Link>
           </Button>
           <Button variant="primary" icon={Send} disabled={sendable.size === 0} onClick={() => setDialog({ kind: 'send', ids: chosen.length > 0 ? chosen : board.sendableIds })} data-testid="send-to-client">
             {chosen.length > 0 ? `Send ${chosen.length} to client` : 'Send to client'}
@@ -465,10 +465,10 @@ export function Shortlist() {
             variant="page"
             icon={Kanban}
             title="Your shortlist is empty"
-            text={`Save materials to ${board.project.name} from Discover. Each one is checked against the date materials are needed on site.`}
+            text={`Save materials to ${board.project.name} from the Marketplace. Each one is checked against the date materials are needed on site.`}
             action={
               <Button asChild variant="primary" icon={Compass}>
-                <Link to={discoverHref(projectId)}>Find materials</Link>
+                <Link to={marketplaceHref(projectId)}>Find materials</Link>
               </Button>
             }
             testId="shortlist-empty"

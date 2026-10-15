@@ -6,6 +6,7 @@ import type { LucideIcon } from 'lucide-react'
 import { BookOpen, Boxes, Building2, Camera, ChevronDown, ClipboardCheck, Compass, Database, FileSpreadsheet, Gauge, Handshake, Info, Layers, Leaf, ListOrdered, Network, Recycle, Rocket, Scale, Share2, ShieldCheck, Tag, Timer, Users } from 'lucide-react'
 import { LABELS } from '../../domain/reference/labels'
 import { useSession, type PlatformRole } from '../../store'
+import { MARKETPLACE_PATH } from '../../store/paths'
 import { methodologyView } from '../../store/selectors/settings'
 import { scoreWeights } from '../../store/selectors/roles-views'
 import { Badge, Card, CardBody, cx, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../ui'
@@ -53,7 +54,7 @@ const GUIDES: Record<PlatformRole, { title: string; intro: string; steps: Step[]
     title: 'Architects',
     intro: 'Find reclaimed materials, shortlist them for a project, check the timing and send them to your client.',
     steps: [
-      { icon: Compass, title: 'Browse Discover', text: 'Filter by typology, family and availability. Pick a project in "Checking against" to see whether each material arrives in time.', href: '/app/discover', cta: 'Open Discover' },
+      { icon: Compass, title: 'Browse the Marketplace', text: 'Filter by typology, family and availability. Pick a project in "Checking against" to see whether each material arrives in time.', href: MARKETPLACE_PATH, cta: 'Open the Marketplace' },
       { icon: Tag, title: 'Save to a project', text: 'Save materials to a project shortlist, or to Saved when you have no project for them yet.', href: '/app/saved', cta: 'Saved' },
       { icon: Handshake, title: 'Send to your client', text: 'From the shortlist, select materials and send them for approval with a message. The client approves or declines.', href: '/app/projects', cta: 'Your projects' },
       { icon: FileSpreadsheet, title: 'Export the specification', text: 'Approved materials make the specification schedule: export the spreadsheet or print it, and download DXF or OBJ geometry.' },

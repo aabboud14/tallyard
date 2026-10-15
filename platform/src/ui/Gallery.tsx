@@ -656,7 +656,7 @@ export function Gallery() {
                 {
                   heading: 'Pages',
                   items: [
-                    { id: 'g1', label: 'Discover', icon: LayoutGrid, shortcut: ['G', 'D'], onSelect: () => toast('Opened Discover') },
+                    { id: 'g1', label: 'Marketplace', icon: LayoutGrid, shortcut: ['G', 'M'], onSelect: () => toast('Opened the Marketplace') },
                     { id: 'g2', label: 'Notifications', icon: Inbox, onSelect: () => toast('Opened Notifications') },
                     { id: 'g3', label: 'Settings', icon: Settings, onSelect: () => toast('Opened Settings') },
                   ],
@@ -668,7 +668,7 @@ export function Gallery() {
           <Section id="feedback" title="Feedback">
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <EmptyState icon={Bookmark} title="Nothing shortlisted yet" text="Browse Discover and save materials to this project. They appear here for you to send to your client." action={<Button variant="primary" icon={LayoutGrid}>Browse Discover</Button>} />
+                <EmptyState icon={Bookmark} title="Nothing shortlisted yet" text="Browse the Marketplace and save materials to this project. They appear here for you to send to your client." action={<Button variant="primary" icon={LayoutGrid}>Browse the Marketplace</Button>} />
               </Card>
               <Card>
                 <EmptyState icon={Search} title="No materials match" text="Try fewer filters or a different word." action={<Button>Clear filters</Button>} />

@@ -1,75 +1,149 @@
-// The architect's home: projects, what is new for them, what waits on the client, recent activity.
-import type { WishStatus } from '../../domain/v1types'
-import { addDays, daysBetween, monthKey } from '../../domain/dates'
-import { timelineFit } from '../../domain/engines/timeline'
+// The architect's home as a dashboard: four figures, the projects with a drawing, their fit and shortlist progress
+// and how many new materials fit each, what is waiting for approval, carbon by project and recent activity.
+// Everything about a seller's material comes from the shortlist rows' public cards (P3).
+import type { Fit, WishStatus } from '../../domain/v1types'
+import { daysBetween, formatDate } from '../../domain/dates'
+import { projectSketch, type BuildingSketch } from '../../domain/sketch'
+import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
-import { marketplaceListings, projectWishlist } from '../lots'
-import { activityFor, firstName, greeting, listingCard, longDate, projectRef, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
+import { projectWishlist } from '../lots'
+import { marketplaceHref } from '../paths'
+import { activityFor, firstName, greeting, longDate, projectRef, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf } from './shortlist'
+import { activitySummary, earliestStart, fitCounts, fitTone, thumbsOf, waitingTone, type ActivitySummary, type MetricTone, type ThumbMaterial } from './dashboard'
+import { newForProjectsFeed, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
 
-export type ProjectCardView = ProjectRef & { counts: Record<WishStatus, number>; total: number; href: string }
+export { NEW_LISTING_DAYS, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
 
-export type NewForProjects = ListingCard & { fitsProjects: { id: string; name: string }[] }
+export type ProjectCardView = ProjectRef & {
+  counts: Record<WishStatus, number>
+  total: number
+  href: string
+  /** Fit of the live (not declined) shortlist against the project's start. */
+  fits: Record<Fit, number>
+  fitTone: MetricTone
+  sketch: BuildingSketch
+  /** Up to 3, for the thumbnail's swatches. */
+  materials: ThumbMaterial[]
+  approvedT: number
+  /** Avoided carbon on the live shortlist: everything but declined. */
+  liveT: number
+  /** New listings in time for this project. */
+  newFits: number
+  marketplaceHref: string
+}
 
-export type WaitingItem = { projectId: string; projectName: string; clientName: string; itemId: string; publicId: string; title: string; sentOn: string | null; daysWaiting: number | null; href: string }
+export type WaitingItem = {
+  projectId: string
+  projectName: string
+  clientName: string
+  itemId: string
+  publicId: string
+  title: string
+  sentOn: string | null
+  daysWaiting: number | null
+  href: string
+  /** The public card, for its picture; null when the project can no longer see the lot. */
+  card: ListingCard | null
+}
 
 export type ArchitectHome = {
   greeting: string
   dateText: string
   stats: { activeProjects: number; shortlisted: number; avoidedApprovedT: number }
+  metrics: {
+    nextStart: { projectName: string; dateText: string } | null
+    byStatus: Record<WishStatus, number>
+    waiting: { count: number; oldestDays: number | null; tone: MetricTone }
+    carbon: { approvedT: number; liveT: number; share: number; percentText: string }
+  }
   projects: ProjectCardView[]
+  carbonByProject: { id: string; name: string; href: string; approvedT: number; liveT: number }[]
+  carbonScaleMax: number
+  /** Oldest first. */
+  waitingForApproval: WaitingItem[]
+  /** The first of the Marketplace's New for your projects feed, for any screen that still lists it. */
   newForProjects: NewForProjects[]
-  waitingOnClient: WaitingItem[]
   activity: ActivityRow[]
+  activitySummary: ActivitySummary
 }
-
-/** Days a listing counts as new on the home page. */
-export const NEW_LISTING_DAYS = 30
-
-/** How many new listings the home page shows. */
-export const NEW_LISTING_LIMIT = 6
 
 export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | null {
   if (roleOfUser(state, viewer.userId) !== 'architect') return null
   const today = todayOf(viewer)
   const user = state.users[viewer.userId]
   const projects = projectsOfUser(state, viewer.userId).filter((p) => isProjectArchitect(state, viewer.userId, p.id))
+  const feed = newForProjectsFeed(state, viewer, null, Number.POSITIVE_INFINITY)
   let shortlisted = 0
   let avoidedApprovedT = 0
+  let liveTotalT = 0
+  const byStatus = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, 0])) as Record<WishStatus, number>
   const waiting: WaitingItem[] = []
-  const cards = projects.map((p) => {
+  const cards: ProjectCardView[] = projects.map((p) => {
     const list = projectWishlist(state.world, p.id)
     const rows = list ? shortlistRows(state, viewer, list, p) : []
     const totals = totalsOf(rows)
-    shortlisted += rows.filter((r) => r.status !== 'declined').length
+    const live = rows.filter((r) => r.status !== 'declined')
+    shortlisted += live.length
     avoidedApprovedT += totals.approved.avoidedT
+    const liveT = totals.all.avoidedT - totals.declined.avoidedT
+    liveTotalT += liveT
     for (const r of rows) {
       if (r.status !== 'sent') continue
-      waiting.push({ projectId: p.id, projectName: p.name, clientName: state.world.orgs[p.clientOrgId]?.name ?? '', itemId: r.itemId, publicId: r.publicId, title: r.title, sentOn: r.sentOn, daysWaiting: r.sentOn ? daysBetween(r.sentOn, today) : null, href: `/app/projects/${p.id}/shortlist` })
+      waiting.push({
+        projectId: p.id,
+        projectName: p.name,
+        clientName: state.world.orgs[p.clientOrgId]?.name ?? '',
+        itemId: r.itemId,
+        publicId: r.publicId,
+        title: r.title,
+        sentOn: r.sentOn,
+        daysWaiting: r.sentOn ? daysBetween(r.sentOn, today) : null,
+        href: `/app/projects/${p.id}/shortlist`,
+        card: r.card,
+      })
     }
     const counts = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, rows.filter((r) => r.status === s).length])) as Record<WishStatus, number>
-    return { ...projectRef(state, p), counts, total: rows.length, href: `/app/projects/${p.id}` }
+    for (const s of BOARD_COLUMNS) byStatus[s] += counts[s]
+    const fits = fitCounts(live.map((r) => r.card?.fit?.fit ?? null))
+    const families = live.flatMap((r) => (r.card ? [r.card.family] : []))
+    return {
+      ...projectRef(state, p),
+      counts,
+      total: rows.length,
+      href: `/app/projects/${p.id}`,
+      fits,
+      fitTone: fitTone(fits),
+      sketch: projectSketch(p, families),
+      materials: thumbsOf(rows),
+      approvedT: totals.approved.avoidedT,
+      liveT,
+      newFits: feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id)).length,
+      marketplaceHref: marketplaceHref(p.id),
+    }
   })
-  const since = monthKey(addDays(today, -NEW_LISTING_DAYS))
-  const newFor: NewForProjects[] = []
-  for (const l of marketplaceListings(state)) {
-    if (l.listedMonth < since) continue
-    // Already on one of the practice's lists: not news.
-    if (Object.values(state.world.wishlists).some((w) => w.orgId === user.orgId && w.items.some((x) => x.publicId === l.publicId))) continue
-    const fits = projects.filter((p) => timelineFit(l.availability, p.startDate, today).fit !== 'late')
-    if (fits.length === 0) continue
-    newFor.push({ ...listingCard(state, l, fits[0], today, user.orgId), fitsProjects: fits.map((p) => ({ id: p.id, name: p.name })) })
-  }
-  newFor.sort((a, b) => (a.listing.listedMonth < b.listing.listedMonth ? 1 : a.listing.listedMonth > b.listing.listedMonth ? -1 : a.publicId < b.publicId ? -1 : 1))
   waiting.sort((a, b) => (a.sentOn ?? '').localeCompare(b.sentOn ?? ''))
+  const oldestDays = waiting.reduce<number | null>((m, w) => (w.daysWaiting === null ? m : m === null ? w.daysWaiting : Math.max(m, w.daysWaiting)), null)
+  const next = earliestStart(projects, today)
+  const share = liveTotalT > 0 ? avoidedApprovedT / liveTotalT : 0
+  const activity = activityFor(state, viewer, {}, 8)
   return {
     greeting: greeting(viewer.now, firstName(user.name)),
     dateText: longDate(today),
     stats: { activeProjects: projects.length, shortlisted, avoidedApprovedT },
+    metrics: {
+      nextStart: next ? { projectName: next.name, dateText: formatDate(next.startDate) } : null,
+      byStatus,
+      waiting: { count: waiting.length, oldestDays, tone: waitingTone(waiting.length, oldestDays) },
+      carbon: { approvedT: avoidedApprovedT, liveT: liveTotalT, share, percentText: f.percent(share) },
+    },
     projects: cards,
-    newForProjects: newFor.slice(0, NEW_LISTING_LIMIT),
-    waitingOnClient: waiting,
-    activity: activityFor(state, viewer, {}, 8),
+    carbonByProject: cards.map((c) => ({ id: c.id, name: c.name, href: c.href, approvedT: c.approvedT, liveT: c.liveT })),
+    carbonScaleMax: cards.reduce((m, c) => Math.max(m, c.liveT), 0) || 1,
+    waitingForApproval: waiting,
+    newForProjects: feed.slice(0, NEW_LISTING_LIMIT),
+    activity,
+    activitySummary: activitySummary(activity),
   }
 }

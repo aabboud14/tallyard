@@ -6,7 +6,7 @@ import { useView } from '../../store'
 import { projectHeader } from '../../store/selectors/project'
 import { AvatarStack, Button, Tabs, type AvatarColourName } from '../../ui'
 import { AppNotFound } from '../../app/NoAccess'
-import { discoverHref } from '../discover/links'
+import { marketplaceHref } from '../discover/links'
 import { EditProjectDialog } from './EditProjectDialog'
 
 const SIDE_LABEL = { architect: 'You are the architect', client: 'You are the client', consultant: 'You are the sustainability consultant' } as const
@@ -43,7 +43,7 @@ export function ProjectLayout() {
                 <>
                   <EditProjectDialog projectId={projectId} trigger={<Button icon={PencilLine}>Edit</Button>} />
                   <Button asChild variant="primary" icon={Compass}>
-                    <Link to={discoverHref(projectId)} data-testid="find-materials">
+                    <Link to={marketplaceHref(projectId)} data-testid="find-materials">
                       Find materials
                     </Link>
                   </Button>

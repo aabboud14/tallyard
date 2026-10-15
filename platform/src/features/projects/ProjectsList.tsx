@@ -77,7 +77,7 @@ function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
           <TH>Stage</TH>
           <TH>Needed from</TH>
           <TH align="right">Shortlisted</TH>
-          <TH align="right">With client</TH>
+          <TH align="right">Waiting for approval</TH>
           <TH align="right">Approved</TH>
           <TH>Last activity</TH>
         </tr>

@@ -57,10 +57,10 @@ test('an item goes from the architect to the client, the owner and the consultan
   await page.getByTestId(`sample-${EMAIL.priya}`).click()
   await page.waitForURL('**/app/home')
 
-  // Discover, open the material, save it to Merrowgate Wharf and see its fit.
-  await page.getByTestId('nav-discover').click()
+  // The Marketplace, open the material, save it to Merrowgate Wharf and see its fit.
+  await page.getByTestId('nav-marketplace').click()
   await page.getByTestId('card-L-9F4CQQ').getByRole('link').first().click()
-  await page.waitForURL('**/app/discover/L-9F4CQQ**')
+  await page.waitForURL('**/app/marketplace/L-9F4CQQ**')
   await page.getByTestId('material-save').click()
   await page.getByTestId(`save-target-${M}`).click()
   await expect(page.getByText('Saved to Merrowgate Wharf').first()).toBeVisible()
@@ -172,7 +172,7 @@ test('a new practice signs up, creates a project and saves a material', async ({
   await page.getByTestId('project-start').fill('2027-09-06')
   await page.getByTestId('create-project').click()
   await page.waitForURL('**/app/projects/prj_*')
-  await page.goto('/app/discover')
+  await page.goto('/app/marketplace')
   await page.getByTestId('card-L-A945G6').hover()
   await page.getByTestId('save-L-A945G6').click()
   await page.locator('[data-testid^="save-target-prj_"]').first().click()
@@ -180,11 +180,11 @@ test('a new practice signs up, creates a project and saves a material', async ({
   expect(errors).toEqual([])
 })
 
-test('Discover and Capture fit a phone', async ({ page }) => {
+test('Marketplace and Capture fit a phone', async ({ page }) => {
   const errors = watchErrors(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await signInWithCard(page, 'priya')
-  for (const path of ['/app/discover', '/app/discover?tab=shared', '/app/discover/L-9F4CQQ']) {
+  for (const path of ['/app/marketplace', '/app/marketplace?tab=shared', '/app/marketplace/L-9F4CQQ']) {
     await page.goto(path)
     await expect(page.locator('main')).not.toBeEmpty()
     expect(await horizontalOverflow(page), path).toBe(0)
@@ -198,5 +198,14 @@ test('Discover and Capture fit a phone', async ({ page }) => {
     await expect(page.getByTestId('capture-text')).toBeVisible()
     expect(await horizontalOverflow(page), path).toBe(0)
   }
+  expect(errors).toEqual([])
+})
+
+test('old Discover links still work', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signInWithCard(page, 'priya')
+  await page.goto('/app/discover/L-9F4CQQ')
+  await page.waitForURL('**/app/marketplace/L-9F4CQQ')
+  await expect(page.getByTestId('material-title')).toBeVisible()
   expect(errors).toEqual([])
 })

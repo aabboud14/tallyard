@@ -8,7 +8,7 @@ import type { Fit } from '../../domain/v1types'
 import { useNow, useView } from '../../store'
 import { projectOverview } from '../../store/selectors/project'
 import { Button, Card, CardBody, CardHeader, DescriptionList, EmptyState, IndicativeMarker, ProgressBar, TimelineStrip } from '../../ui'
-import { discoverHref } from '../discover/links'
+import { marketplaceHref } from '../discover/links'
 import { ActivityFeed, ProjectPage, ProjectProgress } from './ProjectParts'
 
 export function Overview() {
@@ -38,7 +38,7 @@ export function Overview() {
                   action={
                     h.side === 'architect' ? (
                       <Button asChild size="sm" icon={Compass}>
-                        <Link to={discoverHref(projectId)}>Find materials</Link>
+                        <Link to={marketplaceHref(projectId)}>Find materials</Link>
                       </Button>
                     ) : undefined
                   }

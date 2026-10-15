@@ -7,6 +7,7 @@ import { Bookmark, BookmarkCheck, Box, CalendarRange, ChevronDown, Download, Fil
 import { LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
 import { getData, useNow, useView, useViewer } from '../../store'
+import { MARKETPLACE_PATH } from '../../store/paths'
 import { geometryFile, materialView, type MaterialView } from '../../store/selectors/discover'
 import { Badge, Button, Callout, Card, CardBody, cx, DescriptionList, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, FitPill, IndicativeMarker, METHODOLOGY_HREF, SustainabilityBand, TimelineStrip, toast, Tooltip } from '../../ui'
 import { Page } from '../../app/Page'
@@ -169,7 +170,7 @@ export function MaterialPage() {
                 <Tag aria-hidden="true" className="size-3.5" />
                 {card.publicId}
               </span>
-              <span data-testid="seller-line">{view.sellerLine}</span>
+              {view.sellerLine ? <span data-testid="seller-line">{view.sellerLine}</span> : null}
             </p>
           </div>
 
@@ -203,6 +204,16 @@ export function MaterialPage() {
                 <p className="m-0 text-sm text-ink-soft" data-testid="fit-text">
                   {view.availability.fitText} for {view.project?.name}, materials needed from {view.project?.startText}.{view.availability.storageText ? ` ${view.availability.storageText}.` : ''}
                 </p>
+              ) : view.availability.byProject.length > 0 ? (
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm text-ink-soft" data-testid="fit-text" aria-label="Against your projects">
+                  {view.availability.byProject.map((p) => (
+                    <li key={p.projectId} className="flex flex-wrap items-center gap-2">
+                      <FitPill fit={p.fit} />
+                      <span className="font-medium text-ink">{p.name}</span>
+                      <span className="text-muted">needed from {p.startText}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <p className="m-0 text-sm text-muted">Choose a project to check this against its start date.</p>
               )}
@@ -211,18 +222,20 @@ export function MaterialPage() {
 
           <DescriptionList layout="grid" columns={2} items={view.keyFacts.map((f) => ({ label: f.label, value: f.value }))} className="rounded-lg border border-line px-4 py-4" />
 
-          <div className="flex flex-col gap-1 border-t border-line-soft pt-4" data-testid="guide-price">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-              <span className="text-muted">
-                Guide price <span className="font-medium tabular-nums text-ink-soft">{view.price.range}</span>
-              </span>
-              <span className="inline-flex items-center gap-2 text-muted">
-                {view.price.signal}
-                <IndicativeMarker />
-              </span>
+          {view.price ? (
+            <div className="flex flex-col gap-1 border-t border-line-soft pt-4" data-testid="guide-price">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+                <span className="text-muted">
+                  Guide price <span className="font-medium tabular-nums text-ink-soft">{view.price.range}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 text-muted">
+                  {view.price.signal}
+                  <IndicativeMarker />
+                </span>
+              </div>
             </div>
-            {view.saveTargets.length > 0 ? <p className="m-0 text-xs text-muted">{LABELS.L40}</p> : null}
-          </div>
+          ) : null}
+          {view.showPurchaseNote ? <p className="m-0 text-xs text-muted">{LABELS.L40}</p> : null}
         </div>
       </div>
 
@@ -305,12 +318,12 @@ export function MaterialPage() {
                   items={[
                     { label: 'Location', value: view.location.label },
                     { label: 'Collection point', value: view.location.collectionPoint },
-                    { label: 'Seller', value: listing.sellerType },
+                    ...(view.location.seller ? [{ label: 'Seller', value: view.location.seller }] : []),
                   ]}
                 />
               </CardBody>
             </Card>
-            <p className="m-0 mt-2 text-xs text-muted">The seller and the exact site are shared with the client once a reservation is accepted.</p>
+            {view.location.seller ? <p className="m-0 mt-2 text-xs text-muted">The seller and the exact site are shared with the client once a reservation is accepted.</p> : null}
           </Section>
 
           <Section id="downloads-h" title="Geometry" icon={PenLine}>
@@ -325,8 +338,8 @@ export function MaterialPage() {
             <h2 id="similar-h" className="m-0 text-lg font-semibold text-ink">
               Similar materials
             </h2>
-            <Link to="/app/discover" className="text-sm font-medium text-ink-soft hover:text-ink">
-              Browse all
+            <Link to={MARKETPLACE_PATH} className="text-sm font-medium text-ink-soft hover:text-ink">
+              Browse the Marketplace
             </Link>
           </div>
           <div className="@container">

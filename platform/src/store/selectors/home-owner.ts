@@ -1,0 +1,50 @@
+// The donor building owner's dashboard: the owner's own buildings drawn from their surveys, items by typology,
+// what is listed, and requests awaiting a decision. Built on ownerHome; buyers stay blind through requestRows.
+import type { Typology } from '../../domain/v1types'
+import { buildingSketch, type BuildingSketch } from '../../domain/sketch'
+import { formatDate } from '../../domain/dates'
+import type { AppData, Viewer } from '../types'
+import { itemsOf, ownerHome, type BuildingCard, type OwnerHome } from './owner'
+import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial } from './dashboard'
+
+export type OwnerBuildingCard = BuildingCard & { sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string }
+
+export type OwnerDashboard = OwnerHome & {
+  metrics: { byTypology: Record<Typology, number>; listed: number; requestTone: MetricTone }
+  buildingCards: OwnerBuildingCard[]
+  /** The owner's own item behind each request on the home, by request ID. */
+  requestThumbs: Record<string, ThumbMaterial>
+  activitySummary: ActivitySummary
+}
+
+/** The owner's dashboard; null for anyone who is not an asset owner. */
+export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard | null {
+  const home = ownerHome(state, viewer)
+  if (!home) return null
+  const byTypology: Record<Typology, number> = { structure: 0, envelope: 0, finishes: 0 }
+  const buildingCards = home.buildings.map((c) => {
+    const b = state.world.buildings[c.id]
+    const families = itemsOf(state, c.id).map((i) => i.family)
+    const counts = typologyCounts(families)
+    for (const t of Object.keys(counts) as Typology[]) byTypology[t] += counts[t]
+    const start = b?.programme.dismantlingStart ?? null
+    return {
+      ...c,
+      sketch: buildingSketch({ id: c.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '' }, families),
+      byTypology: counts,
+      programmeText: start ? `Dismantling starts ${formatDate(start)}` : 'Programme not set',
+    }
+  })
+  const requestThumbs: Record<string, ThumbMaterial> = {}
+  for (const r of home.requests) {
+    const item = state.world.items[r.itemId]
+    if (item) requestThumbs[r.id] = { publicId: r.publicId, spec: item.spec, title: r.title }
+  }
+  return {
+    ...home,
+    metrics: { byTypology, listed: home.stats.listed + home.stats.shared, requestTone: home.stats.requestsAwaiting > 0 ? 'warning' : 'neutral' },
+    buildingCards,
+    requestThumbs,
+    activitySummary: activitySummary(home.activity),
+  }
+}
