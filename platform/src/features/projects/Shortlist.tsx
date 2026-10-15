@@ -43,6 +43,8 @@ import {
 import { marketplaceHref, listingHref } from '../discover/links'
 import { usePhotoSrc } from '../discover/photo'
 import { ProjectPage } from './ProjectParts'
+import { ClientLinkBanner } from './ClientLinkBanner'
+import { clientLinkView } from '../../store/selectors/project'
 
 type DialogState = { kind: 'note' | 'reopen'; row: ShortlistRow } | { kind: 'send'; ids: string[] } | null
 
@@ -390,11 +392,13 @@ function SendDialog({ board, ids, projectId, onClose, onSent }: { board: Shortli
 export function Shortlist() {
   const { projectId = '' } = useParams()
   const board = useView(shortlistBoard, projectId)
+  // Until the client accepts the project, nothing can be sent for approval (the banner says why).
+  const unlinked = useView(clientLinkView, projectId) !== null
   const layout = useApp((s) => s.ui.shortlistLayout)
   const setUi = useApp((s) => s.setUi)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [dialog, setDialog] = useState<DialogState>(null)
-  const sendable = useMemo(() => new Set(board?.sendableIds ?? []), [board])
+  const sendable = useMemo(() => new Set(unlinked ? [] : (board?.sendableIds ?? [])), [board, unlinked])
   if (!board) return null
   const chosen = [...selected].filter((id) => sendable.has(id))
   const chosenSet = new Set(chosen)
@@ -409,7 +413,8 @@ export function Shortlist() {
 
   return (
     <ProjectPage width="wide" testId="shortlist">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      {unlinked ? <ClientLinkBanner projectId={projectId} /> : null}
+      <div className={cx('flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between', unlinked && 'mt-5')}>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted" data-testid="shortlist-totals">
           <span>
             <span className="font-medium tabular-nums text-ink">{all.count}</span> {all.count === 1 ? 'material' : 'materials'}

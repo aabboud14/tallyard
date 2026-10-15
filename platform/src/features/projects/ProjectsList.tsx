@@ -1,29 +1,52 @@
 // Projects: every project the person works on, as cards or a table (name, client, type, RIBA stage, when materials
-// are needed, shortlist by status, last activity). Architects create projects here.
+// are needed, shortlist by status, last activity). Architects create projects here. A new project shows how far
+// its setup has gone and what comes next; one the client has not accepted says so.
 import { Link } from 'react-router'
-import { Clock, FolderOpen, FolderPlus, LayoutGrid, List } from 'lucide-react'
+import { Clock, FolderPlus, Hourglass, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
 import { formatDateShort } from '../../domain/dates'
 import { useApp, useNow, useView } from '../../store'
 import { projectsListView, type ProjectListRow } from '../../store/selectors/project'
 import { timeAgo } from '../../store/selectors/common'
-import { Button, Card, EmptyState, SegmentedControl, Table, TBody, TD, TH, THead, TR } from '../../ui'
+import { Button, Card, EmptyState, Pill, ProjectThumbnail, SegmentedControl, Table, TBody, TD, TH, THead, TR } from '../../ui'
+import { projectVisuals, type ProjectVisual } from '../../store/selectors/project-visuals'
 import { Page } from '../../app/Page'
 import { ProjectProgress } from './ProjectParts'
 
 const SIDE_EMPTY = {
   architect: 'Create a project to start shortlisting materials against its programme.',
-  client: 'Projects appear here when your architect adds you as the client.',
+  client: 'Projects appear here once you accept an architect\'s request to add you as the client.',
   consultant: 'Projects appear here when an architect adds you as the sustainability consultant.',
 } as const
 
-function ProjectCardLarge({ p, now }: { p: ProjectListRow; now: string }) {
+/** 'Setting up, 2 of 6' and 'Waiting for client' or 'Client declined', where they apply. */
+function StatusPills({ p }: { p: ProjectListRow }) {
+  if (!p.setup && p.linkStatus === 'accepted') return null
   return (
-    <Card interactive as="article" className="flex flex-col" data-testid={`project-card-${p.id}`}>
+    <span className="flex flex-wrap gap-1.5">
+      {p.setup ? (
+        <Pill tone="brand" size="sm" icon={ListChecks} data-testid={`setup-pill-${p.id}`}>
+          Setting up, {p.setup.done} of {p.setup.total}
+        </Pill>
+      ) : null}
+      {p.linkStatus === 'pending' ? (
+        <Pill tone="info" size="sm" icon={Hourglass} data-testid={`link-pill-${p.id}`}>
+          Waiting for client
+        </Pill>
+      ) : p.linkStatus === 'declined' ? (
+        <Pill tone="warning" size="sm" icon={UserRoundX} data-testid={`link-pill-${p.id}`}>
+          Client declined
+        </Pill>
+      ) : null}
+    </span>
+  )
+}
+
+function ProjectCardLarge({ p, now, visual }: { p: ProjectListRow; now: string; visual: ProjectVisual | undefined }) {
+  return (
+    <Card interactive as="article" className="flex flex-col overflow-hidden" data-testid={`project-card-${p.id}`}>
+      {visual ? <ProjectThumbnail sketch={visual.sketch} materials={visual.materials} aspect="16/10" decorative className="border-b border-line-soft" /> : null}
       <div className="flex flex-1 flex-col gap-4 p-5">
         <div className="flex items-start gap-3">
-          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-            <FolderOpen aria-hidden="true" className="size-5" />
-          </span>
           <div className="min-w-0 flex-1">
             <h2 className="m-0 truncate text-md font-semibold text-ink">
               <Link to={p.href} className="outline-none after:absolute after:inset-0 after:rounded-lg">
@@ -33,6 +56,7 @@ function ProjectCardLarge({ p, now }: { p: ProjectListRow; now: string }) {
             <p className="m-0 truncate text-sm text-muted">{p.clientName}</p>
           </div>
         </div>
+        <StatusPills p={p} />
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div>
             <dt className="text-muted">Type</dt>
@@ -52,7 +76,13 @@ function ProjectCardLarge({ p, now }: { p: ProjectListRow; now: string }) {
           </div>
         </dl>
         <div className="mt-auto flex flex-col gap-3 border-t border-line-soft pt-4">
-          <ProjectProgress counts={p.counts} total={p.total} size="sm" />
+          {p.setup?.nextText ? (
+            <p className="m-0 text-sm font-medium text-brand-700" data-testid={`setup-next-${p.id}`}>
+              {p.setup.nextText}
+            </p>
+          ) : (
+            <ProjectProgress counts={p.counts} total={p.total} size="sm" />
+          )}
           {p.lastActivityAt ? (
             <p className="m-0 flex items-center gap-1.5 truncate text-xs text-muted">
               <Clock aria-hidden="true" className="size-3 shrink-0" />
@@ -90,6 +120,9 @@ function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
                 {p.name}
               </Link>
               <div className="text-sm text-muted">{p.clientName}</div>
+              <div className="mt-1 empty:hidden">
+                <StatusPills p={p} />
+              </div>
             </TD>
             <TD muted>{p.typeLabel}</TD>
             <TD muted>Stage {p.stage}</TD>
@@ -109,6 +142,7 @@ function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
 
 export function ProjectsList() {
   const view = useView(projectsListView)
+  const visuals = useView(projectVisuals)
   const layout = useApp((s) => s.ui.projectsLayout)
   const setUi = useApp((s) => s.setUi)
   const now = useNow()
@@ -148,7 +182,7 @@ export function ProjectsList() {
       {view.empty ? (
         <EmptyState
           variant="page"
-          icon={FolderOpen}
+          illustration="project"
           title="No projects yet"
           text={SIDE_EMPTY[side]}
           action={
@@ -168,7 +202,7 @@ export function ProjectsList() {
       {!view.empty ? (
         <div className={layout === 'table' ? 'mt-8 grid grid-cols-1 gap-4 md:hidden' : 'mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'} data-testid="projects-cards">
           {view.rows.map((p) => (
-            <ProjectCardLarge key={p.id} p={p} now={now} />
+            <ProjectCardLarge key={p.id} p={p} now={now} visual={visuals?.[p.id]} />
           ))}
         </div>
       ) : null}

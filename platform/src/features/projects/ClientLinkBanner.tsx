@@ -1,0 +1,139 @@
+// What the architect sees while the client organisation has not accepted the project: a banner on the overview and
+// the shortlist, and the dialog to ask again or ask another client. Only the organisation's name shows, never its
+// people (projects-timeline design D6).
+import { useState } from 'react'
+import { Hourglass, Send, UserRoundX, Users } from 'lucide-react'
+import { act, useView } from '../../store'
+import { PRODUCT_NAME } from '../../domain/constants'
+import { changeClientOptions, clientLinkView } from '../../store/selectors/project'
+import { Button, Callout, Dialog, Field, Input, Select, Textarea, toast } from '../../ui'
+
+const NEW_CLIENT = '__new__'
+
+export type ChangeClientMode = 'ask_again' | 'another'
+
+/** The banner, with its own dialog. Renders nothing once the client has accepted, or for anyone but the architect. */
+export function ClientLinkBanner({ projectId, onChangeClient }: { projectId: string; onChangeClient?: (mode: ChangeClientMode) => void }) {
+  const link = useView(clientLinkView, projectId)
+  const [mode, setMode] = useState<ChangeClientMode | null>(null)
+  if (!link) return null
+  const open = (m: ChangeClientMode) => (onChangeClient ? onChangeClient(m) : setMode(m))
+  const declined = link.status === 'declined'
+  const buttons = (
+    <div className="flex flex-wrap gap-2">
+        {declined ? (
+          <>
+            <Button size="sm" variant="primary" onClick={() => open('ask_again')} data-testid="link-ask-again">
+              Ask again
+            </Button>
+            <Button size="sm" onClick={() => open('another')} data-testid="link-choose-another">
+              Choose another client
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" onClick={() => open('another')} data-testid="link-change-client">
+            Change client
+          </Button>
+        )}
+      </div>
+  )
+  return (
+    <div data-testid="client-link-banner" data-status={link.status}>
+      <Callout
+        tone={declined ? 'warning' : 'info'}
+        icon={declined ? UserRoundX : link.clientHasMembers ? Hourglass : Users}
+        title={declined ? `${link.clientName} declined this project` : link.clientHasMembers ? `Waiting for ${link.clientName} to accept this project` : `Nobody from ${link.clientName} uses ${PRODUCT_NAME} yet`}
+      >
+        {declined ? (
+          <p className="m-0">
+            {link.decidedText ? `${link.decidedText}. ` : ''}
+            {link.note ? `Their note: ${link.note}` : 'Ask them again, or choose another client. Until a client accepts, nothing can be sent for approval.'}
+          </p>
+        ) : link.clientHasMembers ? (
+          <p className="m-0">Until they do, they cannot see it and you cannot send materials for approval. {link.requestedText}.</p>
+        ) : (
+          <p className="m-0">Nobody can accept this project until someone from {link.clientName} joins. You can still shortlist materials. Sending for approval opens once the client accepts.</p>
+        )}
+        <div className="mt-3">{buttons}</div>
+      </Callout>
+      {onChangeClient ? null : <ChangeClientDialog projectId={projectId} mode={mode} onClose={() => setMode(null)} />}
+    </div>
+  )
+}
+
+/** Ask the same client again, or another one (one of the practice's clients or a new name), with a message. */
+export function ChangeClientDialog({ projectId, mode, onClose }: { projectId: string; mode: ChangeClientMode | null; onClose: () => void }) {
+  const options = useView(changeClientOptions, projectId)
+  if (!options) return null
+  return (
+    <Dialog
+      open={mode !== null}
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+      title={mode === 'ask_again' ? `Ask ${options.current.name} again` : 'Change client'}
+      description="The client organisation must accept before the project appears in their workspace."
+      testId="change-client-dialog"
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="submit" form="change-client-form" variant="primary" icon={Send} data-testid="change-client-send">
+            Send request
+          </Button>
+        </>
+      }
+    >
+      {mode ? <ChangeClientForm key={mode} projectId={projectId} mode={mode} onDone={onClose} /> : null}
+    </Dialog>
+  )
+}
+
+function ChangeClientForm({ projectId, mode, onDone }: { projectId: string; mode: ChangeClientMode; onDone: () => void }) {
+  const options = useView(changeClientOptions, projectId)
+  const [choice, setChoice] = useState<string>(() => (options ? ((mode === 'ask_again' ? options.defaults.ask_again : options.defaults.another) ?? NEW_CLIENT) : NEW_CLIENT))
+  const [name, setName] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  if (!options) return null
+  const isNew = choice === NEW_CLIENT
+  return (
+    <form
+      id="change-client-form"
+      noValidate
+      className="flex flex-col gap-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (isNew && !name.trim()) {
+          setError('Enter the client.')
+          return
+        }
+        const r = act.requestClientLink(projectId, isNew ? { name } : { orgId: choice }, message)
+        if (!r.ok) {
+          setError(r.error ?? 'The request could not be sent.')
+          return
+        }
+        const sentTo = isNew ? name.trim() : (options.options.find((o) => o.value === choice)?.label ?? options.current.name)
+        onDone()
+        toast.success(`Request sent to ${sentTo}`, { action: { label: 'Undo', onClick: r.undo } })
+      }}
+    >
+      {options.options.length > 0 ? (
+        <Field label="Client">
+          <Select value={choice} onChange={(e) => setChoice(e.target.value)} options={[...options.options, { value: NEW_CLIENT, label: 'A new client' }]} data-testid="change-client-select" />
+        </Field>
+      ) : null}
+      {isNew ? (
+        <Field label={options.options.length > 0 ? 'New client name' : 'Client'} error={error ?? undefined}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Client organisation" autoFocus data-testid="change-client-name" />
+        </Field>
+      ) : error ? (
+        <Callout tone="danger" role="alert">
+          {error}
+        </Callout>
+      ) : null}
+      <Field label="Message to the client" optional>
+        <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Why you are adding them, and what you will send for approval" data-testid="change-client-message" />
+      </Field>
+    </form>
+  )
+}
