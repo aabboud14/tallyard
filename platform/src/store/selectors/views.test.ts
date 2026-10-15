@@ -290,7 +290,7 @@ describe('owner workspace', () => {
     const s = fresh()
     const h = sel.ownerHome(s, viewer(U.tom))!
     expect(h.stats).toMatchObject({ buildings: 1, itemsSurveyed: 11, listed: 1, shared: 5, reserved: 0, requestsAwaiting: 1 })
-    expect(h.requests[0].buyer).toEqual({ kind: 'blind', text: 'Design team, commercial project, Inner London East, needed by Q2 2028' })
+    expect(h.requests[0].buyer).toEqual({ kind: 'blind', text: 'Design team, commercial project, Inner London East, needed April to June 2028' })
     expect(h.requests[0].sellerEstimate.net).toBeGreaterThan(0)
     const l = sel.listingsView(s, viewer(U.tom), TIVERNE_ID)!
     expect(l.rows.find((r) => r.tag === 'TH-01')).toMatchObject({ choice: 'published', ask: 800, reserve: 730 })
@@ -337,11 +337,11 @@ describe('owner workspace', () => {
   it('sharing lists every other project as a blind line', () => {
     const v = sel.sharingView(fresh(), viewer(U.tom))!
     expect(v.rows.map((r) => [r.text, r.granted])).toEqual([
-      ['Design team, commercial project, Inner London East, needed by Q2 2028', true],
-      ['Design team, hotel project, Central London, needed by Q1 2028', false],
-      ['Design team, residential project, Inner London East, needed by Q2 2027', false],
+      ['Design team, commercial project, Inner London East, needed April to June 2028', true],
+      ['Design team, hotel project, Central London, needed January to March 2028', false],
+      ['Design team, residential project, Inner London East, needed April to June 2027', false],
       // Round 2 (BRIEF 14.2): Kilnworth Place, seeded for Lantern Quay, is one more project to share with.
-      ['Developer, residential project, Inner London East, needed by Q1 2027', false],
+      ['Developer, residential project, Inner London East, needed January to March 2027', false],
     ])
     expect(v.sharedLotCount).toBe(5)
   })

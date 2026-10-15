@@ -28,7 +28,7 @@ describe('requesting a reservation', () => {
     expect(res.estimate.lines.map((l) => l.id)).toEqual(['material', 'testing', 'storage', 'handlingOut', 'delivery'])
     const n = r.state.notifications.find((x) => x.orgId === ORG_IDS.ostlea && x.kind === 'reservation_requested')!
     expect(n.title).toBe('Reservation request for TH-01')
-    expect(n.body).toBe('UB 457x191x67, 7.5 m. Design team, commercial project, Inner London East, needed by Q2 2028.')
+    expect(n.body).toBe('UB 457x191x67, 7.5 m. Design team, commercial project, Inner London East, needed April to June 2028.')
     expect(n.body).not.toContain('Merrowgate')
     expect(n.body).not.toContain('Lantern')
   })

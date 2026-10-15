@@ -17,6 +17,7 @@ import { ProgrammeCard } from './ProgrammeCard'
 import { ProgrammeDialog } from './ProgrammeDialog'
 import { RequirementsCard } from './RequirementsCard'
 import { RequirementsDialog } from './RequirementsDialog'
+import { AppointArchitectCard } from './AppointArchitect'
 
 type DialogState = { kind: 'programme' } | { kind: 'requirements' } | { kind: 'client'; mode: ChangeClientMode } | null
 
@@ -55,6 +56,8 @@ export function Overview() {
             }}
           />
         ) : null}
+
+        {h.canAppointArchitect ? <AppointArchitectCard projectId={projectId} /> : null}
 
         {link ? <ClientLinkBanner projectId={projectId} onChangeClient={(mode) => setDialog({ kind: 'client', mode })} /> : null}
 
@@ -127,7 +130,7 @@ export function Overview() {
                 layout="grid"
                 items={[
                   { label: 'Client', value: clientValue },
-                  { label: 'Architect', value: h.architectName },
+                  { label: 'Architect', value: h.architectText },
                   { label: 'Consultant', value: h.consultantName || 'None yet' },
                   { label: 'Type', value: h.typeLabel },
                   { label: 'RIBA stage', value: h.stageLabel },

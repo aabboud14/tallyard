@@ -58,6 +58,10 @@ export type ProjectRequirementsView = {
   reviewed: boolean
   choices: RequirementChoices
   note: string
+  /** What the card says while nothing is chosen, for this viewer. */
+  emptyText: string
+  /** True on an owner's New project with no architect: no one can choose requirements yet. */
+  noArchitect: boolean
 }
 
 /** What a project tracks, for anyone on the project; the architect may edit it. */
@@ -66,6 +70,7 @@ export function projectRequirementsView(state: AppData, viewer: Viewer, projectI
   if (!side) return null
   const p = state.world.projects[projectId]
   const choices = requirementChoices(p.region, p.localAuthority, p.planningRequirementIds)
+  const noArchitect = !p.architectOrgId
   return {
     canEdit: side === 'architect',
     locationText: [p.localAuthority, p.region].filter((x) => x).join(', '),
@@ -73,6 +78,13 @@ export function projectRequirementsView(state: AppData, viewer: Viewer, projectI
     reviewed: p.requirementsReviewed,
     choices,
     note: REQUIREMENTS_NOTE,
+    emptyText:
+      side === 'architect'
+        ? 'No requirements chosen yet. Pick the policies and standards to track for this location.'
+        : noArchitect
+          ? 'Appoint an architect to choose which requirements apply.'
+          : 'The architect has not chosen any requirements yet.',
+    noArchitect,
   }
 }
 

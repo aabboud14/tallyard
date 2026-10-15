@@ -98,6 +98,15 @@ export type LinkView =
  * The link page for anyone signed in: inactive when revoked or unknown; the owner's own organisation sees a preview;
  * everyone else first accepts the terms, then sees the lots as public listings.
  */
+/** The link page's title, which the breadcrumb follows: the owner's organisation previews its own link. */
+export const LINK_PAGE_TITLES = { preview: 'Your share link', other: 'Shared with you by link' } as const
+
+export function linkPageTitle(state: AppData, viewer: Viewer, linkId: string): string {
+  const link = state.world.shareLinks[linkId]
+  const orgId = state.users[viewer.userId]?.orgId
+  return link && link.revokedAt === null && orgId && link.ownerOrgId === orgId ? LINK_PAGE_TITLES.preview : LINK_PAGE_TITLES.other
+}
+
 export function linkView(state: AppData, viewer: Viewer, linkId: string): LinkView {
   const link = state.world.shareLinks[linkId]
   const user = state.users[viewer.userId]

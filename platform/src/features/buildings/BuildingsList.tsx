@@ -5,16 +5,17 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { CalendarClock, Camera, ClipboardList, HardHat, Plus, UserPlus } from 'lucide-react'
 import type { BuildingSketch } from '../../domain/sketch'
-import { act, selectors, useSession, useView } from '../../store'
+import { selectors, useSession, useView } from '../../store'
 import type { BuildingCard, BuildingsList as BuildingsListView, OwnerProjectRow } from '../../store/selectors/owner'
 import type { ClaimState } from '../../store/selectors/claims'
 import { buildingSketches } from '../../store/selectors/buildings-ui'
 import { formatDate } from '../../domain/dates'
-import { BuildingThumb, Button, Card, Dialog, EmptyState, Field, PageHeader, Pill, SegmentedBar, Select, Table, TBody, TD, TH, THead, TR, toast } from '../../ui'
+import { BuildingThumb, Button, Card, EmptyState, PageHeader, Pill, SegmentedBar, Table, TBody, TD, TH, THead, TR } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE, visibilitySegments } from './labels'
 import { NewBuildingDialog } from './NewBuildingDialog'
 import { ClaimActions, ClaimPill } from './ClaimDialog'
+import { AppointArchitectDialog } from '../projects/AppointArchitect'
 
 export function BuildingsList() {
   const v = useView(selectors.buildingsList)
@@ -171,7 +172,7 @@ function OwnerTable({ rows, sketches }: { rows: BuildingCard[]; sketches: Record
 }
 
 function ProjectsTable({ rows }: { rows: OwnerProjectRow[] }) {
-  const [appointing, setAppointing] = useState<OwnerProjectRow | null>(null)
+  const [appointing, setAppointing] = useState<string | null>(null)
   return (
     <>
       <Table className="max-md:hidden" caption="New projects">
@@ -199,7 +200,7 @@ function ProjectsTable({ rows }: { rows: OwnerProjectRow[] }) {
                 ) : (
                   <span className="relative z-[2] inline-flex items-center gap-2">
                     <span className="text-muted">No architect yet</span>
-                    <Button size="sm" variant="ghost" icon={UserPlus} onClick={() => setAppointing(p)} data-testid={`appoint-architect-${p.id}`}>
+                    <Button size="sm" variant="ghost" icon={UserPlus} onClick={() => setAppointing(p.id)} data-testid={`appoint-architect-${p.id}`}>
                       Appoint
                     </Button>
                   </span>
@@ -230,7 +231,7 @@ function ProjectsTable({ rows }: { rows: OwnerProjectRow[] }) {
                 {p.architectName ?? 'No architect yet'}. Materials needed from {p.startText}.
               </p>
               {p.architectName ? null : (
-                <Button size="sm" icon={UserPlus} className="relative z-[2] self-start" onClick={() => setAppointing(p)}>
+                <Button size="sm" icon={UserPlus} className="relative z-[2] self-start" onClick={() => setAppointing(p.id)}>
                   Appoint an architect
                 </Button>
               )}
@@ -238,46 +239,8 @@ function ProjectsTable({ rows }: { rows: OwnerProjectRow[] }) {
           </li>
         ))}
       </ul>
-      <AppointArchitectDialog project={appointing} onClose={() => setAppointing(null)} />
+      <AppointArchitectDialog projectId={appointing} onClose={() => setAppointing(null)} />
     </>
-  )
-}
-
-function AppointArchitectDialog({ project, onClose }: { project: OwnerProjectRow | null; onClose: () => void }) {
-  const options = useView(selectors.newBuildingOptions)
-  const [value, setValue] = useState('')
-  const close = () => {
-    setValue('')
-    onClose()
-  }
-  const appoint = () => {
-    if (!project) return
-    const r = act.appointProjectArchitect(project.id, value)
-    if (!r.ok) return toast.error(r.error ?? 'Could not appoint the architect.')
-    toast.success('Architect appointed', { description: 'They have been told and can start shortlisting.' })
-    close()
-  }
-  return (
-    <Dialog
-      open={!!project}
-      onOpenChange={(o) => !o && close()}
-      title="Appoint an architect to start sourcing"
-      description={project ? `${project.name}. They shortlist reclaimed materials; you approve what they propose.` : undefined}
-      size="sm"
-      testId="appoint-architect"
-      footer={
-        <>
-          <Button onClick={close}>Cancel</Button>
-          <Button variant="primary" disabled={!value} onClick={appoint} data-testid="appoint-architect-save">
-            Appoint
-          </Button>
-        </>
-      }
-    >
-      <Field label="Architecture practice">
-        <Select value={value} onChange={(e) => setValue(e.target.value)} placeholder="Choose a practice" options={(options?.architects ?? []).map((a) => ({ value: a.orgId, label: a.name }))} data-testid="appoint-architect-select" />
-      </Field>
-    </Dialog>
   )
 }
 

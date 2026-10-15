@@ -224,3 +224,55 @@ test('the owner records the structure and the overview summary follows', async (
   await expect(page.getByTestId('structure-card')).toContainText('timber roof')
   expect(errors).toEqual([])
 })
+
+test("an owner's new project without an architect asks for one, then appoints one from the overview", async ({ page }) => {
+  const errors = watchErrors(page)
+  await signInWithCard(page, 'tom')
+  await page.goto('/app/buildings')
+  await page.getByTestId('add-new-project').click()
+  await page.getByRole('radio', { name: /New project/ }).click()
+  await page.getByTestId('nb-name').fill('Wexcombe House')
+  await page.getByTestId('nb-region').selectOption('Central London')
+  await page.getByTestId('nb-local-authority').selectOption('Camden')
+  await page.getByTestId('nb-project-type').selectOption('office')
+  await page.getByTestId('nb-start').fill('2027-09-20')
+  await page.getByTestId('new-building-save').click()
+  await page.waitForURL('**/app/projects/prj_*')
+  const base = new URL(page.url()).pathname
+  for (const width of [390, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`${base}/team`)
+    await expect(page.getByTestId('team-appoint-architect')).toBeVisible()
+    await expect(page.getByTestId('project-team')).not.toContainText('No one from has joined')
+    expect(await horizontalOverflow(page)).toBe(0)
+    await page.goto(base)
+    await expect(page.getByTestId('appoint-architect-card')).toBeVisible()
+    await expect(page.getByTestId('project-details')).toContainText('Not appointed yet')
+    await expect(page.getByTestId('next-steps')).toContainText('Appoint an architect to start sourcing')
+    expect(await horizontalOverflow(page)).toBe(0)
+  }
+  await page.getByTestId('appoint-architect-card-select').selectOption({ label: 'Studio Oriel' })
+  await page.getByTestId('appoint-architect-card-save').click()
+  await expect(page.getByText('Architect appointed').first()).toBeVisible()
+  await expect(page.getByTestId('appoint-architect-card')).toHaveCount(0)
+  await expect(page.getByTestId('project-details')).toContainText('Studio Oriel')
+  expect(errors).toEqual([])
+})
+
+test('the owner inventory fits without horizontal scroll at 1024, 1280 and 1440, contractor dates included', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signInWithCard(page, 'tom')
+  for (const width of [1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`/app/buildings/${TIVERNE}/inventory`)
+    await expect(page.getByTestId('inventory-table')).toBeVisible()
+    expect(await horizontalOverflow(page)).toBe(0)
+    const tableOverflow = await page.getByTestId('inventory-table').evaluate((t) => t.scrollWidth - (t.parentElement?.clientWidth ?? t.scrollWidth))
+    expect(tableOverflow).toBeLessThanOrEqual(0)
+    // The contractor's month stays on screen: its own column on wide screens, under Expected otherwise.
+    await expect(page.getByTestId('row-TH-07')).toContainText('March 2027')
+    if (width < 1400) await expect(page.getByTestId('row-TH-07-contractor')).toBeVisible()
+    else await expect(page.getByTestId('inventory-table').getByRole('columnheader', { name: 'Contractor' })).toBeVisible()
+  }
+  expect(errors).toEqual([])
+})

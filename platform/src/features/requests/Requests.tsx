@@ -91,7 +91,7 @@ function RequestCard({ row: r, onDecide }: { row: RequestRow; onDecide: (d: 'acc
             <div className="min-w-0">
               <p className="m-0 flex items-center gap-2 text-sm text-muted">
                 <span className="rounded bg-subtle px-1.5 py-0.5 text-xs font-medium tabular-nums text-ink-soft ring-1 ring-inset ring-line-soft">{r.tag}</span>
-                <Link to={`/app/buildings/${r.buildingId}/inventory?item=${r.itemId}`} className="hover:text-ink hover:underline">
+                <Link to={`/app/buildings/${r.buildingId}/inventory?item=${r.itemId}`} className="relative rounded-sm hover:text-ink hover:underline max-sm:after:absolute max-sm:after:-inset-x-1 max-sm:after:-inset-y-3 max-sm:after:content-['']">
                   {r.buildingName}
                 </Link>
                 <span>· {r.timeAgo}</span>

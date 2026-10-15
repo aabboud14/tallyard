@@ -22,6 +22,7 @@ import { projectRequirementsView, type ProjectRequirementsView } from './require
 import { projectWishlist } from '../lots'
 import { sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
 import { plural } from '../notifications'
+import { architectOptions } from './owner'
 
 export type ProjectTab = { id: string; label: string; href: string; badge: number | null; soon: boolean }
 
@@ -84,12 +85,33 @@ export type ProjectHeader = ProjectRef & {
   team: TeamAvatar[]
   description: string
   consultantName: string
+  /** The practice's name, or '' while an owner's New project has none. */
   architectName: string
+  /** The practice's name, or 'Not appointed yet'. */
+  architectText: string
+  /** An owner on their own New project with no architect yet: they may appoint one. */
+  canAppointArchitect: boolean
   siteStartText: string
   completionText: string
   /** "Today: stage 2, Concept Design", or "Programme starts 1 Nov 2026". */
   plannedStageText: string
   linkStatus: ClientLinkStatus
+}
+
+export const NO_ARCHITECT_TEXT = 'Not appointed yet'
+
+/** Only an owner whose organisation is the client of its own New project, while no practice is appointed. */
+function canAppointArchitect(state: AppData, viewer: Viewer, p: Project): boolean {
+  return !p.architectOrgId && roleOfUser(state, viewer.userId) === 'owner' && state.users[viewer.userId]?.orgId === p.clientOrgId
+}
+
+export type AppointArchitectView = { projectId: string; projectName: string; options: { orgId: string; name: string }[] }
+
+/** The practices an owner may appoint to their New project; null when they may not appoint one. */
+export function appointArchitectView(state: AppData, viewer: Viewer, projectId: string): AppointArchitectView | null {
+  const p = state.world.projects[projectId]
+  if (!p || projectSide(state, viewer.userId, projectId) !== 'client' || !canAppointArchitect(state, viewer, p)) return null
+  return { projectId, projectName: p.name, options: architectOptions(state) }
 }
 
 /** The workspace header and tabs for a project the viewer works on; null otherwise. Client members appear only once the client has accepted. */
@@ -108,6 +130,8 @@ export function projectHeader(state: AppData, viewer: Viewer, projectId: string)
     description: p.description,
     consultantName: p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
     architectName: state.world.orgs[p.architectOrgId]?.name ?? '',
+    architectText: state.world.orgs[p.architectOrgId]?.name ?? NO_ARCHITECT_TEXT,
+    canAppointArchitect: canAppointArchitect(state, viewer, p),
     siteStartText: formatDate(p.programme.siteStart),
     completionText: formatDate(p.programme.practicalCompletion),
     plannedStageText: plannedStageText(p, todayOf(viewer)),
@@ -301,6 +325,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     if (counts.declined > 0) steps.push({ id: 'declined', text: `Review ${plural(counts.declined, 'declined material')}`, href: `${base}/shortlist` })
     if (counts.approved > 0) steps.push({ id: 'spec', text: 'Export the specification for the approved materials', href: `${base}/specification` })
   } else if (header.side === 'client') {
+    if (header.canAppointArchitect) steps.push({ id: 'architect', text: 'Appoint an architect to start sourcing', href: `${base}/team` })
     if (counts.sent > 0) steps.push({ id: 'approve', text: `Approve or decline ${plural(counts.sent, 'material')}`, href: `${base}/approvals` })
     const unreserved = rows.filter((r) => r.status === 'approved' && r.card && (!r.reservation || r.reservation.status === 'declined' || r.reservation.status === 'withdrawn')).length
     if (unreserved > 0) steps.push({ id: 'reserve', text: `Request a reservation for ${plural(unreserved, 'approved material')}`, href: `${base}/reservations` })
@@ -609,6 +634,8 @@ export type ProjectTeam = {
   sections: TeamSection[]
   canSetConsultant: boolean
   consultantOptions: { orgId: string; name: string }[]
+  /** Set while an owner's New project has no architect, so the owner can appoint one. */
+  appointArchitect: AppointArchitectView | null
 }
 
 export function projectTeam(state: AppData, viewer: Viewer, projectId: string): ProjectTeam | null {
@@ -625,7 +652,8 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
     yours: orgId === myOrg,
     pending,
   })
-  const sections = [section(p.clientOrgId, 'Client', !clientLinked(p)), section(p.architectOrgId, 'Architect')]
+  const sections = [section(p.clientOrgId, 'Client', !clientLinked(p))]
+  if (p.architectOrgId) sections.push(section(p.architectOrgId, 'Architect'))
   if (p.consultantOrgId) sections.push(section(p.consultantOrgId, 'Sustainability consultant'))
   return {
     header,
@@ -634,6 +662,7 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
     consultantOptions: Object.values(state.world.orgs)
       .filter((o) => roleOfOrg(state, o.id) === 'consultant')
       .map((o) => ({ orgId: o.id, name: o.name })),
+    appointArchitect: appointArchitectView(state, viewer, projectId),
   }
 }
 

@@ -155,7 +155,7 @@ describe('Client helpers', () => {
 
   it('shows the client the blind line the seller will see, and no one else', () => {
     const s = fresh()
-    expect(sellerSeesLine(s, viewer(U.isla), MERROWGATE_ID)).toBe('Design team, commercial project, Inner London East, needed by Q2 2028')
+    expect(sellerSeesLine(s, viewer(U.isla), MERROWGATE_ID)).toBe('Design team, commercial project, Inner London East, needed April to June 2028')
     expect(sellerSeesLine(s, viewer(U.priya), MERROWGATE_ID)).toBeNull()
     expect(sellerSeesLine(s, viewer(U.tom), MERROWGATE_ID)).toBeNull()
   })

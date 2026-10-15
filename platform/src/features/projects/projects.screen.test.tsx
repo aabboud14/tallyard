@@ -12,7 +12,8 @@ import { getData, useApp } from '../../store/app'
 import { signOut } from '../../store/session'
 import { setSessionUserId } from '../../store/sessionId'
 import { createProject, type NewProjectInput } from '../../store/actions/projects'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { MERROWGATE_ID, ORG_IDS } from '../../domain/seed/world'
+import { createOwnerProject } from '../../store/actions/owner'
 import { U } from '../../test/fixtures'
 import { routes } from '../../app/router'
 
@@ -189,6 +190,46 @@ describe('a new project', () => {
     open(`/app/projects/${id}/shortlist`)
     await waitFor(() => q('client-link-banner'))
     expect((byTestId('send-to-client') as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe("an owner's New project with no architect", () => {
+  function wexcombe(): string {
+    const r = createOwnerProject(getData(), { userId: U.tom, now: NOW }, { name: 'Wexcombe House', projectType: 'office', localAuthority: 'Camden', region: 'Central London', ribaStage: 2, startDate: '2027-09-20', architectOrgId: null })
+    expect(r.error).toBeNull()
+    useApp.getState().commit(r.state)
+    return r.value as string
+  }
+
+  it('asks the owner to appoint an architect on the overview, with no blank architect anywhere', async () => {
+    const id = wexcombe()
+    open(`/app/projects/${id}`, U.tom)
+    await waitFor(() => q('appoint-architect-card'))
+    expect(byTestId('appoint-architect-card').textContent).toContain('Appoint an architect to start sourcing')
+    expect(byTestId('project-details').textContent).toContain('Not appointed yet')
+    expect(byTestId('next-steps').textContent).toContain('Appoint an architect to start sourcing')
+    expect(byTestId('next-steps').textContent).not.toContain('You are up to date')
+    expect(byTestId('requirements-card').textContent).toContain('Appoint an architect to choose which requirements apply.')
+    expect(allText()).not.toMatch(FORBIDDEN)
+    choose(byTestId('appoint-architect-card-select'), ORG_IDS.oriel)
+    click(byTestId('appoint-architect-card-save'))
+    await waitFor(() => getData().world.projects[id].architectOrgId === ORG_IDS.oriel)
+    await waitFor(() => !q('appoint-architect-card'))
+    expect(byTestId('project-details').textContent).toContain('Studio Oriel')
+  })
+
+  it('shows only the client on Team, with the appoint card in place of an empty architect block', async () => {
+    const id = wexcombe()
+    open(`/app/projects/${id}/team`, U.tom)
+    await waitFor(() => q('team-appoint-architect'))
+    const main = document.querySelector('main')!.textContent ?? ''
+    expect(main).not.toContain('Architect ·')
+    expect(main).not.toContain('No one from has joined')
+    expect(document.querySelectorAll('[data-testid^="team-org_"]')).toHaveLength(1)
+    choose(byTestId('team-appoint-architect-select'), ORG_IDS.oriel)
+    click(byTestId('team-appoint-architect-save'))
+    await waitFor(() => q(`team-${ORG_IDS.oriel}`))
+    expect(q('team-appoint-architect')).toBeNull()
   })
 })
 

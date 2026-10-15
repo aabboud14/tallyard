@@ -87,8 +87,8 @@ function Metrics({ v }: { v: SurveyorDashboard }) {
         sub="Appointed, by survey status"
         footer={<TileChart label="Buildings by survey status" chart={<Donut segments={status} label="Buildings by survey status" size={48} />} legend={status.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} />}
       />
-      <MetricTile testId="metric-items" label="Items captured" icon={ClipboardList} value={v.stats.itemsCaptured} sub={m.lastCaptureText ? `Last on ${m.lastCaptureText}` : 'Nothing captured yet'} />
-      <MetricTile testId="metric-open" label="Surveys open" icon={CalendarClock} value={m.open} state={m.openState?.state} stateLabel={m.openState?.label} sub={m.open > 0 ? 'Not yet submitted to the owner' : 'Every survey submitted'} />
+      <MetricTile testId="metric-items" label="Items captured" icon={ClipboardList} value={v.stats.itemsCaptured} sub={m.itemsSubText} />
+      <MetricTile testId="metric-open" label="Surveys open" icon={CalendarClock} value={m.open} state={m.openState?.state} stateLabel={m.openState?.label} sub={m.openSubText} />
     </MetricGrid>
   )
 }
@@ -101,7 +101,7 @@ function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuildi
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Link to={b.href} className="text-md font-semibold text-ink hover:underline hover:decoration-line-strong hover:underline-offset-4">
+            <Link to={b.href} className="inline-flex items-center text-md font-semibold text-ink hover:underline hover:decoration-line-strong hover:underline-offset-4 max-sm:min-h-11">
               {b.name}
             </Link>
             <Pill tone={SURVEY_TONE[b.status]} dot size="sm">

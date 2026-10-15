@@ -6,6 +6,8 @@ import { architectHome } from './architect'
 import { ownerDashboard } from './home-owner'
 import { surveyorDashboard } from './home-surveyor'
 import { consultantDashboard } from './home-consultant'
+import { AMBREY_ID } from '../../sandbox/seed-owner-surveyor'
+import { formatDate } from '../../domain/dates'
 
 describe('owner dashboard', () => {
   it('counts items by typology across the buildings, with drawings and the programme', () => {
@@ -60,6 +62,25 @@ describe('surveyor dashboard', () => {
     expect(Object.keys(d.extras).sort()).toEqual([...ids].sort())
     for (const id of ids) expect(d.extras[id].sketch.state).toBe('existing')
     expect(surveyorDashboard(fresh(), viewer(U.tom))).toBeNull()
+  })
+
+  it("counts the firm's work at buildings not yet linked in items and the last capture, and names their open surveys", () => {
+    const s = fresh()
+    const d = surveyorDashboard(s, viewer(U.dana))!
+    const appointed = d.appointments.flatMap((g) => g.buildings)
+    const ambrey = d.unlinked.find((b) => b.id === AMBREY_ID)!
+    expect(ambrey.itemCount).toBe(2)
+    expect(d.stats.unlinkedItems).toBe(2)
+    expect(d.stats.itemsCaptured).toBe(appointed.reduce((n, b) => n + b.itemCount, 0) + 2)
+    // Ambrey House holds the latest capture, so the tile reads its date.
+    const latest = [...appointed, ...d.unlinked].map((b) => b.lastCaptureOn ?? '').sort().at(-1)!
+    expect(ambrey.lastCaptureOn).toBe(latest)
+    expect(d.metrics.lastCaptureText).toBe(formatDate(latest.slice(0, 10)))
+    expect(d.metrics.itemsSubText).toBe(`Last on ${formatDate(latest.slice(0, 10))}, including 2 at a building not yet linked`)
+    // One appointed survey is open; Ambrey's, which cannot be submitted until the owner confirms it, is told apart.
+    expect(d.metrics.byStatus).toEqual({ not_started: 0, in_progress: 1, submitted: 1 })
+    expect(d.metrics.open).toBe(1)
+    expect(d.metrics.openSubText).toBe('Plus 1 at a building not yet linked')
   })
 })
 

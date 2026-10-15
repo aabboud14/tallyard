@@ -103,7 +103,7 @@ describe('sharing with projects', () => {
     expect(n.kind).toBe('lots_shared')
     expect(n.title).toBe('5 lots shared with Sallow Court')
     expect(n.body).not.toContain('Ostlea')
-    expect(r.state.activity[0].text).toBe('shared lots with Design team, hotel project, Central London, needed by Q1 2028')
+    expect(r.state.activity[0].text).toBe('shared lots with Design team, hotel project, Central London, needed January to March 2028')
     const back = must(setProjectAccess(r.state, actor(U.tom), SALLOW_ID, false))
     expect(back.state.world.projects[SALLOW_ID].approvedByOwnerOrgIds).toEqual([])
     expect(setProjectAccess(s0, actor(U.tom), MERROWGATE_ID, true).state).toBe(s0)

@@ -100,7 +100,7 @@ export function ListingEditor({ lot, onSaved, compact = false }: { lot: ListingE
         </div>
       ) : null}
 
-      <Field label="Available from" hint={v.dateEditable ? 'Buyers see it as a quarter or a month, as set in your disclosure settings.' : 'The date can change only while the lot is private.'}>
+      <Field label="Available from" hint={v.dateEditable ? 'Buyers see it as a month or a three-month window, as set in your disclosure settings.' : 'The date can change only while the lot is private.'}>
         <Input type="date" value={draft.availableFrom} disabled={!v.dateEditable} onChange={(e) => set({ availableFrom: e.target.value })} icon={CalendarClock} data-testid="listing-date" />
       </Field>
 

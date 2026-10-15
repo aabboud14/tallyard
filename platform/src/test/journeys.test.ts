@@ -55,7 +55,7 @@ describe('the acceptance journeys', () => {
     expect(switchAccount(U.tom).error).toBeNull()
     expect(sel.bellView(getData(), me()).items[0].title).toBe('Reservation request for TH-01')
     const pending = sel.requestsView(getData(), me())!.pending.find((r) => r.publicId === 'L-9F4CQQ')!
-    expect(pending.buyer).toEqual({ kind: 'blind', text: 'Design team, commercial project, Inner London East, needed by Q2 2028' })
+    expect(pending.buyer).toEqual({ kind: 'blind', text: 'Design team, commercial project, Inner London East, needed April to June 2028' })
     expect(act.decideReservation(pending.id, 'accepted', '').ok).toBe(true)
     const done = sel.requestsView(getData(), me())!.decided.find((r) => r.id === pending.id)!
     expect(done.buyer).toMatchObject({ kind: 'known', org: 'Lantern Quay Developments', contact: 'Isla Brennan' })

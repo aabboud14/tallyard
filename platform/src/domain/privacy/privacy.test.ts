@@ -7,7 +7,7 @@ import { REGIONS } from '../reference/assumptions'
 import { dateFormats, addDays } from '../dates'
 import { createTwinSeed, TWIN_RESERVE } from '../../test/twin'
 import { toPublicListing, PUBLIC_LISTING_KEYS } from './publicListing'
-import { toBlindBuyer, blindBuyerText } from './blindBuyer'
+import { toBlindBuyer, blindBuyerText, needByWindowText } from './blindBuyer'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from './privateStrings'
 import { listingsVisibleToProject, listingFor, lotsVisibleToProject, browseListings } from '../visibility'
 import { matchSchedule } from '../engines/matcher'
@@ -83,11 +83,18 @@ describe('B15 and P1: privacy at data level', () => {
     expect(l17.sourceType).toBe('unused_surplus')
     expect(l17.carbon).toBeNull()
   })
+  it('names the need-by date by its three-month window in words, never a quarter label (BRIEF 14.3)', () => {
+    expect(needByWindowText('2028-05-15')).toBe('April to June 2028')
+    expect(needByWindowText('2027-01-01')).toBe('January to March 2027')
+    expect(needByWindowText('2027-09-30')).toBe('July to September 2027')
+    expect(needByWindowText('2026-12-31')).toBe('October to December 2026')
+  })
   it('the blind buyer has four keys and renders as one line', () => {
     const b = toBlindBuyer(w.projects[MERROWGATE_ID])
     expect(Object.keys(b).sort()).toEqual(['needByQuarter', 'orgType', 'projectType', 'region'])
-    expect(blindBuyerText(b)).toBe('Design team, commercial project, Inner London East, needed by Q2 2028')
+    expect(blindBuyerText(b)).toBe('Design team, commercial project, Inner London East, needed April to June 2028')
     const text = JSON.stringify(b)
+    expect(text).not.toMatch(/Q[1-4] 20/)
     for (const s of projectPrivateStrings(w.projects[MERROWGATE_ID], w)) expect(text).not.toContain(s)
   })
 })

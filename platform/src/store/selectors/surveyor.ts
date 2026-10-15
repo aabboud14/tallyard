@@ -34,7 +34,8 @@ export type Appointment = { orgId: string; clientName: string; buildings: Appoin
 export type SurveyorHome = {
   greeting: string
   dateText: string
-  stats: { clients: number; buildings: number; itemsCaptured: number; inProgress: number; unlinked: number }
+  /** itemsCaptured counts every item the firm captured, at buildings not yet linked too (unlinkedItems of them). */
+  stats: { clients: number; buildings: number; itemsCaptured: number; inProgress: number; unlinked: number; unlinkedItems: number }
   appointments: Appointment[]
   /** Buildings the firm added that no owner has confirmed yet. */
   unlinked: (AppointmentBuilding & { claim: ClaimState })[]
@@ -95,7 +96,14 @@ export function surveyorHome(state: AppData, viewer: Viewer): SurveyorHome | nul
   return {
     greeting: greeting(viewer.now, firstName(user.name)),
     dateText: longDate(todayOf(viewer)),
-    stats: { clients: groups.length, buildings: all.length, itemsCaptured: all.reduce((n, b) => n + b.itemCount, 0), inProgress: all.filter((b) => b.status !== 'submitted').length, unlinked: unlinked.length },
+    stats: {
+      clients: groups.length,
+      buildings: all.length,
+      itemsCaptured: [...all, ...unlinked].reduce((n, b) => n + b.itemCount, 0),
+      inProgress: all.filter((b) => b.status !== 'submitted').length,
+      unlinked: unlinked.length,
+      unlinkedItems: unlinked.reduce((n, b) => n + b.itemCount, 0),
+    },
     appointments: groups,
     unlinked,
     quickCapture: { href: '/app/capture', buildingName: selected?.name ?? null },

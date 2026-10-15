@@ -62,7 +62,7 @@ export function Inventory() {
   return (
     <div className="flex flex-col gap-4" data-testid="inventory">
       <SurveyBar buildingId={buildingId} />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Input
           icon={Search}
           value={filter.q}
@@ -92,9 +92,12 @@ export function Inventory() {
                 <TH>Item</TH>
                 <TH align="right">Quantity</TH>
                 <TH align="center">Condition</TH>
-                <TH align="center">Recovery</TH>
+                {/* Below 1280 px Recovery is left out, and below 1400 px the contractor's month moves under Expected, so the table fits. */}
+                <TH align="center" className="max-xl:hidden">
+                  Recovery
+                </TH>
                 <TH>Expected</TH>
-                {contractor ? <TH>Contractor</TH> : null}
+                {contractor ? <TH className="max-[1400px]:hidden">Contractor</TH> : null}
                 {owner ? <TH>Visibility</TH> : null}
               </tr>
             </THead>
@@ -106,9 +109,9 @@ export function Inventory() {
                   </TD>
                   <TD>
                     <button type="button" onClick={() => select(r.itemId)} className="flex min-w-0 flex-col items-start rounded-sm text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-                      <span className="flex items-center gap-2">
-                        <span className="text-xs font-medium tabular-nums text-muted">{r.tag}</span>
-                        <span className="font-medium text-ink">{r.title}</span>
+                      <span className="flex flex-col xl:flex-row xl:items-baseline xl:gap-2">
+                        <span className="shrink-0 whitespace-nowrap text-xs font-medium tabular-nums text-muted">{r.tag}</span>
+                        <span className="min-w-36 font-medium text-ink">{r.title}</span>
                       </span>
                       <span className="text-sm text-muted">
                         {r.typologyLabel} · {r.familyLabel}
@@ -122,14 +125,20 @@ export function Inventory() {
                   <TD align="center">
                     <Grade value={r.condition} title={`Condition ${r.condition}: ${CONDITION_TEXT[r.condition as 'A'].label}`} />
                   </TD>
-                  <TD align="center">
+                  <TD align="center" className="max-xl:hidden">
                     <Grade value={r.recoverability} title={`Recoverability ${r.recoverability}: ${RECOVERABILITY_TEXT[r.recoverability as 'A'].label}`} />
                   </TD>
-                  <TD muted className="whitespace-nowrap">
-                    {r.expectedText}
+                  <TD muted>
+                    <span className="block whitespace-nowrap">{r.expectedText}</span>
+                    {contractor ? (
+                      <span className="block text-xs min-[1400px]:hidden" data-testid={`row-${r.tag}-contractor`}>
+                        <span className="text-muted">Contractor: </span>
+                        <span className={r.contractorDiffers ? 'font-medium text-ink' : 'text-muted'}>{r.contractorText}</span>
+                      </span>
+                    ) : null}
                   </TD>
                   {contractor ? (
-                    <TD className="whitespace-nowrap">
+                    <TD className="whitespace-nowrap max-[1400px]:hidden">
                       <span className={r.contractorDiffers ? 'font-medium text-ink' : 'text-muted'}>{r.contractorText}</span>
                       {r.contractorDiffers && r.availableFrom ? <span className="block text-xs text-warning">Lot reads {f.date(r.availableFrom)}</span> : null}
                     </TD>
@@ -185,7 +194,7 @@ export function Inventory() {
       >
         {open ? (
           <div className="flex flex-col gap-4">
-            <Link to={open.href} className="inline-flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-ink-soft hover:text-ink">
+            <Link to={open.href} className="inline-flex items-center gap-1.5 self-start rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
               <ExternalLink aria-hidden="true" className="size-3.5" />
               Open as a page
             </Link>

@@ -67,6 +67,13 @@ export function blankElement(kind: StructuralElement['kind']): StructuralElement
   return { kind, material: null, systemId: null, note: '' }
 }
 
+/** A row's label in the structure editor: 'Facade' for the first of its kind, then 'Facade 2', 'Facade 3'. */
+export function elementRowLabel(rows: StructuralElement[], index: number, label: string): string {
+  const kind = rows[index]?.kind
+  const n = rows.slice(0, index + 1).filter((r) => r.kind === kind).length
+  return n <= 1 ? label : `${label} ${n}`
+}
+
 export type RequestsTab = 'reservations' | 'buildings'
 
 export type RequestsPage = {

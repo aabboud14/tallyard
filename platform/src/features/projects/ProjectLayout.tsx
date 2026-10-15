@@ -86,7 +86,7 @@ export function ProjectLayout() {
             </span>
             <span className="inline-flex items-center gap-1.5 max-xl:hidden">
               <Building aria-hidden="true" className="size-4 text-faint" />
-              {header.architectName}
+              {header.architectText}
               {header.consultantName ? `, with ${header.consultantName}` : ''}
             </span>
             <span className="text-muted max-2xl:hidden">{SIDE_LABEL[header.side]}</span>

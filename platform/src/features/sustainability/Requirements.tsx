@@ -193,6 +193,19 @@ export function Requirements() {
     <Page testId="requirements-page" className="lg:pt-7">
       <div className="flex flex-col gap-6">
         <TabHeader title="Planning and sustainability requirements" subtitle={v.locationText ? `${v.locationText}. ${v.canEdit ? 'Keep the status and the evidence current for the whole team.' : 'The client and the consultant keep the status and evidence current.'}` : undefined} />
+        {v.header.canAppointArchitect ? (
+          <Callout
+            tone="info"
+            title="Appoint an architect to choose which requirements apply"
+            action={
+              <Link to={`/app/projects/${projectId}/team`} className="inline-flex min-h-8 items-center rounded-sm text-sm font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline max-sm:min-h-11" data-testid="requirements-appoint">
+                Appoint an architect
+              </Link>
+            }
+          >
+            The statutory requirements below apply whoever designs the project. Your architect adds the local plan policies and standards that fit it.
+          </Callout>
+        ) : null}
         <Callout tone="neutral" title="Indicative">
           {v.caveat}
         </Callout>

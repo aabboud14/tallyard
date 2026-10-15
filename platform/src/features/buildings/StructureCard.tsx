@@ -7,7 +7,7 @@ import type { StructuralElement, StructuralMaterial } from '../../domain/types'
 import { structureSummary } from '../../domain/engines/structure'
 import { act, selectors, useView } from '../../store'
 import type { StructureOption } from '../../store/selectors/owner'
-import { blankElement, structureForm } from '../../store/selectors/buildings-ui'
+import { blankElement, elementRowLabel, structureForm } from '../../store/selectors/buildings-ui'
 import { Button, Card, CardBody, CardHeader, cx, Dialog, EmptyState, Field, IconButton, Input, Select, Textarea, toast } from '../../ui'
 
 export function StructureCard({ buildingId }: { buildingId: string }) {
@@ -167,29 +167,27 @@ export function StructureEditor({ rows, options, onChange, mode }: { rows: Struc
   const optionOf = (kind: StructuralElement['kind']) => options.find((o) => o.kind === kind)!
   return (
     <div className="flex flex-col gap-3" data-testid="structure-editor">
-      <div className="hidden grid-cols-[8.5rem_minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)_2.25rem] gap-2 px-0.5 text-xs font-medium text-muted md:grid" aria-hidden="true">
+      <div className="hidden grid-cols-[7.5rem_minmax(0,1fr)_minmax(0,1.7fr)_2.25rem] gap-2 px-0.5 text-xs font-medium text-muted md:grid" aria-hidden="true">
         <span>Element</span>
         <span>Material</span>
-        <span>System</span>
-        <span>Note</span>
+        <span>System and note</span>
         <span />
       </div>
-      <ul className="m-0 flex list-none flex-col gap-3 p-0 md:gap-2">
+      <ul className="m-0 flex list-none flex-col gap-3 p-0 md:gap-0 md:divide-y md:divide-line-soft">
         {rows.map((r, i) => {
           const o = optionOf(r.kind)
-          const first = rows.findIndex((x) => x.kind === r.kind) === i
           const count = rows.filter((x) => x.kind === r.kind).length
           return (
-            <li key={i} className="flex flex-col gap-2 rounded-lg border border-line-soft p-3 md:border-0 md:p-0" data-testid={`structure-row-${r.kind}`}>
+            <li key={i} className="flex flex-col gap-2 rounded-lg border border-line-soft p-3 md:rounded-none md:border-0 md:px-0 md:py-2.5" data-testid={`structure-row-${r.kind}`}>
               <ElementRow
                 row={r}
                 option={o}
-                label={first ? o.label : `${o.label}, another`}
+                label={elementRowLabel(rows, i, o.label)}
                 onChange={(patch) => update(i, patch)}
                 onRemove={mode === 'compact' || count > 1 ? () => remove(i) : null}
               />
               {mode === 'full' && i === rows.map((x) => x.kind).lastIndexOf(r.kind) && r.kind === 'facade' ? (
-                <Button type="button" size="sm" variant="ghost" icon={Plus} className="self-start md:ml-[9rem]" onClick={() => addAfter(r.kind)} data-testid="structure-add-facade">
+                <Button type="button" size="sm" variant="ghost" icon={Plus} className="self-start md:ml-[8rem]" onClick={() => addAfter(r.kind)} data-testid="structure-add-facade">
                   Add another facade
                 </Button>
               ) : null}
@@ -234,15 +232,16 @@ function ElementRow({ row, option, label, onChange, onRemove }: { row: Structura
     onChange({ systemId: id, material: (owner?.value ?? row.material) as StructuralMaterial | null })
   }
   return (
-    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-[8.5rem_minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)_2.25rem] md:items-center">
+    // Material and system share the row and the note sits under them, so the selects are wide enough to read.
+    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-[7.5rem_minmax(0,1fr)_minmax(0,1.7fr)_2.25rem] md:items-center">
       <span className="flex items-center justify-between gap-2 text-sm font-medium text-ink sm:col-span-2 md:col-span-1">
         {label}
         {onRemove ? <IconButton icon={Trash2} label={`Remove ${label.toLowerCase()}`} size="sm" variant="ghost" className="md:hidden" onClick={onRemove} /> : null}
       </span>
       <Select aria-label={`${label}: material`} selectSize="sm" value={row.material ?? ''} placeholder="Material" onChange={(e) => setMaterial(e.target.value)} options={materials.map((m) => ({ value: m.value, label: m.label }))} data-testid={`structure-material-${row.kind}`} />
       <Select aria-label={`${label}: system`} selectSize="sm" value={row.systemId ?? ''} placeholder={systems.length > 0 ? 'System' : 'No listed system'} disabled={systems.length === 0} onChange={(e) => setSystem(e.target.value)} options={systems.map((x) => ({ value: x.id, label: x.label }))} data-testid={`structure-system-${row.kind}`} />
-      <Input aria-label={`${label}: note`} inputSize="sm" value={row.note} onChange={(e) => onChange({ note: e.target.value })} placeholder="Note, optional" className="sm:col-span-2 md:col-span-1" maxLength={200} />
-      {onRemove ? <IconButton icon={Trash2} label={`Remove ${label.toLowerCase()}`} size="sm" variant="ghost" className="max-md:hidden" onClick={onRemove} /> : <span className="max-md:hidden" />}
+      <Input aria-label={`${label}: note`} inputSize="sm" value={row.note} onChange={(e) => onChange({ note: e.target.value })} placeholder="Note, optional" className="sm:col-span-2 md:col-span-2 md:col-start-2 md:row-start-2" maxLength={200} />
+      {onRemove ? <IconButton icon={Trash2} label={`Remove ${label.toLowerCase()}`} size="sm" variant="ghost" className="max-md:hidden md:col-start-4 md:row-start-1" onClick={onRemove} /> : <span className="max-md:hidden md:col-start-4 md:row-start-1" />}
     </div>
   )
 }

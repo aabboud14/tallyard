@@ -166,7 +166,8 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
   } else if (role === 'surveyor') {
     const buildingItem = (id: string, name: string, href: string) => {
       const side = buildingSide(state, viewer.userId, id)!
-      const tabs = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).filter((t) => t.id !== 'overview')
+      // Overview first, as on the owner's building folders: the Owner, Structure and contractor cards live there.
+      const tabs = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) })
       return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href)) })
     }
     const unlinked = unlinkedBuildings(state, viewer)

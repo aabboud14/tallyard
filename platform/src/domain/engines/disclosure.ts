@@ -20,7 +20,7 @@ export const INFERENCES = {
   openLots: 'Several open lots from one building can be linked by region, window and seller type.',
   frame: 'Beam and column lots together describe a structural grid and storey height.',
   photo: 'A public photo may show features that identify the building.',
-  none: 'Region and quarter only.',
+  none: 'Region and three-month window only.',
 } as const
 
 export function disclosureScore(i: DisclosureInputs, a: Assumptions): Disclosure {

@@ -165,7 +165,7 @@ export function Overview() {
         <Card>
           <CardHeader title="Building" />
           <CardBody>
-            <DescriptionList layout="grid" items={v.facts.map((x) => ({ label: x.label, value: x.value }))} />
+            <DescriptionList layout="grid" items={v.cardFacts.map((x) => ({ label: x.label, value: x.value }))} />
           </CardBody>
         </Card>
       </aside>
