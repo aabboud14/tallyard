@@ -52,13 +52,12 @@ test('every dashboard fits phone, laptop and desktop, with Recent activity colla
       await page.setViewportSize({ width, height: 900 })
       await page.goto('/app/home')
       await expect(page.locator('main')).not.toBeEmpty()
-      // The client home is laid out by the client and consultant stream; the other four are this one's.
-      if (who !== 'isla') {
-        await expect(page.getByTestId('home-stats').locator('[data-testid^="metric-"]')).toHaveCount(4)
-        const panel = page.getByTestId('activity-panel')
-        await expect(panel).toBeVisible()
-        await expect(page.getByTestId('activity-toggle')).toHaveAttribute('aria-expanded', 'false')
-      }
+      // The client home's tiles keep their own ids; every home shares the one Recent activity panel.
+      if (who === 'isla') await expect(page.getByTestId('client-metrics').locator('[data-testid^="client-metric-"]')).toHaveCount(4)
+      else await expect(page.getByTestId('home-stats').locator('[data-testid^="metric-"]')).toHaveCount(4)
+      const panel = page.getByTestId('activity-panel')
+      await expect(panel).toBeVisible()
+      await expect(page.getByTestId('activity-toggle')).toHaveAttribute('aria-expanded', 'false')
       expect(await horizontalOverflow(page), `${who} at ${width}`).toBe(0)
     }
     await signOutNow(page)

@@ -183,7 +183,7 @@ export function Specification() {
         </div>
       </div>
 
-      <div className="spec-paper mx-auto mt-6 max-w-[920px] rounded-xl border border-line bg-surface px-5 py-7 shadow-sm sm:px-10 sm:py-10" data-testid="spec-paper" data-mode={mode}>
+      <div className="spec-paper mx-auto mt-6 max-w-[920px] rounded-xl border border-line bg-surface px-5 py-7 sm:px-10 sm:py-10" data-testid="spec-paper" data-mode={mode}>
         <header className="spec-head flex flex-col gap-4 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p className="m-0 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.06em] text-muted">

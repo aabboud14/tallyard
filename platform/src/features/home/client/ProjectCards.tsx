@@ -14,11 +14,11 @@ export function ProjectCards({ v }: { v: ClientHomeView }) {
         const sketch = v.sketches[p.id]
         return (
           <li key={p.id} data-testid={`client-project-${p.id}`} className="group relative grid min-w-0 grid-cols-1 overflow-hidden rounded-lg lg:grid-cols-[13rem_minmax(0,1fr)] border border-line bg-surface transition-colors hover:border-line-strong has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-brand-600">
-            {sketch ? <ProjectThumbnail sketch={sketch} aspect="16/10" decorative className="w-full max-sm:aspect-[2/1] lg:aspect-auto lg:h-full lg:min-h-56" /> : null}
+            {sketch ? <ProjectThumbnail sketch={sketch} aspect="16/10" className="w-full max-sm:aspect-[2/1] lg:aspect-auto lg:h-full lg:min-h-56" /> : null}
             <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5">
               <div className="min-w-0">
                 <p className="m-0 text-sm text-muted">
-                  {p.typeLabel} · {p.localAuthority}
+                  {p.typeLabel}, {p.localAuthority}
                 </p>
                 <h3 className="m-0 mt-0.5 text-lg font-semibold text-ink">
                   <Link to={p.href} className="outline-none after:absolute after:inset-0 after:content-['']">

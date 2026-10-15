@@ -47,7 +47,7 @@ function FolderCard({ folder, project, onOpen }: { folder: CategoryFolder; proje
       disabled={empty}
       aria-label={`Open ${folder.label}, ${countText(folder.count)}`}
       data-testid={`category-${folder.typology}`}
-      className="group flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-default disabled:hover:border-line"
+      className="group flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-default disabled:hover:border-line"
     >
       <div className={cx('w-full border-b border-line', empty && 'opacity-50')}>
         <Mosaic thumbs={folder.thumbs} />
@@ -88,7 +88,7 @@ function FolderRow({ folder, project, onOpen }: { folder: CategoryFolder; projec
       disabled={empty}
       aria-label={`Open ${folder.label}, ${countText(folder.count)}`}
       data-testid={`category-row-${folder.typology}`}
-      className="flex min-h-[76px] w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 disabled:cursor-default"
+      className="flex min-h-[76px] w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 disabled:cursor-default"
     >
       <span aria-hidden="true" className={cx('size-16 shrink-0 overflow-hidden rounded-md border border-line', empty && 'opacity-50')}>
         {first ? <Tile thumb={first} /> : <span className="block size-full bg-paper" />}

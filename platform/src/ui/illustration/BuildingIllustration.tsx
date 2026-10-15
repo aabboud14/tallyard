@@ -135,6 +135,13 @@ export function BuildingDrawing({ sketch }: { sketch: BuildingSketch }) {
   )
 }
 
+/** Two trees left of the building and one right of it, on the ground line, clear of the board's edges and of the building (about x 80 to 240). Drawing coordinates only. */
+export const TREES: readonly { cx: number; cy: number; r: number; side: 'left' | 'right' }[] = [
+  { cx: 52, cy: SKETCH_BOARD.height - 22, r: 9, side: 'left' },
+  { cx: 69, cy: SKETCH_BOARD.height - 18, r: 6, side: 'left' },
+  { cx: SKETCH_BOARD.width - 56, cy: SKETCH_BOARD.height - 20, r: 8, side: 'right' },
+]
+
 /** The view box that holds the building and its crane with a margin, for small frames. Drawing coordinates only. */
 function fittedBox(sketch: BuildingSketch): { x: number; y: number; w: number; h: number } {
   const ps = massingPoints(massingFor(sketch))
@@ -148,16 +155,19 @@ function fittedBox(sketch: BuildingSketch): { x: number; y: number; w: number; h
 
 /**
  * `fit` crops the drawing to the building itself and leaves out the trees, so it still reads in a 32 to 48 px
- * thumb; the frame behind it supplies the paper. Without it the whole board is drawn and sliced to fill.
+ * thumb; the frame behind it supplies the paper. Without it the whole board is drawn to fit (meet, standing on the
+ * bottom edge) and the ground and its line run on past the board to the frame's edges, so a frame of any shape
+ * shows the whole drawing, trees included, and nothing is cut. `trees="right"` leaves out the left pair, where a
+ * project thumbnail lays its material swatches.
  */
-export function BuildingIllustration({ sketch, className, decorative = false, fit = false }: { sketch: BuildingSketch; className?: string; decorative?: boolean; fit?: boolean }) {
+export function BuildingIllustration({ sketch, className, decorative = false, fit = false, trees = 'both' }: { sketch: BuildingSketch; className?: string; decorative?: boolean; fit?: boolean; trees?: 'both' | 'right' }) {
   const W = SKETCH_BOARD.width
   const H = SKETCH_BOARD.height
   const box = fit ? fittedBox(sketch) : { x: 0, y: 0, w: W, h: H }
   return (
     <svg
       viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
-      preserveAspectRatio={fit ? 'xMidYMid meet' : 'xMidYMid slice'}
+      preserveAspectRatio={fit ? 'xMidYMid meet' : 'xMidYMax meet'}
       className={className}
       role={decorative ? undefined : 'img'}
       aria-label={decorative ? undefined : sketch.label}
@@ -166,15 +176,12 @@ export function BuildingIllustration({ sketch, className, decorative = false, fi
       data-use={sketch.use}
       data-fit={fit ? 'building' : undefined}
     >
-      {fit ? null : <rect width={W} height={H} fill={GROUND} />}
-      <line x1={fit ? box.x : 0} y1={H - 10} x2={fit ? box.x + box.w : W} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.5" />
+      {/* Past the board on every side, so the paper and the ground line reach the frame's edges whatever its shape. */}
+      {fit ? null : <rect x={-W} y={-H} width={3 * W} height={3 * H} fill={GROUND} />}
+      <line x1={fit ? box.x : -W} y1={H - 10} x2={fit ? box.x + box.w : 2 * W} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.5" />
       {fit
         ? null
-        : [
-            [26, H - 22, 9],
-            [44, H - 18, 6],
-            [W - 30, H - 20, 8],
-          ].map(([cx, cy, r], i) => (
+        : TREES.filter((t) => trees === 'both' || t.side === 'right').map(({ cx, cy, r }, i) => (
             <g key={i}>
               <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="0.75" opacity="0.6" />
               <line x1={cx} y1={cy + r} x2={cx} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.6" />

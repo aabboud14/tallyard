@@ -51,3 +51,14 @@ export function portfolioContent(results: ContentResult[]): { percent: number; r
   const reused = withBill.reduce((s, r) => s + r.lines.reduce((x, l) => x + l.line.valueGbp * l.s, 0), 0)
   return { percent: contribution / totalValue, reuse: reused / totalValue, totalValue }
 }
+
+/**
+ * The content aim across projects, read from each project's own target (effectiveTargets), weighted by its bill's
+ * value like portfolioContent, so the portfolio figure is judged against the aims the projects carry. Projects with
+ * no bill or no aim are left out; 0 when none has both (no aim set).
+ */
+export function portfolioAim(rows: { totalValue: number; aim: number }[]): number {
+  const kept = rows.filter((r) => r.totalValue > 0 && r.aim > 0)
+  const value = kept.reduce((s, r) => s + r.totalValue, 0)
+  return value > 0 ? kept.reduce((s, r) => s + r.aim * r.totalValue, 0) / value : 0
+}

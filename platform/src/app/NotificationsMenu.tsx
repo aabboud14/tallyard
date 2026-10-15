@@ -16,7 +16,7 @@ export function NotificationRow({ n, onOpen, compact = false }: { n: InboxItem; 
       onClick={() => onOpen(n)}
       data-testid="notification-row"
       data-unread={n.unread || undefined}
-      className={cx('group flex w-full items-start gap-3 rounded-lg px-2.5 py-2.5 text-left outline-none transition-colors hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600', compact ? '' : 'sm:px-3')}
+      className={cx('group flex w-full items-start gap-3 rounded-lg px-2.5 py-2.5 text-left outline-none transition-colors hover:bg-hover focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600', compact ? '' : 'sm:px-3')}
     >
       <span className={cx('relative mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset', n.unread ? 'bg-brand-50 text-brand-700 ring-brand-100' : 'bg-subtle text-muted ring-line-soft')}>
         <Icon aria-hidden="true" className="size-4" />
@@ -51,7 +51,7 @@ export function NotificationsMenu() {
           type="button"
           data-testid="notifications-button"
           aria-label={bell.unread > 0 ? `Notifications, ${bell.unread} unread` : 'Notifications'}
-          className="relative inline-flex size-9 items-center justify-center rounded-md text-ink-soft transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover data-[state=open]:text-ink max-sm:size-11"
+          className="relative inline-flex size-9 items-center justify-center rounded-md text-ink-soft transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover data-[state=open]:text-ink max-sm:size-11"
         >
           <Bell aria-hidden="true" className="size-[18px]" />
           {bell.unread > 0 ? (
@@ -87,7 +87,7 @@ export function NotificationsMenu() {
           </div>
         )}
         <div className="border-t border-line-soft p-1.5">
-          <Link to="/app/notifications" onClick={() => setOpen(false)} className="flex h-9 items-center justify-center rounded-md text-sm font-medium text-ink-soft transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
+          <Link to="/app/notifications" onClick={() => setOpen(false)} className="flex h-9 items-center justify-center rounded-md text-sm font-medium text-ink-soft transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600">
             View all notifications
           </Link>
         </div>

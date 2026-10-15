@@ -1,4 +1,5 @@
-// Breadcrumbs: where you are, each level a link, the last one the current page.
+// Breadcrumbs: where you are, each level a link, the last one the current page. The current page keeps its
+// width (up to 70% of the bar), so the levels above it truncate first.
 import type { ReactNode } from 'react'
 import { Link, useInRouterContext } from 'react-router'
 import { ChevronRight } from 'lucide-react'
@@ -15,7 +16,7 @@ export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: 
           const last = i === items.length - 1
           const cls = 'truncate rounded-sm px-1 py-0.5 text-muted transition-colors hover:bg-hover hover:text-ink max-sm:py-3'
           return (
-            <li key={i} className={cx('flex min-w-0 items-center gap-1', i < items.length - 2 && 'max-sm:hidden')}>
+            <li key={i} className={cx('flex min-w-0 items-center gap-1', i < items.length - 2 && 'max-sm:hidden', last && 'max-w-[70%] shrink-0')}>
               {last ? (
                 <span aria-current="page" className="truncate px-1 font-medium text-ink">
                   {c.label}

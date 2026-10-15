@@ -1,8 +1,11 @@
 // New for your projects (architects, on the Marketplace landing): listed in the last 30 days and in time for at
-// least one of the practice's projects, or for the project being checked. Hidden when there is nothing new.
-import { CalendarCheck, Sparkles } from 'lucide-react'
+// least one of the practice's projects, or for the project being checked. Hidden when there is nothing new. The
+// row opens on the first few; Show all reaches the rest, so the count on the home is the count the row can show.
+import { useState } from 'react'
+import { CalendarCheck, ChevronDown, ChevronUp, PackagePlus } from 'lucide-react'
 import type { ProjectRef } from '../../store/selectors/common'
 import type { NewForProjects } from '../../store/selectors/marketplace'
+import { Button } from '../../ui'
 import { ListingTile } from './ListingTile'
 
 function caption(card: NewForProjects, project: ProjectRef | null): string {
@@ -11,22 +14,37 @@ function caption(card: NewForProjects, project: ProjectRef | null): string {
   return `In time for ${card.fitsProjects.length} of your projects`
 }
 
-export function NewForProjectsRow({ cards, project }: { cards: NewForProjects[]; project: ProjectRef | null }) {
+export function NewForProjectsRow({ cards, more = [], total, project }: { cards: NewForProjects[]; more?: NewForProjects[]; total?: number; project: ProjectRef | null }) {
+  const [expanded, setExpanded] = useState(false)
   if (cards.length === 0) return null
+  const shown = expanded ? [...cards, ...more] : cards
   return (
     <section aria-labelledby="new-for-projects-h" data-testid="new-for-projects" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
           <h2 id="new-for-projects-h" className="m-0 flex items-center gap-2 text-lg font-semibold text-ink">
-            <Sparkles aria-hidden="true" className="size-4 text-brand-600" />
+            <PackagePlus aria-hidden="true" className="size-4 text-muted" />
             {project ? `New for ${project.name}` : 'New for your projects'}
           </h2>
           <p className="m-0 mt-0.5 text-sm text-muted">{project ? 'Listed in the last 30 days and in time for its start on site.' : 'Listed in the last 30 days and in time for at least one of your projects.'}</p>
         </div>
+        {more.length > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={expanded ? ChevronUp : ChevronDown}
+            onClick={() => setExpanded((x) => !x)}
+            aria-expanded={expanded}
+            aria-controls="new-for-projects-grid"
+            data-testid="new-for-projects-more"
+          >
+            {expanded ? 'Show fewer' : `Show all ${total ?? cards.length + more.length}`}
+          </Button>
+        ) : null}
       </div>
       <div className="@container">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-8 @lg:grid-cols-2 @4xl:grid-cols-4">
-          {cards.map((c) => (
+        <div id="new-for-projects-grid" className="grid grid-cols-1 gap-x-6 gap-y-8 @lg:grid-cols-2 @4xl:grid-cols-4">
+          {shown.map((c) => (
             <ListingTile
               key={c.publicId}
               card={c}

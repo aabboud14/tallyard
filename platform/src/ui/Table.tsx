@@ -61,7 +61,7 @@ export function TH({ align = 'left', sort, onSort, className, children, ...rest 
           type="button"
           onClick={onSort}
           className={cx(
-            'group -mx-1 inline-flex items-center gap-1 rounded-sm px-1 py-0.5 font-medium hover:text-ink max-sm:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600',
+            'group -mx-1 inline-flex items-center gap-1 rounded-sm px-1 py-0.5 font-medium hover:text-ink max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600',
             sort ? 'text-ink' : null,
             align === 'right' && 'flex-row-reverse',
           )}

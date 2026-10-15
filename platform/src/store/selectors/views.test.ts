@@ -193,7 +193,7 @@ describe('architect workspace', () => {
 
   it('shortlist board: columns, totals over visible rows, what can be sent', () => {
     const b = sel.shortlistBoard(fresh(), viewer(U.priya), MERROWGATE_ID)!
-    expect(b.columns.map((c) => [c.label, c.rows.length])).toEqual([['Shortlisted', 1], ['Sent to client', 1], ['Approved', 2], ['Declined', 0]])
+    expect(b.columns.map((c) => [c.label, c.rows.length])).toEqual([['Shortlisted', 1], ['Waiting for approval', 1], ['Approved', 2], ['Declined', 0]])
     expect(b.sendableIds).toEqual(['wli_hp23zk_4'])
     expect(b.totals.all.count).toBe(4)
     const approved = b.columns[2].rows[0]

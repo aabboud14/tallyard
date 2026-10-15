@@ -91,7 +91,7 @@ export function SegmentedControl({ items, value, onValueChange, label, size = 'm
             aria-label={it.iconOnly ? it.label : undefined}
             title={it.iconOnly ? it.label : undefined}
             className={cx(
-              'inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-muted transition-[background-color,color,box-shadow] duration-150 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 data-[state=on]:bg-surface data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgb(28_25_23/0.08),0_0_0_1px_rgb(28_25_23/0.04)] [&_svg]:size-4',
+              'inline-flex items-center justify-center gap-1.5 rounded-md font-medium text-muted transition-[background-color,color,box-shadow] duration-150 hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 data-[state=on]:bg-surface data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgb(28_25_23/0.08),0_0_0_1px_rgb(28_25_23/0.04)] [&_svg]:size-4',
               size === 'sm' ? 'h-7 px-2 text-sm' : 'h-8 px-2.5 text-sm',
               it.iconOnly && (size === 'sm' ? 'w-7 px-0 max-sm:min-w-11' : 'w-8 px-0 max-sm:min-w-11'),
               'max-sm:min-h-11',

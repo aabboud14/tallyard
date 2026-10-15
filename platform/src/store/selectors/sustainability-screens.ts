@@ -126,7 +126,7 @@ export type ClientHomeView = ClientDashboard & {
   tiles: {
     saving: TileReading & { valueText: string; ring: { value: number; max: number; centre: string } | null }
     carbon: TileReading & { ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
-    reuse: TileReading & { aimText: string; ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
+    reuse: TileReading & { aimText: string | null; ring: { value: number; max: number; valueText: string; centre: string } | null; bar: TileBar | null }
   }
   reservationCounts: { pending: number; reserved: number; toRequest: number }
   timeline: { ticks: { iso: string; at: number; label: string | null }[]; today: number; todayText: string; rows: ClientTimelineRow[] }
@@ -140,6 +140,13 @@ function ringCentre(value: number, max: number): string {
   return max > 0 ? `${f.fixed(Math.min(1, value / max) * 100, 0)}%` : ''
 }
 
+/** The reuse tile's state line: it judges recycled content against the aim, so it says so. */
+export function reuseStateLabel(content: number | null, state: MetricState): string {
+  if (content === null) return 'No bill yet'
+  if (state === 'neutral') return 'No content aim set'
+  return `Recycled content ${METRIC_STATE_WORDS[state].toLowerCase()}`
+}
+
 /** The client's dashboard with the state of each tile, the drawn thumbnails and the timeline's marker dates. */
 export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView | null {
   const d = clientDashboard(state, viewer)
@@ -147,7 +154,8 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
   const m = d.metrics
   const carbonTarget = m.carbon.targetT > 0 ? m.carbon.targetT : null
   const carbonState = metricState(m.carbon.securedT, carbonTarget, 'at_least')
-  const reuseState: MetricState = m.reuse.content === null ? 'neutral' : metricState(m.reuse.content, m.reuse.aim, 'at_least')
+  const reuseAim = m.reuse.aim > 0 ? m.reuse.aim : null
+  const reuseState: MetricState = m.reuse.content === null ? 'neutral' : metricState(m.reuse.content, reuseAim, 'at_least')
   const projects = d.projects.map((card) => state.world.projects[card.id]).filter((p) => !!p)
   const sketches: Record<string, BuildingSketch> = {}
   for (const card of d.projects) {
@@ -180,10 +188,11 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
       },
       reuse: {
         state: reuseState,
-        stateLabel: m.reuse.content === null ? 'No bill yet' : METRIC_STATE_WORDS[reuseState],
-        aimText: `${f.fixed(m.reuse.aim * 100, 0)}%`,
-        ring: m.reuse.content === null ? null : { value: m.reuse.content, max: m.reuse.aim, valueText: `${f.percent(m.reuse.content)} of the ${f.percent(m.reuse.aim)} aim`, centre: ringCentre(m.reuse.content, m.reuse.aim) },
-        bar: m.reuse.content === null ? null : { value: m.reuse.content, max: meterMax(m.reuse.aim, m.reuse.content), target: m.reuse.aim, valueText: `${f.percent(m.reuse.content)} reused and recycled`, targetText: `Aim at least ${f.fixed(m.reuse.aim * 100, 0)}%` },
+        // The state judges recycled content (the sub line), not the reuse figure above it, so it names what it judges.
+        stateLabel: reuseStateLabel(m.reuse.content, reuseState),
+        aimText: reuseAim === null ? null : `${f.fixed(reuseAim * 100, 0)}%`,
+        ring: m.reuse.content === null || reuseAim === null ? null : { value: m.reuse.content, max: reuseAim, valueText: `${f.percent(m.reuse.content)} of the ${f.percent(reuseAim)} aim`, centre: ringCentre(m.reuse.content, reuseAim) },
+        bar: m.reuse.content === null || reuseAim === null ? null : { value: m.reuse.content, max: meterMax(reuseAim, m.reuse.content), target: reuseAim, valueText: `${f.percent(m.reuse.content)} reused and recycled`, targetText: `Aim at least ${f.fixed(reuseAim * 100, 0)}%` },
       },
     },
     reservationCounts: {

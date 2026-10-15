@@ -139,7 +139,7 @@ export function ModelViewer({ mesh, family, title, size = 'stage', angles: contr
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="cursor-grab rounded-md outline-none [touch-action:pan-y] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:cursor-grabbing"
+        className="cursor-grab rounded-md outline-none [touch-action:pan-y] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:cursor-grabbing"
       >
         {svg}
       </div>
@@ -150,7 +150,7 @@ export function ModelViewer({ mesh, family, title, size = 'stage', angles: contr
             <button
               type="button"
               onClick={() => set(DEFAULT_ANGLES)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink-soft shadow-xs hover:border-line-strong hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-3.5"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-ink-soft shadow-xs hover:border-line-strong hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-3.5"
             >
               <RotateCcw aria-hidden="true" />
               Reset view

@@ -107,7 +107,7 @@ describe('focus', () => {
     const save = byRole('button', 'Save')
     save.focus()
     expect(document.activeElement).toBe(save)
-    expect(save.className).toContain('focus-visible:outline-2')
+    expect(save.className).toContain('focus-visible:outline-solid focus-visible:outline-2')
     expect(byRole('button', 'Search').getAttribute('aria-label')).toBe('Search')
   })
 })
@@ -198,7 +198,7 @@ describe('Pills', () => {
         <StatusPill status="declined" />
       </>,
     )
-    expect(document.body.textContent).toBe('ShortlistedShortlistedSent to clientApprovedDeclined')
+    expect(document.body.textContent).toBe('ShortlistedShortlistedWaiting for approvalApprovedDeclined')
     expect(Array.from(document.querySelectorAll('[data-status]')).map((e) => e.getAttribute('data-status'))).toEqual(['shortlisted', 'shortlisted', 'sent', 'approved', 'declined'])
   })
 

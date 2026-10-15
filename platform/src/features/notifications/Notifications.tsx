@@ -80,7 +80,7 @@ export function Notifications() {
                       <KindIcon kind={n.kind} unread={n.unread} />
                       <div className="min-w-0 flex-1">
                         <p className="m-0 flex items-start gap-2">
-                          <button type="button" onClick={() => open(n)} className={cx('text-left text-base outline-none after:absolute after:inset-0 after:content-[""]', n.unread ? 'font-semibold text-ink' : 'font-medium text-ink-soft')}>
+                          <button type="button" onClick={() => open(n)} className={cx('text-left text-base outline-none after:absolute after:inset-0 after:content-[""] focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-brand-600', n.unread ? 'font-semibold text-ink' : 'font-medium text-ink-soft')}>
                             {n.title}
                           </button>
                           {n.count > 1 ? <Badge tone="outline">{n.count}</Badge> : null}

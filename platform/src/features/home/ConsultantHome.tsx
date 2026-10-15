@@ -7,21 +7,24 @@ import { ArrowRight, FileSpreadsheet, FolderKanban, Leaf, Recycle, Target } from
 import * as f from '../../domain/format'
 import { useView } from '../../store'
 import { consultantDashboard, type ConsultantDashboard, type TargetRowView } from '../../store/selectors/home-consultant'
-import { Card, Donut, EmptyState, IndicativeMarker, MARK, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, TargetMeter } from '../../ui'
+import { NO_RESULT_TEXT } from '../../store/selectors/dashboard'
+import { Card, Donut, EmptyState, IndicativeMarker, MARK, METRIC_STATE, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, TargetMeter } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
 
 function Metrics({ v }: { v: ConsultantDashboard }) {
   const m = v.metrics
+  // The same words and colours as each project's meters (metricState), so one state reads one way.
   const targets = [
-    { key: 'met', label: 'Met', value: m.targetsMet, colour: MARK.brand },
-    { key: 'below', label: 'Below', value: m.targetsBelow, colour: MARK.warning },
-    { key: 'waiting', label: 'No figure yet', value: m.targetsWaiting, colour: MARK.neutral },
-  ]
+    { key: 'met', label: METRIC_STATE.good.label, value: m.targetsMet, colour: MARK[METRIC_STATE.good.tone] },
+    { key: 'near', label: METRIC_STATE.warning.label, value: m.targetsNear, colour: MARK[METRIC_STATE.warning.tone] },
+    { key: 'off', label: METRIC_STATE.critical.label, value: m.targetsOff, colour: MARK[METRIC_STATE.critical.tone] },
+    { key: 'waiting', label: NO_RESULT_TEXT, value: m.targetsWaiting, colour: MARK.neutral },
+  ].filter((t) => t.value > 0)
   return (
     <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
-      <MetricTile testId="metric-projects" label="Projects" icon={FolderKanban} value={v.stats.projects} sub={`${m.withTargets} with targets set`} />
+      <MetricTile testId="metric-projects" label="Projects" icon={FolderKanban} value={v.stats.projects} sub={m.targetsSetText} />
       <MetricTile
         testId="metric-carbon"
         label="Avoided carbon, approved"
@@ -86,7 +89,7 @@ function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="min-w-0">
             <h3 className="m-0 truncate text-md font-semibold text-ink">
-              <Link to={r.href} className="rounded-sm outline-none hover:underline hover:decoration-line-strong hover:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+              <Link to={r.href} className="rounded-sm outline-none hover:underline hover:decoration-line-strong hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                 {r.name}
               </Link>
             </h3>
@@ -101,7 +104,7 @@ function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
       </div>
       <nav aria-label={`${r.name} pages`} className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft px-4 py-2.5 sm:px-5">
         {r.links.map((l) => (
-          <Link key={l.id} to={l.href} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11">
+          <Link key={l.id} to={l.href} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11">
             {l.label}
           </Link>
         ))}

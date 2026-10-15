@@ -3,7 +3,7 @@
 // page is a fixed sample from the fictional world, labelled as such.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, Bookmark, Building2, Camera, ChevronDown, CircleHelp, ClipboardCheck, Compass, FolderClosed, FolderOpen, Hourglass, House, Leaf, Lock, Search, Settings, Store, Users } from 'lucide-react'
+import { ArrowRight, Bookmark, Building2, Camera, ChevronDown, CircleHelp, ClipboardCheck, Compass, FolderClosed, FolderKanban, Hourglass, House, Layers, Leaf, Lock, Search, Settings, Store, Users } from 'lucide-react'
 import { PRODUCT_NAME } from '../../domain/constants'
 import { buildingSketch, projectSketch } from '../../domain/sketch'
 import {
@@ -17,7 +17,6 @@ import {
   Kbd,
   Legend,
   Logo,
-  MARK,
   MaterialImage,
   MetricTile,
   Pill,
@@ -29,6 +28,7 @@ import {
   TargetMeter,
 } from '../../ui'
 import { BANDS, SAMPLE_DASHBOARD, SAMPLE_MATERIALS } from '../../ui/samples'
+import { ARCHITECT_TILE_LABELS as T, STATUS_SEGMENTS } from '../home/architectTiles'
 import { LandingScene } from './LandingScene'
 import { HERO, LANDING_CTA, LANDING_FACTS, LANDING_PRINCIPLES, LANDING_ROLES, LANDING_STEPS, type LandingRoleKey } from './landingContent'
 
@@ -140,7 +140,7 @@ const NAV_ICON = { home: House, marketplace: Store, saved: Bookmark } as const
 function DashboardShot() {
   const d = SAMPLE_DASHBOARD
   const m = d.metrics
-  const segments = m.shortlisted.segments.map((s) => ({ key: s.key, label: s.label, value: s.value, colour: MARK[s.tone] }))
+  const segments = STATUS_SEGMENTS.map((s) => ({ key: s.key, label: s.label, value: m.shortlisted.values[s.key], colour: s.colour }))
   return (
     <div className="flex min-w-0">
       <aside className="hidden w-[208px] shrink-0 flex-col gap-5 border-r border-line-soft bg-canvas px-3 py-3.5 md:flex">
@@ -184,24 +184,25 @@ function DashboardShot() {
             <div className="mt-0.5 text-[13px] text-muted">{d.dateText}</div>
           </div>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            <MetricTile icon={FolderOpen} label={m.active.label} value={m.active.value} sub={m.active.sub} />
+            <MetricTile icon={FolderKanban} label={T.projects} value={m.active.value} sub={m.active.sub} />
             <MetricTile
-              icon={Bookmark}
-              label={m.shortlisted.label}
+              icon={Layers}
+              label={T.shortlisted}
               value={m.shortlisted.value}
-              chart={<Donut segments={segments} label={m.shortlisted.label} />}
+              sub={m.shortlisted.sub}
+              chart={<Donut segments={segments} label="Shortlist by status" />}
               footer={<Legend items={segments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} className="text-xs" />}
             />
             <MetricTile
               icon={Leaf}
-              label={m.carbon.label}
+              label={T.carbon}
               value={m.carbon.value}
               unit={m.carbon.unit}
-              chart={<ProgressRing value={m.carbon.ring.value} max={m.carbon.ring.max} label={m.carbon.label} valueText={m.carbon.ring.valueText} centre={m.carbon.ring.centre} />}
-              sub={m.carbon.ring.valueText}
+              chart={<ProgressRing value={m.carbon.ring.value} max={m.carbon.ring.max} label="Approved carbon of live shortlists" valueText={m.carbon.ring.valueText} centre={m.carbon.ring.centre} />}
+              sub={m.carbon.sub}
               indicative
             />
-            <MetricTile icon={Hourglass} label={m.waiting.label} value={m.waiting.value} state={m.waiting.state} stateLabel={m.waiting.stateLabel} sub={m.waiting.sub} />
+            <MetricTile icon={Hourglass} label={T.waiting} value={m.waiting.value} state={m.waiting.state} stateLabel={m.waiting.stateLabel} sub={m.waiting.sub} />
           </div>
           <div>
             <div className="text-base font-semibold text-ink">Your projects</div>
@@ -217,7 +218,7 @@ function DashboardShot() {
                     <div>
                       <div className="truncate text-sm font-semibold text-ink">{p.name}</div>
                       <div className="truncate text-xs text-muted">
-                        {p.client}, {p.typeText.toLowerCase()}
+                        {p.client}, {p.typeText}
                       </div>
                     </div>
                     <RibaStageStrip stage={p.stage} showLabel size="sm" />

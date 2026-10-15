@@ -219,7 +219,7 @@ function ViewSwitch({ value, onChange }: { value: 'credit' | 'item'; onChange: (
           onClick={() => onChange(it.v)}
           data-testid={it.testId}
           className={cx(
-            'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors max-sm:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 [&_svg]:size-4',
+            'inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600 [&_svg]:size-4',
             value === it.v ? 'bg-surface text-ink shadow-[0_1px_2px_rgb(28_25_23/0.08),0_0_0_1px_rgb(28_25_23/0.04)]' : 'text-muted hover:text-ink',
           )}
         >

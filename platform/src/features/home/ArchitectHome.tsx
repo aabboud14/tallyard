@@ -4,7 +4,7 @@
 // short first-run welcome. Every figure comes from architectHome (P2); this file only lays it out.
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, CalendarDays, FolderKanban, FolderPlus, Hourglass, Layers, Leaf, Send, Sparkles, Store } from 'lucide-react'
+import { ArrowRight, CalendarDays, FolderKanban, FolderPlus, Hourglass, Layers, Leaf, PackagePlus, Send, Store } from 'lucide-react'
 import * as f from '../../domain/format'
 import type { Fit } from '../../domain/v1types'
 import { useView } from '../../store'
@@ -17,13 +17,9 @@ import { NewProjectDialog } from '../projects/NewProjectDialog'
 import { ProjectProgress } from '../projects/ProjectParts'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
+import { ARCHITECT_TILE_LABELS, STATUS_SEGMENTS } from './architectTiles'
 
 /** Shortlist status, in the mark colours of the shortlist board: shortlisted neutral, waiting info, approved good. */
-const STATUS_SEGMENTS = [
-  { key: 'pending', label: 'Shortlisted', colour: MARK.neutral },
-  { key: 'sent', label: 'Waiting for approval', colour: MARK.info },
-  { key: 'approved', label: 'Approved', colour: MARK.brand },
-] as const
 
 const FIT_WORDS: Record<Fit, string> = { in_time: 'in time', tight: 'tight', late: 'late', now: 'available now' }
 
@@ -48,7 +44,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
     <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
       <MetricTile
         testId="metric-projects"
-        label="Active projects"
+        label={ARCHITECT_TILE_LABELS.projects}
         icon={FolderKanban}
         value={v.stats.activeProjects}
         state={m.programme.state?.state}
@@ -58,7 +54,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
       />
       <MetricTile
         testId="metric-shortlisted"
-        label="Materials shortlisted"
+        label={ARCHITECT_TILE_LABELS.shortlisted}
         icon={Layers}
         value={v.stats.shortlisted}
         state={m.timing.state?.state}
@@ -68,7 +64,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
       />
       <MetricTile
         testId="metric-waiting"
-        label="Waiting for approval"
+        label={ARCHITECT_TILE_LABELS.waiting}
         icon={Hourglass}
         value={m.waiting.count}
         state={m.waiting.state?.state}
@@ -78,7 +74,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
       />
       <MetricTile
         testId="metric-carbon"
-        label="Carbon avoided"
+        label={ARCHITECT_TILE_LABELS.carbon}
         icon={Leaf}
         value={f.number(m.carbon.approvedT, 1)}
         unit="tCO2e"
@@ -144,9 +140,9 @@ function ProjectCard({ p }: { p: ProjectCardView }) {
           <Link
             to={p.marketplaceHref}
             data-testid={`home-new-fits-${p.id}`}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
           >
-            <Sparkles aria-hidden="true" className="size-3.5" />
+            <PackagePlus aria-hidden="true" className="size-3.5" />
             {p.newFits} new {p.newFits === 1 ? 'material fits' : 'materials fit'}
             <ArrowRight aria-hidden="true" className="size-3.5" />
           </Link>
@@ -170,7 +166,7 @@ function Waiting({ items }: { items: WaitingItem[] }) {
             const stale = (w.daysWaiting ?? 0) >= 7
             return (
               <li key={w.itemId}>
-                <Link to={w.href} className="flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+                <Link to={w.href} className="flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-page focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
                   {w.card ? (
                     <MaterialImage spec={w.card.listing.spec} publicId={w.publicId} aspect="1/1" rounded="md" className="size-10 shrink-0" />
                   ) : (

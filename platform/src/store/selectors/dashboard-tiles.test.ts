@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { fresh, U, viewer } from '../../test/fixtures'
 import { MERROWGATE_ID, SALLOW_ID } from '../../domain/seed/world'
 import { niceMax } from '../../domain/engines/chartScale'
-import { awaitingState, fitState, programmeState, targetsMetState, targetState, waitingState } from './dashboard'
+import { awaitingState, fitState, NO_RESULT_TEXT, programmeState, targetsMetState, targetState, targetStatusText, waitingState } from './dashboard'
 import { architectHome } from './architect'
 import { ownerDashboard } from './home-owner'
 import { surveyorDashboard } from './home-surveyor'
@@ -40,11 +40,22 @@ describe('tile states', () => {
     expect(targetState(100, 0)).toBeNull()
   })
 
-  it('counts targets met, below and waiting for a figure', () => {
-    expect(targetsMetState(2, 0, 2)).toEqual({ state: 'good', label: 'All met' })
-    expect(targetsMetState(0, 2, 4)).toEqual({ state: 'warning', label: '2 below target' })
-    expect(targetsMetState(1, 0, 3)).toEqual({ state: 'neutral', label: 'Waiting for figures' })
-    expect(targetsMetState(0, 0, 0)).toBeNull()
+  it('counts targets on, near and off target and waiting for a figure, in the words of metricState', () => {
+    expect(targetsMetState({ good: 2, warning: 0, critical: 0, set: 2 })).toEqual({ state: 'good', label: 'All on target' })
+    expect(targetsMetState({ good: 0, warning: 2, critical: 0, set: 4 })).toEqual({ state: 'warning', label: '2 near target' })
+    expect(targetsMetState({ good: 0, warning: 1, critical: 2, set: 4 })).toEqual({ state: 'critical', label: '2 off target' })
+    expect(targetsMetState({ good: 1, warning: 0, critical: 0, set: 3 })).toEqual({ state: 'neutral', label: '2 with no result yet' })
+    expect(targetsMetState({ good: 0, warning: 0, critical: 0, set: 0 })).toBeNull()
+  })
+
+  it('words one target the way its meter does, with one phrase for no figure yet', () => {
+    expect(targetStatusText(0.25, 0.25)).toBe('On target')
+    expect(targetStatusText(0.23, 0.25)).toBe('Near target')
+    expect(targetStatusText(0.199, 0.25)).toBe('Off target')
+    expect(targetStatusText(null, 0.25)).toBe(NO_RESULT_TEXT)
+    expect(NO_RESULT_TEXT).toBe('No result yet')
+    expect(targetStatusText(null, 0)).toBe('No target set')
+    expect(targetStatusText(4, 0)).toBe('No target set')
   })
 
   it('asks for a decision while anything waits', () => {
@@ -109,7 +120,14 @@ describe('consultant dashboard tiles', () => {
     expect(d.metrics.targetsBelow).toBe(2)
     expect(d.metrics.targetsWaiting).toBe(2)
     expect(d.metrics.targetsMet + d.metrics.targetsBelow + d.metrics.targetsWaiting).toBe(d.metrics.targetsSet)
-    expect(d.metrics.targetsState).toEqual({ state: 'warning', label: '2 below target' })
+    // Both Merrowgate targets are more than 10% short, so they read off target on the tile as on the meters.
+    expect([d.metrics.targetsNear, d.metrics.targetsOff]).toEqual([0, 2])
+    expect(d.metrics.targetsState).toEqual({ state: 'critical', label: '2 off target' })
+    expect(merrow.content.statusText).toBe('Off target')
+    expect(merrow.carbon.statusText).toBe('Off target')
+    expect(sallow.content.statusText).toBe('No result yet')
+    expect(sallow.carbon.statusText).toBe('No target set')
+    expect(d.metrics.targetsSetText).toBe('3 with a content target, 1 with a carbon target')
     expect(d.metrics.carbonState).toEqual({ state: 'critical', label: 'Off target' })
   })
 })

@@ -38,7 +38,7 @@ export function TodoList({ todos, overdue }: { todos: RankedTodo[]; overdue: num
             const warn = t.overdue || t.kind === 'requirement_at_risk'
             return (
               <li key={t.id} data-testid={`todo-${t.id}`} className="relative">
-                <Link to={t.href} className="group flex min-h-14 items-start gap-3 px-4 py-3 outline-none transition-colors hover:bg-page focus-visible:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+                <Link to={t.href} className="group flex min-h-14 items-start gap-3 px-4 py-3 outline-none transition-colors hover:bg-page focus-visible:bg-page focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
                   <span aria-hidden="true" className={cx('mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md ring-1 ring-inset', warn ? 'bg-warning-soft text-warning ring-warning-line' : 'bg-subtle text-ink-soft ring-line-soft')}>
                     <Icon className="size-3.5" />
                   </span>

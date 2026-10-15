@@ -196,6 +196,13 @@ function DimLine({ a, b, label, offset = [0, 14], anchor = 'middle', size }: { a
   const a2: P = [a[0] + offset[0], a[1] + offset[1]]
   const b2: P = [b[0] + offset[0], b[1] + offset[1]]
   const mid: P = [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2]
+  // A dimension set above its edge (offset straight up) keeps its label off the line: centred, 5 px clear above it as
+  // on the section drawing, or with anchor 'end' level with the line just before its first tick, clear of any edge
+  // that rises from the far end. The others sit beside their line, centred on the offset.
+  const above = offset[0] === 0 && offset[1] < 0
+  const before = above && anchor === 'end'
+  const labelX = before ? Math.min(a2[0], b2[0]) - 6 : mid[0] + offset[0] * 0.7
+  const labelY = before ? mid[1] + size * 0.35 : above ? mid[1] - 5 : mid[1] + offset[1] * 0.7 + size * 0.35
   return (
     <g data-part="dimension">
       <g stroke={DIM} strokeWidth="0.75" fill="none">
@@ -205,7 +212,7 @@ function DimLine({ a, b, label, offset = [0, 14], anchor = 'middle', size }: { a
         <line x1={a2[0] - 3} y1={a2[1] + 3} x2={a2[0] + 3} y2={a2[1] - 3} />
         <line x1={b2[0] - 3} y1={b2[1] + 3} x2={b2[0] + 3} y2={b2[1] - 3} />
       </g>
-      <text x={mid[0] + offset[0] * 0.7} y={mid[1] + offset[1] * 0.7 + size * 0.35} textAnchor={anchor} fontFamily={FONT} fontSize={size} fontWeight="500" fill={DIM} style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <text x={labelX} y={labelY} data-label={before ? 'before' : above ? 'above' : undefined} textAnchor={anchor} fontFamily={FONT} fontSize={size} fontWeight="500" fill={DIM} style={{ fontVariantNumeric: 'tabular-nums' }}>
         {label}
       </text>
     </g>
@@ -289,7 +296,7 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
       <polygon points={pts(outline.map(at))} fill={FILL} />
       <polygon points={pts(outline.map(at))} fill={`url(#${hatch})`} stroke={INK} strokeWidth="1.25" strokeLinejoin="round" />
       <DimLine a={at([b, h])} b={far([b, h])} label={formatLength(lengthM)} offset={[9, 15.6]} anchor="start" size={size} />
-      {view === 'detail' ? <DimLine a={at([0, 0])} b={at([b, 0])} label={`${s.b}`} offset={[0, -12]} size={size} /> : null}
+      {view === 'detail' ? <DimLine a={at([0, 0])} b={at([b, 0])} label={`${s.b}`} offset={[0, -12]} anchor="end" size={size} /> : null}
       <TitleStrip text={designation} view={view} />
     </g>
   )

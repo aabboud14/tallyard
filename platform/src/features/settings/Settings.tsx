@@ -93,7 +93,7 @@ function ProfileForm({ p }: { p: NonNullable<ReturnType<typeof selectors.profile
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Avatar colour">
                 {AVATAR_COLOUR_NAMES.map((c) => (
                   <Tooltip key={c} content={c.charAt(0).toUpperCase() + c.slice(1)}>
-                    <button type="button" role="radio" aria-checked={colour === c} aria-label={c} onClick={() => setColour(c)} className={cx('rounded-full p-0.5 ring-2 transition-shadow max-sm:p-1.5', colour === c ? 'ring-brand-600' : 'ring-transparent hover:ring-line-strong')}>
+                    <button type="button" role="radio" aria-checked={colour === c} aria-label={c} onClick={() => setColour(c)} className={cx('rounded-full p-0.5 ring-2 transition-shadow max-sm:inline-flex max-sm:size-11 max-sm:items-center max-sm:justify-center max-sm:p-0', colour === c ? 'ring-brand-600' : 'ring-transparent hover:ring-line-strong')}>
                       <Avatar name="" colour={c} size="sm" decorative />
                     </button>
                   </Tooltip>

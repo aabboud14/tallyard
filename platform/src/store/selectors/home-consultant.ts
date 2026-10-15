@@ -12,7 +12,7 @@ import { projectTabs } from './project'
 import { effectiveTargets } from './sustainability'
 import { niceMax } from '../../domain/engines/chartScale'
 import { metricState, type MetricState } from '../../domain/engines/metricState'
-import { activitySummary, targetProgress, targetsMetState, targetState, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
+import { activitySummary, targetProgress, targetsMetState, targetState, targetStatusText, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
 
 /** A meter's scale and state: value and target on one scale whose right end is a round figure at least both. */
 export type TargetMeterView = { value: number; max: number; target: number | null; state: MetricState }
@@ -22,6 +22,8 @@ export type TargetRowView = TargetProgress & { actualText: string; targetText: s
 export type ConsultantDashboard = ConsultantHome & {
   metrics: {
     withTargets: number
+    /** What the Projects tile says is set: "3 with a content target, 1 with a carbon target". */
+    targetsSetText: string
     carbonTargetT: number
     carbonShare: number
     carbonValueText: string
@@ -29,6 +31,9 @@ export type ConsultantDashboard = ConsultantHome & {
     targetsSet: number
     /** Set targets the figures fall short of; the rest of the unmet ones have no figure yet. */
     targetsBelow: number
+    /** Of those below, how many are near target and how many off target (metricState). */
+    targetsNear: number
+    targetsOff: number
     /** Set targets with no figure yet (no bill of materials). */
     targetsWaiting: number
     billsReviewed: number
@@ -56,8 +61,6 @@ export type ConsultantDashboard = ConsultantHome & {
 /** The tabs a project card links to; the sidebar folder shows all of them (client-consultant design, open questions). */
 const CARD_LINKS: string[] = ['sustainability', 'targets', 'certification']
 
-const STATUS_TEXT: Record<TargetProgress['status'], string> = { met: 'Target met', below: 'Below target', no_target: 'No target set', no_data: 'No bill of materials yet' }
-
 /** Headroom above the larger of figure and target, so the target tick sits inside the meter. */
 const METER_HEADROOM = 1.1
 
@@ -71,7 +74,16 @@ function targetRow(actual: number | null, target: number, format: (x: number) =>
     // No figure yet reads as no state, not as off target.
     state: actual === null ? 'neutral' : metricState(value, target > 0 ? target : null, 'at_least'),
   }
-  return { ...p, actualText: actual === null ? 'Not known' : format(actual), targetText: target > 0 ? format(target) : null, statusText: STATUS_TEXT[p.status], meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
+  return { ...p, actualText: actual === null ? 'Not known' : format(actual), targetText: target > 0 ? format(target) : null, statusText: targetStatusText(actual, target), meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
+}
+
+/** The Projects tile's line: how many projects carry each kind of target, so it never claims more than the cards show. */
+export function targetsSetText(withContent: number, withCarbon: number): string {
+  if (withContent === 0 && withCarbon === 0) return 'No targets set'
+  const parts: string[] = []
+  if (withContent > 0) parts.push(`${withContent} with a content target`)
+  if (withCarbon > 0) parts.push(`${withCarbon} with a carbon target`)
+  return parts.join(', ')
 }
 
 /** The consultant's dashboard; null for anyone who is not a sustainability consultant. */
@@ -84,6 +96,10 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
   let targetsSet = 0
   let targetsMet = 0
   let targetsBelow = 0
+  let targetsNear = 0
+  let targetsOff = 0
+  let withContent = 0
+  let withCarbon = 0
   const rows = home.projects.map((c) => {
     const p = state.world.projects[c.id]
     // The consultant's overrides, or the defaults from the requirements (client-consultant design: the one source of targets).
@@ -91,11 +107,15 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
     const content = targetRow(c.contentPercent, targets.contentByValue, f.percent, (x) => `${f.number(x * 100, 0)}%`)
     const carbon = targetRow(c.avoidedApprovedT, targets.avoidedCarbonT, f.carbon, (x) => `${f.number(x, 0)} tCO2e`)
     if (targets.contentByValue > 0 || targets.avoidedCarbonT > 0) withTargets += 1
+    if (targets.contentByValue > 0) withContent += 1
+    if (targets.avoidedCarbonT > 0) withCarbon += 1
     for (const t of [content, carbon]) {
       if (t.status === 'no_target') continue
       targetsSet += 1
       if (t.status === 'met') targetsMet += 1
       if (t.status === 'below') targetsBelow += 1
+      if (t.status === 'below' && t.meter.state === 'warning') targetsNear += 1
+      if (t.status === 'below' && t.meter.state === 'critical') targetsOff += 1
     }
     if (targets.avoidedCarbonT > 0) {
       carbonTargetT += targets.avoidedCarbonT
@@ -123,17 +143,20 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
     ...home,
     metrics: {
       withTargets,
+      targetsSetText: targetsSetText(withContent, withCarbon),
       carbonTargetT,
       carbonShare: targetProgress(approvedAgainstTargetT, carbonTargetT).share,
       carbonValueText: f.number(approvedAgainstTargetT, 1),
       targetsMet,
       targetsSet,
       targetsBelow,
+      targetsNear,
+      targetsOff,
       targetsWaiting: targetsSet - targetsMet - targetsBelow,
       billsReviewed: home.engagements.filter((e) => e.hasBill).length,
       carbonApprovedT: approvedAgainstTargetT,
       carbonState: targetState(approvedAgainstTargetT, carbonTargetT),
-      targetsState: targetsMetState(targetsMet, targetsBelow, targetsSet),
+      targetsState: targetsMetState({ good: targetsMet, warning: targetsNear, critical: targetsOff, set: targetsSet }),
     },
     rows,
     activitySummary: activitySummary(home.activity),

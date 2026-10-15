@@ -169,20 +169,12 @@ export const SAMPLE_DASHBOARD = {
     ],
     projects: ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court'],
   },
+  // Figures only: the landing shot takes the tile names and the shortlist segments from the real architect home.
   metrics: {
-    active: { label: 'Active projects', value: '3', sub: 'Next start on site: Ferrymoor Yard' },
-    shortlisted: {
-      label: 'Materials shortlisted',
-      value: '14',
-      segments: [
-        { key: 'shortlisted', label: 'Shortlisted', value: 6, tone: 'neutral' },
-        { key: 'sent', label: 'Waiting for approval', value: 3, tone: 'info' },
-        { key: 'approved', label: 'Approved', value: 4, tone: 'brand' },
-        { key: 'declined', label: 'Declined', value: 1, tone: 'danger' },
-      ],
-    },
-    carbon: { label: 'Avoided carbon, approved', value: '41.0', unit: 'tCO2e', ring: { value: 41, max: 96.4, valueText: '41.0 of 96.4 tCO2e shortlisted', centre: '43%' } },
-    waiting: { label: 'Waiting for approval', value: '3', state: 'warning', stateLabel: 'Over a week', sub: 'Oldest sent 9 days ago' },
+    active: { value: '3', sub: 'Next start on site 3 April 2028, Merrowgate Wharf' },
+    shortlisted: { value: '13', sub: 'Shortlisted, waiting or approved', values: { pending: 6, sent: 3, approved: 4 } },
+    carbon: { value: '41.0', unit: 'tCO2e', sub: 'On approved materials, against buying new', ring: { value: 41, max: 96.4, valueText: '41.0 of 96.4 tCO2e', centre: '43%' } },
+    waiting: { value: '3', state: 'warning', stateLabel: 'Over a week', sub: 'Oldest sent 9 days ago' },
   },
   projects: [
     {

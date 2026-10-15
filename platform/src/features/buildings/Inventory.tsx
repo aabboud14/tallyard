@@ -73,7 +73,7 @@ export function Inventory() {
           trailing={filter.q ? <IconButton icon={X} label="Clear search" size="sm" tooltip={false} onClick={() => setFilter((x) => ({ ...x, q: '' }))} /> : undefined}
           data-testid="inventory-search"
         />
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           {v.canApplyContractorDates ? <ApplyContractorDates buildingId={buildingId} count={v.applyCount} name={v.contractorName} /> : null}
           {owner ? <SegmentedControl label="Visibility" value={filter.visibility} onValueChange={(x) => setFilter((f0) => ({ ...f0, visibility: x as InventoryFilter['visibility'] }))} items={tabs} className="max-w-full overflow-x-auto" /> : <p className="m-0 text-sm text-muted">{v.rows.length} items, private to the owner</p>}
         </div>
@@ -105,7 +105,7 @@ export function Inventory() {
                     <Thumb r={r} pic={pics[r.itemId]} />
                   </TD>
                   <TD>
-                    <button type="button" onClick={() => select(r.itemId)} className="flex min-w-0 flex-col items-start rounded-sm text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+                    <button type="button" onClick={() => select(r.itemId)} className="flex min-w-0 flex-col items-start rounded-sm text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
                       <span className="flex items-center gap-2">
                         <span className="text-xs font-medium tabular-nums text-muted">{r.tag}</span>
                         <span className="font-medium text-ink">{r.title}</span>

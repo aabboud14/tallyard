@@ -111,7 +111,9 @@ describe('client home', () => {
     expect(q(`tracking-${M}`)).not.toBeNull()
     expect(byTestId(`tracking-${K}`).textContent).toContain('No consultant appointed')
     expect(byTestId('client-projects').textContent).toContain('Kilnworth Place')
-    expect(byTestId('home-activity').querySelector('[hidden]')).not.toBeNull()
+    // The shared Recent activity panel (shell-dashboards D), collapsed by default.
+    expect(byTestId('activity-panel').getAttribute('data-open')).toBe('false')
+    expect(byTestId('activity-toggle').getAttribute('aria-expanded')).toBe('false')
     expectClean()
   })
 })

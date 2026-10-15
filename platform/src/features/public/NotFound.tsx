@@ -15,11 +15,7 @@ export function NotFound({ homeHref = '/', homeLabel = 'Go to home' }: { homeHre
       <main className="flex flex-1 items-center justify-center px-4 pb-24">
         <div className="flex max-w-md flex-col items-center text-center">
           <div className="relative mb-6">
-            <div aria-hidden="true" className="absolute -inset-3 rounded-[18px] border border-line-soft" />
-            <div aria-hidden="true" className="absolute -inset-6 rounded-[24px] border border-line-soft/60" />
-            <div className="relative flex size-12 items-center justify-center rounded-xl border border-line bg-gradient-to-b from-surface to-subtle text-ink-soft shadow-sm">
-              <Compass aria-hidden="true" className="size-5" />
-            </div>
+            <Compass aria-hidden="true" className="size-8 text-muted" strokeWidth={1.5} />
           </div>
           <p className="m-0 text-sm font-medium text-muted">Error 404</p>
           <h1 className="m-0 mt-2 text-3xl font-semibold text-ink">Page not found</h1>

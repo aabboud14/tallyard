@@ -24,7 +24,7 @@ export function ProjectLayout() {
   const base = `/app/projects/${projectId}`
   return (
     <div data-testid="project-layout" data-side={header.side}>
-      <div className="border-b border-line bg-gradient-to-b from-page to-surface print:hidden">
+      <div className="border-b border-line bg-surface print:hidden">
         <div className="mx-auto w-full max-w-[1240px] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex min-w-0 items-start gap-3.5">

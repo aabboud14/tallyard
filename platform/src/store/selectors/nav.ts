@@ -3,7 +3,7 @@ import { DEFAULT_NAV_PROJECT_VIEW, type AppData, type NavProjectView, type Platf
 import type { Project } from '../../domain/types'
 import { MARKETPLACE_PATH } from '../paths'
 import { buildingSide, buildingsOfUser, canCaptureIn, canOpenEngagement, isBuildingContractor, isProjectClient, orgOfUser, projectSide, projectsOfUser, roleOfUser } from '../access'
-import { orgTypeLabel } from '../../sandbox/accounts'
+import { orgTypeLabel, ROLE_LABELS } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
 import { pendingLinkRequestCount, projectTabs } from './project'
@@ -54,7 +54,8 @@ export type NavProjectTools = { kind: 'projects'; view: NavProjectView; clients:
 export type NavSection = { id: string; title: string | null; items: NavItem[]; tools: NavProjectTools | null }
 
 export type NavModel = {
-  org: { id: string; name: string; typeLabel: string; initials: string }
+  /** roleLabel: the workspace in the words of the sign-in sample list (ROLE_LABELS), shown under the organisation. */
+  org: { id: string; name: string; typeLabel: string; roleLabel: string; initials: string }
   user: { id: string; name: string; email: string; title: string; initials: string; colour: string; sample: boolean }
   role: PlatformRole
   sections: NavSection[]
@@ -187,7 +188,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     sections.push(navSection('engagements', 'Engagements', engagementsOf(state, viewer).map((e) => item(`engagement-${e.id}`, e.name, `/app/engagements/${e.id}/waste`, 'Recycle'))))
   }
   return {
-    org: { id: org.id, name: org.name, typeLabel: orgTypeLabel(org.type), initials: initials(org.name) },
+    org: { id: org.id, name: org.name, typeLabel: orgTypeLabel(org.type), roleLabel: ROLE_LABELS[role], initials: initials(org.name) },
     user: { id: user.id, name: user.name, email: user.email, title: user.title, initials: initials(user.name), colour: user.avatarColour, sample: user.sample },
     role,
     sections,

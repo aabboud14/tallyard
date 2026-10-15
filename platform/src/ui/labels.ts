@@ -13,7 +13,7 @@ export type ItemStatus = 'shortlisted' | 'pending' | 'sent' | 'approved' | 'decl
 export const STATUS: Record<ItemStatus, { tone: Tone; label: string }> = {
   shortlisted: { tone: 'neutral', label: 'Shortlisted' },
   pending: { tone: 'neutral', label: 'Shortlisted' },
-  sent: { tone: 'info', label: 'Sent to client' },
+  sent: { tone: 'info', label: 'Waiting for approval' },
   approved: { tone: 'brand', label: 'Approved' },
   declined: { tone: 'danger', label: 'Declined' },
 }

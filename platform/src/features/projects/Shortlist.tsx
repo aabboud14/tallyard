@@ -1,4 +1,4 @@
-// The project's shortlist: a board with Shortlisted, Sent to client, Approved and Declined (or a list). Select
+// The project's shortlist: a board with Shortlisted, Waiting for approval, Approved and Declined (or a list). Select
 // shortlisted materials and send them to the client with a message; a declined card shows the client's note and
 // can be reopened; an approved card is locked. Notes, moves and removals confirm with a toast that can undo.
 import { useMemo, useState } from 'react'
@@ -73,7 +73,7 @@ function RowMenu({ row, projectId, onDialog }: { row: ShortlistRow; projectId: s
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={`Actions for ${row.title}`} data-testid={`row-menu-${row.publicId}`} className="relative z-[2] inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover max-sm:size-10">
+        <button type="button" aria-label={`Actions for ${row.title}`} data-testid={`row-menu-${row.publicId}`} className="relative z-[2] inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover max-sm:size-10">
           <Ellipsis aria-hidden="true" className="size-4" />
         </button>
       </DropdownMenuTrigger>
@@ -155,16 +155,16 @@ function StatusDetail({ row }: { row: ShortlistRow }) {
 
 function BoardCard({ row, projectId, selected, onToggle, onDialog }: { row: ShortlistRow; projectId: string; selected: boolean; onToggle: () => void; onDialog: (d: DialogState) => void }) {
   return (
-    <article data-testid={`shortlist-card-${row.publicId}`} data-status={row.status} className={cx('group relative overflow-hidden rounded-lg border bg-surface shadow-sm transition-[border-color,box-shadow] hover:shadow-md', selected ? 'border-brand-600 shadow-[0_0_0_1px_var(--color-brand-600)]' : 'border-line')}>
+    <article data-testid={`shortlist-card-${row.publicId}`} data-status={row.status} className={cx('group relative overflow-hidden rounded-lg border bg-surface transition-[border-color,box-shadow] hover:border-line-strong', selected ? 'border-brand-600 shadow-[0_0_0_1px_var(--color-brand-600)]' : 'border-line')}>
       <div className="relative aspect-[16/9] overflow-hidden">
         <Thumb row={row} className="size-full" />
         {row.card?.fit ? (
           <div className="absolute bottom-2 left-2">
-            <FitPill fit={row.card.fit.fit} size="sm" className="bg-white/90! shadow-sm backdrop-blur-sm" />
+            <FitPill fit={row.card.fit.fit} size="sm" className="bg-surface! ring-line!" />
           </div>
         ) : null}
         {row.canSelect ? (
-          <div className={cx('absolute left-2 top-2 z-[2] rounded-[5px] bg-white/90 p-1 shadow-sm backdrop-blur-sm transition-opacity', selected ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}>
+          <div className={cx('absolute left-2 top-2 z-[2] rounded-[5px] bg-surface p-1 ring-1 ring-line transition-opacity', selected ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100')}>
             <Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Select ${row.title}`} data-testid={`select-${row.publicId}`} />
           </div>
         ) : null}

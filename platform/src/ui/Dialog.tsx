@@ -28,7 +28,7 @@ function CloseButton({ testId }: { testId?: string }) {
         type="button"
         aria-label="Close"
         data-testid={testId ? `${testId}-close` : undefined}
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 max-sm:size-11"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand-600 max-sm:size-11"
       >
         <X aria-hidden="true" className="size-4" />
       </button>
@@ -36,7 +36,7 @@ function CloseButton({ testId }: { testId?: string }) {
   )
 }
 
-const overlay = 'fixed inset-0 z-50 bg-[rgb(28_25_23/0.32)] backdrop-blur-[2px] data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out'
+const overlay = 'fixed inset-0 z-50 bg-[rgb(28_25_23/0.32)] data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out'
 
 export type DialogProps = BaseProps & { size?: 'sm' | 'md' | 'lg' | 'xl' }
 

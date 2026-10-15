@@ -13,7 +13,8 @@ import { signOut } from '../../store/session'
 import { setSessionUserId } from '../../store/sessionId'
 import { lotPrivateStrings } from '../../domain/privacy/privateStrings'
 import { FERRYMOOR_ID, MERROWGATE_ID } from '../../domain/seed/world'
-import { U } from '../../test/fixtures'
+import { U, viewer } from '../../test/fixtures'
+import { architectHome } from '../../store/selectors/architect'
 import { routes } from '../../app/router'
 
 const NOW = '2026-10-08T10:00:00.000Z'
@@ -154,6 +155,25 @@ describe('checking strip', () => {
     expect(byTestId('category-structure').textContent).toContain('11 in time for Merrowgate Wharf')
     expect(byTestId('new-for-projects').textContent).toContain('New for Merrowgate Wharf')
     expect(byTestId('card-L-9F4CQQ').querySelector('[data-fit]')!.getAttribute('data-fit')).toBe('in_time')
+    expectClean()
+  })
+
+  it('reaches every new material the home counts for the project: four first, then Show all and Show fewer', async () => {
+    const home = architectHome(getData(), viewer(U.priya, NOW))!.projects.find((p) => p.id === MERROWGATE_ID)!
+    open(`/app/marketplace?project=${MERROWGATE_ID}`)
+    await waitFor(() => document.querySelector('[data-testid="new-for-projects"]'))
+    const row = byTestId('new-for-projects')
+    const cards = () => row.querySelectorAll('[data-testid^="new-card-"]').length
+    expect(home.newFits).toBeGreaterThan(4)
+    expect(cards()).toBe(4)
+    const more = byTestId('new-for-projects-more')
+    expect(more.textContent).toBe(`Show all ${home.newFits}`)
+    expect(more.getAttribute('aria-expanded')).toBe('false')
+    click(more)
+    await waitFor(() => cards() === home.newFits)
+    expect(byTestId('new-for-projects-more').textContent).toBe('Show fewer')
+    click(byTestId('new-for-projects-more'))
+    await waitFor(() => cards() === 4)
     expectClean()
   })
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { closeTo, pence } from '../../test/helpers'
 import { createSeed, MERROWGATE_ID } from '../seed/world'
 import { contentByValue } from './content'
-import { byStage, financeTotals, portfolioContent, reuseByValue, seededDealLine, type FinanceLine } from './finance'
+import { byStage, financeTotals, portfolioAim, portfolioContent, reuseByValue, seededDealLine, type FinanceLine } from './finance'
 
 const line = (total: number, costNew: number, stage: FinanceLine['stage'] = 'to_request', avoidedT: number | null = 1, massT = 2): FinanceLine => ({ key: `k${total}`, stage, total, costNew, avoidedT, massT })
 const mg = createSeed().projects[MERROWGATE_ID]
@@ -75,5 +75,15 @@ describe('reuse by value', () => {
     closeTo(withEmpty.percent, r.percent, 9)
     expect(portfolioContent([])).toBeNull()
     expect(portfolioContent([contentByValue([], {})])).toBeNull()
+  })
+})
+
+describe('portfolioAim', () => {
+  it('weights each project aim by its bill value, leaving out projects with no bill or no aim', () => {
+    expect(portfolioAim([{ totalValue: 100, aim: 0.25 }])).toBe(0.25)
+    expect(portfolioAim([{ totalValue: 300, aim: 0.25 }, { totalValue: 100, aim: 0.2 }, { totalValue: 0, aim: 0.5 }])).toBeCloseTo(0.2375, 10)
+    expect(portfolioAim([{ totalValue: 100, aim: 0.25 }, { totalValue: 100, aim: 0 }])).toBe(0.25)
+    expect(portfolioAim([{ totalValue: 0, aim: 0.2 }])).toBe(0)
+    expect(portfolioAim([])).toBe(0)
   })
 })

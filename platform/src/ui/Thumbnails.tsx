@@ -38,7 +38,8 @@ function Frame({ aspect, rounded, className, testId, children }: { aspect: Aspec
 export function ProjectThumbnail({ sketch, materials = [], aspect = '16/10', rounded = 'none', decorative = false, className, testId }: ThumbnailProps & { materials?: ThumbMaterial[] }) {
   return (
     <Frame aspect={aspect} rounded={rounded} className={className} testId={testId}>
-      <BuildingIllustration sketch={sketch} decorative={decorative} className="absolute inset-0 size-full" />
+      {/* The swatches sit bottom left, so the left trees give way to them. */}
+      <BuildingIllustration sketch={sketch} decorative={decorative} trees={materials.length > 0 ? 'right' : 'both'} className="absolute inset-0 size-full" />
       {materials.length > 0 ? (
         <div aria-hidden="true" className="absolute bottom-2 left-2 flex gap-1.5">
           {materials.slice(0, 3).map((m) => (

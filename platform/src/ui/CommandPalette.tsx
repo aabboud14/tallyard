@@ -109,7 +109,7 @@ export function CommandPalette({ open, onOpenChange, groups, query, onQueryChang
       }}
     >
       <D.Portal>
-        <D.Overlay className="fixed inset-0 z-50 bg-[rgb(28_25_23/0.28)] backdrop-blur-[2px] data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out" />
+        <D.Overlay className="fixed inset-0 z-50 bg-[rgb(28_25_23/0.28)] data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out" />
         <D.Content
           aria-describedby={undefined}
           data-testid="command-palette"

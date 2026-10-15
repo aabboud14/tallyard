@@ -104,8 +104,10 @@ describe('the client home', () => {
     expect(v.tiles.carbon).toMatchObject({ state: 'critical', stateLabel: 'Off target' })
     expect(v.tiles.carbon.ring).toMatchObject({ max: 150, centre: '32%' })
     expect(v.tiles.carbon.bar).toMatchObject({ max: 200, target: 150 })
-    expect(v.tiles.reuse).toMatchObject({ state: 'warning', stateLabel: 'Near target', aimText: '20%' })
-    expect(v.tiles.reuse.ring?.centre).toBe('100%')
+    // BRIEF 14.2: the aim is the project's own (25%, overridden by the consultant), as on the tracking table below
+    // it; the state line names the figure it judges.
+    expect(v.tiles.reuse).toMatchObject({ state: 'critical', stateLabel: 'Recycled content off target', aimText: '25%' })
+    expect(v.tiles.reuse.ring?.centre).toBe('80%')
   })
 
   it('lays out the two projects on the timeline with their marker dates, and no axis dates', () => {

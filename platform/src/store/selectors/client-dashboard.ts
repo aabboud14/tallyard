@@ -4,16 +4,15 @@
 // engine, the public listings and the project's own records.
 import type { FamilyId } from '../../domain/types'
 import type { Typology } from '../../domain/v1types'
-import { byStage, financeTotals, portfolioContent, seededDealLine, type FinanceLine, type FinanceStage } from '../../domain/engines/finance'
+import { byStage, financeTotals, portfolioAim, portfolioContent, seededDealLine, type FinanceLine, type FinanceStage } from '../../domain/engines/finance'
 import { goalProgress, sumTargets, type GoalProgress } from '../../domain/engines/goals'
 import { APPROVAL_DUE_DAYS, dueAfter, rankTodos, REVIEW_DUE_DAYS, type RankedTodo, type Todo } from '../../domain/engines/tracker'
 import { goalDef } from '../../domain/reference/goals'
 import { typologyOf } from '../../domain/engines/typology'
-import { DEFAULT_ASSUMPTIONS as A } from '../../domain/reference/assumptions'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { isProjectClient, projectsOfUser, roleOfUser } from '../access'
-import { applicableRequirements, sustainabilityOf } from '../sustainabilityRecord'
+import { applicableRequirements, effectiveTargets, sustainabilityOf } from '../sustainabilityRecord'
 import { todayOf, type ActivityRow } from './common'
 import { approvalsView, clientHome, reservationGroup, reservationsView, type ClientHome } from './client'
 import { projectMetrics, type ProjectMetrics } from './consultant'
@@ -32,6 +31,7 @@ export type ClientDashboard = {
     cost: { total: number; count: number; projects: number; byStage: { key: FinanceStage; label: string; total: number }[] }
     saving: { amount: number; percent: number; costNew: number; text: string; negative: boolean }
     carbon: { securedT: number; approvedT: number; targetT: number; progress: GoalProgress }
+    /** aim: the bill-weighted aim of the projects' own content targets; 0 when none is set. */
     reuse: { reuse: number | null; content: number | null; aim: number; progress: GoalProgress }
   }
   todos: RankedTodo[]
@@ -62,6 +62,7 @@ export function clientDashboard(state: AppData, viewer: Viewer): ClientDashboard
   let approvedT = 0
   const carbonRows: { actual: number | null; target: number | null }[] = []
   const contents: ProjectContent[] = []
+  const aims: { totalValue: number; aim: number }[] = []
   for (const p of projects) {
     const own: FinanceLine[] = p.seededDeals.map(seededDealLine)
     const res = reservationsView(state, viewer, p.id)!
@@ -99,6 +100,8 @@ export function clientDashboard(state: AppData, viewer: Viewer): ClientDashboard
     securedT += m.avoidedSecuredT
     approvedT += m.avoidedApprovedT
     contents.push(m.secured)
+    // Each project's own aim, as its Sustainability tab and the consultant read it (BRIEF 14.2: effectiveTargets).
+    aims.push({ totalValue: m.secured.totalValue, aim: effectiveTargets(state, p.id).contentByValue })
     const goal = goalRows(state, viewer, p.id)!.find((g) => g.id === 'avoided_carbon')!
     carbonRows.push({ actual: typeof goal.actual === 'number' ? goal.actual : null, target: typeof goal.target === 'number' ? goal.target : null })
     thumbs[p.id] = m.items.map((i) => ({ publicId: i.publicId, family: i.family, typology: typologyOf(i.family) }))
@@ -108,6 +111,7 @@ export function clientDashboard(state: AppData, viewer: Viewer): ClientDashboard
   const target = sumTargets(carbonRows)
   const content = portfolioContent(contents)
   const contentDef = goalDef('content_by_value')
+  const aim = portfolioAim(aims)
   return {
     greeting: home.greeting,
     dateText: home.dateText,
@@ -115,7 +119,7 @@ export function clientDashboard(state: AppData, viewer: Viewer): ClientDashboard
       cost: { total: totals.total, count: totals.count, projects: Object.values(linesByProject).filter((x) => x.length > 0).length, byStage: STAGE_LABELS.map((s) => ({ key: s.key, label: s.label, total: stages[s.key].total })) },
       saving: { amount: totals.saving, percent: totals.savingPercent, costNew: totals.costNew, text: totals.saving < 0 ? 'Costs more than buying new' : `${f.percent(totals.savingPercent)} less than buying new`, negative: totals.saving < 0 },
       carbon: { securedT, approvedT, targetT: target.target, progress: goalProgress(goalDef('avoided_carbon'), target.target > 0 ? target.target : null, target.actual) },
-      reuse: { reuse: content ? content.reuse : null, content: content ? content.percent : null, aim: A.contentAim, progress: goalProgress(contentDef, A.contentAim, content ? content.percent : null) },
+      reuse: { reuse: content ? content.reuse : null, content: content ? content.percent : null, aim, progress: goalProgress(contentDef, aim > 0 ? aim : null, content ? content.percent : null) },
     },
     todos: rankTodos(todos, today),
     programme: programmeOf(projects, today),
