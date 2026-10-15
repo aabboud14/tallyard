@@ -72,6 +72,7 @@ const SECTIONS = [
   ['data', 'Data'],
   ['programme-chart', 'Programme chart'],
   ['thumbnails', 'Thumbnails'],
+  ['illustrations', 'Illustrations'],
   ['empty-states', 'Empty states'],
   ['model', '3D view'],
   ['tracking', 'Tracking and documents'],

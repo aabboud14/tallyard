@@ -59,3 +59,45 @@ export function BuildingThumbnail({ sketch, aspect = '16/10', rounded = 'none', 
     </Frame>
   )
 }
+
+// ---------- Compact thumbs for a page header's leading slot or a list row ----------
+
+type ThumbSize = 'sm' | 'md' | 'lg'
+
+/** sm 32 by 32 for list rows, md 48 by 48 for page headers, lg 96 by 72 to lead a card. */
+const THUMB_SIZE: Record<ThumbSize, string> = { sm: 'size-8', md: 'size-12', lg: 'h-[72px] w-24' }
+
+export type ThumbProps = {
+  sketch: BuildingSketch
+  size?: ThumbSize
+  /**
+   * Decorative by default: a thumb sits beside the project or building name, so the name already says what it is.
+   * Pass false to give it the sketch's label.
+   */
+  decorative?: boolean
+  className?: string
+  testId?: string
+}
+
+function CompactThumb({ sketch, size = 'md', decorative = true, className, testId }: ThumbProps) {
+  return (
+    <span
+      data-testid={testId}
+      data-kind="illustration"
+      data-size={size}
+      className={cx('relative isolate block shrink-0 overflow-hidden rounded-md border border-line bg-paper', THUMB_SIZE[size], className)}
+    >
+      <BuildingIllustration sketch={sketch} decorative={decorative} fit className="absolute inset-0.5 block size-[calc(100%-4px)]" />
+    </span>
+  )
+}
+
+/** A project's drawing at header size, in place of a folder tile. */
+export function ProjectThumb(props: ThumbProps) {
+  return <CompactThumb {...props} />
+}
+
+/** A building's drawing at header size, in place of a building tile. */
+export function BuildingThumb(props: ThumbProps) {
+  return <CompactThumb {...props} />
+}

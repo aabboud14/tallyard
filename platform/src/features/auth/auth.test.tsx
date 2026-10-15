@@ -35,6 +35,24 @@ describe('AuthLayout', () => {
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 
+  it('draws a straight drawing sheet with a title block, not a rotated collage', () => {
+    render(
+      <AuthLayout>
+        <p>Form</p>
+      </AuthLayout>,
+    )
+    const sheet = byTestId('auth-sheet')
+    expect(sheet.className).toContain('bg-paper')
+    expect(sheet.className).toContain('lg:flex')
+    expect(sheet.outerHTML).not.toMatch(/rotate-|backdrop-blur|linear-gradient|shadow-pop|bg-white\/85/)
+    expect(sheet.querySelector('[data-part="section-axo"]')).not.toBeNull()
+    expect(sheet.textContent).toContain('7.5 m')
+    const block = byTestId('title-block').textContent ?? ''
+    for (const t of ['UB 457x191x67, 7.5 m', '48 pieces, Central London', 'Illustration from the survey record']) expect(block).toContain(t)
+    expect(sheet.textContent).toContain('Every material shows when it comes out, and whether it arrives in time for your start on site.')
+    expect(sheet.textContent?.toLowerCase()).not.toContain('photo')
+  })
+
   it('can leave the footer out', () => {
     render(
       <AuthLayout footer={false}>

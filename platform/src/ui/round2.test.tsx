@@ -9,8 +9,11 @@ import { DEFAULT_ANGLES } from '../domain/engines/view3d'
 import { buildingSketch, projectSketch } from '../domain/sketch'
 import { accessibleName, allByRole, allText, byRole, byTestId, cleanup, click, FORBIDDEN, installDomShims, press, render } from './testing'
 import {
+  BuildingDrawing,
   BuildingIllustration,
+  BuildingThumb,
   BuildingThumbnail,
+  ProjectThumb,
   CollapsiblePanel,
   EmptyState,
   MaterialImage,
@@ -228,6 +231,59 @@ describe('building illustrations and thumbnails', () => {
     render(<BuildingThumbnail sketch={tiverne} />)
     expect(accessibleName(byRole('img'))).toBe('Illustration of a 7 storey building, drawn from its survey')
     expect(allText().toLowerCase()).not.toContain('photo')
+  })
+})
+
+describe('compact thumbs and the building drawing', () => {
+  const office = projectSketch({ id: 'p1', name: 'Merrowgate Wharf', projectType: 'office' }, ['steel_section', 'stone_cladding'])
+  const tiverne = buildingSketch({ id: 'b1', storeys: 7, structureType: 'Steel frame' }, ['stone_cladding', 'curtain_wall'])
+
+  it('is decorative by default beside a name, and named when asked', () => {
+    render(
+      <>
+        <ProjectThumb sketch={office} testId="a" />
+        <BuildingThumb sketch={tiverne} size="lg" decorative={false} testId="b" />
+      </>,
+    )
+    expect(allByRole('img').map(accessibleName)).toEqual(['Illustration of a 7 storey building, drawn from its survey'])
+    expect(byTestId('a').querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    expect(byTestId('a').getAttribute('data-size')).toBe('md')
+    expect(byTestId('a').className).toContain('size-12')
+    expect(byTestId('b').className).toContain('h-[72px] w-24')
+    expect(byTestId('a').getAttribute('data-kind')).toBe('illustration')
+  })
+
+  it('crops a fitted drawing to the building, with no trees, and draws it the same each time', () => {
+    render(
+      <>
+        <BuildingIllustration sketch={office} fit />
+        <BuildingIllustration sketch={office} fit />
+        <BuildingIllustration sketch={office} />
+      </>,
+    )
+    const [a, b, full] = Array.from(document.querySelectorAll('svg[data-sketch]'))
+    expect(a.outerHTML).toBe(b.outerHTML)
+    expect(a.getAttribute('data-fit')).toBe('building')
+    expect(full.getAttribute('viewBox')).toBe('0 0 320 200')
+    const [x, y, w, h] = (a.getAttribute('viewBox') ?? '').split(' ').map(Number)
+    expect(w).toBeLessThan(320)
+    expect(x).toBeGreaterThanOrEqual(-10)
+    expect(y + h).toBeLessThanOrEqual(200)
+    expect(a.querySelectorAll('circle')).toHaveLength(0)
+    expect(full.querySelectorAll('circle').length).toBeGreaterThan(0)
+  })
+
+  it('draws the building group alone for composing into a larger sheet', () => {
+    render(
+      <svg role="img" aria-label="Sheet">
+        <BuildingDrawing sketch={tiverne} />
+      </svg>,
+    )
+    const g = document.querySelector('g[data-part="building"]')!
+    expect(g.getAttribute('data-sketch')).toBe('existing')
+    expect(g.querySelectorAll('[data-part="block"]').length).toBeGreaterThan(0)
+    expect(g.querySelector('[data-part="crane"]')).toBeNull()
+    expect(g.querySelector('rect')).toBeNull()
   })
 })
 

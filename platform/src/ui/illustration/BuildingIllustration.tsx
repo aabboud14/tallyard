@@ -4,7 +4,7 @@
 // an existing one has scaffold on its right face. Always an illustration, never a photo.
 import type { ReactNode } from 'react'
 import type { BuildingSketch, FacadeKind } from '../../domain/sketch'
-import { axo, cranePoints, massingFor, SKETCH_BOARD, type Massing, type MassingBlock } from './massing'
+import { axo, cranePoints, massingFor, massingPoints, SKETCH_BOARD, type Massing, type MassingBlock } from './massing'
 
 const INK = '#1c1917'
 const GROUND = '#f7f6f3'
@@ -107,36 +107,17 @@ function Block({ b, m, frameOnlyTop, steel, scaffold, k }: { b: MassingBlock; m:
   )
 }
 
-export function BuildingIllustration({ sketch, className, decorative = false }: { sketch: BuildingSketch; className?: string; decorative?: boolean }) {
+/**
+ * The building alone, as an SVG group on the 320 by 200 board: its blocks, frame, scaffold and crane, with no
+ * ground or trees. The landing scene places two of these on one sheet.
+ */
+export function BuildingDrawing({ sketch }: { sketch: BuildingSketch }) {
   const m = massingFor(sketch)
-  const W = SKETCH_BOARD.width
-  const H = SKETCH_BOARD.height
   const tallest = Math.max(...m.blocks.map((b) => b.z + b.h))
   const steel = sketch.frame === 'steel'
   const crane = m.crane ? cranePoints(m) : null
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="xMidYMid slice"
-      className={className}
-      role={decorative ? undefined : 'img'}
-      aria-label={decorative ? undefined : sketch.label}
-      aria-hidden={decorative ? true : undefined}
-      data-sketch={sketch.state}
-      data-use={sketch.use}
-    >
-      <rect width={W} height={H} fill={GROUND} />
-      <line x1={0} y1={H - 10} x2={W} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.5" />
-      {[
-        [26, H - 22, 9],
-        [44, H - 18, 6],
-        [W - 30, H - 20, 8],
-      ].map(([cx, cy, r], i) => (
-        <g key={i}>
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="0.75" opacity="0.6" />
-          <line x1={cx} y1={cy + r} x2={cx} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.6" />
-        </g>
-      ))}
+    <g data-part="building" data-sketch={sketch.state} data-use={sketch.use}>
       {/* The crane stands behind the building, so it is drawn first. */}
       {crane ? (
         <g data-part="crane" stroke={INK} strokeWidth="1" fill="none">
@@ -150,6 +131,56 @@ export function BuildingIllustration({ sketch, className, decorative = false }: 
       {m.blocks.map((b, i) => (
         <Block key={i} k={`b${i}`} b={b} m={m} steel={steel} scaffold={m.scaffold} frameOnlyTop={m.crane && b.z + b.h === tallest && b.storeys > 1} />
       ))}
+    </g>
+  )
+}
+
+/** The view box that holds the building and its crane with a margin, for small frames. Drawing coordinates only. */
+function fittedBox(sketch: BuildingSketch): { x: number; y: number; w: number; h: number } {
+  const ps = massingPoints(massingFor(sketch))
+  const pad = 8
+  const xs = ps.map((p) => p[0])
+  const ys = ps.map((p) => p[1])
+  const x = Math.min(...xs) - pad
+  const y = Math.min(...ys) - pad
+  return { x, y, w: Math.max(...xs) + pad + 4 - x, h: SKETCH_BOARD.height - 10 + pad - y }
+}
+
+/**
+ * `fit` crops the drawing to the building itself and leaves out the trees, so it still reads in a 32 to 48 px
+ * thumb; the frame behind it supplies the paper. Without it the whole board is drawn and sliced to fill.
+ */
+export function BuildingIllustration({ sketch, className, decorative = false, fit = false }: { sketch: BuildingSketch; className?: string; decorative?: boolean; fit?: boolean }) {
+  const W = SKETCH_BOARD.width
+  const H = SKETCH_BOARD.height
+  const box = fit ? fittedBox(sketch) : { x: 0, y: 0, w: W, h: H }
+  return (
+    <svg
+      viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+      preserveAspectRatio={fit ? 'xMidYMid meet' : 'xMidYMid slice'}
+      className={className}
+      role={decorative ? undefined : 'img'}
+      aria-label={decorative ? undefined : sketch.label}
+      aria-hidden={decorative ? true : undefined}
+      data-sketch={sketch.state}
+      data-use={sketch.use}
+      data-fit={fit ? 'building' : undefined}
+    >
+      {fit ? null : <rect width={W} height={H} fill={GROUND} />}
+      <line x1={fit ? box.x : 0} y1={H - 10} x2={fit ? box.x + box.w : W} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.5" />
+      {fit
+        ? null
+        : [
+            [26, H - 22, 9],
+            [44, H - 18, 6],
+            [W - 30, H - 20, 8],
+          ].map(([cx, cy, r], i) => (
+            <g key={i}>
+              <circle cx={cx} cy={cy} r={r} fill="none" stroke={INK} strokeWidth="0.75" opacity="0.6" />
+              <line x1={cx} y1={cy + r} x2={cx} y2={H - 10} stroke={INK} strokeWidth="0.75" opacity="0.6" />
+            </g>
+          ))}
+      <BuildingDrawing sketch={sketch} />
     </svg>
   )
 }

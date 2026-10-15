@@ -13,7 +13,12 @@ import { ProgrammeChart } from './ProgrammeChart'
 import { ModelViewer } from './ModelViewer'
 import { StatementSection } from './StatementSection'
 import { TrackStatusPill, TrackStatusSelect } from './Tracking'
-import { ProjectThumbnail, BuildingThumbnail } from './Thumbnails'
+import { ProjectThumbnail, BuildingThumbnail, ProjectThumb, BuildingThumb } from './Thumbnails'
+import { PageHeader } from './PageHeader'
+import { MaterialImage } from './MaterialImage'
+import { SectionDrawing } from './illustration/drawings'
+import { scaleFor } from './illustration/helpers'
+import { SpotIllustration } from './illustration/spots'
 import { BarList, ChartFrame, Donut, Legend, MetricGrid, MetricTile, PortfolioTimeline, ProgressRing, RibaStageStrip, TargetMeter } from './charts'
 import { MARK, TRACK_STATUS_ORDER, TYPOLOGY_VIZ, type MetricState, type TrackStatusKey } from './labels'
 import { SPOT_KINDS, type SpotKind } from './illustration/spotKinds'
@@ -54,6 +59,12 @@ const STATUS_ROWS = [
   { key: 'pending', label: 'Shortlisted', value: 69.4, valueText: '69.4 tCO2e', colour: MARK.neutral },
   { key: 'declined', label: 'Declined', value: 12.1, valueText: '12.1 tCO2e', colour: MARK.danger, hatched: true },
 ]
+
+/** The sample materials; every family's card image is already under Materials, so this section adds only the larger views. */
+const ILLUSTRATION_SAMPLES = SAMPLE_MATERIALS
+/** One member drawn at two recorded lengths, to show the length on the card. */
+const STEEL_LENGTHS = [3.2, 9] as const
+const STEEL_DESIGNATIONS = ['UB 457x191x67', 'UC 254x254x89']
 
 const FACADE_FAMILIES: [string, FamilyId[]][] = [
   ['Brick', ['clay_brick']],
@@ -97,6 +108,7 @@ function TrackingDemo() {
 
 export function GalleryData() {
   const model = sampleModel(SAMPLE_MATERIALS[0].spec)
+  const tiverne = buildingSketch({ id: 'b-tiverne', storeys: 7, structureType: 'Steel frame with composite slabs, stone and precast cladding', use: 'office' }, ['stone_cladding', 'precast_cladding', 'curtain_wall'])
   const merrowgate = projectSketch({ id: 'p-merrowgate', name: 'Merrowgate Wharf', projectType: 'office' }, ['steel_section', 'steel_section', 'stone_cladding', 'curtain_wall', 'clay_brick'])
   const states: MetricState[] = ['good', 'warning', 'critical', 'neutral']
   return (
@@ -253,6 +265,18 @@ export function GalleryData() {
             </div>
           ))}
         </Row>
+        <Row label="Compact thumbs: small for list rows, medium in a page header, large to lead a card">
+          <ProjectThumb size="sm" sketch={merrowgate} />
+          <ProjectThumb size="md" sketch={merrowgate} />
+          <ProjectThumb size="lg" sketch={merrowgate} />
+          <BuildingThumb size="sm" sketch={tiverne} />
+          <BuildingThumb size="md" sketch={tiverne} />
+          <BuildingThumb size="lg" sketch={tiverne} />
+        </Row>
+        <Row label="In a page header, in place of the folder and building tiles" className="grid gap-6 lg:grid-cols-2">
+          <PageHeader leading={<ProjectThumb sketch={merrowgate} />} title="Merrowgate Wharf" subtitle="Office for Lantern Quay Developments, RIBA stage 2" />
+          <PageHeader leading={<BuildingThumb sketch={tiverne} />} title="Tiverne House" subtitle="Donor building, 7 storeys, steel frame" />
+        </Row>
         <Row label="Project card thumbnail with its materials" className="block max-w-sm">
           <Card>
             <ProjectThumbnail rounded="top" sketch={merrowgate} materials={SAMPLE_MATERIALS.slice(0, 3).map((m) => ({ publicId: m.publicId, spec: m.spec }))} />
@@ -262,6 +286,34 @@ export function GalleryData() {
               <RibaStageStrip stage={2} showLabel className="mt-3" />
             </CardBody>
           </Card>
+        </Row>
+      </Section>
+
+      <Section id="illustrations" title="Illustrations" text="Two kinds of picture only, both illustrations and never photos: a swatch of the material at a stated scale with its scale bar, or a technical line drawing with a title strip. Each family's card image is under Materials; steel is drawn in axonometric at its recorded length.">
+        <Row label="Larger views of the drawn families not shown under Materials" className="grid gap-4 md:grid-cols-2">
+          {[ILLUSTRATION_SAMPLES[5], ILLUSTRATION_SAMPLES[7]].map((m) => (
+            <MaterialImage key={m.publicId} spec={m.spec} publicId={m.publicId} aspect="4/3" rounded="md" view="detail" showKind />
+          ))}
+        </Row>
+        <Row label="The same member at two recorded lengths" className="grid max-w-2xl grid-cols-2 gap-4">
+          {STEEL_LENGTHS.map((lengthM) => (
+            <MaterialImage key={lengthM} spec={{ family: 'steel_section', designation: 'UB 457x191x67', lengthM }} publicId={`L-STEEL${lengthM}`} rounded="md" />
+          ))}
+        </Row>
+        <Row label="Dimensioned sections at one shared scale">
+          <Card padding="md" className="flex flex-wrap items-end justify-center gap-6">
+            {STEEL_DESIGNATIONS.map((d) => (
+              <SectionDrawing key={d} designation={d} scale={scaleFor(STEEL_DESIGNATIONS, 120)} idPrefix="gal" />
+            ))}
+          </Card>
+        </Row>
+        <Row label="Spot drawings for empty states">
+          {SPOT_KINDS.map((k) => (
+            <span key={k} className="inline-flex flex-col items-center gap-1.5">
+              <SpotIllustration kind={k} className="h-[66px] w-[90px]" />
+              <span className="text-xs text-muted">{k}</span>
+            </span>
+          ))}
         </Row>
       </Section>
 
