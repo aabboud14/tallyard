@@ -17,7 +17,7 @@ import { OUTPUT_CAVEAT } from '../../store/selectors/roles-views'
 import type { ReusedItem } from '../../store/selectors/consultant'
 import { BarList, Button, Callout, Card, CardBody, CardHeader, CollapsiblePanel, EmptyState, IndicativeMarker, MARK, Pill, Table, TargetMeter, TBody, TD, TH, THead, TR, toast } from '../../ui'
 import { Page } from '../../app/Page'
-import { TabHeader, TrackBar } from '../sustainability/parts'
+import { TabHeader, TrackBar, TrackLegend } from '../sustainability/parts'
 import { buildComplianceWorkbook, downloadFile } from './exports'
 
 const ITEM_TONE: Record<ReusedItem['status'], 'brand' | 'info' | 'neutral'> = { Confirmed: 'brand', Reserved: 'info', Approved: 'neutral' }
@@ -97,7 +97,7 @@ function ComplianceBody() {
                   </dl>
                 </div>
                 <TargetMeter
-                  label="Secured against the aim"
+                  label={fig.content.label}
                   value={fig.content.value}
                   max={fig.content.max}
                   target={fig.content.target}
@@ -106,6 +106,7 @@ function ComplianceBody() {
                   state={fig.content.state}
                   stateText={fig.content.stateText}
                   axis={fig.content.axis}
+                  reference={fig.content.reference}
                   testId="content-chart"
                 />
                 {fig.contribution.items.length > 0 ? (
@@ -187,7 +188,7 @@ function ComplianceBody() {
                   </p>
                   <p className="m-0 text-sm text-ink-soft">
                     {card.targetText}
-                    <span className="text-muted">. {card.predictedText}</span>
+                    <span className="text-muted">. {card.latestLine}</span>
                   </p>
                   <TrackBar counts={s.counts} label={`${s.label} credits by status`} size="sm" legend={false} />
                   <p className="m-0 text-sm text-muted">
@@ -198,6 +199,7 @@ function ComplianceBody() {
               )
             })}
           </div>
+          <TrackLegend />
         </section>
       ) : null}
 

@@ -235,6 +235,25 @@ describe('goals and targets', () => {
     expectClean()
   })
 
+  it('starts a new value without the old reason, and writes the basis out below the table layout', async () => {
+    await page(`/app/projects/${M}/targets`, U.marcus, 'targets-page')
+    // Below 1280 px the rows are cards and a tooltip cannot be tapped open, so the basis is a line of text.
+    expect(byTestId('goal-basis-cd_diversion').textContent).toContain('London Plan 2021 Policy SI 7')
+    click(byTestId('goal-edit-content_by_value'))
+    const note = await waitFor(() => document.querySelector<HTMLTextAreaElement>('[data-testid="goal-note"]'))
+    const before = record().goals.content_by_value?.note ?? ''
+    expect(before.length).toBeGreaterThan(0)
+    expect(note.value).toBe(before)
+    typeInto(byTestId('goal-value'), '30')
+    await settle()
+    expect(byTestId('goal-note').getAttribute('placeholder')).toBe(`Before: ${before}`)
+    expect((byTestId('goal-note') as HTMLTextAreaElement).value).toBe('')
+    click(byTestId('goal-save'))
+    await settle()
+    expect(record().goals.content_by_value).toMatchObject({ value: 0.3, note: '' })
+    expect(byTestId('goal-content_by_value').textContent).not.toContain(before)
+  })
+
   it('shows a field error for a value out of range', async () => {
     await page(`/app/projects/${M}/targets`, U.marcus, 'targets-page')
     click(byTestId('goal-edit-content_by_value'))

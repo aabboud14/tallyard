@@ -22,6 +22,10 @@ function CellLabel({ children }: { children: string }) {
   return <p className="m-0 mb-0.5 text-xs text-muted xl:sr-only">{children}</p>
 }
 
+function basisText(row: GoalRow): string {
+  return `${row.defaultBasis}${row.defaultStatus === 'published' ? '' : ' Indicative.'}`
+}
+
 function GoalLine({ row, onEdit }: { row: GoalRow; onEdit: (e: Editing) => void }) {
   const projectId = useParams().projectId ?? ''
   const reset = () => {
@@ -46,13 +50,19 @@ function GoalLine({ row, onEdit }: { row: GoalRow; onEdit: (e: Editing) => void 
         <p className="m-0 flex items-start gap-1.5 text-ink-soft">
           <span className="min-w-0">{row.defaultText}</span>
           {row.defaultBasis ? (
-            <Tooltip content={`${row.defaultBasis}${row.defaultStatus === 'published' ? '' : ' Indicative.'}`}>
-              <button type="button" aria-label={`Basis: ${row.defaultBasis}`} className="relative mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-faint hover:text-ink max-sm:after:absolute max-sm:after:-inset-3.5">
+            <Tooltip content={basisText(row)}>
+              <button type="button" aria-label={`Basis: ${row.defaultBasis}`} className="relative mt-0.5 hidden size-4 shrink-0 items-center justify-center rounded-sm text-faint hover:text-ink xl:inline-flex">
                 <Info aria-hidden="true" className="size-3.5" />
               </button>
             </Tooltip>
           ) : null}
         </p>
+        {/* A tooltip does not open on touch, so below the table layout the basis is written out. */}
+        {row.defaultBasis ? (
+          <p className="m-0 mt-0.5 text-xs text-muted xl:hidden" data-testid={`goal-basis-${row.id}`}>
+            {basisText(row)}
+          </p>
+        ) : null}
       </div>
       <div className="min-w-0 text-sm">
         <CellLabel>For this project</CellLabel>
@@ -121,8 +131,15 @@ function TargetDialog({ editing, onClose }: { editing: GoalRow; onClose: () => v
   const projectId = useParams().projectId ?? ''
   const [value, setValue] = useState(goalInputText(editing, editing.target))
   const [notTargeted, setNotTargeted] = useState(editing.source === 'override' && editing.target === null)
-  const [note, setNote] = useState(editing.overrideNote ?? '')
+  const previousNote = editing.overrideNote ?? ''
+  const [note, setNote] = useState(previousNote)
   const [error, setError] = useState<string | null>(null)
+  // The reason belongs to the value it was given for: a new value starts without it, unless the consultant has edited it.
+  const changeValue = (v: string) => {
+    setValue(v)
+    setError(null)
+    if (note === previousNote) setNote('')
+  }
   const save = () => {
     let next: string | number | null = null
     if (!notTargeted) {
@@ -161,11 +178,20 @@ function TargetDialog({ editing, onClose }: { editing: GoalRow; onClose: () => v
     >
       <div className="flex flex-col gap-4">
         <p className="m-0 text-sm text-muted">Default: {editing.defaultText}. The default stays on record.</p>
-        {!notTargeted ? <ValueField row={editing} value={value} onChange={(v) => { setValue(v); setError(null) }} label="Target" error={error} testId="goal-value" /> : null}
-        <Checkbox checked={notTargeted} onCheckedChange={(c) => { setNotTargeted(c === true); setError(null) }} label="Not targeted on this project" data-testid="goal-not-targeted" />
+        {!notTargeted ? <ValueField row={editing} value={value} onChange={changeValue} label="Target" error={error} testId="goal-value" /> : null}
+        <Checkbox
+          checked={notTargeted}
+          onCheckedChange={(c) => {
+            setNotTargeted(c === true)
+            setError(null)
+            if (note === previousNote) setNote('')
+          }}
+          label="Not targeted on this project"
+          data-testid="goal-not-targeted"
+        />
         {notTargeted && error ? <p className="m-0 text-sm text-danger">{error}</p> : null}
         <Field label="Reason" optional hint="Seen by the project team with the target.">
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="For example: agreed with the client at stage 2." data-testid="goal-note" />
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={previousNote && note === '' ? `Before: ${previousNote}` : 'For example: agreed with the client at stage 2.'} data-testid="goal-note" />
         </Field>
       </div>
     </Dialog>

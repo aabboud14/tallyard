@@ -13,7 +13,7 @@ import { CERT_CAVEAT } from '../../domain/reference/sustainabilityCopy'
 import { Button, Callout, Card, Dialog, Field, MetricGrid, MetricTile, Pill, ProgressRing, Textarea, toast } from '../../ui'
 import { Page } from '../../app/Page'
 import { CarbonSection } from '../carbon/ProjectCarbon'
-import { GoalMeterView, MethodologyFooter, TabHeader, TabSection, TrackBar } from './parts'
+import { GoalMeterView, MethodologyFooter, TabHeader, TabSection, TrackBar, TrackLegend } from './parts'
 
 const SCHEME_ICON = { breeam: ShieldCheck, leed: ShieldCheck, well: ShieldCheck, circular: Recycle } as const
 
@@ -107,7 +107,7 @@ function Schemes({ v }: { v: SustainabilityView }) {
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {v.schemes.map((s) => {
-          const c = schemeCard(s)
+          const c = schemeCard(s, v.side)
           const Icon = SCHEME_ICON[s.scheme]
           return (
             <Card key={s.scheme} padding="md" className="flex min-w-0 flex-col gap-3" data-testid={`scheme-${s.scheme}`}>
@@ -117,7 +117,7 @@ function Schemes({ v }: { v: SustainabilityView }) {
                     <Icon aria-hidden="true" className="size-4 text-faint" />
                     {s.label}
                   </p>
-                  <p className="m-0 mt-0.5 line-clamp-1 text-xs text-muted" title={s.version}>
+                  <p className="m-0 mt-0.5 line-clamp-2 text-xs text-muted" title={s.version}>
                     {s.version}
                   </p>
                 </div>
@@ -133,7 +133,7 @@ function Schemes({ v }: { v: SustainabilityView }) {
                   <dd className="m-0 font-medium text-ink">{c.targetText}</dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="text-muted">Latest</dt>
+                  <dt className="text-muted">{c.latestLabel}</dt>
                   <dd className="m-0 font-medium text-ink">{c.predictedText}</dd>
                 </div>
               </dl>
@@ -145,6 +145,7 @@ function Schemes({ v }: { v: SustainabilityView }) {
           )
         })}
       </div>
+      <TrackLegend />
     </TabSection>
   )
 }
@@ -170,7 +171,7 @@ function RequirementsRollup({ v }: { v: SustainabilityView }) {
             {r.atRiskItems.map((x) => (
               <li key={x.id} className="flex min-w-0 items-center gap-2 text-sm">
                 <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-warning" />
-                <Link to={r.href} className="min-w-0 truncate rounded-sm font-medium text-ink hover:underline">
+                <Link to={r.href} className="min-w-0 rounded-sm font-medium text-ink hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:items-center sm:truncate">
                   {x.title}
                 </Link>
                 <span className="shrink-0 text-muted">At risk</span>

@@ -10,7 +10,7 @@ import type { CertificationView, CreditRow } from '../../store/selectors/sustain
 import { readyText, schemeCard } from '../../store/selectors/sustainability-screens'
 import { SCHEME_IDS, type SchemeId } from '../../domain/reference/certification'
 import type { TrackStatus } from '../../domain/sustainabilityTypes'
-import { Button, Callout, Card, Checkbox, cx, DescriptionList, EmptyState, Pill, Switch, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, toast, TrackStatusPill, TrackStatusSelect, type TrackStatusKey } from '../../ui'
+import { Button, Callout, Card, Checkbox, cx, DescriptionList, EmptyState, Pill, Switch, Table, TBody, TD, TH, THead, TR, Tabs, Textarea, toast, TrackStatusSelect, type TrackStatusKey } from '../../ui'
 import { Page } from '../../app/Page'
 import { useMediaQuery } from '../../app/media'
 import { TabHeader, TrackBar } from './parts'
@@ -49,7 +49,6 @@ function CreditCard({ c, projectId }: { c: CreditRow; projectId: string }) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 max-sm:pl-12">
-          {c.targeted ? <TrackStatusPill status={c.status} variant="quiet" className="max-md:hidden" /> : null}
           <TrackStatusSelect value={c.status} onChange={setStatus} label={`Status of ${c.code}`} options={STATUS_OPTIONS} disabled={!c.targeted} testId={`credit-status-${c.id}`} />
         </div>
       </div>
@@ -252,6 +251,7 @@ export function Certification() {
         <div className="border-b border-line">
           <Tabs
             label="Scheme"
+            wrapOnPhone
             items={v.schemes.map((s) => ({ label: s.label, href: `${base}/certification?scheme=${s.scheme}`, active: s.scheme === v.scheme, count: s.targeted, testId: `scheme-tab-${s.scheme}` }))}
           />
         </div>
@@ -267,7 +267,7 @@ export function Certification() {
             ) : null}
           </div>
           <div className="min-w-0">
-            <p className="m-0 text-sm text-muted">Latest</p>
+            <p className="m-0 text-sm text-muted">{card.latestLabel}</p>
             <p className="m-0 text-lg font-semibold text-ink">{card.predictedText}</p>
             <p className="m-0 mt-0.5 text-sm text-muted">{current.version}</p>
           </div>

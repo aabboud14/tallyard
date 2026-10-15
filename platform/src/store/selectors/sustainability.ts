@@ -18,7 +18,7 @@ import { formatDate, formatDateShort } from '../../domain/dates'
 import * as f from '../../domain/format'
 import type { AppData, CreditTrack, Viewer } from '../types'
 import { projectSide, type ProjectSide } from '../access'
-import { applicableRequirements, goalTargets, schemeTargeted, sustainabilityOf } from '../sustainabilityRecord'
+import { applicableRequirements, effectiveTargets, goalTargets, schemeTargeted, sustainabilityOf } from '../sustainabilityRecord'
 import { projectHeader, projectCarbon, type ProjectCarbon, type ProjectHeader } from './project'
 import { projectMetrics, slug, type ProjectMetrics } from './consultant'
 import { stageLabel, todayOf } from './common'
@@ -149,6 +149,8 @@ export type SchemeSummaryView = {
   atRisk: number
   counts: Record<TrackStatus, number>
   tone: 'brand' | 'info' | 'warning' | 'neutral'
+  /** Circular economy only: the project's content by value target (0 when not targeted) and the statement's status. */
+  circular: { contentTarget: number; statement: StatementStatus | null } | null
 }
 
 function schemeSummaries(state: AppData, p: Project): SchemeSummaryView[] {
@@ -159,7 +161,8 @@ function schemeSummaries(state: AppData, p: Project): SchemeSummaryView[] {
     const ratingTarget = goal ? goalValueText(goalDef(goal), goalTargets(state, p, goal).target.value) : null
     const predicted = goal ? (record.actuals[goal]?.value ?? null) : null
     const tone = c.atRisk > 0 ? 'warning' : c.targeted > 0 && c.ready === c.targeted ? 'brand' : c.targeted > 0 ? 'info' : 'neutral'
-    return { scheme: s.id, label: s.label, version: s.version, ratingTarget, ratingPredicted: predicted === null ? null : String(predicted), targeted: c.targeted, ready: c.ready, atRisk: c.atRisk, counts: c.counts, tone }
+    const circular = s.id === 'circular' ? { contentTarget: effectiveTargets(state, p.id).contentByValue, statement: record.statement?.status ?? null } : null
+    return { scheme: s.id, label: s.label, version: s.version, ratingTarget, ratingPredicted: predicted === null ? null : String(predicted), targeted: c.targeted, ready: c.ready, atRisk: c.atRisk, counts: c.counts, tone, circular }
   })
 }
 

@@ -44,7 +44,7 @@ export function TodoList({ todos, overdue }: { todos: RankedTodo[]; overdue: num
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-base font-medium text-ink sm:truncate">{t.title}</span>
-                    <span className="block truncate text-sm text-muted">
+                    <span className="block text-sm text-muted sm:truncate">
                       <span className="sr-only">{KIND[t.kind]}. </span>
                       {t.detail}
                     </span>

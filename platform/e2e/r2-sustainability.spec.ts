@@ -157,3 +157,55 @@ test('the developer reviews and follows the figures; the consultant sets targets
 
   expect(errors).toEqual([])
 })
+
+test('the review link lands on the statement on a phone, and the tracking, tiles and tab strips fit at 390, 1024 and 1440', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signIn(page, 'isla')
+
+  // The four tiles stack on a phone, so their words do not wrap into narrow columns.
+  const tiles = page.getByTestId('client-metrics').locator('[data-testid^="client-metric-"]')
+  await expect(tiles).toHaveCount(4)
+  for (const box of await tiles.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))) expect(box).toBeGreaterThan(300)
+  await expect(page.getByTestId('client-reuse-content')).toContainText('reused and recycled by value, aim 25%')
+
+  // The to-do link for the statement opens the Sustainability tab at the statement, with its review button on screen.
+  await page.getByTestId(`todo-review_statement-${M}`).getByRole('link').click()
+  await page.waitForURL(`**/app/projects/${M}/sustainability#statement`)
+  await expect(page.getByTestId('statement-review')).toBeInViewport()
+  expect(await horizontalOverflow(page)).toBe(0)
+
+  // The tracking table needs about 900 px of its own: cards at 1024 with the sidebar open, a table at 1440.
+  const fits = () =>
+    page.getByTestId('sustainability-tracking').evaluate((el) => Array.from(el.querySelectorAll('*')).every((c) => !['auto', 'scroll'].includes(getComputedStyle(c).overflowX) || c.scrollWidth <= c.clientWidth + 1))
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await page.goto('/app/home')
+  await expect(page.getByTestId('sustainability-tracking')).toHaveAttribute('data-layout', 'cards')
+  expect(await fits()).toBe(true)
+  expect(await horizontalOverflow(page)).toBe(0)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.getByTestId('sustainability-tracking')).toHaveAttribute('data-layout', 'table')
+  expect(await fits()).toBe(true)
+  await expect(page.getByTestId(`tracking-${K}`)).toContainText('No consultant appointed. Defaults from the requirements are shown.')
+
+  // The consultant's scheme tabs wrap on a phone; his long project tab strip keeps the current tab in view and shows
+  // a chevron towards the tabs it hides.
+  await switchTo(page, 'marcus')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/app/projects/${M}/certification`)
+  const schemes = page.getByRole('navigation', { name: 'Scheme' }).locator('ul')
+  expect(await schemes.evaluate((ul) => ul.scrollWidth - ul.clientWidth)).toBeLessThanOrEqual(0)
+  await expect(page.getByTestId('scheme-tab-circular')).toBeInViewport()
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await page.goto(`/app/projects/${M}/compliance`)
+  await expect(page.getByTestId('tab-compliance')).toBeInViewport({ ratio: 1 })
+  const strip = page.getByRole('navigation', { name: 'Project' })
+  await expect(strip.locator('[data-part="tabs-scroll-left"]')).toBeVisible()
+  await strip.locator('[data-part="tabs-scroll-left"]').click()
+  await expect(strip.locator('[data-part="tabs-scroll-right"]')).toBeVisible()
+  await expect(page.getByTestId('content-chart')).toContainText('Target at least 25%')
+  await expect(page.getByTestId('content-chart')).toContainText('Policy aim 20%')
+  expect(await horizontalOverflow(page)).toBe(0)
+
+  expect(errors).toEqual([])
+})

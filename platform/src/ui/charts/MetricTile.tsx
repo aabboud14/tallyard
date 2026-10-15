@@ -9,10 +9,10 @@ import { IndicativeMarker } from '../Badge'
 import { StateLine } from '../Card'
 import { MARK, METRIC_STATE, type MetricState } from '../labels'
 
-/** Two tiles across on phones, four from 1280 px. */
-export function MetricGrid({ children, className, label, testId }: { children: ReactNode; className?: string; /** Names the group of figures. */ label?: string; testId?: string }) {
+/** Two tiles across on phones, four from 1280 px. With stackOnPhone, one across below 480 px, for tiles with long words. */
+export function MetricGrid({ children, className, label, testId, stackOnPhone = false }: { children: ReactNode; className?: string; /** Names the group of figures. */ label?: string; testId?: string; stackOnPhone?: boolean }) {
   return (
-    <div role={label ? 'group' : undefined} aria-label={label} data-testid={testId} className={cx('grid min-w-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4', className)}>
+    <div role={label ? 'group' : undefined} aria-label={label} data-testid={testId} className={cx('grid min-w-0 gap-3 sm:gap-4 xl:grid-cols-4', stackOnPhone ? 'grid-cols-1 min-[480px]:grid-cols-2' : 'grid-cols-2', className)}>
       {children}
     </div>
   )

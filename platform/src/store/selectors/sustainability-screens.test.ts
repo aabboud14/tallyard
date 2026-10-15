@@ -5,9 +5,9 @@ import { actor, fresh, must, U, viewer } from '../../test/fixtures'
 import { MERROWGATE_ID } from '../../domain/seed/world'
 import { lotPrivateStrings } from '../../domain/privacy/privateStrings'
 import { FORBIDDEN } from '../../ui/testing'
-import { setGoalTarget } from '../actions/sustainability'
+import { resetGoalTarget, setGoalTarget } from '../actions/sustainability'
 import type { AppData } from '../types'
-import { goalRows, requirementsView } from './sustainability'
+import { certificationSummary, goalRows, requirementsView } from './sustainability'
 import { reservationsView, approvalsView } from './client'
 import { projectCarbon } from './project'
 import { complianceView } from './consultant'
@@ -24,7 +24,9 @@ import {
   requirementFilters,
   reservationCarbonRows,
   reservationCostBars,
+  reuseContentText,
   scaleValueText,
+  schemeCard,
 } from './sustainability-screens'
 
 const KILNWORTH_ID = 'prj_w7kq2m'
@@ -110,6 +112,16 @@ describe('the client home', () => {
     expect(v.tiles.reuse.ring?.centre).toBe('80%')
   })
 
+  it('words the reuse tile\'s content line as the measure is named everywhere else, against the project aim', () => {
+    expect(clientHomeView(fresh(), viewer(U.isla))!.tiles.reuse.contentText).toBe('19.9% reused and recycled by value, aim 25%')
+    // A new target reaches the client's tile as it reaches the tracking table.
+    const s = must(setGoalTarget(fresh(), actor(U.marcus), MERROWGATE_ID, 'content_by_value', 0.3, '')).state
+    const v = clientHomeView(s, viewer(U.isla))!
+    expect(v.tiles.reuse).toMatchObject({ aimText: '30%', contentText: '19.9% reused and recycled by value, aim 30%', state: 'critical' })
+    expect(reuseContentText(null, 0.2)).toBeNull()
+    expect(reuseContentText(0.1, null)).toBe('10.0% reused and recycled by value, no aim set')
+  })
+
   it('lays out the two projects on the timeline with their marker dates, and no axis dates', () => {
     const v = clientHomeView(fresh(), viewer(U.isla))!
     expect(v.timeline.rows.map((r) => r.id).sort()).toEqual([KILNWORTH_ID, MERROWGATE_ID].sort())
@@ -176,16 +188,46 @@ describe('carbon, certification, requirements and compliance', () => {
     expect(readyText(1, 4)).toBe('1 of 4 ready')
   })
 
+  it('words the circular economy card by its content target and the statement, not a rating', () => {
+    const sum = certificationSummary(fresh(), viewer(U.marcus), MERROWGATE_ID)!
+    const circular = sum.find((x) => x.scheme === 'circular')!
+    expect(circular.circular).toEqual({ contentTarget: 0.25, statement: 'ready_for_review' })
+    expect(schemeCard(circular)).toMatchObject({ targetText: 'Content by value at least 25%', latestLabel: 'Statement', predictedText: 'With the client for review', latestLine: 'Statement with the client for review' })
+    expect(schemeCard(circular, 'client')).toMatchObject({ predictedText: 'Ready for your review' })
+    const breeam = sum.find((x) => x.scheme === 'breeam')!
+    expect(breeam.circular).toBeNull()
+    expect(schemeCard(breeam)).toMatchObject({ targetText: 'Excellent', latestLabel: 'Latest', predictedText: 'Predicted Very good' })
+    const off = must(setGoalTarget(fresh(), actor(U.marcus), MERROWGATE_ID, 'content_by_value', null, '')).state
+    expect(schemeCard(certificationSummary(off, viewer(U.marcus), MERROWGATE_ID)!.find((x) => x.scheme === 'circular')!).targetText).toBe('Content by value not targeted')
+  })
+
   it('filters the requirements by status, with counts', () => {
     const v = requirementsView(fresh(), viewer(U.isla), MERROWGATE_ID)!
     const f = Object.fromEntries(requirementFilters(v.rows).map((x) => [x.key, x.count]))
     expect(f).toEqual({ all: 10, at_risk: 1, open: 10, evidence_ready: 0, not_applicable: 0 })
   })
 
-  it('reads content by value near the 20% aim on the compliance page', () => {
+  it('reads content by value against the project target on the compliance page, with the 20% policy aim as a second mark', () => {
     const c = complianceFigures(complianceView(fresh(), viewer(U.marcus), MERROWGATE_ID)!)
-    expect(c.content).toMatchObject({ state: 'warning', stateText: 'Near target', targetText: 'Aim at least 20%', valueText: '19.91%', withApprovedText: '20.29%' })
+    // BRIEF 14.2: effectiveTargets is the one source of project targets, so the meter judges Merrowgate's 25% override.
+    expect(c.content).toMatchObject({ label: 'Secured against the project target', target: 0.25, state: 'critical', stateText: 'Off target', targetText: 'Target at least 25%', valueText: '19.91%', withApprovedText: '20.29%' })
+    expect(c.content!.reference).toEqual({ value: 0.2, text: 'Policy aim 20%' })
+    expect(c.content!.max).toBeGreaterThanOrEqual(0.25)
     expect(c.contribution.items.length).toBeGreaterThan(0)
     for (const it of c.contribution.items) expect(it.value).toBeLessThanOrEqual(c.contribution.max)
+  })
+
+  it('follows a new target, and drops the second mark when the target is the policy aim', () => {
+    let s = must(setGoalTarget(fresh(), actor(U.marcus), MERROWGATE_ID, 'content_by_value', 0.3, '')).state
+    expect(complianceFigures(complianceView(s, viewer(U.marcus), MERROWGATE_ID)!).content).toMatchObject({ target: 0.3, targetText: 'Target at least 30%', state: 'critical' })
+    s = must(resetGoalTarget(s, actor(U.marcus), MERROWGATE_ID, 'content_by_value')).state
+    const c = complianceFigures(complianceView(s, viewer(U.marcus), MERROWGATE_ID)!).content!
+    expect(c).toMatchObject({ target: 0.2, targetText: 'Target at least 20%', state: 'warning', stateText: 'Near target', reference: null })
+  })
+
+  it('reads the policy aim when content by value is not targeted on the project', () => {
+    const s = must(setGoalTarget(fresh(), actor(U.marcus), MERROWGATE_ID, 'content_by_value', null, '')).state
+    const c = complianceFigures(complianceView(s, viewer(U.marcus), MERROWGATE_ID)!).content!
+    expect(c).toMatchObject({ label: 'Secured against the policy aim', target: 0.2, targetText: 'Policy aim at least 20%', reference: null })
   })
 })

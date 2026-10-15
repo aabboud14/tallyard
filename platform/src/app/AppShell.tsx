@@ -24,7 +24,7 @@ function NavProgress() {
   )
 }
 
-/** Scroll position per history entry: a new page starts at the top, Back returns to where you were. */
+/** Scroll position per history entry: a new page starts at the top, or at its #hash target; Back returns to where you were. */
 function useScrollMemory(el: RefObject<HTMLElement | null>) {
   const location = useLocation()
   const type = useNavigationType()
@@ -38,7 +38,14 @@ function useScrollMemory(el: RefObject<HTMLElement | null>) {
     last.current = { key: location.key, pathname: location.pathname }
     if (prev && prev.pathname === location.pathname && type !== 'POP') return
     const to = type === 'POP' ? (positions.current.get(location.key) ?? 0) : 0
+    const hash = type === 'POP' ? '' : location.hash
     requestAnimationFrame(() => {
+      // A link to a section (for example #statement) lands on it. A page still loading scrolls there itself once ready.
+      const target = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null
+      if (target) {
+        target.scrollIntoView({ block: 'start' })
+        return
+      }
       if (node && typeof node.scrollTo === 'function') node.scrollTo({ top: to })
       else if (node) node.scrollTop = to
       try {
@@ -47,7 +54,7 @@ function useScrollMemory(el: RefObject<HTMLElement | null>) {
         // no window scrolling here (tests)
       }
     })
-  }, [location.key, location.pathname, type, el])
+  }, [location.key, location.pathname, location.hash, type, el])
 }
 
 export function AppShell() {
