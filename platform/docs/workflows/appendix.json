@@ -1,0 +1,15 @@
+{"title": "Things worth a look",
+ "intro": "While checking each workflow against the code, these gaps came up. None of them breaks a journey, but each is a product decision you may want to make. The section and workflow where each appears is given in brackets.",
+ "items": [
+  ["A lot made private keeps its waiting reservation requests, and the owner can still accept one.", "Donor building owner, List a lot"],
+  ["When the owner declines a reservation, the architect is not notified; it only shows in project activity. The consultant gets no reservation notifications at all.", "Client, Seller decision; Donor building owner, Decide reservation requests"],
+  ["When another buyer reserves a lot, the approved material drops out of the client's Approvals and Reservations with no prompt to choose again.", "Client, Seller decision"],
+  ["Once saved, a captured item's material, size and quantity cannot be changed and the item cannot be deleted. Undo straight after saving is the only fix.", "Surveyor, Capture an item"],
+  ["A result the consultant enters for a goal cannot be removed from the screen, only replaced.", "Sustainability consultant, Enter a result"],
+  ["The client cannot send a circular economy statement back to the consultant, only comment and mark it reviewed. A statement already sent keeps updating from live figures.", "Sustainability consultant, Statement review"],
+  ["Waste engagements exist only in the sample data. Nothing in the platform starts a new one.", "How it fits together, Getting a new organisation started"],
+  ["Removing a surveyor or a deconstruction contractor tells nobody; only the building's activity records it.", "Donor building owner, Appoint a surveyor; Contractor dates"],
+  ["A share link page hides every reserved lot, including one reserved for the opener's own project.", "Donor building owner, Open a share link"],
+  ["Search shows inventory results to a deconstruction contractor that then open a no-access page.", "Accounts and the sandbox, Search"],
+  ["Sandbox limits, expected for now: Reset your password lets anyone who knows an account's email set its password; invite links only work in the same browser; changing a sample account's password stops its one-click card working until the sandbox is reset.", "Accounts and the sandbox"]
+ ]}

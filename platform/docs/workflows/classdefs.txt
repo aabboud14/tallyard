@@ -1,0 +1,7 @@
+classDef arch fill:#dbeafe,stroke:#1d4ed8,color:#1c1917
+classDef client fill:#ede9fe,stroke:#6d28d9,color:#1c1917
+classDef owner fill:#fef3c7,stroke:#b45309,color:#1c1917
+classDef surveyor fill:#ccfbf1,stroke:#0f766e,color:#1c1917
+classDef contractor fill:#e7e5e4,stroke:#57534e,color:#1c1917
+classDef consultant fill:#dcfce7,stroke:#15803d,color:#1c1917
+classDef system fill:#fafaf9,stroke:#a8a29e,color:#44403c,stroke-dasharray:4 3
