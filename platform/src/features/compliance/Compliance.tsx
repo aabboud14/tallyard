@@ -1,19 +1,23 @@
 // Project compliance for the sustainability consultant: reused and recycled content by value against the aim,
-// avoided carbon and reclaimed mass, the reused items, the bill of materials and the certification mapping.
-// Exports the workbook and prints to A4. Indicative, from public listings and the project's own records.
+// avoided carbon and reclaimed mass, the circular economy statement, the certification summary per scheme, the
+// reused items and the bill of materials. Exports the compliance workbook (with the targets, requirements and the
+// certification mapping from the tracked credits) and prints to A4. Indicative, from public listings and the
+// project's own records; not certification advice.
 import { useState } from 'react'
-import { useParams } from 'react-router'
-import { FileSpreadsheet, Leaf, Printer, Scale } from 'lucide-react'
+import { Link, useParams } from 'react-router'
+import { ArrowRight, FileSpreadsheet, FileText, Leaf, Printer, Scale, ShieldCheck, Table2 } from 'lucide-react'
 import './print.css'
 import { LABELS } from '../../domain/reference/labels'
-import { CERTIFICATION_ROWS, STAGE_CHECKLIST } from '../../domain/reference/policy'
+import { CERT_CAVEAT } from '../../domain/reference/sustainabilityCopy'
 import { formatDate } from '../../domain/dates'
 import * as f from '../../domain/format'
 import { selectors, useView } from '../../store'
-import { complianceWorkbookModel, contentChart, OUTPUT_CAVEAT, type ContentChart } from '../../store/selectors/roles-views'
+import { complianceFigures, schemeCard, STATEMENT_TONE } from '../../store/selectors/sustainability-screens'
+import { OUTPUT_CAVEAT } from '../../store/selectors/roles-views'
 import type { ReusedItem } from '../../store/selectors/consultant'
-import { Button, Callout, Card, CardBody, CardHeader, EmptyState, IndicativeMarker, Pill, Table, TBody, TD, TH, THead, TR, toast } from '../../ui'
+import { BarList, Button, Callout, Card, CardBody, CardHeader, CollapsiblePanel, EmptyState, IndicativeMarker, MARK, Pill, Table, TargetMeter, TBody, TD, TH, THead, TR, toast } from '../../ui'
 import { Page } from '../../app/Page'
+import { TabHeader, TrackBar } from '../sustainability/parts'
 import { buildComplianceWorkbook, downloadFile } from './exports'
 
 const ITEM_TONE: Record<ReusedItem['status'], 'brand' | 'info' | 'neutral'> = { Confirmed: 'brand', Reserved: 'info', Approved: 'neutral' }
@@ -21,9 +25,12 @@ const ITEM_TONE: Record<ReusedItem['status'], 'brand' | 'info' | 'neutral'> = { 
 function ComplianceBody() {
   const { projectId = '' } = useParams()
   const c = useView(selectors.complianceView, projectId)
-  const m = useView(complianceWorkbookModel, projectId)
+  const m = useView(selectors.complianceWorkbook, projectId)
+  const schemes = useView(selectors.certificationSummary, projectId)
+  const sus = useView(selectors.sustainabilityView, projectId)
   const [busy, setBusy] = useState(false)
   if (!c) return null
+  const base = `/app/projects/${projectId}`
 
   const exportWorkbook = async () => {
     setBusy(true)
@@ -39,86 +46,72 @@ function ComplianceBody() {
     }
   }
 
-  const lines = c.secured.lines.filter((l) => l.line.family !== null)
-  const chart = contentChart(c.secured.percent, c.withApproved.percent, c.aim)
+  const fig = complianceFigures(c)
+  const statement = sus?.statement ?? null
 
   return (
-    <div className="compliance-report flex flex-col gap-6" data-testid="compliance">
+    <div className="compliance-report flex flex-col gap-8" data-testid="compliance">
       <p className="m-0 hidden text-2xl font-semibold text-ink print:block">{c.header.name}, compliance</p>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="m-0 flex flex-wrap items-center gap-2 text-md font-semibold text-ink">
+      <TabHeader
+        title={
+          <>
             Compliance
             <Pill tone="warning" size="sm" data-testid="label-L17">
               {LABELS.L17}
             </Pill>
-          </h2>
-          <p className="m-0 mt-0.5 text-sm text-muted">{LABELS.L16}</p>
-        </div>
-        <div className="flex shrink-0 gap-2 print:hidden">
-          <Button icon={Printer} onClick={() => window.print()} data-testid="print-compliance">
-            Print
-          </Button>
-          <Button variant="primary" icon={FileSpreadsheet} loading={busy} onClick={exportWorkbook} data-testid="export-compliance">
-            Export workbook
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        subtitle={LABELS.L16}
+        actions={
+          <>
+            <Button icon={Printer} onClick={() => window.print()} data-testid="print-compliance">
+              Print
+            </Button>
+            <Button variant="primary" icon={FileSpreadsheet} loading={busy} onClick={exportWorkbook} data-testid="export-compliance">
+              Export workbook
+            </Button>
+          </>
+        }
+      />
 
-      <div className="report-grid grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="report-grid grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card className="avoid-break">
           <CardHeader title="Reused and recycled content by value" icon={Scale} actions={<IndicativeMarker />} />
           <CardBody className="flex flex-col gap-5">
-            {c.hasBill ? (
+            {fig.content ? (
               <>
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
                     <p className="m-0 text-sm text-muted">Secured</p>
                     <p className="m-0 text-4xl font-semibold tabular-nums text-ink" data-testid="content-secured">
-                      {f.percent2(c.secured.percent)}
+                      {fig.content.valueText}
                     </p>
                   </div>
-                  <div className="text-right text-sm">
-                    <p className="m-0 text-muted">Aim</p>
-                    <p className="m-0 font-semibold tabular-nums text-ink">{chart.aimLabel}</p>
-                  </div>
-                </div>
-                <BulletChart chart={chart} label={`Secured ${f.percent2(c.secured.percent)}, with approved ${f.percent2(c.withApproved.percent)}, aim ${chart.aimLabel.toLowerCase()}`} />
-                <dl className="m-0 grid grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <dt className="flex items-center gap-1.5 text-muted">
-                      <span aria-hidden="true" className="size-2 rounded-full bg-brand-600" />
-                      Secured
-                    </dt>
-                    <dd className="m-0 font-medium tabular-nums">{f.percent2(c.secured.percent)}</dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-1.5 text-muted">
-                      <span aria-hidden="true" className="size-2 rounded-full bg-brand-200" />
-                      With approved
-                    </dt>
-                    <dd className="m-0 font-medium tabular-nums">{f.percent2(c.withApproved.percent)}</dd>
-                  </div>
-                  <div>
+                  <dl className="m-0 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    <dt className="text-muted">With approved</dt>
+                    <dd className="m-0 text-right font-medium tabular-nums text-ink">{fig.content.withApprovedText}</dd>
                     <dt className="text-muted">Without reuse</dt>
-                    <dd className="m-0 font-medium tabular-nums" data-testid="content-without-reuse">
+                    <dd className="m-0 text-right font-medium tabular-nums text-ink" data-testid="content-without-reuse">
                       {f.percent2(c.secured.withoutReuse)}
                     </dd>
-                  </div>
-                </dl>
-                {lines.length > 0 ? (
-                  <div>
-                    <p className="m-0 mb-1.5 text-sm font-medium text-ink">Contribution of reuse, by line</p>
-                    <ul className="m-0 list-none divide-y divide-line-soft rounded-lg border border-line-soft p-0">
-                      {lines.map((l, i) => (
-                        <li key={l.line.id} className="flex items-center justify-between gap-3 px-3 py-2 text-base">
-                          <span className="min-w-0 truncate text-ink-soft">{c.billLines.find((b) => b.id === l.line.id)?.name ?? l.line.element}</span>
-                          <span className="shrink-0 font-medium tabular-nums text-ink" data-testid={`contribution-${i}`}>
-                            {f.signedPoints(l.points)} points
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  </dl>
+                </div>
+                <TargetMeter
+                  label="Secured against the aim"
+                  value={fig.content.value}
+                  max={fig.content.max}
+                  target={fig.content.target}
+                  valueText={fig.content.valueText}
+                  targetText={fig.content.targetText}
+                  state={fig.content.state}
+                  stateText={fig.content.stateText}
+                  axis={fig.content.axis}
+                  testId="content-chart"
+                />
+                {fig.contribution.items.length > 0 ? (
+                  <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+                    <p className="m-0 text-sm font-medium text-ink">Contribution of reuse, by line</p>
+                    <BarList label="Contribution of reuse to content by value, by bill line" max={fig.contribution.max} items={fig.contribution.items.map((it, i) => ({ ...it, key: `contribution-${i}`, colour: MARK.brand }))} testId="contribution-bars" />
                   </div>
                 ) : null}
                 <p className="m-0 text-xs text-muted">{LABELS.L15}</p>
@@ -129,7 +122,7 @@ function ComplianceBody() {
           </CardBody>
         </Card>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <Card className="avoid-break">
             <CardHeader title="Upfront carbon and reclaimed mass" icon={Leaf} actions={<IndicativeMarker />} />
             <CardBody className="flex flex-col gap-4">
@@ -150,21 +143,63 @@ function ComplianceBody() {
               <p className="m-0 text-xs text-muted">{LABELS.L11}</p>
             </CardBody>
           </Card>
-          <Card className="avoid-break">
-            <CardHeader title="Circular Economy Statement stages" />
-            <ul className="m-0 list-none divide-y divide-line-soft p-0">
-              {STAGE_CHECKLIST.map((s) => (
-                <li key={s} className="flex items-start justify-between gap-3 px-4 py-3 text-sm text-ink-soft sm:px-5">
-                  <span>{s}</span>
-                  <Pill size="sm" className="shrink-0">
-                    To validate
+          {statement ? (
+            <Card className="avoid-break" data-testid="compliance-statement">
+              <CardHeader title="Circular economy statement" icon={FileText} />
+              <CardBody className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone={STATEMENT_TONE[statement.status]} dot size="sm">
+                    {statement.label}
                   </Pill>
-                </li>
-              ))}
-            </ul>
-          </Card>
+                  {statement.sentText ? <span className="text-sm text-muted">{statement.sentText}</span> : null}
+                </div>
+                <Button asChild size="sm" trailingIcon={ArrowRight} className="self-start print:hidden">
+                  <Link to={`${base}/statement`}>Open the statement</Link>
+                </Button>
+              </CardBody>
+            </Card>
+          ) : null}
         </div>
       </div>
+
+      {schemes ? (
+        <section aria-labelledby="cert-title" className="flex flex-col gap-3" data-testid="compliance-certification">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h3 id="cert-title" className="m-0 flex items-center gap-2.5 text-md font-semibold text-ink">
+                Certification
+                <IndicativeMarker />
+              </h3>
+              <p className="m-0 mt-0.5 max-w-[90ch] text-sm text-muted">{CERT_CAVEAT}</p>
+            </div>
+            <Button asChild size="sm" trailingIcon={ArrowRight} className="print:hidden">
+              <Link to={`${base}/certification`}>Open certification</Link>
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {schemes.map((s) => {
+              const card = schemeCard(s)
+              return (
+                <Card key={s.scheme} padding="md" className="avoid-break flex min-w-0 flex-col gap-2.5" data-testid={`compliance-scheme-${s.scheme}`}>
+                  <p className="m-0 flex items-center gap-1.5 font-semibold text-ink">
+                    <ShieldCheck aria-hidden="true" className="size-4 text-faint" />
+                    {s.label}
+                  </p>
+                  <p className="m-0 text-sm text-ink-soft">
+                    {card.targetText}
+                    <span className="text-muted">. {card.predictedText}</span>
+                  </p>
+                  <TrackBar counts={s.counts} label={`${s.label} credits by status`} size="sm" legend={false} />
+                  <p className="m-0 text-sm text-muted">
+                    {card.readyText}
+                    {card.atRiskText ? `, ${card.atRiskText}` : ''}
+                  </p>
+                </Card>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="reused-title" className="flex flex-col gap-3">
         <h3 id="reused-title" className="m-0 text-md font-semibold text-ink">
@@ -197,7 +232,7 @@ function ComplianceBody() {
                     {f.massT(it.massT)}
                   </TD>
                   <TD>
-                    <Pill tone={ITEM_TONE[it.status]} dot size="sm">
+                    <Pill tone={ITEM_TONE[it.status]} dot size="sm" variant="quiet">
                       {it.status}
                     </Pill>
                   </TD>
@@ -216,11 +251,15 @@ function ComplianceBody() {
       </section>
 
       {c.hasBill ? (
-        <section aria-labelledby="bom-title" className="flex flex-col gap-3">
-          <h3 id="bom-title" className="m-0 text-md font-semibold text-ink">
-            Bill of materials
-          </h3>
-          <Table caption="Bill of materials" density="compact" data-testid="bill-of-materials">
+        <CollapsiblePanel
+          id="compliance-bill"
+          title="Bill of materials"
+          icon={Table2}
+          count={c.secured.lines.length}
+          summary={`Total ${f.moneyWhole(c.secured.totalValue)}, ${f.percent2(c.secured.percent)} reused and recycled by value`}
+          className="avoid-break"
+        >
+          <Table caption="Bill of materials" density="compact" bare data-testid="bill-of-materials">
             <THead>
               <tr>
                 <TH>Line</TH>
@@ -265,54 +304,12 @@ function ComplianceBody() {
               </TR>
             </TBody>
           </Table>
-        </section>
+        </CollapsiblePanel>
       ) : null}
-
-      <section aria-labelledby="cert-title" className="flex flex-col gap-3">
-        <h3 id="cert-title" className="m-0 text-md font-semibold text-ink">
-          Certification mapping
-        </h3>
-        <Table caption="Certification mapping" density="compact">
-          <THead>
-            <tr>
-              <TH>Scheme and requirement</TH>
-              <TH>In the workbook</TH>
-            </tr>
-          </THead>
-          <TBody>
-            {CERTIFICATION_ROWS.filter((r) => r.workbook === 'compliance').map((r) => (
-              <TR key={r.requirement}>
-                <TD className="whitespace-normal">{r.requirement}</TD>
-                <TD muted>{r.provides}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-        <p className="m-0 text-xs text-muted">{LABELS.L19}</p>
-      </section>
 
       <Callout tone="warning" title="Indicative">
         {LABELS.L11} {OUTPUT_CAVEAT}
       </Callout>
-    </div>
-  )
-}
-
-function BulletChart({ chart, label }: { chart: ContentChart; label: string }) {
-  return (
-    <div>
-      <svg viewBox="0 0 1000 12" preserveAspectRatio="none" className="block h-3 w-full overflow-hidden rounded-full bg-subtle" role="img" aria-label={label} data-testid="content-chart">
-        <rect x="0" y="0" width={chart.approvedAt * 1000} height="12" className="fill-brand-200" />
-        <rect x="0" y="0" width={chart.securedAt * 1000} height="12" className="fill-brand-600" />
-        <rect x={chart.aimAt * 1000 - 2} y="0" width="4" height="12" className="fill-ink" />
-      </svg>
-      <div className="relative mt-1 h-4 text-xs text-muted">
-        <span className="absolute left-0">0%</span>
-        <span className="absolute -translate-x-1/2 font-medium text-ink" style={{ left: `${chart.aimAt * 100}%` }}>
-          Aim
-        </span>
-        <span className="absolute right-0">{chart.scaleLabel}</span>
-      </div>
     </div>
   )
 }

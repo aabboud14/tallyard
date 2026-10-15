@@ -2,15 +2,19 @@
 // Approving does not buy anything: approved materials move to Reservations.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowRight, Check, CheckCheck, ClipboardCheck, MessageSquareText, X } from 'lucide-react'
+import { ArrowRight, Check, CheckCheck, ClipboardCheck, Hourglass, Leaf, MessageSquareText, X } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { ApprovalCard } from '../../store/selectors/client'
+import { approvalsStrip } from '../../store/selectors/sustainability-screens'
 import { formatDate, formatDateShort } from '../../domain/dates'
 import { LABELS } from '../../domain/reference/labels'
-import { Avatar, Button, Card, Dialog, EmptyState, Field, Pill, StatusPill, Textarea, toast } from '../../ui'
+import * as f from '../../domain/format'
+import { Avatar, Button, Card, Dialog, EmptyState, Field, IndicativeMarker, MetricTile, Pill, StatusPill, Textarea, toast } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { MaterialSummary } from './MaterialSummary'
+import { CostPanel } from './CostPanel'
 import { MaterialPicture } from '../buildings/photos'
+import { TabHeader } from '../sustainability/parts'
 
 type Decision = { item: ApprovalCard; decision: 'approved' | 'declined' }
 
@@ -26,6 +30,7 @@ function ApprovalsBody() {
       <EmptyState
         variant="page"
         icon={ClipboardCheck}
+        illustration="inbox"
         title="Nothing to approve yet"
         text={`When ${v.architectName || 'your architect'} sends materials for your approval, they appear here with the facts you need to decide.`}
         testId="approvals-empty"
@@ -33,21 +38,32 @@ function ApprovalsBody() {
     )
   }
 
+  const strip = approvalsStrip(v)
   return (
     <div className="flex flex-col gap-10" data-testid="approvals">
+      <div className="flex flex-col gap-5">
+        <TabHeader title="Approvals" subtitle={`Materials ${v.architectName || 'your architect'} sent for your decision, with what each would cost against buying new. ${LABELS.L40}`} />
+        <div role="group" aria-label="Approvals in figures" className="grid min-w-0 gap-3 sm:grid-cols-3" data-testid="approvals-finance">
+          <MetricTile label="Waiting for your decision" icon={Hourglass} value={strip.waiting.count} sub={strip.waiting.sub} indicative testId="finance-waiting" />
+          <MetricTile label="Approved" icon={CheckCheck} value={strip.approved.count} sub={strip.approved.sub} indicative testId="finance-approved" />
+          <MetricTile label="Avoided carbon if you approve" icon={Leaf} value={f.number(strip.avoidedIfApprovedT, 1)} unit="tCO2e" sub="The materials waiting, against buying new" indicative testId="finance-carbon" />
+        </div>
+      </div>
       <section aria-labelledby="waiting-title">
         <SectionTitle
           id="waiting-title"
           title={v.waiting.length > 0 ? `${v.waiting.length} waiting for your decision` : 'Waiting for your decision'}
-          description={`Sent by ${v.architectName}. ${LABELS.L40}`}
+          description={`Sent by ${v.architectName}.`}
           actions={
             <div className="flex items-center gap-2">
               <Pill tone="brand" dot size="sm">
                 {v.totals.approved.count} approved
               </Pill>
-              <Pill tone="danger" dot size="sm">
-                {v.totals.declined.count} declined
-              </Pill>
+              {v.totals.declined.count > 0 ? (
+                <Pill tone="danger" dot size="sm">
+                  {v.totals.declined.count} declined
+                </Pill>
+              ) : null}
             </div>
           }
         />
@@ -59,6 +75,7 @@ function ApprovalsBody() {
               <li key={item.itemId}>
                 <Card padding="lg" data-testid={`approval-${item.publicId}`}>
                   <MaterialSummary card={item.card} title={item.title}>
+                    <CostPanel cost={item.cost} publicId={item.publicId} />
                     {item.sentMessage || item.note ? (
                       <div className="flex gap-3 rounded-lg bg-subtle/70 px-3.5 py-3">
                         <Avatar name={v.architectName} shape="square" size="sm" decorative className="mt-0.5" />
@@ -103,6 +120,9 @@ function ApprovalsBody() {
                         {item.card.quantityText}
                         {item.decidedOn ? ` · Decided ${formatDate(item.decidedOn)}` : ''}
                       </p>
+                      <p className="m-0 mt-0.5 truncate text-sm tabular-nums text-muted" data-testid={`decided-cost-${item.publicId}`}>
+                        {f.moneyWhole(item.cost.total)} · {f.savingShort(item.cost.saving)} <span className="sr-only">Indicative</span>
+                      </p>
                       {item.decisionNote ? (
                         <p className="m-0 mt-1 flex items-start gap-1.5 text-sm text-ink-soft">
                           <MessageSquareText aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-faint" />
@@ -131,6 +151,10 @@ function ApprovalsBody() {
         </section>
       ) : null}
 
+      <p className="m-0 flex flex-col gap-2 border-t border-line-soft pt-4 text-sm text-muted sm:flex-row sm:items-start sm:justify-between" data-testid="finance-caveat">
+        <span className="max-w-[90ch]">{v.caveat}</span>
+        <IndicativeMarker />
+      </p>
       <DecisionDialog projectId={projectId} deciding={deciding} onClose={() => setDeciding(null)} />
     </div>
   )

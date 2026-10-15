@@ -58,6 +58,12 @@ describe('the circular economy statement', () => {
     expect(text('next_steps').split('\n')).toHaveLength(4)
   })
 
+  it('does not repeat "no result yet" for a goal without a result', () => {
+    const input: StatementInput = { ...MERROWGATE_INPUT, targets: [{ label: 'Construction and demolition waste diverted from landfill', targetText: '95%', actualText: 'No result yet', statusText: 'No result yet' }] }
+    const t = statementSections(input).find((x) => x.id === 'targets')!.text
+    expect(t).toBe('Construction and demolition waste diverted from landfill: target 95%, no result yet.')
+  })
+
   it('says not yet when there are no materials and no bill', () => {
     const s = statementSections(EMPTY)
     const text = (id: string) => s.find((x) => x.id === id)!.text

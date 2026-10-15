@@ -4,8 +4,9 @@ import type ExcelJS from 'exceljs'
 import { PRODUCT_NAME } from '../../domain/constants'
 import { DEFAULT_ASSUMPTIONS as A, parameterRows } from '../../domain/reference/assumptions'
 import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
+import { LABELS } from '../../domain/reference/labels'
 import { nowIso } from '../../sandbox/clock'
-import type { ComplianceWorkbookModel } from '../../store/selectors/roles-views'
+import type { ComplianceWorkbook } from '../../store/selectors/compliance-workbook'
 
 export type Workbook = ExcelJS.Workbook
 type Worksheet = ExcelJS.Worksheet
@@ -71,8 +72,11 @@ function securedSum(sheet: string, col: string, first: number, last: number): st
   return `SUMIF(${status},"Confirmed",${values})+SUMIF(${status},"Reserved",${values})`
 }
 
-/** The project's compliance workbook: summary, bill of materials, reused items, certification mapping, assumptions. */
-export async function buildComplianceWorkbook(m: ComplianceWorkbookModel): Promise<ArrayBuffer> {
+/**
+ * The project's compliance workbook: summary, bill of materials, reused items, targets, requirements, the
+ * certification mapping from the tracked credits, and assumptions.
+ */
+export async function buildComplianceWorkbook(m: ComplianceWorkbook): Promise<ArrayBuffer> {
   const wb = await newWorkbook(m.title)
   const SUMMARY = 'Summary'
   const BOM = 'Bill of materials'
@@ -143,9 +147,30 @@ export async function buildComplianceWorkbook(m: ComplianceWorkbookModel): Promi
   if (m.items.length === 0) items.addRow(['No reused items yet'])
   caveat(items, m.caveat)
 
+  const targets = wb.addWorksheet('Targets')
+  header(targets, ['Goal', 'Default', 'Target', 'Source', 'Now', 'Status'], [44, 56, 18, 40, 44, 24])
+  for (const g of m.targets) {
+    const source = g.source === 'override' ? `Overridden. ${g.overriddenText ?? ''}`.trim() : g.source === 'default' ? 'Default from the requirements' : 'No target'
+    targets.addRow([g.label, g.defaultText, g.targetText, source, g.actualNote ? `${g.actualText}. ${g.actualNote}` : g.actualText, g.statusText])
+  }
+  caveat(targets, m.caveat)
+
+  const reqs = wb.addWorksheet('Requirements')
+  header(reqs, ['Requirement', 'Scope', 'Status', 'Evidence'], [56, 20, 18, 100])
+  for (const r of m.requirements) {
+    const evidence = r.evidence.map((e) => [e.text, e.outputLabel, `${e.by}, ${e.onText}`].filter(Boolean).join('. ')).join('\n')
+    const row = reqs.addRow([r.title, r.scopeLabel, r.statusLabel, evidence || 'None recorded'])
+    row.getCell(4).alignment = { wrapText: true, vertical: 'top' }
+  }
+  if (m.requirements.length === 0) reqs.addRow(['No requirements recorded for this project yet'])
+  caveat(reqs, m.caveat)
+
   const cert = wb.addWorksheet('Certification mapping')
-  header(cert, ['Scheme and requirement', 'What the workbook provides', 'Note'], [80, 50, 90])
-  for (const c of m.certification) cert.addRow([c.requirement, c.provides, c.note])
+  header(cert, ['Scheme', 'Code', 'Title', 'Targeted', 'Status', 'Materials', 'What the workbook provides', 'Note'], [18, 18, 52, 10, 16, 40, 60, 70])
+  for (const c of m.credits) {
+    const items = c.items.filter((i) => i.included).map((i) => i.publicId).join(', ')
+    cert.addRow([c.schemeLabel, c.code, c.title, c.targeted ? 'Yes' : 'No', c.targeted ? c.statusLabel : 'Not targeted', items || 'None', c.provides, c.note || LABELS.L19])
+  }
   caveat(cert, m.caveat)
 
   assumptionsSheet(wb, m.caveat)

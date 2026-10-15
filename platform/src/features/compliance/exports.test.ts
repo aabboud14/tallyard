@@ -8,7 +8,7 @@ import { lotPrivateStrings } from '../../domain/privacy/privateStrings'
 import { SAMPLE_BILL_XLSX_BASE64 } from '../../domain/reference/samples'
 import { base64ToArrayBuffer, cellsFromArrayBuffer } from '../../domain/engines/billXlsx'
 import { FORBIDDEN } from '../../ui/testing'
-import { complianceWorkbookModel } from '../../store/selectors/roles-views'
+import { complianceWorkbook } from '../../store/selectors/compliance-workbook'
 import { wasteView } from '../../store/selectors/consultant'
 import { loadWasteBill } from '../../store/actions/consultant'
 import { buildComplianceWorkbook } from './exports'
@@ -35,11 +35,11 @@ function texts(wb: ExcelJS.Workbook): string[] {
 }
 
 describe('Compliance workbook', () => {
-  it('holds the summary, bill of materials, reused items, mapping and assumptions with cached results', async () => {
+  it('holds the summary, bill of materials, reused items, targets, requirements, mapping and assumptions with cached results', async () => {
     const s = fresh()
-    const m = complianceWorkbookModel(s, viewer(U.marcus), MERROWGATE_ID)!
+    const m = complianceWorkbook(s, viewer(U.marcus), MERROWGATE_ID)!
     const wb = await read(await buildComplianceWorkbook(m))
-    expect(wb.worksheets.map((w) => w.name)).toEqual(['Summary', 'Bill of materials', 'Reused items', 'Certification mapping', 'Assumptions'])
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Summary', 'Bill of materials', 'Reused items', 'Targets', 'Requirements', 'Certification mapping', 'Assumptions'])
     const summary = wb.getWorksheet('Summary')!
     const secured = summary.getRow(8).getCell(2).value as ExcelJS.CellFormulaValue
     expect(summary.getRow(8).getCell(1).value).toBe('Reused and recycled content by value, secured')
@@ -52,7 +52,7 @@ describe('Compliance workbook', () => {
 
   it('carries no seller-private string and no forbidden character', async () => {
     const s = fresh()
-    const wb = await read(await buildComplianceWorkbook(complianceWorkbookModel(s, viewer(U.marcus), MERROWGATE_ID)!))
+    const wb = await read(await buildComplianceWorkbook(complianceWorkbook(s, viewer(U.marcus), MERROWGATE_ID)!))
     const all = texts(wb).join('\n')
     for (const lot of Object.values(s.world.lots)) {
       const item = s.world.items[lot.itemId]
