@@ -1,8 +1,8 @@
 // Who works on the project: the client, the architect practice and the sustainability consultant, with their
-// people. The architect sets the consultancy; anyone can invite a colleague into their own organisation.
+// people. A client that has not accepted shows by name only, never its people. The architect sets the consultancy; anyone can invite a colleague into their own organisation.
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
-import { Check, Copy, Mail, UserPlus } from 'lucide-react'
+import { Check, Copy, Hourglass, Mail, UserPlus } from 'lucide-react'
 import { act, useView } from '../../store'
 import { projectTeam, type TeamSection } from '../../store/selectors/project'
 import { Avatar, Badge, Button, Card, CardHeader, Dialog, Field, Input, Select, toast, type AvatarColourName } from '../../ui'
@@ -102,11 +102,20 @@ function SectionCard({ s, action }: { s: TeamSection; action?: ReactNode }) {
         actions={
           <>
             {s.yours ? <Badge tone="brand">Your organisation</Badge> : null}
+            {s.pending ? (
+              <Badge tone="info" icon={Hourglass}>
+                Waiting to accept
+              </Badge>
+            ) : null}
             {action}
           </>
         }
       />
-      {s.members.length === 0 ? (
+      {s.pending ? (
+        <p className="m-0 px-5 py-5 text-sm text-muted" data-testid="team-pending">
+          {s.orgName} has not accepted this project yet. Their people appear here once they do.
+        </p>
+      ) : s.members.length === 0 ? (
         <p className="m-0 px-5 py-5 text-sm text-muted">No one from {s.orgName} has joined the platform yet.</p>
       ) : (
         <ul className="m-0 list-none divide-y divide-line-soft p-0">

@@ -1,10 +1,10 @@
 // The project programme for the overview chart, the programme form and the cross-project summaries. Dates are
 // the project's own; materials come from the shortlist rows, which read the public listing only (P3).
-import type { Project, ProgrammeSource, StageStarts } from '../../domain/types'
+import type { ProgrammeDates, Project, ProgrammeSource, StageStarts } from '../../domain/types'
 import type { Fit, WishStatus } from '../../domain/v1types'
 import { RIBA_STAGES } from '../../domain/reference/policy'
 import { addDays, daysBetween, formatDate, formatDateShort, formatMonth } from '../../domain/dates'
-import { axisAt, programmeAxis, programmeCheck, programmeRange, programmeStages, stageOn, type ProgrammeStatus, type StageSpan } from '../../domain/engines/programme'
+import { axisAt, PROGRAMME_ERRORS, programmeAxis, programmeCheck, programmeRange, programmeStages, stageOn, suggestProgramme, validateProgramme, type ProgrammeField, type ProgrammeStatus, type StageSpan } from '../../domain/engines/programme'
 import { storageRun } from '../../domain/engines/timelineScale'
 import type { AppData, Viewer } from '../types'
 import { projectSide } from '../access'
@@ -227,4 +227,55 @@ export function programmeForm(state: AppData, viewer: Viewer, projectId: string)
     stageOptions: RIBA_STAGES.map((name, i) => ({ value: i, label: `${i}, ${name}` })),
     today: todayOf(viewer),
   }
+}
+
+// ---------- The programme dialog: live lengths, field errors and suggested dates ----------
+
+/** The programme dialog's values as typed: ISO strings, possibly empty or half typed. */
+export type ProgrammeDraft = { ribaStage: number; stageStarts: StageStarts; siteStart: string; practicalCompletion: string; startDate: string }
+
+export type ProgrammeDraftRow = { stage: number; field: ProgrammeField; label: string; name: string; start: string; lengthText: string }
+
+export type ProgrammeDraftView = {
+  /** Stages 0 to 4, each with its start and its length until the next stage starts ('' while a date is missing). */
+  rows: ProgrammeDraftRow[]
+  /** Stage 5, site start to practical completion, as a length. */
+  constructionText: string
+  /** The first problem on each field, from validateProgramme. */
+  errors: Partial<Record<ProgrammeField, string>>
+  valid: boolean
+}
+
+function lengthText(start: string, end: string): string {
+  const days = daysBetween(start, end) + 1
+  if (!Number.isFinite(days) || days <= 0) return ''
+  return days < 14 ? plural(days, 'day') : plural(Math.round(days / 7), 'week')
+}
+
+const isIso = (s: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s
+
+/** What the programme dialog shows as the architect types: each stage's length and the errors on each field. */
+export function programmeDraftView(d: ProgrammeDraft): ProgrammeDraftView {
+  const dates: ProgrammeDates = { stageStarts: d.stageStarts, siteStart: d.siteStart, practicalCompletion: d.practicalCompletion }
+  const errors: Partial<Record<ProgrammeField, string>> = {}
+  for (const [field, message] of validateProgramme(dates, d.startDate)) if (!errors[field]) errors[field] = message
+  const ends = [d.stageStarts[1], d.stageStarts[2], d.stageStarts[3], d.stageStarts[4], d.siteStart]
+  const rows: ProgrammeDraftRow[] = d.stageStarts.map((start, i) => ({
+    stage: i,
+    field: `stage${i}` as ProgrammeField,
+    label: `Stage ${i}`,
+    name: RIBA_STAGES[i],
+    start,
+    lengthText: isIso(start) && isIso(ends[i]) ? lengthText(start, addDays(ends[i], -1)) : '',
+  }))
+  const constructionText = isIso(d.siteStart) && isIso(d.practicalCompletion) ? lengthText(d.siteStart, addDays(d.practicalCompletion, -1)) : ''
+  return { rows, constructionText, errors, valid: Object.keys(errors).length === 0 }
+}
+
+/** 'Suggest stage dates': the five stage starts from today, the stage, site start and practical completion, or why not. */
+export function suggestedStageStarts(today: string, ribaStage: number, siteStart: string, practicalCompletion: string): { stageStarts: StageStarts } | { error: string } {
+  if (!isIso(siteStart)) return { error: PROGRAMME_ERRORS.badDate }
+  const dates = suggestProgramme(today, ribaStage, siteStart, isIso(practicalCompletion) ? practicalCompletion : null)
+  if (!dates) return { error: PROGRAMME_ERRORS.tooSoon }
+  return { stageStarts: dates.stageStarts }
 }

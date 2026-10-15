@@ -23,6 +23,7 @@ import { draftFromText } from '../store/capture'
 import { itemsOf } from '../store/selectors/owner'
 import { SCHEME_IDS } from '../domain/reference/certification'
 import { addRequirementEvidence, reviewStatement, sendStatementForReview, setCreditStatus, setGoalTarget, setRequirementStatus } from '../store/actions/sustainability'
+import { projectVisual, projectVisuals } from '../store/selectors/project-visuals'
 
 const LOT_ID = /\blot_[a-z0-9]{6}\b/
 
@@ -76,6 +77,7 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   add('linkRequests', sel.clientLinkRequests(s, v))
   add('clientDashboard', sel.clientDashboard(s, v))
   add('clientProgramme', sel.clientProgramme(s, v))
+  add('projectVisuals', projectVisuals(s, v))
   const publicIds = new Set(marketplaceListings(s).map((l) => l.publicId))
   for (const p of projectsOfUser(s, v.userId)) {
     add(`discover ${p.name}`, sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, projectId: p.id, tab: 'shared', fitsOnly: true }))
@@ -86,6 +88,8 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
     add(`programme ${p.name}`, [sel.programmeView(s, v, p.id, 'whole'), sel.programmeView(s, v, p.id, 'ahead')])
     add(`requirements ${p.name}`, sel.projectRequirementsView(s, v, p.id))
     add(`programme form ${p.name}`, sel.programmeForm(s, v, p.id))
+    add(`change client ${p.name}`, sel.changeClientOptions(s, v, p.id))
+    add(`visual ${p.name}`, projectVisual(s, v, p.id))
     add(`board ${p.name}`, sel.shortlistBoard(s, v, p.id))
     add(`spec ${p.name}`, [sel.specificationView(s, v, p.id, 'approved'), sel.specificationView(s, v, p.id, 'draft')])
     add(`carbon ${p.name}`, sel.projectCarbon(s, v, p.id))

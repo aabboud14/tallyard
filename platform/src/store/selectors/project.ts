@@ -357,6 +357,31 @@ export function clientLinkView(state: AppData, viewer: Viewer, projectId: string
   }
 }
 
+export type ChangeClientOptions = {
+  /** The client asked now, by organisation name only. */
+  current: { orgId: string; name: string; status: ClientLinkStatus }
+  /** Who the architect may ask: the declined client again, and the practice's other clients. A new name is always possible. */
+  options: { value: string; label: string }[]
+  /** The choice the dialog opens on for "Ask again" ('ask_again') and for "Change client" or "Choose another client" ('another'). */
+  defaults: { ask_again: string | null; another: string | null }
+}
+
+/** Choices for the change client dialog, for the project's architect while the client has not accepted. */
+export function changeClientOptions(state: AppData, viewer: Viewer, projectId: string): ChangeClientOptions | null {
+  if (projectSide(state, viewer.userId, projectId) !== 'architect') return null
+  const p = state.world.projects[projectId]
+  if (p.clientLink.status === 'accepted') return null
+  const orgName = (id: string) => state.world.orgs[id]?.name ?? ''
+  const others = existingClientOrgIds(state, p.architectOrgId).filter((id) => id !== p.clientOrgId)
+  const declined = p.clientLink.status === 'declined'
+  const options = [...(declined ? [p.clientOrgId] : []), ...others].map((id) => ({ value: id, label: orgName(id) }))
+  return {
+    current: { orgId: p.clientOrgId, name: orgName(p.clientOrgId), status: p.clientLink.status },
+    options,
+    defaults: { ask_again: declined ? p.clientOrgId : null, another: others[0] ?? null },
+  }
+}
+
 export type SetupStepState = 'done' | 'current' | 'todo' | 'waiting' | 'attention'
 export type SetupIntent = 'edit_programme' | 'keep_programme' | 'requirements' | 'change_client' | null
 export type SetupStep = {

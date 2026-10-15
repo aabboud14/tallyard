@@ -75,3 +75,27 @@ export function projectRequirementsView(state: AppData, viewer: Viewer, projectI
     note: REQUIREMENTS_NOTE,
   }
 }
+
+export type RequirementChoiceSummary = { applyCount: number; suggestedCount: number; selectedCount: number; text: string; selectedText: string }
+
+/** The line on the closed requirements disclosure: '12 apply to Camden, Central London, 10 suggested. Choose now or later.' */
+export function requirementChoiceSummary(choices: RequirementChoices, selectedIds: string[], place: string): RequirementChoiceSummary {
+  const ids = new Set(choices.groups.flatMap((g) => g.rows.map((r) => r.id)))
+  const applyCount = ids.size
+  const suggestedCount = choices.suggestedIds.length
+  const selectedCount = new Set(selectedIds.filter((id) => ids.has(id))).size
+  return {
+    applyCount,
+    suggestedCount,
+    selectedCount,
+    text: `${applyCount} apply to ${place || 'England'}, ${suggestedCount} suggested. Choose now or later.`,
+    selectedText: `${selectedCount} selected`,
+  }
+}
+
+/** The first few chosen requirements for a card, and how many more there are. */
+export function requirementsPreview(rows: RequirementRow[], limit = 4): { shown: RequirementRow[]; moreText: string | null } {
+  const shown = rows.slice(0, Math.max(0, limit))
+  const more = rows.length - shown.length
+  return { shown, moreText: more > 0 ? `${more} more` : null }
+}

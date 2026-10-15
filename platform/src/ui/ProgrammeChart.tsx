@@ -102,7 +102,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               </span>
             ))}
           </div>
-          <div className="pt-1 text-xs text-muted sm:hidden">RIBA stages</div>
+          <div className="relative w-fit bg-surface pr-1 pt-1 text-xs text-muted sm:hidden">RIBA stages</div>
           <div className="relative h-12">
             {stages.map((s) => (
               <div
@@ -117,7 +117,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               </div>
             ))}
           </div>
-          <div className="pt-3 text-xs text-muted sm:hidden">Milestones</div>
+          <div className="relative w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Milestones</div>
           <div className="h-6 max-sm:hidden" />
           <div className="relative" style={{ height: `${milestoneRows * 22}px` }}>
             {milestones.map((m, i) => {
@@ -134,7 +134,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
           </div>
           {materials.length > 0 ? (
             <>
-              <div className="pt-3 text-xs text-muted sm:hidden">Materials</div>
+              <div className="relative w-fit bg-surface pr-1 pt-3 text-xs text-muted sm:hidden">Materials</div>
               <div className="h-6 max-sm:hidden" />
             </>
           ) : null}
@@ -142,7 +142,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
             const fill = MARK[FIT[m.fit].tone]
             return (
               <div key={m.itemId} data-part="material" data-fit={m.fit}>
-                <div className="truncate pt-1 text-xs text-ink-soft sm:hidden">{m.title}</div>
+                <div className="relative w-fit max-w-full truncate bg-surface pr-1 pt-1 text-xs text-ink-soft sm:hidden">{m.title}</div>
                 <div className="relative h-8">
                   {m.storage ? <div className="absolute top-1/2 border-t-[1.5px] border-dashed border-mark-neutral" style={span(m.storage.from, m.storage.to)} /> : null}
                   {m.kind === 'window' ? (
@@ -175,7 +175,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
       ) : null}
       {materials.length === 0 && emptyText ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-line-strong px-4 py-3 text-sm text-muted sm:ml-[200px]">
-          <span className="min-w-0 flex-1">{emptyText}</span>
+          <span className="min-w-48 flex-1">{emptyText}</span>
           {emptyAction}
         </div>
       ) : null}

@@ -1,10 +1,13 @@
-// The project workspace: a header with the project's facts and team, then the tabs for the person's side on the
-// project (architect, client or consultant). Each tab is its own route.
+// The project workspace: a header with the project's drawing, facts (materials needed, site start, practical
+// completion, place, practice) and team, then the tabs for the person's side on the project (architect, client or
+// consultant). Each tab is its own route. Until the client accepts, the architect sees a link status pill and no
+// client people.
 import { Link, Outlet, useLocation, useParams } from 'react-router'
-import { Building, CalendarClock, Compass, FolderOpen, MapPin, PencilLine } from 'lucide-react'
+import { Building, CalendarCheck, CalendarClock, CalendarRange, Compass, Hourglass, MapPin, PencilLine, UserRoundX } from 'lucide-react'
 import { useView } from '../../store'
 import { projectHeader } from '../../store/selectors/project'
-import { AvatarStack, Button, Tabs, type AvatarColourName } from '../../ui'
+import { AvatarStack, Button, Pill, ProjectThumb, Tabs, type AvatarColourName } from '../../ui'
+import { projectVisual } from '../../store/selectors/project-visuals'
 import { AppNotFound } from '../../app/NoAccess'
 import { marketplaceHref } from '../discover/links'
 import { EditProjectDialog } from './EditProjectDialog'
@@ -15,7 +18,9 @@ export function ProjectLayout() {
   const { projectId = '' } = useParams()
   const { pathname } = useLocation()
   const header = useView(projectHeader, projectId)
+  const visual = useView(projectVisual, projectId)
   if (!header) return <AppNotFound />
+  const pending = header.side === 'architect' && header.linkStatus !== 'accepted'
   const base = `/app/projects/${projectId}`
   return (
     <div data-testid="project-layout" data-side={header.side}>
@@ -23,17 +28,28 @@ export function ProjectLayout() {
         <div className="mx-auto w-full max-w-[1240px] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex min-w-0 items-start gap-3.5">
-              <span className="mt-0.5 inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.15),0_1px_2px_rgb(28_25_23/0.2)]">
-                <FolderOpen aria-hidden="true" className="size-5" />
-              </span>
+              {visual ? <ProjectThumb sketch={visual.sketch} size="md" className="mt-0.5" testId="project-thumb" /> : null}
               <div className="min-w-0">
                 <h1 className="m-0 text-2xl font-semibold text-ink" data-testid="project-name">
                   {header.name}
                 </h1>
-                <p className="m-0 mt-1 text-base text-muted">
-                  {header.typeLabel} for {header.clientName}
-                  <span className="text-faint"> · </span>
-                  {header.stageLabel}
+                <p className="m-0 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-muted">
+                  <span>
+                    {header.typeLabel} for {header.clientName}
+                    <span className="text-faint"> · </span>
+                    {header.stageLabel}
+                  </span>
+                  {pending ? (
+                    header.linkStatus === 'declined' ? (
+                      <Pill tone="warning" size="sm" icon={UserRoundX} data-testid="link-status">
+                        Client declined
+                      </Pill>
+                    ) : (
+                      <Pill tone="info" size="sm" icon={Hourglass} data-testid="link-status">
+                        Waiting for client
+                      </Pill>
+                    )
+                  ) : null}
                 </p>
               </div>
             </div>
@@ -54,18 +70,26 @@ export function ProjectLayout() {
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-soft">
             <span className="inline-flex items-center gap-1.5">
               <CalendarClock aria-hidden="true" className="size-4 text-faint" />
-              Materials needed on site from <span className="font-medium text-ink">{header.startText}</span>
+              Materials needed from <span className="font-medium text-ink">{header.startText}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarRange aria-hidden="true" className="size-4 text-faint" />
+              Site start <span className="font-medium text-ink">{header.siteStartText}</span>
             </span>
             <span className="inline-flex items-center gap-1.5 max-sm:hidden">
+              <CalendarCheck aria-hidden="true" className="size-4 text-faint" />
+              Practical completion <span className="font-medium text-ink">{header.completionText}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 max-lg:hidden">
               <MapPin aria-hidden="true" className="size-4 text-faint" />
               {[header.localAuthority, header.region].filter(Boolean).join(', ')}
             </span>
-            <span className="inline-flex items-center gap-1.5 max-sm:hidden">
+            <span className="inline-flex items-center gap-1.5 max-xl:hidden">
               <Building aria-hidden="true" className="size-4 text-faint" />
               {header.architectName}
               {header.consultantName ? `, with ${header.consultantName}` : ''}
             </span>
-            <span className="text-muted max-md:hidden">{SIDE_LABEL[header.side]}</span>
+            <span className="text-muted max-2xl:hidden">{SIDE_LABEL[header.side]}</span>
           </div>
           <div className="mt-5">
             <Tabs
