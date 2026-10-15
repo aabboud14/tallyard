@@ -211,3 +211,4 @@ These assertions change because the partner changed the product, not to make cod
 - The architect's material view has no price or seller line; the price sort is for clients.
 - The sidebar orders projects by name.
 - Labels "Discover" and "Waiting on" become "Marketplace" and "Waiting for approval"; "Priorities" becomes "Recovery plan".
+- Quarter labels go on every surface, the seller side included: the blind buyer line "needed by Q2 2028" becomes "needed April to June 2028". It is the same three-month window, so `toBlindBuyer` discloses nothing more; its tests change to the new wording.
