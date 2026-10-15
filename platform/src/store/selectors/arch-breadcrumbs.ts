@@ -59,6 +59,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   }
   if (section === 'projects') {
     if (id === 'new') return done([crumb(sectionLabel, sectionHref), crumb('New project')])
+    if (id === 'requests') return done([crumb(sectionLabel, sectionHref), crumb('Project requests')])
     const p = state.world.projects[id]
     const side = projectSide(state, viewer.userId, id)
     if (!p || !side) return done([crumb(sectionLabel, sectionHref)])

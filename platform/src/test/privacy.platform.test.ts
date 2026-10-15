@@ -4,12 +4,13 @@ import { describe, it, expect } from 'vitest'
 import { actor, fresh, must, U, viewer } from './fixtures'
 import type { AppData, Viewer } from '../store/types'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../domain/privacy/privateStrings'
-import { itemByTag, lotForItem, MERROWGATE_ID, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
+import { itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
 import { DEFAULT_DISCOVER_QUERY } from '../store/selectors/discover'
 import * as sel from '../store/selectors'
 import { projectsOfUser, buildingsOfUser } from '../store/access'
 import { listingOf, marketplaceListings, projectWishlist } from '../store/lots'
 import { saveToProject, sendToClient, decideItem } from '../store/actions/shortlist'
+import { createProject, decideClientLink } from '../store/actions/projects'
 import { requestReservation, decideReservation } from '../store/actions/reservations'
 import { setLotVisibility, setProjectAccess } from '../store/actions/owner'
 import { captureItem } from '../store/actions/surveyor'
@@ -53,11 +54,15 @@ function buyerViews(s: AppData, v: Viewer): [string, unknown][] {
   add('organisation', sel.organisationView(s, v))
   add('notificationSettings', sel.notificationSettings(s, v))
   add('engagements', sel.engagementsOf(s, v).map((e) => sel.wasteView(s, v, e.id)))
+  add('linkRequests', sel.clientLinkRequests(s, v))
   const publicIds = new Set(marketplaceListings(s).map((l) => l.publicId))
   for (const p of projectsOfUser(s, v.userId)) {
     add(`discover ${p.name}`, sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, projectId: p.id, tab: 'shared', fitsOnly: true }))
     add(`header ${p.name}`, sel.projectHeader(s, v, p.id))
     add(`overview ${p.name}`, sel.projectOverview(s, v, p.id))
+    add(`programme ${p.name}`, [sel.programmeView(s, v, p.id, 'whole'), sel.programmeView(s, v, p.id, 'ahead')])
+    add(`requirements ${p.name}`, sel.projectRequirementsView(s, v, p.id))
+    add(`programme form ${p.name}`, sel.programmeForm(s, v, p.id))
     add(`board ${p.name}`, sel.shortlistBoard(s, v, p.id))
     add(`spec ${p.name}`, [sel.specificationView(s, v, p.id, 'approved'), sel.specificationView(s, v, p.id, 'draft')])
     add(`carbon ${p.name}`, sel.projectCarbon(s, v, p.id))
@@ -209,5 +214,51 @@ describe('P3 on the platform: the seller never receives a buyer-private string b
     const other = rows.pending.find((r) => r.publicId === 'L-WPX5A6')!
     expect(other.buyer.kind).toBe('blind')
     expect(JSON.stringify(other)).not.toContain('Lantern')
+  })
+})
+
+describe('P3 on the platform, round 2: a project of type Other and the notes to the client stay on the buyer side', () => {
+  /** Priya creates a project of type Other with a client message; Isla accepts it, approves a shared lot and asks to reserve it; Tom shares with it. */
+  function withOther(): { s: AppData; id: string } {
+    let s = fresh()
+    // The check matches strings, so the project's own suggested dates must not fall on a day a seller keeps private
+    // in this sandbox (site start 6 September 2027 would put stage 4 on 20 April 2027, a private lot date).
+    const created = must(createProject(s, actor(U.priya), { name: 'Corbel Yard', client: { orgId: ORG_IDS.lantern }, projectType: 'other', projectTypeOther: 'Rooftop lido and spa', localAuthority: 'Camden', region: 'Central London', ribaStage: 2, startDate: '2027-09-20', clientMessage: 'Please accept the Corbel Yard brief.', consultantOrgId: ORG_IDS.halewick }))
+    s = created.state
+    const id = created.value
+    s = must(setProjectAccess(s, actor(U.tom), id, true)).state
+    s = must(decideClientLink(s, actor(U.isla), id, 'accepted', '')).state
+    s = must(saveToProject(s, actor(U.priya), 'L-9F4CQQ', id)).state
+    const item = projectWishlist(s.world, id)!.items[0].id
+    s = must(sendToClient(s, actor(U.priya), id, [item], 'For the pool hall.')).state
+    s = must(decideItem(s, actor(U.isla), id, item, 'approved', '')).state
+    s = must(requestReservation(s, actor(U.isla), id, item, 'For the lido roof.')).state
+    return { s, id }
+  }
+
+  it('the owner never receives the type description, the client message or the project', () => {
+    const { s, id } = withOther()
+    const strings = projectPrivateStrings(s.world.projects[id], s.world)
+    expect(strings).toEqual(expect.arrayContaining(['Rooftop lido and spa', 'Please accept the Corbel Yard brief.', 'Corbel Yard']))
+    const views = ownerViews(s, viewer(U.tom))
+    expectNone(views, strings, 'Tom')
+    const blind = JSON.stringify(sel.requestsView(s, viewer(U.tom)))
+    expect(blind).toContain('other project')
+  })
+
+  it('the buyer side still receives no seller-private string', () => {
+    const { s } = withOther()
+    const strings = allLotStrings(s)
+    for (const [who, id] of [['Priya', U.priya], ['Isla', U.isla], ['Marcus', U.marcus]] as const) expectNone(buyerViews(s, viewer(id)), strings, who)
+  })
+
+  it('a declined request reaches the architect with no person from the client', () => {
+    let s = fresh()
+    const created = must(createProject(s, actor(U.priya), { name: 'Corbel Yard', client: { orgId: ORG_IDS.lantern }, projectType: 'office', localAuthority: '', region: 'Central London', ribaStage: 2, startDate: '2027-09-06', consultantOrgId: null }))
+    s = must(decideClientLink(created.state, actor(U.isla), created.value, 'declined', 'Not this time.')).state
+    const priya = JSON.stringify([sel.projectOverview(s, viewer(U.priya), created.value), sel.projectTeam(s, viewer(U.priya), created.value), sel.projectHeader(s, viewer(U.priya), created.value), sel.inboxView(s, viewer(U.priya)).groups[0]])
+    expect(priya).toContain('Lantern Quay Developments declined Corbel Yard')
+    expect(priya).not.toContain('Isla Brennan')
+    expect(priya).not.toContain('isla.brennan@lanternquay.example')
   })
 })

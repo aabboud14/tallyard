@@ -33,6 +33,8 @@ export function projectPrivateStrings(project: Project, world: World): string[] 
   out.push(...dateFormats(project.keyDates.steelNeedBy))
   // Version 1.0: the construction start is private; a seller sees at most the need-by quarter from toBlindBuyer.
   out.push(...dateFormats(project.startDate))
+  // Round 2: the free type description and the notes between architect and client stay with the project team.
+  out.push(project.projectTypeOther, project.clientLink.message, project.clientLink.decisionNote)
   return [...new Set(out.filter((s) => s.length > 0))]
 }
 

@@ -61,11 +61,16 @@ export function clientsFor(world: World, personaId: string): { org: Org; buildin
   return out
 }
 
-/** Projects where the persona's organisation is the architect, the client or the consultant, in seed order. */
+/** Whether the client organisation has accepted the project. Only then does the client reach it. */
+export function clientLinked(p: Project): boolean {
+  return p.clientLink.status === 'accepted'
+}
+
+/** Projects where the persona's organisation is the architect, the linked client or the consultant, in seed order. */
 export function projectsFor(world: World, personaId: string): Project[] {
   const orgId = accessOrgId(world, personaId)
   if (!orgId) return []
-  return Object.values(world.projects).filter((p) => p.architectOrgId === orgId || p.clientOrgId === orgId || p.consultantOrgId === orgId)
+  return Object.values(world.projects).filter((p) => p.architectOrgId === orgId || (p.clientOrgId === orgId && clientLinked(p)) || p.consultantOrgId === orgId)
 }
 
 /** Waste engagements where the persona's organisation is the consultant or the building owner. */

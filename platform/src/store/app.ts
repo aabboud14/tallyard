@@ -11,7 +11,7 @@ import { clearPhotos } from './photos'
 import { getSessionUserId, setSessionUserId } from './sessionId'
 import { ERRORS } from './access'
 
-export const STATE_VERSION = 1
+export const STATE_VERSION = 2
 
 export type Outcome<V> = { ok: boolean; error: string | null; value: V | null; undo: () => void }
 

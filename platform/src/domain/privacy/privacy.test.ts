@@ -242,3 +242,15 @@ describe('P1b: the expected availability and the start date never reach a projec
     for (const id of Object.keys(o.projects)) expect(toBlindBuyer(t.projects[id])).toEqual(toBlindBuyer(o.projects[id]))
   })
 })
+
+describe('round 2: the free type description never reaches a seller', () => {
+  it('toBlindBuyer of a project of type other holds the blind type only', () => {
+    const w = createSeed()
+    const p = { ...w.projects[SALLOW_ID], projectType: 'other' as const, projectTypeOther: 'Rooftop lido and spa', blind: { orgType: 'Design team', projectType: 'other project' } }
+    const blind = toBlindBuyer(p)
+    expect(JSON.stringify(blind)).not.toContain('Rooftop lido and spa')
+    expect(blindBuyerText(blind)).not.toContain('Rooftop')
+    expect(blind.projectType).toBe('other project')
+    expect(projectPrivateStrings(p, w)).toContain('Rooftop lido and spa')
+  })
+})

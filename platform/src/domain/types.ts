@@ -259,6 +259,36 @@ export type MatchResult = {
   avoidedT: number
 }
 
+/** Start of RIBA Plan of Work 2020 stages 0 to 4, in order. Stage i runs to the day before stage i+1 starts; stage 4 runs to the day before site start. */
+export type StageStarts = [string, string, string, string, string]
+
+export type ProgrammeDates = {
+  stageStarts: StageStarts
+  /** Start of stage 5, Manufacturing and Construction. */
+  siteStart: string
+  /** Start of stage 6, Handover. */
+  practicalCompletion: string
+}
+
+export type ProgrammeSource = 'suggested' | 'set'
+export type ProjectProgramme = ProgrammeDates & { source: ProgrammeSource }
+
+export type ClientLinkStatus = 'pending' | 'accepted' | 'declined'
+/** The client organisation's answer to being added to a project. Only 'accepted' gives the client access. */
+export type ClientLink = {
+  status: ClientLinkStatus
+  /** ISO date. */
+  requestedOn: string
+  /** Null for seeded links. */
+  requestedByPersonaId: string | null
+  /** The architect's note to the client, '' if none. */
+  message: string
+  decidedOn: string | null
+  decidedByPersonaId: string | null
+  /** The client's note on a decline, '' if none. */
+  decisionNote: string
+}
+
 export type Project = {
   id: string
   name: string
@@ -268,6 +298,14 @@ export type Project = {
   clientOrgId: string
   architectOrgId: string
   projectType: ProjectType
+  /** Free text when projectType is 'other'; '' otherwise. Project team only, never in toBlindBuyer. */
+  projectTypeOther: string
+  programme: ProjectProgramme
+  clientLink: ClientLink
+  /** IDs from src/domain/reference/requirements.ts that apply to the project's region and local authority, in dataset order. */
+  planningRequirementIds: string[]
+  /** True once the architect has saved or skipped the requirements. */
+  requirementsReviewed: boolean
   /** Materials needed on site from (construction start), ISO. Private. */
   startDate: string
   /** The persona who created the project in the tool; null for seeded projects. */

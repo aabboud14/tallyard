@@ -9,7 +9,7 @@ import { disclosureScore, type Disclosure } from '../../domain/engines/disclosur
 import { timelineFit } from '../../domain/engines/timeline'
 import { blindBuyerText, toBlindBuyer } from '../../domain/privacy/blindBuyer'
 import type { ActionResult, Actor, AppData, SurveyRecord } from '../types'
-import { ERRORS, buildingOrgIds, isBuildingOwner, roleOfOrg, roleOfUser } from '../access'
+import { ERRORS, buildingOrgIds, buyerSideOrgIds, isBuildingOwner, roleOfOrg, roleOfUser } from '../access'
 import { mint } from '../ids'
 import { acceptedReservation, listingOf } from '../lots'
 import { listJoin, log, notify, plural } from '../notifications'
@@ -272,7 +272,7 @@ export function setLotVisibility(state: AppData, actor: Actor, lotId: string, in
     for (const p of Object.values(s.world.projects)) {
       if (!p.approvedByOwnerOrgIds.includes(a.org.id)) continue
       s = notify(s, {
-        orgIds: [p.architectOrgId, p.clientOrgId],
+        orgIds: buyerSideOrgIds(p),
         kind: 'lots_shared',
         title: `New lot shared with ${p.name}`,
         body: p.termsAccepted ? `${listing.title}, shared in confidence by an asset owner.` : 'An asset owner shared a lot in confidence. Accept the confidentiality terms to see it.',
@@ -352,7 +352,7 @@ export function setProjectAccess(state: AppData, actor: Actor, projectId: string
   s = log(s, { at: a.now, orgIds: [a.org.id], buildingId: null, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: granted ? `shared lots with ${blind}` : `stopped sharing lots with ${blind}`, href: firstBuilding ? `/app/buildings/${firstBuilding.id}/sharing` : null })
   if (granted && shared > 0) {
     s = notify(s, {
-      orgIds: [p.architectOrgId, p.clientOrgId],
+      orgIds: buyerSideOrgIds(p),
       kind: 'lots_shared',
       title: `${plural(shared, 'lot')} shared with ${p.name}`,
       body: p.termsAccepted ? 'Shared in confidence by an asset owner. They are in Discover, under Shared with you.' : 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.',

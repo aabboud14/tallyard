@@ -51,6 +51,7 @@ export const routes: RouteObject[] = [
               { path: 'saved', lazy: lazyPage(() => import('../features/saved/Saved'), 'Saved') },
               { path: 'projects', lazy: lazyPage(() => import('../features/projects/ProjectsList'), 'ProjectsList') },
               { path: 'projects/new', lazy: lazyPage(() => import('../features/projects/NewProject'), 'NewProject') },
+              { path: 'projects/requests', lazy: lazyPage(() => import('../features/projects/LinkRequests'), 'LinkRequests') },
               {
                 path: 'projects/:projectId',
                 lazy: lazyPage(() => import('../features/projects/ProjectLayout'), 'ProjectLayout'),

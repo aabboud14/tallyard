@@ -1,16 +1,23 @@
-// Projects: create and edit, terms, consultant, and the architect's specification notes.
-import type { Project } from '../../domain/types'
+// Projects: create and edit, the programme, planning and sustainability requirements, the client's acceptance,
+// terms, consultant, and the architect's specification notes.
+import type { ClientLink, ProgrammeDates, Project, ProjectProgramme } from '../../domain/types'
 import type { ProjectType } from '../../domain/v1types'
 import { REGIONS } from '../../domain/reference/assumptions'
 import { V1_ASSUMPTIONS } from '../../domain/reference/v1assumptions'
-import { isOnOrBefore } from '../../domain/dates'
+import { blindProjectType, PROJECT_TYPE_OTHER_MAX, PROJECT_TYPES } from '../../domain/reference/projectTypes'
+import { isValidLocalAuthority } from '../../domain/reference/places'
+import { applicableIds, keepApplicable } from '../../domain/reference/requirements'
+import { defaultCompletion, PROGRAMME_ERRORS, suggestProgramme, validateProgramme } from '../../domain/engines/programme'
+import { daysBetween, isOnOrBefore } from '../../domain/dates'
 import type { ActionResult, Actor, AppData } from '../types'
 import { ERRORS, isProjectArchitect, isProjectClient, projectOrgIds, roleOfOrg } from '../access'
 import { mint } from '../ids'
 import { listIdFor } from '../lots'
-import { log, notify } from '../notifications'
+import { log, notify, plural } from '../notifications'
 import { setTermsAccepted } from '../worldOps'
-import { acting, clean, fail, isIsoDate, ok, withWorld } from './common'
+import { acting, clean, fail, isIsoDate, ok, withWorld, type Acting } from './common'
+
+export { PROJECT_TYPES }
 
 export const PROJECT_ERRORS = {
   name: 'Enter a project name.',
@@ -23,9 +30,12 @@ export const PROJECT_ERRORS = {
   badDate: 'Enter a valid date.',
   pastDate: 'The date must be today or later.',
   consultant: 'Choose a sustainability consultancy.',
+  localAuthority: 'Choose a local authority in this region.',
+  requirement: 'Choose requirements that apply to this location.',
+  linked: 'The client has already accepted this project.',
+  alreadyPending: 'A request is already waiting for this client.',
+  notPending: 'This request has already been answered.',
 } as const
-
-export const PROJECT_TYPES: ProjectType[] = ['office', 'hotel', 'residential', 'other']
 
 export type ClientChoice = { orgId: string } | { name: string }
 
@@ -33,16 +43,36 @@ export type NewProjectInput = {
   name: string
   client: ClientChoice
   projectType: ProjectType | null
+  /** A description of the type when it is 'other'. Project team only. */
+  projectTypeOther?: string
   localAuthority: string
   region: string
   ribaStage: number
   /** Materials needed on site from (ISO date). */
   startDate: string
+  /** Start of stage 5 (ISO date); the materials date when left out. */
+  siteStart?: string
+  /** Start of stage 6 (ISO date); CONSTRUCTION_DAYS after site start when left out. */
+  practicalCompletion?: string
+  /** Planning and sustainability requirements to track; filtered to the location. */
+  requirementIds?: string[]
+  /** The architect's note to the client with the request to join. */
+  clientMessage?: string
   description?: string
   consultantOrgId?: string | null
 }
 
-export type ProjectField = 'name' | 'client' | 'projectType' | 'region' | 'ribaStage' | 'startDate' | 'consultantOrgId'
+export type ProjectField = 'name' | 'client' | 'projectType' | 'projectTypeOther' | 'region' | 'localAuthority' | 'ribaStage' | 'startDate' | 'siteStart' | 'practicalCompletion' | 'consultantOrgId'
+
+function validStage(stage: number): boolean {
+  return Number.isInteger(stage) && stage >= 0 && stage <= 7
+}
+
+/** The programme dates a new project gets: site start defaults to the materials date, completion to the typical length. */
+function newProgrammeDates(input: NewProjectInput, today: string): ProgrammeDates | null {
+  const siteStart = input.siteStart || input.startDate
+  return suggestProgramme(today, input.ribaStage, siteStart, input.practicalCompletion || defaultCompletion(siteStart))
+}
 
 /** Every field error at once, in form order. Checks that need the state (a duplicate name, the client) stay in createProject. */
 export function validateNewProject(input: NewProjectInput, today: string): [ProjectField, string][] {
@@ -51,16 +81,42 @@ export function validateNewProject(input: NewProjectInput, today: string): [Proj
   if ('name' in input.client && !input.client.name.trim()) out.push(['client', PROJECT_ERRORS.clientName])
   if ('orgId' in input.client && !input.client.orgId) out.push(['client', PROJECT_ERRORS.clientName])
   if (input.projectType === null || !PROJECT_TYPES.includes(input.projectType)) out.push(['projectType', PROJECT_ERRORS.projectType])
-  if (!(REGIONS as readonly string[]).includes(input.region)) out.push(['region', PROJECT_ERRORS.region])
-  if (!Number.isInteger(input.ribaStage) || input.ribaStage < 0 || input.ribaStage > 7) out.push(['ribaStage', PROJECT_ERRORS.stage])
+  const regionOk = (REGIONS as readonly string[]).includes(input.region)
+  if (!regionOk) out.push(['region', PROJECT_ERRORS.region])
+  const stageOk = validStage(input.ribaStage)
+  if (!stageOk) out.push(['ribaStage', PROJECT_ERRORS.stage])
+  let startOk = false
   if (!isIsoDate(input.startDate)) out.push(['startDate', PROJECT_ERRORS.badDate])
   else if (!isOnOrBefore(today, input.startDate)) out.push(['startDate', PROJECT_ERRORS.pastDate])
+  else startOk = true
+  if (regionOk && !isValidLocalAuthority(input.region, input.localAuthority)) out.push(['localAuthority', PROJECT_ERRORS.localAuthority])
+  if (!startOk) return out
+  // The programme: checked only once the materials date is a valid future date, so earlier error lists stay as they were.
+  let datesOk = true
+  if (input.siteStart && !isIsoDate(input.siteStart)) {
+    out.push(['siteStart', PROJECT_ERRORS.badDate])
+    datesOk = false
+  }
+  if (input.practicalCompletion && !isIsoDate(input.practicalCompletion)) {
+    out.push(['practicalCompletion', PROJECT_ERRORS.badDate])
+    datesOk = false
+  }
+  if (!datesOk || !stageOk) return out
+  const dates = newProgrammeDates(input, today)
+  if (!dates) {
+    out.push(['siteStart', PROGRAMME_ERRORS.tooSoon])
+    return out
+  }
+  for (const [field, message] of validateProgramme(dates, input.startDate)) {
+    if (field === 'siteStart' || field === 'practicalCompletion') out.push([field, message])
+    else if (field === 'startDate') out.push([input.siteStart ? 'startDate' : 'siteStart', message])
+  }
   return out
 }
 
-/** The practice's existing clients, for the new project dialog. */
+/** The practice's clients that have not declined: for the new project dialog and the change of client. */
 export function existingClientOrgIds(state: AppData, architectOrgId: string): string[] {
-  return [...new Set(Object.values(state.world.projects).filter((p) => p.architectOrgId === architectOrgId).map((p) => p.clientOrgId))]
+  return [...new Set(Object.values(state.world.projects).filter((p) => p.architectOrgId === architectOrgId && p.clientLink.status !== 'declined').map((p) => p.clientOrgId))]
 }
 
 function resolveClient(state: AppData, architectOrgId: string, client: ClientChoice): { orgId: string; createName: string | null } | { error: string } {
@@ -80,7 +136,94 @@ function resolveClient(state: AppData, architectOrgId: string, client: ClientCho
   return { orgId: '', createName: name }
 }
 
-/** The architect creates a project with an empty shortlist (09 section 13.6, adapted). */
+/** A request to the client organisation to accept a project, waiting for its answer. */
+export function pendingClientLink(today: string, requestedByPersonaId: string | null, message: string): ClientLink {
+  return { status: 'pending', requestedOn: today, requestedByPersonaId, message: clean(message, 1000), decidedOn: null, decidedByPersonaId: null, decisionNote: '' }
+}
+
+export type ProjectRecordInput = {
+  id: string
+  name: string
+  clientOrgId: string
+  /** '' when no practice is appointed yet. */
+  architectOrgId: string
+  createdByPersonaId: string
+  consultantOrgId: string
+  projectType: ProjectType
+  projectTypeOther: string
+  region: string
+  localAuthority: string
+  ribaStage: number
+  /** Materials needed on site from. */
+  startDate: string
+  programme: ProjectProgramme
+  clientLink: ClientLink
+  requirementIds: string[]
+  description: string
+  /** What a seller reads as the buyer's organisation type; 'Design team' unless given. */
+  blindOrgType?: string
+}
+
+/** A new project record with an empty bill, schedule and plan. Pure: the caller resolves the IDs and the client. */
+export function projectRecord(input: ProjectRecordInput): Project {
+  const type = input.projectType
+  const localAuthority = clean(input.localAuthority, 80)
+  const planningRequirementIds = keepApplicable(input.requirementIds, input.region, localAuthority)
+  return {
+    id: input.id,
+    name: clean(input.name, 120),
+    developerOrgId: input.clientOrgId,
+    clientOrgId: input.clientOrgId,
+    architectOrgId: input.architectOrgId,
+    projectType: type,
+    projectTypeOther: type === 'other' ? clean(input.projectTypeOther, PROJECT_TYPE_OTHER_MAX) : '',
+    programme: { stageStarts: [...input.programme.stageStarts], siteStart: input.programme.siteStart, practicalCompletion: input.programme.practicalCompletion, source: input.programme.source },
+    clientLink: { ...input.clientLink },
+    planningRequirementIds,
+    requirementsReviewed: planningRequirementIds.length > 0,
+    startDate: input.startDate,
+    createdBy: input.createdByPersonaId,
+    teamOrgIds: [input.architectOrgId, input.consultantOrgId].filter((x) => x),
+    teamPersonaIds: [input.createdByPersonaId],
+    postcodeDistrict: '',
+    localAuthority,
+    region: input.region,
+    blind: { orgType: input.blindOrgType ?? 'Design team', projectType: blindProjectType(type) },
+    giaM2: 0,
+    ribaStage: input.ribaStage,
+    description: clean(input.description, 600),
+    keyDates: { planningSubmission: input.startDate, steelNeedBy: input.startDate },
+    frameMassT: 0,
+    billOfMaterials: [],
+    requirements: [],
+    matchResult: null,
+    planItems: [],
+    termsAccepted: false,
+    approvedByOwnerOrgIds: [],
+    seededDeals: [],
+    hubDistancesKm: { ...V1_ASSUMPTIONS.regionHubKm[input.region] },
+    consultantOrgId: input.consultantOrgId,
+    targets: { contentByValue: 0, avoidedCarbonT: 0 },
+  }
+}
+
+/** The client side of a link request: a line in their activity and a notification, both leading to Project requests. */
+function askClient(s: AppData, a: Acting, clientOrgId: string, projectName: string, message: string): AppData {
+  const text = clean(message, 1000)
+  let next = log(s, { at: a.now, orgIds: [clientOrgId], projectId: null, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `asked to add you as client on ${projectName}`, href: '/app/projects/requests' })
+  next = notify(next, {
+    orgIds: [clientOrgId],
+    kind: 'team',
+    title: `${a.org.name} asked to add you as client on ${projectName}`,
+    body: text ? `${a.user.name}: ${text}` : 'Accept to see the project and approve materials for it.',
+    href: '/app/projects/requests',
+    at: a.now,
+    actorUserId: a.user.id,
+  })
+  return next
+}
+
+/** The architect creates a project with an empty shortlist and suggested programme dates; the client is asked to accept. */
 export function createProject(state: AppData, actor: Actor, input: NewProjectInput): ActionResult<string> {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
@@ -94,6 +237,8 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
   if (consultantOrgId && roleOfOrg(state, consultantOrgId) !== 'consultant') return fail(state, PROJECT_ERRORS.consultant)
   const client = resolveClient(state, a.org.id, input.client)
   if ('error' in client) return fail(state, client.error)
+  const dates = newProgrammeDates(input, a.today)
+  if (!dates) return fail(state, PROGRAMME_ERRORS.tooSoon)
 
   let s = state
   let clientOrgId = client.orgId
@@ -107,49 +252,149 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
   const pm = mint(s, 'prj', (id) => !!w.projects[id] || !!w.wishlists[listIdFor(a.org.id, id)])
   s = pm.state
   const id = pm.id
-  const type = input.projectType!
-  const project: Project = {
+  const project = projectRecord({
     id,
     name,
-    developerOrgId: clientOrgId,
     clientOrgId,
     architectOrgId: a.org.id,
-    projectType: type,
-    startDate: input.startDate,
-    createdBy: a.persona.id,
-    teamOrgIds: consultantOrgId ? [a.org.id, consultantOrgId] : [a.org.id],
-    teamPersonaIds: [a.persona.id],
-    postcodeDistrict: '',
-    localAuthority: clean(input.localAuthority, 80),
-    region: input.region,
-    blind: { orgType: 'Design team', projectType: `${type} project` },
-    giaM2: 0,
-    ribaStage: input.ribaStage,
-    description: clean(input.description ?? '', 600),
-    keyDates: { planningSubmission: input.startDate, steelNeedBy: input.startDate },
-    frameMassT: 0,
-    billOfMaterials: [],
-    requirements: [],
-    matchResult: null,
-    planItems: [],
-    termsAccepted: false,
-    approvedByOwnerOrgIds: [],
-    seededDeals: [],
-    hubDistancesKm: { ...V1_ASSUMPTIONS.regionHubKm[input.region] },
+    createdByPersonaId: a.persona.id,
     consultantOrgId,
-    targets: { contentByValue: 0, avoidedCarbonT: 0 },
-  }
+    projectType: input.projectType!,
+    projectTypeOther: input.projectTypeOther ?? '',
+    region: input.region,
+    localAuthority: input.localAuthority,
+    ribaStage: input.ribaStage,
+    startDate: input.startDate,
+    programme: { ...dates, source: 'suggested' },
+    clientLink: pendingClientLink(a.today, a.persona.id, input.clientMessage ?? ''),
+    requirementIds: input.requirementIds ?? [],
+    description: input.description ?? '',
+  })
   w.projects[id] = project
   const listId = listIdFor(a.org.id, id)
   w.wishlists[listId] = { id: listId, orgId: a.org.id, projectId: id, items: [] }
   s = withWorld(s, w)
   s = log(s, { at: a.now, orgIds: projectOrgIds(project), projectId: id, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'created the project', href: `/app/projects/${id}` })
-  s = notify(s, { orgIds: [clientOrgId], kind: 'team', title: `${a.org.name} added you as client`, body: `${name} is now in your projects.`, href: `/app/projects/${id}`, at: a.now, actorUserId: a.user.id })
+  s = askClient(s, a, clientOrgId, name, input.clientMessage ?? '')
   if (consultantOrgId) s = notify(s, { orgIds: [consultantOrgId], kind: 'team', title: `${a.org.name} added you to ${name}`, body: 'You are the sustainability consultant on this project.', href: `/app/projects/${id}`, at: a.now, actorUserId: a.user.id })
   return ok(s, id)
 }
 
-export type ProjectPatch = Partial<Pick<Project, 'name' | 'projectType' | 'ribaStage' | 'startDate' | 'localAuthority' | 'region' | 'description'>>
+/** The client organisation accepts or declines being the client on a project. Only a pending request can be answered. */
+export function decideClientLink(state: AppData, actor: Actor, projectId: string, decision: 'accepted' | 'declined', note: string): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const p = state.world.projects[projectId]
+  if (!p) return fail(state, ERRORS.noProject)
+  if (a.role !== 'client' || p.clientOrgId !== a.org.id) return fail(state, ERRORS.role)
+  if (p.clientLink.status !== 'pending') return fail(state, PROJECT_ERRORS.notPending)
+  const clientOrg = a.org.name
+  const href = `/app/projects/${projectId}`
+  const w = structuredClone(state.world)
+  const next = w.projects[projectId]
+  let s: AppData
+  if (decision === 'accepted') {
+    next.clientLink = { ...next.clientLink, status: 'accepted', decidedOn: a.today, decidedByPersonaId: a.persona.id, decisionNote: '' }
+    s = withWorld(state, w)
+    s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'accepted the project as client', href })
+    s = notify(s, { orgIds: [p.architectOrgId], kind: 'team', title: `${clientOrg} accepted ${p.name}`, body: 'They can now see the project and approve materials you send.', href, at: a.now, actorUserId: a.user.id })
+    return ok(s)
+  }
+  const text = clean(note, 1000)
+  next.clientLink = { ...next.clientLink, status: 'declined', decidedOn: a.today, decidedByPersonaId: a.persona.id, decisionNote: text }
+  s = withWorld(state, w)
+  // A decline reaches the architect under the organisation's name, never a person's.
+  s = log(s, { at: a.now, orgIds: [p.architectOrgId], projectId, buildingId: null, actorUserId: null, actor: clientOrg, text: 'declined the project', href })
+  s = notify(s, { orgIds: [p.architectOrgId], kind: 'team', title: `${clientOrg} declined ${p.name}`, body: text ? `Their note: ${text}` : 'Ask again or choose another client from the project overview.', href, at: a.now, actorUserId: null })
+  return ok(s)
+}
+
+/** The architect asks a client to accept the project again, or asks another client, while it is not accepted. */
+export function requestClientLink(state: AppData, actor: Actor, projectId: string, client: ClientChoice, message: string): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const p = state.world.projects[projectId]
+  if (!p) return fail(state, ERRORS.noProject)
+  if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  if (p.clientLink.status === 'accepted') return fail(state, PROJECT_ERRORS.linked)
+  // Asking the same client again after a decline is allowed, even though it no longer counts as one of the practice's clients.
+  const resolved = 'orgId' in client && client.orgId === p.clientOrgId ? { orgId: p.clientOrgId, createName: null } : resolveClient(state, p.architectOrgId, client)
+  if ('error' in resolved) return fail(state, resolved.error)
+  if (p.clientLink.status === 'pending' && resolved.orgId === p.clientOrgId) return fail(state, PROJECT_ERRORS.alreadyPending)
+  let s = state
+  let clientOrgId = resolved.orgId
+  const w = structuredClone(s.world)
+  if (resolved.createName) {
+    const m = mint(s, 'org', (id) => !!w.orgs[id])
+    s = m.state
+    clientOrgId = m.id
+    w.orgs[clientOrgId] = { id: clientOrgId, name: clean(resolved.createName, 120), type: 'Developer' }
+  }
+  const next = w.projects[projectId]
+  next.clientOrgId = clientOrgId
+  next.developerOrgId = clientOrgId
+  next.clientLink = pendingClientLink(a.today, a.persona.id, message)
+  s = withWorld(s, w)
+  const clientName = w.orgs[clientOrgId]?.name ?? ''
+  s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `asked ${clientName} to join as client`, href: `/app/projects/${projectId}` })
+  s = askClient(s, a, clientOrgId, p.name, message)
+  return ok(s)
+}
+
+export type ProgrammeInput = { ribaStage: number; programme: ProgrammeDates; startDate: string }
+
+/** The architect sets the declared stage, the programme dates and when materials are needed on site. */
+export function setProjectProgramme(state: AppData, actor: Actor, projectId: string, input: ProgrammeInput): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const p = state.world.projects[projectId]
+  if (!p) return fail(state, ERRORS.noProject)
+  if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  if (!validStage(input.ribaStage)) return fail(state, PROJECT_ERRORS.stage)
+  const problems = validateProgramme(input.programme, input.startDate)
+  if (problems.length > 0) return fail(state, problems[0][1])
+  const programme: ProjectProgramme = { stageStarts: [...input.programme.stageStarts], siteStart: input.programme.siteStart, practicalCompletion: input.programme.practicalCompletion, source: 'set' }
+  const same =
+    p.programme.source === 'set' &&
+    p.ribaStage === input.ribaStage &&
+    p.startDate === input.startDate &&
+    p.keyDates.steelNeedBy === input.startDate &&
+    p.programme.siteStart === programme.siteStart &&
+    p.programme.practicalCompletion === programme.practicalCompletion &&
+    p.programme.stageStarts.every((d, i) => d === programme.stageStarts[i])
+  if (same) return ok(state)
+  const w = structuredClone(state.world)
+  const next = w.projects[projectId]
+  next.programme = programme
+  next.ribaStage = input.ribaStage
+  next.startDate = input.startDate
+  next.keyDates = { ...next.keyDates, steelNeedBy: input.startDate }
+  let s = withWorld(state, w)
+  s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'updated the programme', href: `/app/projects/${projectId}` })
+  return ok(s)
+}
+
+/** The architect chooses the planning and sustainability requirements to track. An empty list counts as skipped. */
+export function setProjectRequirements(state: AppData, actor: Actor, projectId: string, ids: string[]): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const p = state.world.projects[projectId]
+  if (!p) return fail(state, ERRORS.noProject)
+  if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  const applicable = new Set(applicableIds(p.region, p.localAuthority))
+  if (ids.some((id) => !applicable.has(id))) return fail(state, PROJECT_ERRORS.requirement)
+  const chosen = keepApplicable(ids, p.region, p.localAuthority)
+  if (p.requirementsReviewed && chosen.length === p.planningRequirementIds.length && chosen.every((id, i) => id === p.planningRequirementIds[i])) return ok(state)
+  const w = structuredClone(state.world)
+  w.projects[projectId].planningRequirementIds = chosen
+  w.projects[projectId].requirementsReviewed = true
+  let s = withWorld(state, w)
+  const text = chosen.length > 0 ? `chose ${plural(chosen.length, 'planning and sustainability requirement')}` : 'cleared the planning and sustainability requirements'
+  s = log(s, { at: a.now, orgIds: projectOrgIds(p), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text, href: `/app/projects/${projectId}` })
+  return ok(s)
+}
+
+export type ProjectPatch = Partial<Pick<Project, 'name' | 'projectType' | 'projectTypeOther' | 'ribaStage' | 'startDate' | 'localAuthority' | 'region' | 'description'>>
 
 /** The architect edits a project's details. A new start date moves the need-by date the seller sees as a quarter. */
 export function updateProject(state: AppData, actor: Actor, projectId: string, patch: ProjectPatch): ActionResult {
@@ -169,14 +414,16 @@ export function updateProject(state: AppData, actor: Actor, projectId: string, p
   if (patch.projectType !== undefined) {
     if (!PROJECT_TYPES.includes(patch.projectType)) return fail(state, PROJECT_ERRORS.projectType)
     next.projectType = patch.projectType
-    if (p.createdBy !== null) next.blind = { ...p.blind, projectType: `${patch.projectType} project` }
+    if (p.createdBy !== null) next.blind = { ...p.blind, projectType: blindProjectType(patch.projectType) }
   }
+  next.projectTypeOther = next.projectType === 'other' ? clean(patch.projectTypeOther ?? p.projectTypeOther, PROJECT_TYPE_OTHER_MAX) : ''
   if (patch.ribaStage !== undefined) {
-    if (!Number.isInteger(patch.ribaStage) || patch.ribaStage < 0 || patch.ribaStage > 7) return fail(state, PROJECT_ERRORS.stage)
+    if (!validStage(patch.ribaStage)) return fail(state, PROJECT_ERRORS.stage)
     next.ribaStage = patch.ribaStage
   }
   if (patch.startDate !== undefined) {
     if (!isIsoDate(patch.startDate)) return fail(state, PROJECT_ERRORS.badDate)
+    if (daysBetween(p.programme.siteStart, patch.startDate) < 0 || daysBetween(patch.startDate, p.programme.practicalCompletion) < 0) return fail(state, PROGRAMME_ERRORS.materials)
     next.startDate = patch.startDate
     next.keyDates = { ...p.keyDates, steelNeedBy: patch.startDate }
   }
@@ -186,6 +433,8 @@ export function updateProject(state: AppData, actor: Actor, projectId: string, p
     if (patch.region !== p.region) next.hubDistancesKm = { ...V1_ASSUMPTIONS.regionHubKm[patch.region] }
   }
   if (patch.localAuthority !== undefined) next.localAuthority = clean(patch.localAuthority, 80)
+  if (!isValidLocalAuthority(next.region, next.localAuthority)) return fail(state, PROJECT_ERRORS.localAuthority)
+  if (next.region !== p.region || next.localAuthority !== p.localAuthority) next.planningRequirementIds = keepApplicable(p.planningRequirementIds, next.region, next.localAuthority)
   if (patch.description !== undefined) next.description = clean(patch.description, 600)
   const w = structuredClone(state.world)
   w.projects[projectId] = next

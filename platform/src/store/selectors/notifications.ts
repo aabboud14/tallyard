@@ -14,7 +14,7 @@ export const NOTIFICATION_KIND_INFO: Record<NotificationKind, { label: string; d
   item_captured: { label: 'New items captured', description: 'A surveyor captures items in one of your buildings.', roles: ['owner'] },
   new_fit: { label: 'New materials for your projects', description: 'A material is published that is available in time for one of your projects.', roles: ['architect'] },
   appointed: { label: 'Survey appointments', description: 'An owner appoints you to survey a building.', roles: ['surveyor'] },
-  team: { label: 'Team and projects', description: 'Someone joins your organisation, or you are added to a project.', roles: ['architect', 'client', 'owner', 'surveyor', 'consultant'] },
+  team: { label: 'Team and projects', description: 'Someone joins your organisation, an architect asks to add you to a project, or a client answers your request.', roles: ['architect', 'client', 'owner', 'surveyor', 'consultant'] },
 }
 
 export type InboxItem = { id: string; kind: NotificationKind; kindLabel: string; title: string; body: string; href: string; at: string; timeAgo: string; unread: boolean; count: number }

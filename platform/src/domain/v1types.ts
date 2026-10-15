@@ -4,7 +4,20 @@ import type { Condition, FamilyId } from './types'
 /** Browse grouping agreed on the calls: structure, envelope, finishes. */
 export type Typology = 'structure' | 'envelope' | 'finishes'
 
-export type ProjectType = 'office' | 'hotel' | 'residential' | 'other'
+export type ProjectType =
+  | 'office'
+  | 'residential'
+  | 'hotel'
+  | 'mixed_use'
+  | 'retail'
+  | 'education'
+  | 'healthcare'
+  | 'laboratory'
+  | 'industrial'
+  | 'cultural'
+  | 'leisure'
+  | 'student_housing'
+  | 'other'
 
 /** The five steps of the UK decision tree. Version 1.0 assigns reuse, downcycle and recycle. */
 export type DecisionRoute = 'reuse' | 'upcycle' | 'downcycle' | 'recycle' | 'scrap'

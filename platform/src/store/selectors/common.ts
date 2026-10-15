@@ -4,7 +4,8 @@ import type { FamilyId, Project, PublicListing } from '../../domain/types'
 import type { Band, TimelineFit, Typology, WishStatus } from '../../domain/v1types'
 import { FAMILIES } from '../../domain/reference/families'
 import { facilityById } from '../../domain/reference/assumptions'
-import { PROJECT_TYPE_LABELS, TIMELINE_TEXT, TYPOLOGY_LABELS } from '../../domain/reference/labels'
+import { TIMELINE_TEXT, TYPOLOGY_LABELS } from '../../domain/reference/labels'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import { RIBA_STAGES } from '../../domain/reference/policy'
 import { daysBetween, formatDate, formatDateShort } from '../../domain/dates'
 import { typologyOf } from '../../domain/engines/typology'
@@ -208,7 +209,7 @@ export function projectRef(state: AppData, p: Project): ProjectRef {
     id: p.id,
     name: p.name,
     clientName: state.world.orgs[p.clientOrgId]?.name ?? '',
-    typeLabel: PROJECT_TYPE_LABELS[p.projectType],
+    typeLabel: projectTypeLabel(p),
     stage: p.ribaStage,
     stageLabel: stageLabel(p.ribaStage),
     region: p.region,
@@ -254,6 +255,7 @@ const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
 export function hrefForReader(state: AppData, userId: string, href: string | null): string | null {
   if (!href) return null
   const [, section, id, tab, ...rest] = href.split('?')[0].split('/').filter(Boolean)
+  if (section === 'projects' && id === 'requests') return roleOfUser(state, userId) === 'client' ? href : null
   if (section === 'projects' && id) {
     const side = projectSide(state, userId, id)
     if (!side) return null

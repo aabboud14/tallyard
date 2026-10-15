@@ -18,6 +18,10 @@ export const act = {
   // Projects
   createProject: bind(projects.createProject),
   updateProject: bind(projects.updateProject),
+  decideClientLink: bind(projects.decideClientLink),
+  requestClientLink: bind(projects.requestClientLink),
+  setProjectProgramme: bind(projects.setProjectProgramme),
+  setProjectRequirements: bind(projects.setProjectRequirements),
   acceptTerms: bind(projects.acceptTerms),
   setProjectConsultant: bind(projects.setProjectConsultant),
   editSpecHeader: bind(projects.editSpecHeader),

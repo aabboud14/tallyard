@@ -4,7 +4,7 @@ import { buildingSide, buildingsOfUser, canOpenEngagement, isProjectClient, orgO
 import { orgTypeLabel } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
-import { projectTabs } from './project'
+import { pendingLinkRequestCount, projectTabs } from './project'
 import { buildingTabs } from './owner'
 import { appointments } from './surveyor'
 import { engagementsOf } from './consultant'
@@ -77,7 +77,10 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     sections.push({ id: 'projects', title: 'Projects', items: [...projects.map((p) => projectFolder(p.id, p.name)), item('new-project', 'New project', '/app/projects/new', 'FolderPlus')] })
   } else if (role === 'client') {
     sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House')] })
-    sections.push({ id: 'projects', title: 'Projects', items: projects.filter((p) => isProjectClient(state, viewer.userId, p.id)).map((p) => projectFolder(p.id, p.name)) })
+    const requests = pendingLinkRequestCount(state, org.id)
+    const folders = projects.filter((p) => isProjectClient(state, viewer.userId, p.id)).map((p) => projectFolder(p.id, p.name))
+    // Project requests shows only while an architect is waiting for an answer.
+    sections.push({ id: 'projects', title: 'Projects', items: requests > 0 ? [...folders, item('project-requests', 'Project requests', '/app/projects/requests', 'Inbox', { badge: badge(requests) })] : folders })
   } else if (role === 'owner') {
     const buildings = buildingsOfUser(state, viewer.userId)
     sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House')] })
@@ -143,6 +146,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
   if (section === 'projects') {
     if (id === undefined) return roles('architect', 'client', 'consultant')
     if (id === 'new') return tab === undefined ? roles('architect') : 'not_found'
+    if (id === 'requests') return tab === undefined ? roles('client') : 'not_found'
     if (!ID.test(id)) return 'not_found'
     const side = projectSide(state, viewer.userId, id)
     if (!side) return 'forbidden'

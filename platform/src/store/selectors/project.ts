@@ -1,16 +1,23 @@
-// Projects: the list, the workspace header and tabs, overview with the programme timeline, carbon, team and activity.
-import type { Project } from '../../domain/types'
+// Projects: the list, the workspace header and tabs, overview with the programme, setup and the client's
+// acceptance, carbon, team and activity, and the client's project requests.
+import type { ClientLinkStatus, Project } from '../../domain/types'
 import type { Typology, WishStatus } from '../../domain/v1types'
 import { REGIONS } from '../../domain/reference/assumptions'
 import { PROJECT_TYPE_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/labels'
 import { RIBA_STAGES } from '../../domain/reference/policy'
-import { addDays, daysBetween, formatQuarter, maxDate, quarterWindow } from '../../domain/dates'
+import { isLondonRegion, localAuthoritiesFor } from '../../domain/reference/places'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
+import { clientLinked } from '../../domain/access'
+import { CONSTRUCTION_DAYS } from '../../domain/engines/programme'
+import { addDays, daysBetween, formatDate, formatQuarter, maxDate, quarterWindow } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { projectSide, projectsOfUser, roleOfOrg, roleOfUser, usersOfOrg, type ProjectSide } from '../access'
 import { existingClientOrgIds, PROJECT_TYPES } from '../actions/projects'
 import { orgTypeLabel } from '../../sandbox/accounts'
-import { activityFor, initials, projectRef, SHORTLIST_STATUS_LABELS, todayOf, type ActivityRow, type ProjectRef } from './common'
+import { activityFor, initials, projectRef, SHORTLIST_STATUS_LABELS, stageLabel, todayOf, type ActivityRow, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf, type ShortlistRow, type TotalsByState } from './shortlist'
+import { plannedStageText, programmeView, type ProgrammeView } from './programme'
+import { projectRequirementsView, type ProjectRequirementsView } from './requirements'
 import { projectWishlist } from '../lots'
 import { plural } from '../notifications'
 
@@ -38,14 +45,26 @@ export function projectTabs(state: AppData, side: ProjectSide, p: Project): Proj
 
 export type TeamAvatar = { userId: string; name: string; initials: string; colour: string; orgName: string }
 
-export type ProjectHeader = ProjectRef & { side: ProjectSide; tabs: ProjectTab[]; team: TeamAvatar[]; description: string; consultantName: string; architectName: string }
+export type ProjectHeader = ProjectRef & {
+  side: ProjectSide
+  tabs: ProjectTab[]
+  team: TeamAvatar[]
+  description: string
+  consultantName: string
+  architectName: string
+  siteStartText: string
+  completionText: string
+  /** "Today: stage 2, Concept Design", or "Programme starts 1 Nov 2026". */
+  plannedStageText: string
+  linkStatus: ClientLinkStatus
+}
 
-/** The workspace header and tabs for a project the viewer works on; null otherwise. */
+/** The workspace header and tabs for a project the viewer works on; null otherwise. Client members appear only once the client has accepted. */
 export function projectHeader(state: AppData, viewer: Viewer, projectId: string): ProjectHeader | null {
   const side = projectSide(state, viewer.userId, projectId)
   if (!side) return null
   const p = state.world.projects[projectId]
-  const team = [p.architectOrgId, p.clientOrgId, p.consultantOrgId]
+  const team = [p.architectOrgId, clientLinked(p) ? p.clientOrgId : '', p.consultantOrgId]
     .filter((x) => x)
     .flatMap((orgId) => usersOfOrg(state, orgId).map((u) => ({ userId: u.id, name: u.name, initials: initials(u.name), colour: u.avatarColour, orgName: state.world.orgs[orgId]?.name ?? '' })))
   return {
@@ -56,6 +75,10 @@ export function projectHeader(state: AppData, viewer: Viewer, projectId: string)
     description: p.description,
     consultantName: p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
     architectName: state.world.orgs[p.architectOrgId]?.name ?? '',
+    siteStartText: formatDate(p.programme.siteStart),
+    completionText: formatDate(p.programme.practicalCompletion),
+    plannedStageText: plannedStageText(p, todayOf(viewer)),
+    linkStatus: p.clientLink.status,
   }
 }
 
@@ -66,6 +89,9 @@ export type ProjectListRow = ProjectRef & {
   lastActivityAt: string | null
   lastActivity: string | null
   href: string
+  /** The setup checklist's progress, for the architect while it shows; null otherwise. */
+  setup: { done: number; total: number; nextText: string | null } | null
+  linkStatus: ClientLinkStatus
 }
 
 export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean }
@@ -77,7 +103,18 @@ export function projectsListView(state: AppData, viewer: Viewer): ProjectsListVi
     const items = projectWishlist(state.world, p.id)?.items ?? []
     const counts = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, items.filter((i) => i.status === s).length])) as Record<WishStatus, number>
     const last = state.activity.find((e) => e.projectId === p.id && !!orgId && e.orgIds.includes(orgId)) ?? null
-    return { ...projectRef(state, p), side, counts, total: items.length, lastActivityAt: last?.at ?? null, lastActivity: last ? `${last.actor} ${last.text}` : null, href: `/app/projects/${p.id}` }
+    const setup = side === 'architect' ? projectSetup(state, viewer, p.id) : null
+    return {
+      ...projectRef(state, p),
+      side,
+      counts,
+      total: items.length,
+      lastActivityAt: last?.at ?? null,
+      lastActivity: last ? `${last.actor} ${last.text}` : null,
+      href: `/app/projects/${p.id}`,
+      setup: setup && setup.visible ? { done: setup.done, total: setup.total, nextText: setup.nextText } : null,
+      linkStatus: p.clientLink.status,
+    }
   })
   rows.sort((a, b) => ((a.lastActivityAt ?? '') < (b.lastActivityAt ?? '') ? 1 : (a.lastActivityAt ?? '') > (b.lastActivityAt ?? '') ? -1 : a.name.localeCompare(b.name, 'en-GB')))
   return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0 }
@@ -91,6 +128,9 @@ export type NewProjectOptions = {
   stages: { value: number; label: string }[]
   /** The earliest start date the form accepts. */
   minStartDate: string
+  today: string
+  /** Practical completion defaults to this many days after site start. */
+  typicalCompletionDays: number
 }
 
 /** Choices for the new project dialog. Clients are the practice's own; consultancies are those on the platform. */
@@ -106,7 +146,21 @@ export function newProjectOptions(state: AppData, viewer: Viewer): NewProjectOpt
     regions: [...REGIONS],
     stages: RIBA_STAGES.map((label, i) => ({ value: i, label: `${i}, ${label}` })),
     minStartDate: todayOf(viewer),
+    today: todayOf(viewer),
+    typicalCompletionDays: CONSTRUCTION_DAYS,
   }
+}
+
+export type LocalAuthorityChoices = { options: string[]; allowsOther: boolean; london: boolean }
+
+/**
+ * The local authority dropdown for a region: its listed authorities, and whether a typed name is accepted.
+ * Reference data with no state, so the forms call it as the region changes. It is kept out of newProjectOptions
+ * on purpose: a list of every authority would put a seller's private local authority into a buyer's view model.
+ */
+export function localAuthorityChoices(region: string): LocalAuthorityChoices {
+  const london = isLondonRegion(region)
+  return { options: [...localAuthoritiesFor(region)], allowsOther: !london, london }
 }
 
 // ---------- Overview ----------
@@ -184,9 +238,16 @@ export type ProjectOverview = {
   counts: Record<WishStatus, number>
   totals: TotalsByState
   carbon: { securedT: number; shortlistedT: number }
+  /** Kept for compatibility; the overview draws `programme`. */
   timeline: ProgrammeTimeline
+  programme: ProgrammeView
+  requirements: ProjectRequirementsView
+  setup: ProjectSetup | null
+  link: ClientLinkView | null
   nextSteps: NextStep[]
   activity: ActivityRow[]
+  /** Every activity line on the project the viewer may read. */
+  activityTotal: number
   empty: boolean
 }
 
@@ -203,7 +264,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
   if (header.side === 'architect') {
     if (rows.length === 0) steps.push({ id: 'discover', text: 'Find materials for this project in Discover', href: `/app/discover?project=${projectId}` })
     const sendable = rows.filter((r) => r.canSelect).length
-    if (sendable > 0) steps.push({ id: 'send', text: `Send ${plural(sendable, 'shortlisted material')} to ${clientName}`, href: `${base}/shortlist` })
+    if (sendable > 0 && clientLinked(p)) steps.push({ id: 'send', text: `Send ${plural(sendable, 'shortlisted material')} to ${clientName}`, href: `${base}/shortlist` })
     if (counts.declined > 0) steps.push({ id: 'declined', text: `Review ${plural(counts.declined, 'declined material')}`, href: `${base}/shortlist` })
     if (counts.approved > 0) steps.push({ id: 'spec', text: 'Export the specification for the approved materials', href: `${base}/specification` })
   } else if (header.side === 'client') {
@@ -220,10 +281,229 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     totals,
     carbon: { securedT: totals.approved.avoidedT, shortlistedT: totals.all.avoidedT - totals.declined.avoidedT },
     timeline: programmeTimeline(todayOf(viewer), p.startDate, rows),
+    programme: programmeView(state, viewer, projectId, 'whole')!,
+    requirements: projectRequirementsView(state, viewer, projectId)!,
+    setup: projectSetup(state, viewer, projectId),
+    link: clientLinkView(state, viewer, projectId),
     nextSteps: steps,
     activity: activityFor(state, viewer, { projectId }, 8),
+    activityTotal: activityFor(state, viewer, { projectId }, Number.MAX_SAFE_INTEGER).length,
     empty: rows.length === 0,
   }
+}
+
+// ---------- Client link and setup ----------
+
+export type ClientLinkView = {
+  status: ClientLinkStatus
+  clientName: string
+  /** Whether anyone from the client organisation uses the product, so someone can accept. Never who. */
+  clientHasMembers: boolean
+  requestedText: string
+  decidedText: string | null
+  /** The client's note on a decline. */
+  note: string | null
+  canChange: boolean
+}
+
+/** The architect's view of a client that has not accepted: the organisation's name only, never its people. Null once accepted. */
+export function clientLinkView(state: AppData, viewer: Viewer, projectId: string): ClientLinkView | null {
+  if (projectSide(state, viewer.userId, projectId) !== 'architect') return null
+  const p = state.world.projects[projectId]
+  const link = p.clientLink
+  if (link.status === 'accepted') return null
+  return {
+    status: link.status,
+    clientName: state.world.orgs[p.clientOrgId]?.name ?? '',
+    clientHasMembers: usersOfOrg(state, p.clientOrgId).length > 0,
+    requestedText: `Asked on ${formatDate(link.requestedOn)}`,
+    decidedText: link.status === 'declined' && link.decidedOn ? `Declined on ${formatDate(link.decidedOn)}` : null,
+    note: link.status === 'declined' && link.decisionNote ? link.decisionNote : null,
+    canChange: true,
+  }
+}
+
+export type SetupStepState = 'done' | 'current' | 'todo' | 'waiting' | 'attention'
+export type SetupIntent = 'edit_programme' | 'keep_programme' | 'requirements' | 'change_client' | null
+export type SetupStep = {
+  id: 'programme' | 'client' | 'requirements' | 'consultant' | 'shortlist' | 'send'
+  title: string
+  text: string
+  state: SetupStepState
+  optional: boolean
+  action: { label: string; href: string | null; intent: SetupIntent } | null
+  secondary: { label: string; intent: SetupIntent } | null
+}
+export type ProjectSetup = { visible: boolean; done: number; total: number; steps: SetupStep[]; nextText: string | null }
+
+function lowerFirst(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1)
+}
+
+/** The setup checklist on a new project, for its architect. It hides once the programme, the client and the shortlist are done. */
+export function projectSetup(state: AppData, viewer: Viewer, projectId: string): ProjectSetup | null {
+  if (projectSide(state, viewer.userId, projectId) !== 'architect') return null
+  const p = state.world.projects[projectId]
+  const base = `/app/projects/${projectId}`
+  const items = projectWishlist(state.world, projectId)?.items ?? []
+  const clientName = state.world.orgs[p.clientOrgId]?.name ?? 'The client'
+  const linked = p.clientLink.status === 'accepted'
+  type Draft = Omit<SetupStep, 'state'> & { done: boolean; waiting: boolean; attention: boolean }
+  const drafts: Draft[] = []
+  const programmeSet = p.programme.source === 'set'
+  drafts.push({
+    id: 'programme',
+    title: 'Check the programme',
+    text: programmeSet ? 'Stage dates, site start and practical completion are set.' : 'Suggested from your site start and typical stage lengths. Indicative: confirm the dates or edit them.',
+    optional: false,
+    action: programmeSet ? null : { label: 'Edit programme', href: null, intent: 'edit_programme' },
+    secondary: programmeSet ? null : { label: 'Keep these dates', intent: 'keep_programme' },
+    done: programmeSet,
+    waiting: false,
+    attention: false,
+  })
+  const declined = p.clientLink.status === 'declined'
+  drafts.push({
+    id: 'client',
+    title: 'Client accepts the project',
+    text: linked ? `${clientName} accepted the project.` : declined ? `${clientName} declined this project.` : `Waiting for ${clientName} to accept.`,
+    optional: false,
+    action: declined ? { label: 'Ask again', href: null, intent: 'change_client' } : null,
+    secondary: linked ? null : { label: 'Change client', intent: 'change_client' },
+    done: linked,
+    waiting: p.clientLink.status === 'pending',
+    attention: declined,
+  })
+  drafts.push({
+    id: 'requirements',
+    title: 'Choose planning and sustainability requirements',
+    text: p.requirementsReviewed ? plural(p.planningRequirementIds.length, 'requirement') + ' chosen.' : 'Pick the policies and standards to track for this location.',
+    optional: true,
+    action: { label: p.requirementsReviewed ? 'Edit requirements' : 'Choose requirements', href: null, intent: 'requirements' },
+    secondary: null,
+    done: p.requirementsReviewed,
+    waiting: false,
+    attention: false,
+  })
+  const consultantName = p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : ''
+  drafts.push({
+    id: 'consultant',
+    title: 'Add a sustainability consultant',
+    text: consultantName ? `${consultantName} is on the team.` : 'They can follow carbon and compliance on this project.',
+    optional: true,
+    action: { label: consultantName ? 'Open team' : 'Add consultant', href: `${base}/team`, intent: null },
+    secondary: null,
+    done: !!consultantName,
+    waiting: false,
+    attention: false,
+  })
+  drafts.push({
+    id: 'shortlist',
+    title: 'Shortlist materials',
+    text: items.length > 0 ? `${plural(items.length, 'material')} on the shortlist.` : 'Find materials that arrive in time for this project.',
+    optional: false,
+    action: { label: 'Find materials', href: `/app/discover?project=${projectId}`, intent: null },
+    secondary: null,
+    done: items.length > 0,
+    waiting: false,
+    attention: false,
+  })
+  const sentAny = items.some((i) => i.status !== 'pending' || !!i.sentOn)
+  drafts.push({
+    id: 'send',
+    title: 'Send materials for approval',
+    text: sentAny ? 'Materials have gone to the client.' : linked ? `Send shortlisted materials to ${clientName}.` : 'Opens once the client accepts the project.',
+    optional: false,
+    action: { label: 'Open shortlist', href: `${base}/shortlist`, intent: null },
+    secondary: null,
+    done: sentAny,
+    waiting: !sentAny && !linked,
+    attention: false,
+  })
+  let currentFound = false
+  const steps: SetupStep[] = drafts.map(({ done, waiting, attention, ...rest }) => {
+    let st: SetupStepState
+    if (done) st = 'done'
+    else if (waiting) st = 'waiting'
+    else if (!currentFound) {
+      st = attention ? 'attention' : 'current'
+      currentFound = true
+    } else st = attention ? 'attention' : 'todo'
+    return { ...rest, state: st }
+  })
+  const first = drafts.findIndex((d) => !d.done && !d.waiting)
+  const doneCount = drafts.filter((d) => d.done).length
+  const doneById = (id: SetupStep['id']) => drafts.find((d) => d.id === id)!.done
+  return {
+    visible: !(doneById('programme') && doneById('client') && doneById('shortlist')),
+    done: doneCount,
+    total: drafts.length,
+    steps,
+    nextText: first >= 0 ? `Next: ${lowerFirst(drafts[first].title)}` : null,
+  }
+}
+
+export type LinkRequestRow = {
+  projectId: string
+  projectName: string
+  architectName: string
+  requestedBy: string
+  requestedText: string
+  message: string
+  typeLabel: string
+  locationText: string
+  stageText: string
+  siteStartText: string
+  completionText: string
+  status: ClientLinkStatus
+  statusText: string
+  href: string | null
+}
+
+/**
+ * The client's project requests: pending ones to answer, and the ones answered here. Before accepting, a row
+ * holds the project's name, practice, requester, type, place, stage and key dates, and the message; never the
+ * shortlist, a listing or a figure. Seeded projects and a client's own projects are not requests.
+ */
+export function clientLinkRequests(state: AppData, viewer: Viewer): { pending: LinkRequestRow[]; answered: LinkRequestRow[] } | null {
+  if (roleOfUser(state, viewer.userId) !== 'client') return null
+  const orgId = state.users[viewer.userId].orgId
+  const rows: (LinkRequestRow & { sortKey: string })[] = []
+  for (const p of Object.values(state.world.projects)) {
+    if (p.clientOrgId !== orgId || p.createdBy === null) continue
+    const link = p.clientLink
+    const requester = link.requestedByPersonaId ? (state.world.personas[link.requestedByPersonaId] ?? null) : null
+    if (requester && requester.orgId === orgId) continue
+    const statusText = link.status === 'pending' ? 'Waiting for your answer' : `${link.status === 'accepted' ? 'Accepted' : 'Declined'} ${link.decidedOn ? formatDate(link.decidedOn) : ''}`.trim()
+    rows.push({
+      projectId: p.id,
+      projectName: p.name,
+      architectName: state.world.orgs[p.architectOrgId]?.name ?? '',
+      requestedBy: requester?.name ?? '',
+      requestedText: formatDate(link.requestedOn),
+      message: link.message,
+      typeLabel: projectTypeLabel(p),
+      locationText: [p.localAuthority, p.region].filter((x) => x).join(', '),
+      stageText: stageLabel(p.ribaStage),
+      siteStartText: formatDate(p.programme.siteStart),
+      completionText: formatDate(p.programme.practicalCompletion),
+      status: link.status,
+      statusText,
+      href: link.status === 'accepted' ? `/app/projects/${p.id}` : null,
+      sortKey: link.status === 'pending' ? link.requestedOn : (link.decidedOn ?? link.requestedOn),
+    })
+  }
+  const newestFirst = (a: { sortKey: string; projectName: string }, b: { sortKey: string; projectName: string }) => (a.sortKey < b.sortKey ? 1 : a.sortKey > b.sortKey ? -1 : a.projectName.localeCompare(b.projectName, 'en-GB'))
+  const strip = ({ sortKey: _sortKey, ...r }: LinkRequestRow & { sortKey: string }): LinkRequestRow => r
+  return {
+    pending: rows.filter((r) => r.status === 'pending').sort(newestFirst).map(strip),
+    answered: rows.filter((r) => r.status !== 'pending').sort(newestFirst).map(strip),
+  }
+}
+
+/** Requests waiting for the client organisation's answer, for the sidebar badge. */
+export function pendingLinkRequestCount(state: AppData, orgId: string): number {
+  return Object.values(state.world.projects).filter((p) => p.clientOrgId === orgId && p.createdBy !== null && p.clientLink.status === 'pending' && state.world.personas[p.clientLink.requestedByPersonaId ?? '']?.orgId !== orgId).length
 }
 
 // ---------- Carbon ----------
@@ -262,7 +542,8 @@ export function projectCarbon(state: AppData, viewer: Viewer, projectId: string)
 
 export type TeamMember = { userId: string; name: string; title: string; email: string; initials: string; colour: string; you: boolean }
 
-export type TeamSection = { orgId: string; orgName: string; orgTypeLabel: string; roleLabel: string; members: TeamMember[]; yours: boolean }
+/** `pending` is true for a client that has not accepted: then members is empty. */
+export type TeamSection = { orgId: string; orgName: string; orgTypeLabel: string; roleLabel: string; members: TeamMember[]; yours: boolean; pending: boolean }
 
 export type ProjectTeam = {
   header: ProjectHeader
@@ -276,15 +557,16 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
   if (!header) return null
   const p = state.world.projects[projectId]
   const myOrg = state.users[viewer.userId].orgId
-  const section = (orgId: string, roleLabel: string): TeamSection => ({
+  const section = (orgId: string, roleLabel: string, pending = false): TeamSection => ({
     orgId,
     orgName: state.world.orgs[orgId]?.name ?? '',
     orgTypeLabel: orgTypeLabel(state.world.orgs[orgId]?.type ?? ''),
     roleLabel,
-    members: usersOfOrg(state, orgId).map((u) => ({ userId: u.id, name: u.name, title: u.title, email: u.email, initials: initials(u.name), colour: u.avatarColour, you: u.id === viewer.userId })),
+    members: pending ? [] : usersOfOrg(state, orgId).map((u) => ({ userId: u.id, name: u.name, title: u.title, email: u.email, initials: initials(u.name), colour: u.avatarColour, you: u.id === viewer.userId })),
     yours: orgId === myOrg,
+    pending,
   })
-  const sections = [section(p.clientOrgId, 'Client'), section(p.architectOrgId, 'Architect')]
+  const sections = [section(p.clientOrgId, 'Client', !clientLinked(p)), section(p.architectOrgId, 'Architect')]
   if (p.consultantOrgId) sections.push(section(p.consultantOrgId, 'Sustainability consultant'))
   return {
     header,

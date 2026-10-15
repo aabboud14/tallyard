@@ -94,7 +94,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   if (fy) fy.items = fy.items.map((it) => (it.status === 'sent' ? { ...it, sentOn: addDays(it.addedOn, 1), sentMessage: null } : it))
 
   let s: AppData = {
-    version: 1,
+    version: 2,
     seededOn: todayIso,
     seq: 0,
     world: w,

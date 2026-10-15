@@ -154,7 +154,7 @@ export type UiState = {
 }
 
 export type AppData = {
-  version: 1
+  version: 2
   /** The date the sandbox was seeded. */
   seededOn: string
   /** Counter for deterministic IDs. */

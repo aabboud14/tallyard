@@ -43,6 +43,12 @@ export const ALLOWED_SOURCES = [
   'European Waste Catalogue',
   'RIBA',
   'NRM',
+  'WELL',
+  'UK Net Zero Carbon Buildings Standard',
+  'RIBA 2030 Climate Challenge',
+  'National Planning Policy Framework',
+  'Approved Document L',
+  'BS EN 15978',
 ] as const
 
 // Group 3: the generic facility names in the sample bill (C1).
@@ -65,6 +71,9 @@ export const ALLOWED_FACILITIES = [
 
 // Group 4: fictional names that appear only in the platform's tests (sign-ups, invites, a new project and building).
 export const TEST_ONLY_NAMES = ['Corbel Yard', 'Wexcombe House', '9 Lantry Street', 'Park Studio', 'Reed Holdings', 'Shaw Surveys', 'Jo Park', 'Ash Reed', 'Lee Shaw', 'Alex Moore', 'Ruth Calder', '2 Wharf Lane'] as const
+
+// Group 5: real places, named only as references for location and policy, never as actors.
+export { ALL_REFERENCE_PLACES as REFERENCE_PLACES } from './places'
 
 // Real company names that must never be introduced. The scan script fails on any of these.
 export const DENIED_NAMES = [
