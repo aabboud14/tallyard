@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FAMILY_IDS } from './reference/families'
-import { buildingSketch, facadeOf, frameFromText, projectSketch, rankFamilies, sketchUse } from './sketch'
+import { buildingSketch, facadeOf, frameFromText, frameOfBuilding, projectSketch, rankFamilies, sketchUse } from './sketch'
 import { fresh } from '../test/fixtures'
 import { MERROWGATE_ID, TIVERNE_ID } from './seed/world'
 import { listingOf, lotByPublicId, projectWishlist } from '../store/lots'
@@ -57,6 +57,15 @@ describe('sketch', () => {
     expect(t).toMatchObject({ storeys: 7, frame: 'steel', state: 'existing', facades: ['stone', 'glass', 'precast'] })
     expect(t.label).toBe('Illustration of a 7 storey building, drawn from its survey')
     expect(buildingSketch({ id: 'b', storeys: null, structureType: '' }, []).label).toBe('Illustration of a building, drawn from its survey')
+  })
+
+  it('takes the frame from the recorded frame element before the structure text', () => {
+    const el = (kind: 'frame' | 'floors', material: 'steel' | 'timber' | 'concrete_precast' | 'other' | null) => ({ kind, material, systemId: null, note: '' })
+    expect(frameOfBuilding([el('floors', 'concrete_precast'), el('frame', 'timber')], 'Steel frame')).toBe('timber')
+    expect(frameOfBuilding([el('frame', 'steel')], '')).toBe('steel')
+    expect(frameOfBuilding([el('frame', 'other')], 'Loadbearing brick')).toBe('masonry')
+    expect(frameOfBuilding([el('floors', 'concrete_precast')], '')).toBe('unknown')
+    expect(frameOfBuilding([], 'In situ concrete frame')).toBe('concrete')
   })
 
   it('never calls a drawing a photo', () => {

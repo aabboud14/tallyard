@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { fresh, U, viewer } from '../../test/fixtures'
-import { MERROWGATE_ID, SALLOW_ID } from '../../domain/seed/world'
+import { actor, fresh, must, U, viewer } from '../../test/fixtures'
+import { MERROWGATE_ID, ORG_IDS, SALLOW_ID } from '../../domain/seed/world'
+import { createOwnerProject } from '../actions/owner'
+import { architectHome } from './architect'
 import { ownerDashboard } from './home-owner'
 import { surveyorDashboard } from './home-surveyor'
 import { consultantDashboard } from './home-consultant'
@@ -19,6 +21,32 @@ describe('owner dashboard', () => {
     for (const r of d.requests) expect(d.requestThumbs[r.id].publicId).toBe(r.publicId)
     expect(d.activitySummary.count).toBe(d.activity.length)
     expect(ownerDashboard(fresh(), viewer(U.dana))).toBeNull()
+  })
+
+  it('names each card by kind and draws the owner New projects going up, with their site start', () => {
+    const s0 = fresh()
+    const before = ownerDashboard(s0, viewer(U.tom))!
+    expect(before.buildingCards.every((c) => c.kindLabel === 'Donor building')).toBe(true)
+    expect(before.newProjectCards).toEqual([])
+    const input = { name: 'Wexcombe House', projectType: 'office' as const, localAuthority: 'Camden', region: 'Central London', ribaStage: 2, startDate: '2027-09-20', architectOrgId: ORG_IDS.oriel }
+    const r = must(createOwnerProject(s0, actor(U.tom), input))
+    const after = ownerDashboard(r.state, viewer(U.tom))!
+    expect(after.newProjectCards).toHaveLength(1)
+    const card = after.newProjectCards[0]
+    expect(card).toMatchObject({ id: r.value, name: 'Wexcombe House', kindLabel: 'New project' })
+    expect(card.sketch.state).toBe('proposed')
+    expect(card.programmeText).toMatch(/^Site start /)
+  })
+})
+
+describe('programme stage on the project cards', () => {
+  it('gives the architect and consultant cards the stage the programme dates place today in', () => {
+    const s = fresh()
+    const a = architectHome(s, viewer(U.priya))!
+    const merrow = a.projects.find((p) => p.id === MERROWGATE_ID)!
+    expect(merrow.plannedStage).toBe(2)
+    const c = consultantDashboard(s, viewer(U.marcus))!
+    expect(c.rows.find((r) => r.id === MERROWGATE_ID)!.plannedStage).toBe(2)
   })
 })
 

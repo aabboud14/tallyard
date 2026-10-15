@@ -116,7 +116,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
         <Field label="Project type" error={errors.projectType}>
           <Select value={projectType} onChange={(e) => setProjectType(e.target.value as ProjectType)} options={options.types} data-testid="project-type" />
         </Field>
-        <Field label="Materials needed on site from" error={errors.startDate}>
+        <Field label="Materials needed on site from" error={errors.startDate ?? errors.siteStart}>
           <Input type="date" value={startDate} min={options.minStartDate} onChange={(e) => setStartDate(e.target.value)} data-testid="project-start" />
         </Field>
         <Field label="Region" error={errors.region}>
@@ -124,7 +124,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
         </Field>
         {short ? null : (
           <>
-            <Field label="Local authority" optional>
+            <Field label="Local authority" optional error={errors.localAuthority}>
               <Input value={localAuthority} onChange={(e) => setLocalAuthority(e.target.value)} placeholder="For example, Southwark" />
             </Field>
             <Field label="RIBA stage" error={errors.ribaStage}>

@@ -73,6 +73,9 @@ const tiverne: SourceBuilding = {
   storeys: 7,
   giaM2: 5200,
   structureType: 'Steel frame with composite slabs, stone and precast cladding, curtain wall added in 2003',
+  structure: [],
+  createdByOrgId: ORG_IDS.ostlea,
+  contractorOrgId: null,
   tenants: ['Corvane Insurance', 'Meridale Partners'],
   programme: { stripOutStart: '2027-01-04', dismantlingStart: '2027-01-25', clearBy: '2027-04-30' },
   defaultHubId: 'HUB-BARK',
@@ -100,6 +103,9 @@ const harrowden: SourceBuilding = {
   storeys: 5,
   giaM2: 4300,
   structureType: 'Steel frame with composite slabs, brick cladding and raised floors',
+  structure: [],
+  createdByOrgId: ORG_IDS.brackwater,
+  contractorOrgId: null,
   tenants: [],
   programme: { stripOutStart: '2027-06-14', dismantlingStart: '2027-07-05', clearBy: '2027-09-24' },
   defaultHubId: 'HUB-PARK',
@@ -247,6 +253,11 @@ const merrowgate: Project = {
   clientOrgId: ORG_IDS.lantern,
   architectOrgId: ORG_IDS.oriel,
   projectType: 'office',
+  projectTypeOther: '',
+  programme: { stageStarts: ['2025-09-01', '2025-12-01', '2026-06-01', '2026-11-02', '2027-02-01'], siteStart: '2027-11-01', practicalCompletion: '2029-06-29', source: 'set' },
+  clientLink: { status: 'accepted', requestedOn: '2025-09-01', requestedByPersonaId: PERSONA_IDS.priya, message: '', decidedOn: '2025-09-03', decidedByPersonaId: PERSONA_IDS.isla, decisionNote: '' },
+  planningRequirementIds: ['nppf', 'adl', 'nzcbs', 'breeam-nc', 'lp-si2', 'lp-si7', 'lp-d3', 'gla-wlc', 'gla-ces', 'la-newham'],
+  requirementsReviewed: true,
   startDate: STEEL_NEED_BY,
   createdBy: null,
   teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
@@ -283,6 +294,11 @@ const sallow: Project = {
   clientOrgId: ORG_IDS.pellory,
   architectOrgId: ORG_IDS.oriel,
   projectType: 'hotel',
+  projectTypeOther: '',
+  programme: { stageStarts: ['2026-05-04', '2026-08-03', '2026-12-14', '2027-04-05', '2027-08-09'], siteStart: '2027-11-01', practicalCompletion: '2029-03-30', source: 'set' },
+  clientLink: { status: 'accepted', requestedOn: '2026-05-04', requestedByPersonaId: PERSONA_IDS.priya, message: '', decidedOn: '2026-05-04', decidedByPersonaId: null, decisionNote: '' },
+  planningRequirementIds: ['nppf', 'breeam-nc', 'lp-si2', 'lp-si7', 'gla-ces', 'la-camden-cc1', 'la-camden-cpg'],
+  requirementsReviewed: true,
   startDate: SALLOW_START,
   createdBy: null,
   teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
@@ -318,6 +334,11 @@ const ferrymoor: Project = {
   clientOrgId: ORG_IDS.quillon,
   architectOrgId: ORG_IDS.oriel,
   projectType: 'residential',
+  projectTypeOther: '',
+  programme: { stageStarts: ['2025-06-02', '2025-08-04', '2025-11-03', '2026-04-06', '2026-11-02'], siteStart: '2027-04-05', practicalCompletion: '2028-08-25', source: 'set' },
+  clientLink: { status: 'accepted', requestedOn: '2025-06-02', requestedByPersonaId: PERSONA_IDS.priya, message: '', decidedOn: '2025-06-02', decidedByPersonaId: null, decisionNote: '' },
+  planningRequirementIds: ['nppf', 'adl', 'well-v2', 'lp-si2', 'lp-si7', 'lp-d3', 'la-hackney-lp33'],
+  requirementsReviewed: true,
   startDate: FERRYMOOR_START,
   createdBy: null,
   teamOrgIds: [ORG_IDS.oriel, ORG_IDS.halewick],
@@ -394,8 +415,8 @@ function osBuildingId(itemId: string): string {
 
 export function createSeed(): World {
   const buildings: Record<string, SourceBuilding> = {
-    [tiverne.id]: { ...tiverne, distancesKm: { ...tiverne.distancesKm } },
-    [harrowden.id]: { ...harrowden, distancesKm: { ...harrowden.distancesKm } },
+    [tiverne.id]: structuredClone(tiverne),
+    [harrowden.id]: structuredClone(harrowden),
   }
   const items: Record<string, InventoryItem> = {}
   const lots: Record<string, Lot> = {}
@@ -417,6 +438,8 @@ export function createSeed(): World {
       capturedBy: 'Dana Kowalski',
       capturedOn: '2026-09-14',
       expectedAvailableFrom: r.availableFrom,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -451,6 +474,8 @@ export function createSeed(): World {
       capturedBy: 'Dana Kowalski',
       capturedOn: '2026-09-28',
       expectedAvailableFrom: HARROWDEN_AVAILABLE_FROM,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -484,6 +509,9 @@ export function createSeed(): World {
       storeys: null,
       giaM2: null,
       structureType: '',
+      structure: [],
+      createdByOrgId: null,
+      contractorOrgId: null,
       tenants: [],
       programme: { stripOutStart: null, dismantlingStart: null, clearBy: null },
       defaultHubId: r.hub?.id ?? null,
@@ -511,6 +539,8 @@ export function createSeed(): World {
       capturedBy: '',
       capturedOn: '2026-09-01',
       expectedAvailableFrom: null,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -539,6 +569,7 @@ export function createSeed(): World {
     deals: {},
     engagements: { [durnley.id]: structuredClone(durnley) },
     wishlists: Object.fromEntries(wishlistsSeed.map((l) => [l.id, structuredClone(l)])),
+    shareLinks: {},
     snapshot,
     ledger: ledgerSeed.map((l) => ({ ...l })),
     publicIdPool: [...PUBLIC_ID_POOL],

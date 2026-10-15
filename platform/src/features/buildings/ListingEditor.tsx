@@ -194,7 +194,7 @@ export function PreviewCard({ card, shared }: { card: ListingCard; shared: boole
             {card.quantityText} · {card.availabilityText}
           </p>
           <p className="m-0 text-sm text-ink-soft">
-            {card.locationLabel} · {card.listing.sellerType === 'Asset owner' ? 'Listed by an asset owner' : card.listing.sellerType}
+            {card.locationLabel} · {card.listing.sellerType === 'Asset owner' ? 'Listed by a donor building owner' : card.listing.sellerType}
           </p>
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             <SustainabilityBand band={card.band} size="sm" />

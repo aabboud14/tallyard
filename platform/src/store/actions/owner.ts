@@ -1,6 +1,6 @@
-// The asset owner's decisions: buildings, surveyor appointments, what is visible to whom and from when,
-// disclosure settings, and which projects may see shared lots.
-import type { LocationLevel, SourceBuilding, TimingLevel, EraBand } from '../../domain/types'
+// The donor building owner's decisions: buildings, their structure, surveyor appointments, what is visible to whom
+// and from when, disclosure settings, which projects may see shared lots, and the owner's own new projects.
+import type { LocationLevel, SourceBuilding, StructuralElement, TimingLevel, EraBand } from '../../domain/types'
 import { DEFAULT_ASSUMPTIONS as A, REGIONS } from '../../domain/reference/assumptions'
 import { FAMILIES } from '../../domain/reference/families'
 import { V1_ASSUMPTIONS } from '../../domain/reference/v1assumptions'
@@ -8,14 +8,17 @@ import { ticksOf } from '../../domain/money'
 import { disclosureScore, type Disclosure } from '../../domain/engines/disclosure'
 import { timelineFit } from '../../domain/engines/timeline'
 import { blindBuyerText, toBlindBuyer } from '../../domain/privacy/blindBuyer'
+import { normaliseStructure } from '../../domain/engines/structure'
 import type { ActionResult, Actor, AppData, SurveyRecord } from '../types'
-import { ERRORS, buildingOrgIds, isBuildingOwner, roleOfOrg, roleOfUser } from '../access'
+import { ERRORS, buildingOrgIds, buildingSide, buyerSideOrgIds, isBuildingOwner, isProjectClient, projectOrgIds, roleOfOrg, roleOfUser } from '../access'
 import { mint } from '../ids'
-import { acceptedReservation, listingOf } from '../lots'
+import { acceptedReservation, listIdFor, listingOf } from '../lots'
 import { listJoin, log, notify, plural } from '../notifications'
 import * as ops from '../worldOps'
 import { materialHref, sharedWithProjectHref } from '../paths'
-import { acting, clean, fail, isIsoDate, ok, withWorld } from './common'
+import { acting, clean, fail, isIsoDate, ok, withWorld, type Acting } from './common'
+import { pendingClientLink, PROJECT_ERRORS, projectRecord, validateNewProject, newProgrammeDates, type NewProjectInput } from './projects'
+import { PROGRAMME_ERRORS } from '../../domain/engines/programme'
 
 export const OWNER_ERRORS = {
   name: 'Enter the building name.',
@@ -32,6 +35,8 @@ export const OWNER_ERRORS = {
   blocked: 'Publishing at this disclosure level lets an outsider narrow down the building. Reduce what is disclosed first.',
   notPrivate: 'The date can be changed only while the lot is private.',
   noPhoto: 'That photo could not be found.',
+  architect: 'Choose an architecture practice.',
+  hasArchitect: 'This project already has an architect.',
 } as const
 
 export type LotVisibilityChoice = 'private' | 'shared' | 'published'
@@ -44,7 +49,8 @@ export function ownerOrgIdOf(state: AppData, userId: string): string | null {
 
 // ---------- Buildings ----------
 
-export type NewBuildingInput = {
+/** The details of a building that the owner, or a surveyor before its owner confirms it, records. */
+export type BuildingDetailsInput = {
   name: string
   address: string
   postcodeDistrict: string
@@ -53,12 +59,16 @@ export type NewBuildingInput = {
   yearBuilt: number | null
   storeys: number | null
   giaM2: number | null
+  /** Other notes on the structure. */
   structureType: string
+  /** The structure element by element; empty when not recorded yet or left out. */
+  structure?: StructuralElement[]
   stripOutStart: string | null
   dismantlingStart: string | null
   clearBy: string | null
-  surveyorOrgId: string | null
 }
+
+export type NewBuildingInput = BuildingDetailsInput & { surveyorOrgId: string | null }
 
 function eraFor(year: number | null): EraBand | null {
   if (year === null) return null
@@ -73,29 +83,27 @@ function checkProgramme(input: { stripOutStart: string | null; dismantlingStart:
   return null
 }
 
-/** The owner adds a building. Its records are private; nothing is listed until the owner decides. */
-export function createBuilding(state: AppData, actor: Actor, input: NewBuildingInput): ActionResult<string> {
-  const a = acting(state, actor)
-  if (typeof a === 'string') return fail(state, a)
-  if (a.role !== 'owner') return fail(state, ERRORS.role)
-  const name = clean(input.name, 120)
-  if (!name) return fail(state, OWNER_ERRORS.name)
-  if (!clean(input.address, 200)) return fail(state, OWNER_ERRORS.address)
-  if (!(REGIONS as readonly string[]).includes(input.region)) return fail(state, OWNER_ERRORS.region)
-  const thisYear = Number(a.today.slice(0, 4))
-  if (input.yearBuilt !== null && (!Number.isInteger(input.yearBuilt) || input.yearBuilt < 1800 || input.yearBuilt > thisYear)) return fail(state, OWNER_ERRORS.year)
+/** The first problem with a building's details, or null. `today` bounds the year built. */
+export function checkBuildingDetails(input: BuildingDetailsInput, today: string): string | null {
+  if (!clean(input.name, 120)) return OWNER_ERRORS.name
+  if (!clean(input.address, 200)) return OWNER_ERRORS.address
+  if (!(REGIONS as readonly string[]).includes(input.region)) return OWNER_ERRORS.region
+  const thisYear = Number(today.slice(0, 4))
+  if (input.yearBuilt !== null && (!Number.isInteger(input.yearBuilt) || input.yearBuilt < 1800 || input.yearBuilt > thisYear)) return OWNER_ERRORS.year
   const bad = checkProgramme(input)
-  if (bad) return fail(state, bad)
-  if (input.surveyorOrgId && roleOfOrg(state, input.surveyorOrgId) !== 'surveyor') return fail(state, OWNER_ERRORS.surveyor)
-  const m = mint(state, 'bld', (id) => !!state.world.buildings[id])
-  let s = m.state
+  if (bad) return bad
+  return normaliseStructure(input.structure ?? []).error
+}
+
+/** A building record from checked details. Records are private; nothing is listed until the owner decides. */
+export function buildingRecord(id: string, input: BuildingDetailsInput, orgs: { ownerOrgId: string | null; surveyorOrgId: string | null; createdByOrgId: string }): SourceBuilding {
   const hubKm = V1_ASSUMPTIONS.regionHubKm[input.region]
-  const building: SourceBuilding = {
-    id: m.id,
-    ownerOrgId: a.org.id,
+  return {
+    id,
+    ownerOrgId: orgs.ownerOrgId,
     sellerType: 'Asset owner',
     sourceType: 'deconstruction',
-    name,
+    name: clean(input.name, 120),
     address: clean(input.address, 200),
     postcodeDistrict: clean(input.postcodeDistrict, 8).toUpperCase(),
     localAuthority: clean(input.localAuthority, 80),
@@ -105,16 +113,33 @@ export function createBuilding(state: AppData, actor: Actor, input: NewBuildingI
     storeys: input.storeys,
     giaM2: input.giaM2,
     structureType: clean(input.structureType, 200),
+    structure: normaliseStructure(input.structure ?? []).elements,
+    createdByOrgId: orgs.createdByOrgId,
+    contractorOrgId: null,
     tenants: [],
     programme: { stripOutStart: input.stripOutStart, dismantlingStart: input.dismantlingStart, clearBy: input.clearBy },
     defaultHubId: Object.entries(hubKm).sort((x, y) => x[1] - y[1])[0][0],
-    surveyorOrgId: input.surveyorOrgId,
+    surveyorOrgId: orgs.surveyorOrgId,
     locationLevel: 'region',
     timingLevel: 'quarter',
     arisingsTitle: 'owner',
     distancesKm: { ...hubKm },
     surveyedBy: null,
   }
+}
+
+/** The owner adds a building. Its records are private; nothing is listed until the owner decides. */
+export function createBuilding(state: AppData, actor: Actor, input: NewBuildingInput): ActionResult<string> {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  if (a.role !== 'owner') return fail(state, ERRORS.role)
+  const bad = checkBuildingDetails(input, a.today)
+  if (bad) return fail(state, bad)
+  if (input.surveyorOrgId && roleOfOrg(state, input.surveyorOrgId) !== 'surveyor') return fail(state, OWNER_ERRORS.surveyor)
+  const m = mint(state, 'bld', (id) => !!state.world.buildings[id])
+  let s = m.state
+  const building = buildingRecord(m.id, input, { ownerOrgId: a.org.id, surveyorOrgId: input.surveyorOrgId, createdByOrgId: a.org.id })
+  const name = building.name
   const w = structuredClone(s.world)
   w.buildings[m.id] = building
   s = withWorld(s, w)
@@ -125,9 +150,9 @@ export function createBuilding(state: AppData, actor: Actor, input: NewBuildingI
   return ok(s, m.id)
 }
 
-export type BuildingPatch = Partial<Pick<NewBuildingInput, 'name' | 'address' | 'stripOutStart' | 'dismantlingStart' | 'clearBy'>>
+export type BuildingPatch = Partial<Pick<NewBuildingInput, 'name' | 'address' | 'postcodeDistrict' | 'localAuthority' | 'region' | 'stripOutStart' | 'dismantlingStart' | 'clearBy'>>
 
-/** The owner edits a building's name, address or programme. */
+/** The owner edits a building's name, address, location or programme. */
 export function updateBuilding(state: AppData, actor: Actor, buildingId: string, patch: BuildingPatch): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
@@ -145,10 +170,47 @@ export function updateBuilding(state: AppData, actor: Actor, buildingId: string,
   if (!name) return fail(state, OWNER_ERRORS.name)
   const address = patch.address !== undefined ? clean(patch.address, 200) : b.address
   if (!address) return fail(state, OWNER_ERRORS.address)
+  const region = patch.region !== undefined ? patch.region : b.region
+  if (!(REGIONS as readonly string[]).includes(region)) return fail(state, OWNER_ERRORS.region)
+  const postcodeDistrict = patch.postcodeDistrict !== undefined ? clean(patch.postcodeDistrict, 8).toUpperCase() : b.postcodeDistrict
+  const localAuthority = patch.localAuthority !== undefined ? clean(patch.localAuthority, 80) : b.localAuthority
   const w = structuredClone(state.world)
-  w.buildings[buildingId] = { ...w.buildings[buildingId], name, address, programme }
+  const moved = region !== b.region
+  const hubKm = V1_ASSUMPTIONS.regionHubKm[region]
+  w.buildings[buildingId] = {
+    ...w.buildings[buildingId],
+    name,
+    address,
+    postcodeDistrict,
+    localAuthority,
+    region,
+    programme,
+    ...(moved ? { distancesKm: { ...b.distancesKm, ...hubKm }, defaultHubId: Object.entries(hubKm).sort((x, y) => x[1] - y[1])[0][0] } : {}),
+  }
   let s = withWorld(state, w)
   s = log(s, { at: a.now, orgIds: buildingOrgIds(w.buildings[buildingId]), buildingId, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: 'updated the building details', href: `/app/buildings/${buildingId}` })
+  return ok(s)
+}
+
+export type StructureInput = { elements: StructuralElement[]; notes: string }
+
+/** The owner or the surveyor records the building's structure, element by element, with other notes. */
+export function setBuildingStructure(state: AppData, actor: Actor, buildingId: string, input: StructureInput): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const b = state.world.buildings[buildingId]
+  if (!b) return fail(state, ERRORS.noBuilding)
+  const side = buildingSide(state, actor.userId, buildingId)
+  if (side !== 'owner' && side !== 'surveyor') return fail(state, ERRORS.role)
+  const r = normaliseStructure(input.elements)
+  if (r.error) return fail(state, r.error)
+  const notes = clean(input.notes, 200)
+  if (notes === b.structureType && JSON.stringify(r.elements) === JSON.stringify(b.structure)) return ok(state)
+  const w = structuredClone(state.world)
+  w.buildings[buildingId].structure = r.elements
+  w.buildings[buildingId].structureType = notes
+  let s = withWorld(state, w)
+  s = log(s, { at: a.now, orgIds: buildingOrgIds(b), buildingId, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: 'updated the structure', href: `/app/buildings/${buildingId}` })
   return ok(s)
 }
 
@@ -273,10 +335,10 @@ export function setLotVisibility(state: AppData, actor: Actor, lotId: string, in
     for (const p of Object.values(s.world.projects)) {
       if (!p.approvedByOwnerOrgIds.includes(a.org.id)) continue
       s = notify(s, {
-        orgIds: [p.architectOrgId, p.clientOrgId],
+        orgIds: buyerSideOrgIds(p),
         kind: 'lots_shared',
         title: `New lot shared with ${p.name}`,
-        body: p.termsAccepted ? `${listing.title}, shared in confidence by an asset owner.` : 'An asset owner shared a lot in confidence. Accept the confidentiality terms to see it.',
+        body: p.termsAccepted ? `${listing.title}, shared in confidence by a donor building owner.` : 'A donor building owner shared a lot in confidence. Accept the confidentiality terms to see it.',
         href: sharedWithProjectHref(p.id),
         at: a.now,
         actorUserId: null,
@@ -353,14 +415,103 @@ export function setProjectAccess(state: AppData, actor: Actor, projectId: string
   s = log(s, { at: a.now, orgIds: [a.org.id], buildingId: null, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: granted ? `shared lots with ${blind}` : `stopped sharing lots with ${blind}`, href: firstBuilding ? `/app/buildings/${firstBuilding.id}/sharing` : null })
   if (granted && shared > 0) {
     s = notify(s, {
-      orgIds: [p.architectOrgId, p.clientOrgId],
+      orgIds: buyerSideOrgIds(p),
       kind: 'lots_shared',
       title: `${plural(shared, 'lot')} shared with ${p.name}`,
-      body: p.termsAccepted ? 'Shared in confidence by an asset owner. They are in the Marketplace, under Shared with you.' : 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.',
+      body: p.termsAccepted ? 'Shared in confidence by a donor building owner. They are in the Marketplace, under Shared with you.' : 'Shared in confidence by a donor building owner. Accept the confidentiality terms to see them.',
       href: sharedWithProjectHref(p.id),
       at: a.now,
       actorUserId: null,
     })
   }
+  return ok(s)
+}
+
+// ---------- New projects (the owner as client) ----------
+
+/** A New project: a Project on which the owner organisation is the client and developer, with an optional architect. */
+export type OwnerProjectInput = Omit<NewProjectInput, 'client' | 'consultantOrgId' | 'clientMessage'> & { architectOrgId: string | null }
+
+/** The architect hears they are appointed; their shortlist for the project is ready. */
+function welcomeArchitect(state: AppData, a: Acting, projectId: string, projectName: string, architectOrgId: string): AppData {
+  let s = state
+  const listId = listIdFor(architectOrgId, projectId)
+  if (!s.world.wishlists[listId]) {
+    const w = structuredClone(s.world)
+    w.wishlists[listId] = { id: listId, orgId: architectOrgId, projectId, items: [] }
+    s = withWorld(s, w)
+  }
+  return notify(s, {
+    orgIds: [architectOrgId],
+    kind: 'team',
+    title: `${a.org.name} added you as architect on ${projectName}`,
+    body: `${projectName} is now in your projects. Your client is ${a.org.name}.`,
+    href: `/app/projects/${projectId}`,
+    at: a.now,
+    actorUserId: a.user.id,
+  })
+}
+
+/** The owner adds a New project, as its client and developer, and may appoint an architecture practice at once. */
+export function createOwnerProject(state: AppData, actor: Actor, input: OwnerProjectInput): ActionResult<string> {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  if (a.role !== 'owner') return fail(state, ERRORS.role)
+  const invalid = validateNewProject({ ...input, client: { orgId: a.org.id } }, a.today)
+  if (invalid.length > 0) return fail(state, invalid[0][1])
+  const name = clean(input.name, 120)
+  const taken = Object.values(state.world.projects).some((p) => p.clientOrgId === a.org.id && p.name.trim().toLowerCase() === name.toLowerCase())
+  if (taken) return fail(state, PROJECT_ERRORS.duplicateName)
+  const architectOrgId = input.architectOrgId ?? ''
+  if (architectOrgId && roleOfOrg(state, architectOrgId) !== 'architect') return fail(state, OWNER_ERRORS.architect)
+  const dates = newProgrammeDates({ ...input, client: { orgId: a.org.id } }, a.today)
+  if (!dates) return fail(state, PROGRAMME_ERRORS.tooSoon)
+  const pm = mint(state, 'prj', (id) => !!state.world.projects[id] || (!!architectOrgId && !!state.world.wishlists[listIdFor(architectOrgId, id)]))
+  let s = pm.state
+  const id = pm.id
+  const project = projectRecord({
+    id,
+    name,
+    clientOrgId: a.org.id,
+    architectOrgId,
+    createdByPersonaId: a.persona.id,
+    consultantOrgId: '',
+    projectType: input.projectType!,
+    projectTypeOther: input.projectTypeOther ?? '',
+    region: input.region,
+    localAuthority: input.localAuthority,
+    ribaStage: input.ribaStage,
+    startDate: input.startDate,
+    programme: { ...dates, source: 'suggested' },
+    // The owner is its own client: the link is accepted when the project is made.
+    clientLink: { ...pendingClientLink(a.today, a.persona.id, ''), status: 'accepted', decidedOn: a.today, decidedByPersonaId: a.persona.id },
+    requirementIds: input.requirementIds ?? [],
+    description: input.description ?? '',
+  })
+  project.teamOrgIds = [a.org.id, ...(architectOrgId ? [architectOrgId] : [])]
+  const w = structuredClone(s.world)
+  w.projects[id] = project
+  s = withWorld(s, w)
+  if (architectOrgId) s = welcomeArchitect(s, a, id, project.name, architectOrgId)
+  s = log(s, { at: a.now, orgIds: projectOrgIds(project), projectId: id, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'created the project', href: `/app/projects/${id}` })
+  return ok(s, id)
+}
+
+/** The owner appoints an architecture practice to a New project that has none yet. */
+export function appointProjectArchitect(state: AppData, actor: Actor, projectId: string, architectOrgId: string): ActionResult {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  const p = state.world.projects[projectId]
+  if (!p) return fail(state, ERRORS.noProject)
+  if (a.role !== 'owner' || !isProjectClient(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  if (p.architectOrgId !== '') return fail(state, OWNER_ERRORS.hasArchitect)
+  if (!architectOrgId || roleOfOrg(state, architectOrgId) !== 'architect') return fail(state, OWNER_ERRORS.architect)
+  const w = structuredClone(state.world)
+  const next = w.projects[projectId]
+  next.architectOrgId = architectOrgId
+  next.teamOrgIds = [...next.teamOrgIds.filter((x) => x !== architectOrgId), architectOrgId]
+  let s = withWorld(state, w)
+  s = welcomeArchitect(s, a, projectId, p.name, architectOrgId)
+  s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `appointed ${w.orgs[architectOrgId].name} as architect`, href: `/app/projects/${projectId}` })
   return ok(s)
 }

@@ -19,6 +19,7 @@ export const SHORTLIST_ERRORS = {
   noteLocked: 'The note can be edited while the item is shortlisted or declined.',
   revoked: 'No longer shared with this project.',
   notAvailable: 'No longer available.',
+  clientNotLinked: 'The client has not accepted this project yet, so nothing can be sent for approval.',
 } as const
 
 function withList(state: AppData, list: Wishlist): AppData {
@@ -125,6 +126,7 @@ export function sendToClient(state: AppData, actor: Actor, projectId: string, it
   const p = state.world.projects[projectId]
   if (!p) return fail(state, ERRORS.noProject)
   if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  if (p.clientLink.status !== 'accepted') return fail(state, SHORTLIST_ERRORS.clientNotLinked)
   const list = projectWishlist(state.world, projectId)
   if (!list) return fail(state, SHORTLIST_ERRORS.nothingToSend)
   const chosen = itemIds === null ? null : new Set(itemIds)

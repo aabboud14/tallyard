@@ -3,7 +3,7 @@ import type { AppData, Viewer } from '../types'
 import { buildingsOfUser, projectSide, projectsOfUser, roleOfUser } from '../access'
 import { listingOf, marketplaceListings } from '../lots'
 import { familyLabel } from './common'
-import { navModel, type NavItem } from './nav'
+import { navModel, ownerHasClientProject, type NavItem } from './nav'
 import { sharedGroups } from './discover'
 import { itemsOf } from './owner'
 import { titleFor } from '../../domain/reference/families'
@@ -47,7 +47,7 @@ export function searchIndex(state: AppData, viewer: Viewer): SearchEntry[] {
     }
   }
   const role = roleOfUser(state, viewer.userId)
-  if (role === 'architect' || role === 'client' || role === 'consultant') {
+  if (role === 'architect' || role === 'client' || role === 'consultant' || ownerHasClientProject(state, viewer.userId)) {
     const seen = new Set<string>()
     const add = (title: string, publicId: string, family: Parameters<typeof familyLabel>[0], location: string) => {
       if (seen.has(publicId)) return

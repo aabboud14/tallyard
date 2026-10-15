@@ -1,12 +1,18 @@
-// The asset owner's and the surveyor's building views: home, buildings, inventory, item detail, priorities,
-// listings with the disclosure score and a live preview, sharing as blind lines, and requests.
+// The donor building owner's and the surveyor's building views: home, buildings and new projects, inventory, item
+// detail, the recovery plan, listings with the disclosure score and a live preview, sharing as blind lines, requests,
+// and the round 2 additions: structure, the deconstruction contractor's dates and testing.
 // A buyer appears to the owner only through toBlindBuyer until the owner accepts their request.
-import type { FamilyId, InventoryItem, Lot, PublicListing, SourceBuilding, Visibility } from '../../domain/types'
+import type { FamilyId, InventoryItem, Lot, Project, PublicListing, SourceBuilding, StructuralElementKind, Visibility } from '../../domain/types'
 import type { DecisionRoute } from '../../domain/v1types'
 import { DEFAULT_ASSUMPTIONS as A, FACILITIES, facilityById, REGIONS } from '../../domain/reference/assumptions'
 import { FAMILIES } from '../../domain/reference/families'
 import { DECISION_ROUTE_LABELS, LABELS, OWNER_VISIBILITY_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/labels'
 import { daysBetween, formatDate, formatMonth } from '../../domain/dates'
+import { ELEMENT_LABELS, ELEMENT_ORDER, MATERIAL_LABELS, structureSystemById } from '../../domain/reference/structure'
+import { PROJECT_TYPE_LABELS } from '../../domain/reference/labels'
+import { RIBA_STAGES } from '../../domain/reference/policy'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
+import { materialsFor, structureSummary, systemsFor } from '../../domain/engines/structure'
 import { itemMeasures, lotMeasures, type Measures } from '../../domain/engines/measures'
 import { itemCarbon, type CarbonResult } from '../../domain/engines/carbon'
 import { guidePrice, sellerMandate, signalForLot, type GuidePrice } from '../../domain/engines/pricing'
@@ -20,10 +26,12 @@ import { titleFor } from '../../domain/reference/families'
 import type { Disclosure } from '../../domain/engines/disclosure'
 import * as f from '../../domain/format'
 import type { AppData, ReservationStatus, SurveyStatus, Viewer } from '../types'
-import { buildingSide, buildingsOfUser, roleOfOrg, roleOfUser, type BuildingSide } from '../access'
-import { acceptedReservation, lotOfItem } from '../lots'
+import { buildingSide, buildingsOfUser, isBuildingContractor, projectSide, projectsOfUser, roleOfOrg, roleOfUser, type BuildingSide } from '../access'
+import { acceptedReservation, lotOfItem, projectWishlist } from '../lots'
 import { checkPrices, disclosureWith, type LotVisibilityChoice, type PriceCheck } from '../actions/owner'
-import { activityFor, firstName, greeting, listingCard, longDate, RESERVATION_STATUS_LABELS, timeAgo, todayOf, type ActivityRow, type ListingCard } from './common'
+import { PROJECT_TYPES } from '../actions/projects'
+import { claimRowsForOwner, claimStateFor, type ClaimRow, type ClaimState } from './claims'
+import { activityFor, firstName, greeting, listingCard, longDate, RESERVATION_STATUS_LABELS, stageLabel, timeAgo, todayOf, type ActivityRow, type ListingCard } from './common'
 
 export const SURVEY_STATUS_LABELS: Record<SurveyStatus, string> = { not_started: 'Not started', in_progress: 'In progress', submitted: 'Submitted' }
 
@@ -50,20 +58,26 @@ export function surveyStatus(state: AppData, buildingId: string): SurveyStatus {
 
 export type BuildingTab = { id: string; label: string; href: string }
 
-export function buildingTabs(side: BuildingSide, buildingId: string): BuildingTab[] {
+/** The building kind label (round 2). A New project is a Project, not a building, so every building is a donor building. */
+export const DONOR_BUILDING = 'Donor building'
+export const NEW_PROJECT = 'New project'
+
+/**
+ * The tabs for a side. The owner's priorities page reads Recovery plan (its address stays /priorities). A surveying
+ * firm that is also the building's deconstruction contractor gets Availability too; a contractor alone, Overview and
+ * Availability.
+ */
+export function buildingTabs(side: BuildingSide, buildingId: string, opts: { contractor: boolean } = { contractor: false }): BuildingTab[] {
   const base = `/app/buildings/${buildingId}`
-  if (side === 'owner') return [
-    { id: 'overview', label: 'Overview', href: base },
-    { id: 'inventory', label: 'Inventory', href: `${base}/inventory` },
-    { id: 'priorities', label: 'Priorities', href: `${base}/priorities` },
-    { id: 'listings', label: 'Listings', href: `${base}/listings` },
-    { id: 'sharing', label: 'Sharing', href: `${base}/sharing` },
-  ]
-  return [
-    { id: 'overview', label: 'Overview', href: base },
-    { id: 'capture', label: 'Capture', href: `${base}/capture` },
-    { id: 'inventory', label: 'Inventory', href: `${base}/inventory` },
-  ]
+  const tab = (id: string, label: string, path: string): BuildingTab => ({ id, label, href: `${base}${path}` })
+  if (side === 'owner') return [tab('overview', 'Overview', ''), tab('inventory', 'Inventory', '/inventory'), tab('priorities', 'Recovery plan', '/priorities'), tab('listings', 'Listings', '/listings'), tab('sharing', 'Sharing', '/sharing'), tab('testing', 'Testing', '/testing')]
+  if (side === 'contractor') return [tab('overview', 'Overview', ''), tab('availability', 'Availability', '/availability')]
+  return [tab('overview', 'Overview', ''), tab('capture', 'Capture', '/capture'), tab('inventory', 'Inventory', '/inventory'), tab('testing', 'Testing', '/testing'), ...(opts.contractor ? [tab('availability', 'Availability', '/availability')] : [])]
+}
+
+/** The tabs the viewer gets on a building, from their side and whether their firm is its contractor. */
+export function tabsFor(state: AppData, viewer: Viewer, b: SourceBuilding, side: BuildingSide): BuildingTab[] {
+  return buildingTabs(side, b.id, { contractor: isBuildingContractor(state, viewer.userId, b.id) })
 }
 
 export type BuildingRef = {
@@ -78,10 +92,17 @@ export type BuildingRef = {
   tabs: BuildingTab[]
   surveyStatus: SurveyStatus
   surveyStatusLabel: string
+  /** Where the building stands with its owner, for the surveying firm's side only. */
+  claim: ClaimState | null
+  contractorName: string
+  /** The viewer's firm is the building's deconstruction contractor. */
+  isContractor: boolean
+  kindLabel: string
 }
 
-function buildingRef(state: AppData, b: SourceBuilding, side: BuildingSide): BuildingRef {
+function buildingRef(state: AppData, b: SourceBuilding, side: BuildingSide, viewer: Viewer | null = null): BuildingRef {
   const status = surveyStatus(state, b.id)
+  const isContractor = viewer ? isBuildingContractor(state, viewer.userId, b.id) : false
   return {
     id: b.id,
     name: b.name,
@@ -91,17 +112,27 @@ function buildingRef(state: AppData, b: SourceBuilding, side: BuildingSide): Bui
     clientName: b.ownerOrgId ? (state.world.orgs[b.ownerOrgId]?.name ?? '') : '',
     surveyorName: b.surveyorOrgId ? (state.world.orgs[b.surveyorOrgId]?.name ?? '') : '',
     side,
-    tabs: buildingTabs(side, b.id),
+    tabs: buildingTabs(side, b.id, { contractor: isContractor }),
     surveyStatus: status,
     surveyStatusLabel: SURVEY_STATUS_LABELS[status],
+    claim: side === 'surveyor' ? claimStateFor(state, b.id) : null,
+    contractorName: b.contractorOrgId ? (state.world.orgs[b.contractorOrgId]?.name ?? '') : '',
+    isContractor,
+    kindLabel: DONOR_BUILDING,
   }
 }
 
-/** The header for a building the viewer owns or surveys; null otherwise. */
+/** The header for a building the viewer owns, surveys or dates as contractor; null otherwise. */
 export function buildingHeader(state: AppData, viewer: Viewer, buildingId: string): BuildingRef | null {
   const side = buildingSide(state, viewer.userId, buildingId)
   if (!side) return null
-  return buildingRef(state, state.world.buildings[buildingId], side)
+  return buildingRef(state, state.world.buildings[buildingId], side, viewer)
+}
+
+/** The header for a building whose records the viewer may read and edit: owner or surveyor, never a contractor alone. */
+function recordHeader(state: AppData, viewer: Viewer, buildingId: string): BuildingRef | null {
+  const header = buildingHeader(state, viewer, buildingId)
+  return header && header.side !== 'contractor' ? header : null
 }
 
 export type VisibilityCounts = Record<Visibility, number> & { reserved: number }
@@ -160,17 +191,55 @@ export function priorityFor(state: AppData, buildingId: string): PriorityResult 
 
 export type BuildingCard = BuildingRef & { itemCount: number; counts: VisibilityCounts; href: string; lastCaptureOn: string | null }
 
-function buildingCard(state: AppData, b: SourceBuilding, side: BuildingSide): BuildingCard {
+function buildingCard(state: AppData, b: SourceBuilding, side: BuildingSide, viewer: Viewer | null = null): BuildingCard {
   const items = itemsOf(state, b.id)
   const last = items.reduce<string | null>((m, i) => (m === null || i.capturedOn > m ? i.capturedOn : m), null)
-  return { ...buildingRef(state, b, side), itemCount: items.length, counts: visibilityCounts(state, b.id), href: `/app/buildings/${b.id}`, lastCaptureOn: last }
+  return { ...buildingRef(state, b, side, viewer), itemCount: items.length, counts: visibilityCounts(state, b.id), href: `/app/buildings/${b.id}`, lastCaptureOn: last }
 }
 
-export type BuildingsList = { rows: BuildingCard[]; canAdd: boolean; empty: boolean }
+/** A New project on the owner's side: a project where the owner organisation is the client. */
+export type OwnerProjectRow = { id: string; name: string; typeLabel: string; architectName: string | null; stageText: string; startText: string; waitingApprovals: number; approved: number; href: string }
+
+/** The viewer's own New projects, if they are a donor building owner. */
+export function ownerProjects(state: AppData, viewer: Viewer): Project[] {
+  if (roleOfUser(state, viewer.userId) !== 'owner') return []
+  return projectsOfUser(state, viewer.userId).filter((p) => projectSide(state, viewer.userId, p.id) === 'client')
+}
+
+function ownerProjectRow(state: AppData, p: Project): OwnerProjectRow {
+  const items = projectWishlist(state.world, p.id)?.items ?? []
+  return {
+    id: p.id,
+    name: p.name,
+    typeLabel: projectTypeLabel(p),
+    architectName: p.architectOrgId ? (state.world.orgs[p.architectOrgId]?.name ?? null) : null,
+    stageText: stageLabel(p.ribaStage),
+    startText: formatDate(p.startDate),
+    waitingApprovals: items.filter((i) => i.status === 'sent').length,
+    approved: items.filter((i) => i.status === 'approved').length,
+    href: `/app/projects/${p.id}`,
+  }
+}
+
+export type BuildingsList = {
+  /** Donor buildings for the owner; buildings linked to an owner for the surveyor. */
+  rows: BuildingCard[]
+  canAdd: boolean
+  empty: boolean
+  /** The owner's New projects. */
+  projects: OwnerProjectRow[]
+  /** The surveyor's own buildings that no owner has confirmed yet. */
+  unlinked: (BuildingCard & { claim: ClaimState })[]
+}
 
 export function buildingsList(state: AppData, viewer: Viewer): BuildingsList {
-  const rows = buildingsOfUser(state, viewer.userId).map((b) => buildingCard(state, b, buildingSide(state, viewer.userId, b.id)!))
-  return { rows, canAdd: roleOfUser(state, viewer.userId) === 'owner', empty: rows.length === 0 }
+  const role = roleOfUser(state, viewer.userId)
+  const cards = buildingsOfUser(state, viewer.userId).map((b) => buildingCard(state, b, buildingSide(state, viewer.userId, b.id)!, viewer))
+  const isUnlinked = (c: BuildingCard) => role === 'surveyor' && !state.world.buildings[c.id].ownerOrgId
+  const rows = cards.filter((c) => !isUnlinked(c))
+  const unlinked = cards.filter(isUnlinked).map((c) => ({ ...c, claim: claimStateFor(state, c.id) }))
+  const projects = ownerProjects(state, viewer).map((p) => ownerProjectRow(state, p))
+  return { rows, canAdd: role === 'owner' || role === 'surveyor', empty: rows.length === 0 && unlinked.length === 0 && projects.length === 0, projects, unlinked }
 }
 
 export type RequestRow = {
@@ -256,9 +325,12 @@ export function requestsView(state: AppData, viewer: Viewer): RequestsView | nul
 export type OwnerHome = {
   greeting: string
   dateText: string
-  stats: { buildings: number; itemsSurveyed: number; listed: number; shared: number; reserved: number; potentialAvoidedT: number; requestsAwaiting: number }
+  stats: { buildings: number; donorBuildings: number; newProjects: number; itemsSurveyed: number; listed: number; shared: number; reserved: number; potentialAvoidedT: number; requestsAwaiting: number; claimsAwaiting: number }
   buildings: BuildingCard[]
   requests: RequestRow[]
+  /** Buildings surveyors ask the owner to confirm, waiting. */
+  claims: ClaimRow[]
+  newProjects: OwnerProjectRow[]
   activity: ActivityRow[]
 }
 
@@ -267,15 +339,20 @@ export function ownerHome(state: AppData, viewer: Viewer): OwnerHome | null {
   if (!orgId) return null
   const user = state.users[viewer.userId]
   const buildings = buildingsOfUser(state, viewer.userId)
-  const cards = buildings.map((b) => buildingCard(state, b, 'owner'))
+  const cards = buildings.map((b) => buildingCard(state, b, 'owner', viewer))
   let potential = 0
   for (const b of buildings) for (const row of priorityFor(state, b.id).rows) if (row.route === 'recover') potential += row.carbon
   const requests = requestRows(state, viewer)
+  const claims = claimRowsForOwner(state, viewer).filter((c) => c.status === 'pending')
+  const newProjects = ownerProjects(state, viewer).map((p) => ownerProjectRow(state, p))
   return {
     greeting: greeting(viewer.now, firstName(user.name)),
     dateText: longDate(todayOf(viewer)),
     stats: {
       buildings: buildings.length,
+      donorBuildings: buildings.length,
+      newProjects: newProjects.length,
+      claimsAwaiting: claims.length,
       itemsSurveyed: cards.reduce((n, c) => n + c.itemCount, 0),
       listed: cards.reduce((n, c) => n + c.counts.open, 0),
       shared: cards.reduce((n, c) => n + c.counts.matched_only, 0),
@@ -285,14 +362,62 @@ export function ownerHome(state: AppData, viewer: Viewer): OwnerHome | null {
     },
     buildings: cards,
     requests: requests.filter((r) => r.status === 'pending').slice(0, 5),
+    claims,
+    newProjects,
     activity: activityFor(state, viewer, {}, 8),
   }
 }
 
-/** Choices for the add building dialog: regions and the surveying firms on the platform. */
-export function newBuildingOptions(state: AppData, viewer: Viewer): { regions: string[]; surveyors: { orgId: string; name: string }[] } | null {
-  if (!ownerOrg(state, viewer)) return null
-  return { regions: [...REGIONS], surveyors: surveyorOptions(state) }
+export type StructureOption = { kind: StructuralElementKind; label: string; materials: { value: string; label: string; systems: { id: string; label: string }[] }[] }
+
+/** Every element with its materials and, for each material, its systems: the structure editor's choices. */
+export function structureOptions(): StructureOption[] {
+  return ELEMENT_ORDER.map((kind) => ({
+    kind,
+    label: ELEMENT_LABELS[kind],
+    materials: materialsFor(kind).map((m) => ({ value: m, label: MATERIAL_LABELS[m], systems: systemsFor(kind, m).map((x) => ({ id: x.id, label: x.label })) })),
+  }))
+}
+
+export type NewBuildingOptions = {
+  /** Owners choose Donor building or New project; surveyors add buildings to survey. */
+  mode: 'owner' | 'surveyor'
+  kinds: { value: 'donor' | 'project'; label: string; description: string }[]
+  regions: string[]
+  surveyors: { orgId: string; name: string }[]
+  /** Architecture practices on the platform, for a New project. Owners only. */
+  architects: { orgId: string; name: string }[]
+  projectTypes: { value: string; label: string }[]
+  stages: { value: number; label: string }[]
+  structure: StructureOption[]
+}
+
+/** Choices for the add building dialog. Owners also get what a New project needs; surveyors only the building. */
+export function newBuildingOptions(state: AppData, viewer: Viewer): NewBuildingOptions | null {
+  const role = roleOfUser(state, viewer.userId)
+  if (role === 'surveyor') return { mode: 'surveyor', kinds: [], regions: [...REGIONS], surveyors: [], architects: [], projectTypes: [], stages: [], structure: structureOptions() }
+  if (role !== 'owner') return null
+  return {
+    mode: 'owner',
+    kinds: [
+      { value: 'donor', label: DONOR_BUILDING, description: 'Coming down or being stripped out. Survey it and offer what it holds for reuse.' },
+      { value: 'project', label: NEW_PROJECT, description: 'Being built or refurbished. Source reclaimed materials for it with your architect.' },
+    ],
+    regions: [...REGIONS],
+    surveyors: surveyorOptions(state),
+    architects: architectOptions(state),
+    projectTypes: PROJECT_TYPES.map((t) => ({ value: t, label: PROJECT_TYPE_LABELS[t] })),
+    stages: RIBA_STAGES.map((label, i) => ({ value: i, label: `${i}, ${label}` })),
+    structure: structureOptions(),
+  }
+}
+
+/** Architecture practices on the platform, by name. Shown to an owner only to appoint one to their own New project. */
+export function architectOptions(state: AppData): { orgId: string; name: string }[] {
+  return Object.values(state.world.orgs)
+    .filter((o) => roleOfOrg(state, o.id) === 'architect')
+    .map((o) => ({ orgId: o.id, name: o.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en-GB'))
 }
 
 export function surveyorOptions(state: AppData): { orgId: string; name: string }[] {
@@ -314,6 +439,20 @@ export type BuildingOverview = {
   byTypology: { typology: string; label: string; count: number; massT: number }[]
   counts: VisibilityCounts
   activity: ActivityRow[]
+  /** Round 2: the structure element by element, and the editor's choices. */
+  structure: {
+    rows: { kind: StructuralElementKind; label: string; materialLabel: string; systemLabel: string; note: string }[]
+    summary: string
+    notes: string
+    canEdit: boolean
+    options: StructureOption[]
+  }
+  /** The deconstruction contractor invited to set availability dates, with how many items it has dated. */
+  contractor: { orgId: string; name: string; datedCount: number; itemCount: number } | null
+  /** Firms that can be invited as contractor (owner and surveyor sides). */
+  contractorOptions: { orgId: string; name: string }[]
+  /** Testing requests still open, for the owner and surveyor sides; null for a contractor. */
+  testing: { open: number; href: string } | null
 }
 
 export function buildingOverview(state: AppData, viewer: Viewer, buildingId: string): BuildingOverview | null {
@@ -329,8 +468,12 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
   if (b.yearBuilt) facts.push({ label: 'Built', value: String(b.yearBuilt) })
   if (b.storeys) facts.push({ label: 'Storeys', value: String(b.storeys) })
   if (b.giaM2) facts.push({ label: 'Gross internal area', value: `${f.number(b.giaM2)} m2` })
-  if (b.structureType) facts.push({ label: 'Structure', value: b.structureType })
+  const summary = structureSummary(b.structure)
+  if (summary || b.structureType) facts.push({ label: 'Structure', value: summary || b.structureType })
   const date = (d: string | null) => (d ? formatDate(d) : 'Not set')
+  const records = header.side === 'owner' || header.side === 'surveyor'
+  const datedCount = items.filter((i) => i.contractorAvailableFrom !== null).length
+  const openTests = Object.values(state.testingRequests).filter((t) => t.buildingId === buildingId && (t.status === 'requested' || t.status === 'booked')).length
   const typologies = ['structure', 'envelope', 'finishes'] as const
   return {
     header,
@@ -349,6 +492,16 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
     }),
     counts: visibilityCounts(state, buildingId),
     activity: activityFor(state, viewer, { buildingId }, 8),
+    structure: {
+      rows: b.structure.map((e) => ({ kind: e.kind, label: ELEMENT_LABELS[e.kind], materialLabel: e.material ? MATERIAL_LABELS[e.material] : 'Not recorded', systemLabel: e.systemId ? (structureSystemById(e.systemId)?.label ?? '') : 'Not recorded', note: e.note })),
+      summary,
+      notes: b.structureType,
+      canEdit: records,
+      options: structureOptions(),
+    },
+    contractor: b.contractorOrgId ? { orgId: b.contractorOrgId, name: state.world.orgs[b.contractorOrgId]?.name ?? '', datedCount, itemCount: items.length } : null,
+    contractorOptions: records ? surveyorOptions(state) : [],
+    testing: records ? { open: openTests, href: `/app/buildings/${buildingId}/testing` } : null,
   }
 }
 
@@ -368,6 +521,10 @@ export type InventoryRow = {
   expectedText: string
   /** The owner's date for the lot (owner only). */
   availableFrom: string | null
+  /** The deconstruction contractor's month, or 'Not set'. */
+  contractorText: string
+  /** The contractor's date differs from the lot's date (owner only). */
+  contractorDiffers: boolean
   visibility: Visibility
   visibilityLabel: string
   reserved: boolean
@@ -378,14 +535,35 @@ export type InventoryRow = {
   href: string
 }
 
-export type InventoryView = { header: BuildingRef; rows: InventoryRow[]; canCapture: boolean; canSubmit: boolean; counts: VisibilityCounts; empty: boolean }
+export type InventoryView = {
+  header: BuildingRef
+  rows: InventoryRow[]
+  canCapture: boolean
+  canSubmit: boolean
+  counts: VisibilityCounts
+  empty: boolean
+  /** The deconstruction contractor's name, '' when none is appointed. */
+  contractorName: string
+  /** The owner may apply the contractor's dates: some private, unreserved lot's date differs. */
+  canApplyContractorDates: boolean
+  /** How many lots applying would change. */
+  applyCount: number
+}
+
+/** Whether the contractor's date would change this lot when the owner applies it: private, not reserved, different. */
+function contractorApplies(state: AppData, item: InventoryItem, lot: Lot): boolean {
+  return !!item.contractorAvailableFrom && lot.visibility === 'private' && !acceptedReservation(state, lot.id) && lot.availableFrom !== item.contractorAvailableFrom
+}
 
 export function inventoryView(state: AppData, viewer: Viewer, buildingId: string): InventoryView | null {
-  const header = buildingHeader(state, viewer, buildingId)
+  const header = recordHeader(state, viewer, buildingId)
   if (!header) return null
   const owner = header.side === 'owner'
+  const b = state.world.buildings[buildingId]
+  let applyCount = 0
   const rows = itemsOf(state, buildingId).map((item) => {
     const lot = lotOfItem(state.world, item.id)!
+    if (owner && contractorApplies(state, item, lot)) applyCount++
     return {
       itemId: item.id,
       lotId: lot.id,
@@ -401,6 +579,8 @@ export function inventoryView(state: AppData, viewer: Viewer, buildingId: string
       expectedAvailableFrom: item.expectedAvailableFrom,
       expectedText: item.expectedAvailableFrom ? formatMonth(item.expectedAvailableFrom) : 'Not set',
       availableFrom: owner ? lot.availableFrom : null,
+      contractorText: item.contractorAvailableFrom ? formatMonth(item.contractorAvailableFrom) : 'Not set',
+      contractorDiffers: owner && !!item.contractorAvailableFrom && lot.availableFrom !== item.contractorAvailableFrom,
       visibility: lot.visibility,
       visibilityLabel: OWNER_VISIBILITY_LABELS[lot.visibility],
       reserved: !!acceptedReservation(state, lot.id),
@@ -411,7 +591,18 @@ export function inventoryView(state: AppData, viewer: Viewer, buildingId: string
       href: `/app/buildings/${buildingId}/inventory/${item.id}`,
     }
   })
-  return { header, rows, canCapture: true, canSubmit: header.side === 'surveyor' && header.surveyStatus !== 'submitted' && rows.length > 0, counts: visibilityCounts(state, buildingId), empty: rows.length === 0 }
+  return {
+    header,
+    rows,
+    canCapture: true,
+    // Round 2: a building the surveyor added waits for its owner's confirmation before the survey goes in.
+    canSubmit: header.side === 'surveyor' && header.surveyStatus !== 'submitted' && rows.length > 0 && b.ownerOrgId !== null,
+    counts: visibilityCounts(state, buildingId),
+    empty: rows.length === 0,
+    contractorName: header.contractorName,
+    canApplyContractorDates: owner && applyCount > 0,
+    applyCount,
+  }
 }
 
 export type ItemDetail = {
@@ -443,11 +634,13 @@ export type ItemDetail = {
     preview: ListingCard
     requests: RequestRow[]
     reserved: boolean
+    /** The surveyor's and the contractor's months beside what buyers see. */
+    dates: { surveyorText: string; contractorText: string; contractorDatedOn: string | null; buyersSeeText: string; canUseContractor: boolean }
   } | null
 }
 
 export function itemDetail(state: AppData, viewer: Viewer, buildingId: string, itemId: string): ItemDetail | null {
-  const header = buildingHeader(state, viewer, buildingId)
+  const header = recordHeader(state, viewer, buildingId)
   const item = state.world.items[itemId]
   if (!header || !item || item.buildingId !== buildingId) return null
   const lot = lotOfItem(state.world, itemId)!
@@ -457,6 +650,7 @@ export function itemDetail(state: AppData, viewer: Viewer, buildingId: string, i
     const figures = itemFigures(state, itemId, today)
     const row = priorityFor(state, buildingId).rows.find((r) => r.itemId === itemId)
     const route = decisionTreeRoute(item.family, row?.route ?? 'recover')
+    const preview = listingCard(state, previewListing(state, lot, lot.visibility === 'matched_only' ? 'matched_only' : 'open', null, today), null, today)
     owner = {
       visibility: lot.visibility,
       visibilityLabel: OWNER_VISIBILITY_LABELS[lot.visibility],
@@ -466,9 +660,16 @@ export function itemDetail(state: AppData, viewer: Viewer, buildingId: string, i
       figures,
       route,
       routeLabel: DECISION_ROUTE_LABELS[route],
-      preview: listingCard(state, previewListing(state, lot, lot.visibility === 'matched_only' ? 'matched_only' : 'open', null, today), null, today),
+      preview,
       requests: requestRows(state, viewer).filter((r) => r.itemId === itemId),
       reserved: !!acceptedReservation(state, lot.id),
+      dates: {
+        surveyorText: item.expectedAvailableFrom ? formatMonth(item.expectedAvailableFrom) : 'Not set',
+        contractorText: item.contractorAvailableFrom ? formatMonth(item.contractorAvailableFrom) : 'Not set',
+        contractorDatedOn: item.contractorDatedOn,
+        buyersSeeText: preview.availabilityText,
+        canUseContractor: contractorApplies(state, item, lot),
+      },
     }
   }
   return {

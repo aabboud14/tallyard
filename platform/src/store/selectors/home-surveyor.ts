@@ -28,7 +28,7 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
       if (row.lastCaptureOn && (last === null || row.lastCaptureOn > last)) last = row.lastCaptureOn
       const b = state.world.buildings[row.id]
       const families = itemsOf(state, row.id).map((i) => i.family)
-      extras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '' }, families), byTypology: typologyCounts(families) }
+      extras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families) }
     }
   }
   const open = byStatus.not_started + byStatus.in_progress

@@ -1,7 +1,7 @@
 // What a generated thumbnail draws for a project or a building: its use, its frame, its storeys when recorded and
 // the facade materials taken from its families. Pure and deterministic. The drawing itself lives in the design
 // system; this only decides what to draw and how to name it for screen readers. Nothing here is a photograph.
-import type { FamilyId } from './types'
+import type { FamilyId, StructuralElement, StructuralMaterial } from './types'
 import { FAMILY_IDS } from './reference/families'
 
 export type FacadeKind = 'brick' | 'stone' | 'glass' | 'precast' | 'timber'
@@ -51,6 +51,28 @@ export function frameFromText(structureType: string): SketchFrame {
   return 'unknown'
 }
 
+const FRAME_OF_MATERIAL: Record<StructuralMaterial, SketchFrame> = {
+  steel: 'steel',
+  concrete_in_situ: 'concrete',
+  concrete_precast: 'concrete',
+  composite: 'concrete',
+  timber: 'timber',
+  masonry: 'masonry',
+  aluminium_glass: 'unknown',
+  stone: 'masonry',
+  other: 'unknown',
+}
+
+/**
+ * The frame a building is drawn with: the material of its recorded frame element when there is one (round 2
+ * granular structure), else the frame its structure text describes.
+ */
+export function frameOfBuilding(structure: StructuralElement[], structureType: string): SketchFrame {
+  const frame = structure.find((e) => e.kind === 'frame' && e.material !== null)
+  const fromElement = frame?.material ? FRAME_OF_MATERIAL[frame.material] : 'unknown'
+  return fromElement !== 'unknown' ? fromElement : frameFromText(structureType)
+}
+
 /** The massing a project type is drawn with. Types the drawing does not know are drawn as other. */
 export function sketchUse(projectType: string): SketchUse {
   const t = projectType.trim().toLowerCase()
@@ -91,7 +113,7 @@ export function projectSketch(p: { id: string; name: string; projectType: string
  * A building coming down, drawn from its survey: storeys, frame and the families in its inventory. A use, when the
  * record has one, picks the massing; without one it is drawn as other.
  */
-export function buildingSketch(b: { id: string; storeys: number | null; structureType: string; use?: string | null }, families: FamilyId[]): BuildingSketch {
+export function buildingSketch(b: { id: string; storeys: number | null; structureType: string; structure?: StructuralElement[]; use?: string | null }, families: FamilyId[]): BuildingSketch {
   const label = b.storeys !== null ? `Illustration of a ${b.storeys} storey building, drawn from its survey` : 'Illustration of a building, drawn from its survey'
-  return { seed: b.id, use: sketchUse(b.use ?? ''), storeys: b.storeys, frame: frameFromText(b.structureType), facades: facadesFrom(families), state: 'existing', label }
+  return { seed: b.id, use: sketchUse(b.use ?? ''), storeys: b.storeys, frame: frameOfBuilding(b.structure ?? [], b.structureType), facades: facadesFrom(families), state: 'existing', label }
 }

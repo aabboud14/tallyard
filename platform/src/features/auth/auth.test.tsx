@@ -125,7 +125,7 @@ describe('SignUpForm', () => {
     expect(onSubmit).not.toHaveBeenCalled()
 
     typeInto(field('Organisation name'), 'Test Practice')
-    click(byRole('radio', 'Asset owner'))
+    click(byRole('radio', 'Donor building owner'))
     submit(byTestId('signup-step-2'))
     expect(onSubmit).toHaveBeenCalledWith({ name: 'Test User', email: 'test.user@practice.example', password: 'long enough', orgName: 'Test Practice', orgType: 'owner' })
     expect(allText()).not.toMatch(FORBIDDEN)

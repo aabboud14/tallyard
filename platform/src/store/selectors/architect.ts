@@ -4,6 +4,7 @@
 import type { Fit, WishStatus } from '../../domain/v1types'
 import { daysBetween, formatDate } from '../../domain/dates'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
+import { stageOn } from '../../domain/engines/programme'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
@@ -17,6 +18,8 @@ import { newForProjectsFeed, NEW_LISTING_LIMIT, type NewForProjects } from './ma
 export { NEW_LISTING_DAYS, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
 
 export type ProjectCardView = ProjectRef & {
+  /** The RIBA stage the programme dates place today in (round 2); null before stage 0 starts. The strip shows it before the declared stage. */
+  plannedStage: number | null
   counts: Record<WishStatus, number>
   total: number
   href: string
@@ -110,6 +113,7 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     const families = live.flatMap((r) => (r.card ? [r.card.family] : []))
     return {
       ...projectRef(state, p),
+      plannedStage: stageOn(p.programme, today),
       counts,
       total: rows.length,
       href: `/app/projects/${p.id}`,

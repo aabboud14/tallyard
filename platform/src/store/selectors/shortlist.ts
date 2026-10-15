@@ -4,7 +4,7 @@ import type { Lot, Project } from '../../domain/types'
 import type { WishStatus, WishTotals, Wishlist, WishlistItem, SpecSheet } from '../../domain/v1types'
 import { MOVE_REASONS, wishlistTotals } from '../../domain/engines/wishlist'
 import { specSheet } from '../../domain/engines/specSheet'
-import { PROJECT_TYPE_LABELS } from '../../domain/reference/labels'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import type { AppData, ReservationStatus, Viewer } from '../types'
 import { isProjectArchitect, projectSide, projectsOfUser, roleOfUser } from '../access'
 import { acceptedReservation, generalWishlist, isLotAvailable, listingOf, lotByPublicId, projectCanSee, projectWishlist, saveBlock } from '../lots'
@@ -199,7 +199,7 @@ export function specificationView(state: AppData, viewer: Viewer, projectId: str
   const pick = (m: SpecMode) => rows.filter((r) => (m === 'approved' ? r.status === 'approved' : r.status !== 'declined'))
   const chosen = pick(mode)
   const sheet = specSheet(
-    { name: p.name, typeLabel: PROJECT_TYPE_LABELS[p.projectType], startDate: p.startDate },
+    { name: p.name, typeLabel: projectTypeLabel(p), startDate: p.startDate },
     chosen.map((r) => ({ listing: r.card!.listing, fit: r.card!.fit, status: r.status })),
   )
   const spec = state.specs[projectId] ?? { header: '', clauseNotes: {}, updatedAt: null }

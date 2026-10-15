@@ -1,7 +1,7 @@
 // Where the viewer is, as breadcrumbs for the top bar and a title for the browser tab. Names come only from
 // records the viewer may open: a route they cannot open reads as its section alone.
 import type { AppData, Viewer } from '../types'
-import { buildingSide, projectSide } from '../access'
+import { buildingSide, isBuildingContractor, projectSide } from '../access'
 import { listingOf, lotByPublicId } from '../lots'
 import { projectTabs } from './project'
 import { buildingTabs } from './owner'
@@ -24,6 +24,8 @@ const SECTION_LABELS: Record<string, string> = {
   saved: 'Saved',
   projects: 'Projects',
   buildings: 'Buildings',
+  capture: 'Capture',
+  links: 'Shared with you by link',
   requests: 'Requests',
   engagements: 'Engagements',
   notifications: 'Notifications',
@@ -54,6 +56,8 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
     return { crumbs: shown, title: last ? last.label : 'Home' }
   }
   if (!SECTION_LABELS[section] || access === 'not_found') return done([crumb('Page not found')])
+  // A share link's address is its token: the page has no section of its own to go back to.
+  if (section === 'links') return done([crumb(sectionLabel)])
   if (id === undefined || access !== 'ok') return done([crumb(sectionLabel, sectionHref)])
 
   if (section === 'marketplace' || section === 'discover') {
@@ -62,6 +66,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   }
   if (section === 'projects') {
     if (id === 'new') return done([crumb(sectionLabel, sectionHref), crumb('New project')])
+    if (id === 'requests') return done([crumb(sectionLabel, sectionHref), crumb('Project requests')])
     const p = state.world.projects[id]
     const side = projectSide(state, viewer.userId, id)
     if (!p || !side) return done([crumb(sectionLabel, sectionHref)])
@@ -76,7 +81,7 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
     if (!b || !side) return done([crumb(sectionLabel, sectionHref)])
     const base = [crumb(sectionLabel, sectionHref), crumb(b.name, `/app/buildings/${id}`)]
     if (tab === undefined) return done(base)
-    const t = buildingTabs(side, id).find((x) => x.id === tab)
+    const t = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).find((x) => x.id === tab)
     const tabCrumb = crumb(t ? t.label : slugLabel(tab), `/app/buildings/${id}/${tab}`)
     if (tab === 'inventory' && sub !== undefined) {
       const item = state.world.items[sub]

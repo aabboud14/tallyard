@@ -1,17 +1,23 @@
 // The donor building owner's dashboard: the owner's own buildings drawn from their surveys, items by typology,
 // what is listed, and requests awaiting a decision. Built on ownerHome; buyers stay blind through requestRows.
 import type { Typology } from '../../domain/v1types'
-import { buildingSketch, type BuildingSketch } from '../../domain/sketch'
+import { buildingSketch, projectSketch, type BuildingSketch } from '../../domain/sketch'
 import { formatDate } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
-import { itemsOf, ownerHome, type BuildingCard, type OwnerHome } from './owner'
+import { projectWishlist } from '../lots'
+import { itemsOf, ownerHome, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
+import { shortlistRows } from './shortlist'
 import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial } from './dashboard'
 
-export type OwnerBuildingCard = BuildingCard & { sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string }
+export type OwnerBuildingCard = BuildingCard & { kindLabel: 'Donor building'; sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string }
+
+/** One of the owner's New projects, drawn going up from its live shortlist's public cards, with its site start. */
+export type OwnerProjectCard = OwnerProjectRow & { kindLabel: 'New project'; sketch: BuildingSketch; programmeText: string }
 
 export type OwnerDashboard = OwnerHome & {
   metrics: { byTypology: Record<Typology, number>; listed: number; requestTone: MetricTone }
   buildingCards: OwnerBuildingCard[]
+  newProjectCards: OwnerProjectCard[]
   /** The owner's own item behind each request on the home, by request ID. */
   requestThumbs: Record<string, ThumbMaterial>
   activitySummary: ActivitySummary
@@ -30,10 +36,18 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     const start = b?.programme.dismantlingStart ?? null
     return {
       ...c,
-      sketch: buildingSketch({ id: c.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '' }, families),
+      kindLabel: 'Donor building' as const,
+      sketch: buildingSketch({ id: c.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families),
       byTypology: counts,
       programmeText: start ? `Dismantling starts ${formatDate(start)}` : 'Programme not set',
     }
+  })
+  const newProjectCards: OwnerProjectCard[] = home.newProjects.map((row) => {
+    const p = state.world.projects[row.id]
+    const list = projectWishlist(state.world, p.id)
+    // Families from the live shortlist's public cards only (P3).
+    const families = (list ? shortlistRows(state, viewer, list, p) : []).flatMap((r) => (r.card && r.status !== 'declined' ? [r.card.family] : []))
+    return { ...row, kindLabel: 'New project' as const, sketch: projectSketch(p, families), programmeText: `Site start ${formatDate(p.programme.siteStart)}` }
   })
   const requestThumbs: Record<string, ThumbMaterial> = {}
   for (const r of home.requests) {
@@ -44,6 +58,7 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     ...home,
     metrics: { byTypology, listed: home.stats.listed + home.stats.shared, requestTone: home.stats.requestsAwaiting > 0 ? 'warning' : 'neutral' },
     buildingCards,
+    newProjectCards,
     requestThumbs,
     activitySummary: activitySummary(home.activity),
   }

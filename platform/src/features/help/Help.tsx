@@ -70,11 +70,11 @@ const GUIDES: Record<PlatformRole, { title: string; intro: string; steps: Step[]
     ],
   },
   owner: {
-    title: 'Asset owners',
+    title: 'Donor building owners',
     intro: 'Know what your buildings hold and decide what is visible, to whom and from when.',
     steps: [
       { icon: Building2, title: 'Add a building and appoint a surveyor', text: 'The surveyor captures each item. You are told as items arrive and when the survey is submitted.', href: '/app/buildings', cta: 'Buildings' },
-      { icon: ListOrdered, title: 'Decide what to recover', text: 'Priorities ranks items by net value, avoided carbon, demand and ease, with their route on the UK decision tree.' },
+      { icon: ListOrdered, title: 'Decide what to recover', text: 'The recovery plan ranks items by net value, avoided carbon, demand and ease, with their route on the UK decision tree.' },
       { icon: Share2, title: 'Share or publish', text: 'Keep a lot private, share it in confidence with projects you choose, or publish it. Set the ask, the reserve and the date.' },
       { icon: Handshake, title: 'Answer requests', text: 'Buyers stay anonymous until you accept. Accepting holds the lot and exchanges contacts.', href: '/app/requests', cta: 'Requests' },
     ],

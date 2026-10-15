@@ -5,6 +5,8 @@ import { orgOfUser, roleOfUser, usersOfOrg } from '../access'
 import { orgTypeLabel, ROLE_LABELS, SAMPLE_ACCOUNTS, SAMPLE_PASSWORD } from '../../sandbox/accounts'
 import { parameterRows, type Parameter } from '../../domain/reference/assumptions'
 import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
+import { PROGRAMME_PARAMETER_ROWS } from '../../domain/engines/programme'
+import { requirementsMethodology } from '../../domain/reference/requirements'
 import { LABELS } from '../../domain/reference/labels'
 import { formatDate } from '../../domain/dates'
 import { initials, timeAgo } from './common'
@@ -74,13 +76,13 @@ export function sampleAccountCards(state: AppData) {
 export type MethodologyGroup = { group: string; rows: Parameter[] }
 
 /** Every factor and price with its source and status, grouped as the Help page shows them. */
-export function methodologyView(): { groups: MethodologyGroup[]; indicative: string[] } {
+export function methodologyView(): { groups: MethodologyGroup[]; indicative: string[]; references: ReturnType<typeof requirementsMethodology> } {
   const groups: MethodologyGroup[] = []
-  for (const r of [...parameterRows(), ...V1_PARAMETER_ROWS]) {
+  for (const r of [...parameterRows(), ...V1_PARAMETER_ROWS, ...PROGRAMME_PARAMETER_ROWS]) {
     if (r.id === 'negotiation') continue
     const g = groups.find((x) => x.group === r.group)
     if (g) g.rows.push(r)
     else groups.push({ group: r.group, rows: [r] })
   }
-  return { groups, indicative: [LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10, LABELS.L41, LABELS.L20] }
+  return { groups, indicative: [LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10, LABELS.L41, LABELS.L20], references: requirementsMethodology() }
 }

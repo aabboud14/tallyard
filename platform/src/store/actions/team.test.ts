@@ -49,7 +49,7 @@ describe('sign-up and password reset as state', () => {
 
   it('accepts the organisation type as the role or the label too', () => {
     const s0 = fresh()
-    for (const [orgType, role] of [['owner', 'owner'], ['Surveying firm', 'surveyor'], ['client', 'client'], ['Sustainability consultant', 'consultant']] as const) {
+    for (const [orgType, role] of [['owner', 'owner'], ['Surveying or deconstruction firm', 'surveyor'], ['client', 'client'], ['Sustainability consultant', 'consultant']] as const) {
       const r = must(signUpState(s0, { name: 'A Person', email: 'a@b.example', orgName: 'Org', orgType, salt: 's', passwordHash: 'h', now: NOW }))
       expect(roleOfUser(r.state, r.value)).toBe(role)
     }

@@ -9,6 +9,10 @@ import * as owner from './actions/owner'
 import * as surveyor from './actions/surveyor'
 import * as team from './actions/team'
 import * as consultant from './actions/consultant'
+import * as claims from './actions/claims'
+import * as contractor from './actions/contractor'
+import * as testing from './actions/testing'
+import * as links from './actions/links'
 
 function bind<V, A extends unknown[]>(fn: (s: AppData, actor: Actor, ...args: A) => ActionResult<V>): (...args: A) => Outcome<V> {
   return (...args: A) => useApp.getState().run(fn, ...args)
@@ -18,6 +22,10 @@ export const act = {
   // Projects
   createProject: bind(projects.createProject),
   updateProject: bind(projects.updateProject),
+  decideClientLink: bind(projects.decideClientLink),
+  requestClientLink: bind(projects.requestClientLink),
+  setProjectProgramme: bind(projects.setProjectProgramme),
+  setProjectRequirements: bind(projects.setProjectRequirements),
   acceptTerms: bind(projects.acceptTerms),
   setProjectConsultant: bind(projects.setProjectConsultant),
   editSpecHeader: bind(projects.editSpecHeader),
@@ -34,9 +42,12 @@ export const act = {
   requestReservation: bind(reservations.requestReservation),
   withdrawReservation: bind(reservations.withdrawReservation),
   decideReservation: bind(reservations.decideReservation),
-  // Asset owner
+  // Donor building owner
   createBuilding: bind(owner.createBuilding),
   updateBuilding: bind(owner.updateBuilding),
+  setBuildingStructure: bind(owner.setBuildingStructure),
+  createOwnerProject: bind(owner.createOwnerProject),
+  appointProjectArchitect: bind(owner.appointProjectArchitect),
   appointSurveyor: bind(owner.appointSurveyor),
   setLotVisibility: bind(owner.setLotVisibility),
   setLotAvailability: bind(owner.setLotAvailability),
@@ -51,6 +62,25 @@ export const act = {
   removePhoto: bind(surveyor.removePhoto),
   submitSurvey: bind(surveyor.submitSurvey),
   reopenSurvey: bind(surveyor.reopenSurvey),
+  // Buildings a surveyor adds, and their owners' confirmation
+  createSurveyBuilding: bind(claims.createSurveyBuilding),
+  requestBuildingClaim: bind(claims.requestBuildingClaim),
+  withdrawBuildingClaim: bind(claims.withdrawBuildingClaim),
+  decideBuildingClaim: bind(claims.decideBuildingClaim),
+  deleteSurveyBuilding: bind(claims.deleteSurveyBuilding),
+  // Deconstruction contractor
+  appointContractor: bind(contractor.appointContractor),
+  setContractorDates: bind(contractor.setContractorDates),
+  applyContractorDates: bind(contractor.applyContractorDates),
+  // Testing
+  requestTesting: bind(testing.requestTesting),
+  recordTestingBooked: bind(testing.recordTestingBooked),
+  recordTestResults: bind(testing.recordTestResults),
+  cancelTesting: bind(testing.cancelTesting),
+  // Share links
+  createShareLink: bind(links.createShareLink),
+  openShareLink: bind(links.openShareLink),
+  revokeShareLink: bind(links.revokeShareLink),
   // Consultant
   loadWasteBill: bind(consultant.loadWasteBill),
   editWasteRow: bind(consultant.editWasteRow),

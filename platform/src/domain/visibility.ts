@@ -1,5 +1,5 @@
 // Which lots a project or the open market can see (02 section 4, rule 5; 04 section 2).
-import type { Project, PublicListing, World } from './types'
+import type { Project, PublicListing, ShareLink, World } from './types'
 import type { Assumptions } from './reference/assumptions'
 import { toPublicListing } from './privacy/publicListing'
 
@@ -10,12 +10,41 @@ export function listingFor(world: World, lotId: string, a: Assumptions): PublicL
   return toPublicListing(lot, item, building, world.snapshot, a)
 }
 
-/** Open lots, plus matched-only lots from owners who approved the project once the terms are accepted. */
+/** The link's lots still shared or published, from the link owner's own buildings, in the link's order. Empty when revoked. */
+export function activeLinkLots(world: World, link: ShareLink): string[] {
+  if (link.revokedAt !== null) return []
+  return link.lotIds.filter((id) => {
+    const lot = world.lots[id]
+    if (!lot || lot.visibility === 'private') return false
+    const item = world.items[lot.itemId]
+    const owner = item ? (world.buildings[item.buildingId]?.ownerOrgId ?? null) : null
+    return owner !== null && owner === link.ownerOrgId
+  })
+}
+
+/** Lots an organisation reaches through the share links it has opened. */
+export function lotsSharedByLinkWithOrg(world: World, orgId: string): string[] {
+  if (!orgId) return []
+  const out = new Set<string>()
+  for (const link of Object.values(world.shareLinks ?? {})) {
+    if (!link.opens.some((o) => o.orgId === orgId)) continue
+    for (const id of activeLinkLots(world, link)) out.add(id)
+  }
+  return [...out]
+}
+
+/**
+ * Open lots, plus matched-only lots from owners who approved the project once the terms are accepted, plus
+ * matched-only lots that the project's architect or client reached through a share link (the link has its own terms).
+ */
 export function lotsVisibleToProject(world: World, project: Project): string[] {
+  const byLink = new Set([...lotsSharedByLinkWithOrg(world, project.architectOrgId), ...lotsSharedByLinkWithOrg(world, project.clientOrgId)])
   return Object.values(world.lots)
     .filter((lot) => {
       if (lot.visibility === 'open') return true
-      if (lot.visibility !== 'matched_only' || !project.termsAccepted) return false
+      if (lot.visibility !== 'matched_only') return false
+      if (byLink.has(lot.id)) return true
+      if (!project.termsAccepted) return false
       const owner = world.buildings[world.items[lot.itemId].buildingId].ownerOrgId
       return owner !== null && project.approvedByOwnerOrgIds.includes(owner)
     })

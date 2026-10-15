@@ -11,7 +11,7 @@ import { clearPhotos } from './photos'
 import { getSessionUserId, setSessionUserId } from './sessionId'
 import { ERRORS } from './access'
 
-export const STATE_VERSION = 1
+export const STATE_VERSION = 2
 
 export type Outcome<V> = { ok: boolean; error: string | null; value: V | null; undo: () => void }
 
@@ -27,10 +27,12 @@ export type AppStore = AppData & {
   setCheckingProject: (projectId: string | null) => void
   /** The sidebar's project order and client filter, for the signed-in person. */
   setNavProjectView: (patch: Partial<NavProjectView>) => void
+  /** The building the standalone Capture page uses, for the signed-in person. */
+  setCaptureBuilding: (buildingId: string | null) => void
   resetSandbox: () => Promise<void>
 }
 
-const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'orgProfiles', 'ui'] as const satisfies readonly (keyof AppData)[]
+const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'orgProfiles', 'buildingClaims', 'testingRequests', 'ui'] as const satisfies readonly (keyof AppData)[]
 
 /** The data part of the store, without the functions. */
 export function dataOf(s: AppData): AppData {
@@ -40,7 +42,7 @@ export function dataOf(s: AppData): AppData {
 function looksValid(x: unknown): x is AppData {
   if (!x || typeof x !== 'object') return false
   const d = x as Partial<AppData>
-  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.ui
+  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.buildingClaims && !!d.testingRequests && !!d.ui
 }
 
 function fresh(): AppData {
@@ -89,6 +91,11 @@ export const useApp = create<AppStore>()(
         const ui = get().ui
         const all = ui.navProjects ?? {}
         set({ ui: { ...ui, navProjects: { ...all, [userId]: { ...DEFAULT_NAV_PROJECT_VIEW, ...all[userId], ...patch } } } })
+      },
+      setCaptureBuilding: (buildingId) => {
+        const userId = getSessionUserId()
+        if (!userId) return
+        set({ ui: { ...get().ui, captureBuildingId: { ...(get().ui.captureBuildingId ?? {}), [userId]: buildingId } } })
       },
       resetSandbox: async () => {
         await clearPhotos()

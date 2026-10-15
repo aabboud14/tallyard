@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSeed, PERSONA_IDS, ORG_IDS, TIVERNE_ID, HARROWDEN_ID, MERROWGATE_ID, SALLOW_ID, FERRYMOOR_ID, DURNLEY_ID } from './seed/world'
-import { roleOf, buildingsFor, clientsFor, projectsFor, engagementsFor, canAccess } from './access'
+import { roleOf, buildingsFor, clientsFor, projectsFor, engagementsFor, canAccess, clientLinked } from './access'
 
 const w = createSeed()
 const ids = <T extends { id: string }>(xs: T[]) => xs.map((x) => x.id)
@@ -103,5 +103,20 @@ describe('the seed behind the access rules', () => {
     expect(w.buildings[HARROWDEN_ID].ownerOrgId).toBe(ORG_IDS.brackwater)
     expect(w.buildings[HARROWDEN_ID].surveyorOrgId).toBe(ORG_IDS.tarnbrook)
     expect(w.buildings[TIVERNE_ID].surveyorOrgId).toBe(ORG_IDS.tarnbrook)
+  })
+})
+
+describe('round 2: the client reaches a project only once it has accepted', () => {
+  it('a pending link hides the project from the client and from no one else', () => {
+    const w2 = createSeed()
+    w2.projects[MERROWGATE_ID].clientLink = { ...w2.projects[MERROWGATE_ID].clientLink, status: 'pending', decidedOn: null, decidedByPersonaId: null }
+    expect(clientLinked(w2.projects[MERROWGATE_ID])).toBe(false)
+    expect(projectsFor(w2, PERSONA_IDS.isla)).toEqual([])
+    expect(canAccess(w2, PERSONA_IDS.isla, { projectId: MERROWGATE_ID })).toBe(false)
+    expect(ids(projectsFor(w2, PERSONA_IDS.priya))).toEqual([MERROWGATE_ID, SALLOW_ID, FERRYMOOR_ID])
+    expect(canAccess(w2, PERSONA_IDS.marcus, { projectId: MERROWGATE_ID })).toBe(true)
+  })
+  it('every seeded project is already linked', () => {
+    for (const p of Object.values(w.projects)) expect(clientLinked(p), p.name).toBe(true)
   })
 })

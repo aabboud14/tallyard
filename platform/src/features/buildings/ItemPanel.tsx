@@ -284,7 +284,7 @@ function OwnerSide({ d, buildingId }: { d: ItemDetail; buildingId: string }) {
         </section>
       ) : null}
       <Link to={`/app/buildings/${buildingId}/priorities`} className="inline-flex items-center gap-1 self-start rounded-sm text-sm font-medium text-ink-soft hover:text-ink">
-        See where it ranks in Priorities
+        See where it ranks in the recovery plan
         <ArrowRight aria-hidden="true" className="size-3.5" />
       </Link>
     </div>

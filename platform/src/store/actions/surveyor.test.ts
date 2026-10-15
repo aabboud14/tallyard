@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { actor, fresh, must, refused, U, TODAY } from '../../test/fixtures'
+import { actor, addTestUser, fresh, must, refused, U, TODAY } from '../../test/fixtures'
+import { AMBREY_ID, FENNICK_ID } from '../../sandbox/seed-owner-surveyor'
 import { addPhoto, captureItem, removePhoto, reopenSurvey, submitSurvey, SURVEY_ERRORS, updateItem, type CaptureInput } from './surveyor'
 import { draftFromText } from '../capture'
 import { lotOfItem, listingOf } from '../lots'
@@ -104,5 +105,24 @@ describe('items, photos and the survey', () => {
     refused(s0, submitSurvey(s0, actor(U.tom), TIVERNE_ID), ERRORS.role)
     const again = must(reopenSurvey(r.state, actor(U.dana), HARROWDEN_ID))
     expect(again.state.surveys[HARROWDEN_ID].status).toBe('in_progress')
+  })
+})
+
+describe('round 2: who captures', () => {
+  it('a deconstruction contractor alone may not capture, edit items or photos', () => {
+    const lee = addTestUser(fresh(), { orgId: FENNICK_ID, name: 'Lee Shaw', email: 'lee.shaw@fennick.example' })
+    const s = lee.state
+    const th07 = itemByTag(s.world, 'TH-07')
+    refused(s, captureItem(s, actor(lee.userId), fromText('30 no. 203x203x46 UC, 3.2m long, bolted, roof plant room')), ERRORS.noAccess)
+    refused(s, updateItem(s, actor(lee.userId), th07.id, { notes: 'Seen' }), ERRORS.noAccess)
+    refused(s, addPhoto(s, actor(lee.userId), th07.id, 'pho_a1b2c3d4-e5f6'), ERRORS.noAccess)
+  })
+
+  it('capturing in a building no owner has confirmed notifies nobody', () => {
+    const s0 = fresh()
+    const r = must(captureItem(s0, actor(U.dana), { ...fromText('30 no. 203x203x46 UC, 3.2m long, bolted, roof plant room', AMBREY_ID), photoIds: [] }))
+    expect(r.value.tag).toBe('AH-03')
+    expect(r.state.notifications).toBe(s0.notifications)
+    expect(r.state.activity[0].orgIds).toEqual([ORG_IDS.tarnbrook])
   })
 })

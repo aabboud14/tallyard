@@ -2,8 +2,10 @@
 // by value and avoided carbon), drawn from its shortlist's public cards, plus waste engagements. Indicative.
 import * as f from '../../domain/format'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
+import { stageOn } from '../../domain/engines/programme'
 import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
+import { todayOf } from './common'
 import { shortlistRows } from './shortlist'
 import { consultantHome, type ConsultantHome } from './consultant'
 import { projectTabs } from './project'
@@ -18,6 +20,8 @@ export type ConsultantDashboard = ConsultantHome & {
     name: string
     clientName: string
     stage: number
+    /** The RIBA stage the programme dates place today in (round 2); null before stage 0 starts. */
+    plannedStage: number | null
     href: string
     sketch: BuildingSketch
     links: { id: string; label: string; href: string }[]
@@ -66,6 +70,7 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
       name: c.name,
       clientName: c.clientName,
       stage: c.stage,
+      plannedStage: stageOn(p.programme, todayOf(viewer)),
       href: c.href,
       sketch: projectSketch(p, families),
       links: projectTabs(state, 'consultant', p)

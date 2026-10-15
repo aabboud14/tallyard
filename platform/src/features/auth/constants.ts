@@ -14,8 +14,8 @@ export type OrgType = PlatformRole
 const PRESENTATION: Record<OrgType, { description: string; icon: LucideIcon }> = {
   architect: { description: 'Find, shortlist and specify reclaimed materials', icon: Compass },
   client: { description: 'Approve and reserve for your projects', icon: ClipboardCheck },
-  owner: { description: 'List what your buildings hold', icon: Building2 },
-  surveyor: { description: 'Capture materials on site', icon: Camera },
+  owner: { description: 'List what your buildings hold, and source for new ones', icon: Building2 },
+  surveyor: { description: 'Survey buildings and plan when materials come out', icon: Camera },
   consultant: { description: 'Report avoided carbon and reuse', icon: Leaf },
 }
 

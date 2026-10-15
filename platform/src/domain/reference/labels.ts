@@ -66,7 +66,7 @@ export const BAND_WORDS = { high: 'High', medium: 'Medium', low: 'Low', none: 'N
 export const WISH_STATUS_LABELS = { pending: 'Pending', sent: 'Sent to client', approved: 'Approved', declined: 'Declined' } as const
 export const TYPOLOGY_LABELS = { structure: 'Structure', envelope: 'Envelope', finishes: 'Finishes' } as const
 export const DECISION_ROUTE_LABELS = { reuse: 'Reuse', upcycle: 'Upcycle', downcycle: 'Downcycle', recycle: 'Recycle', scrap: 'Scrap' } as const
-export const PROJECT_TYPE_LABELS = { office: 'Office', hotel: 'Hotel', residential: 'Residential', other: 'Other' } as const
+export { PROJECT_TYPE_LABELS } from './projectTypes'
 export const NOT_SHARED = 'No longer shared with this project'
 export const NOT_AVAILABLE_TO_ROLE = 'Not available to this role'
 export const SOURCE_TYPE_LABELS ={ deconstruction: 'Deconstruction', unused_surplus: 'Unused surplus', fit_out_strip: 'Fit-out strip' } as const

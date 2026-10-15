@@ -6,7 +6,7 @@ import { newProjectOptions } from '../../store/selectors/project'
 import { projectFields, type ProjectFields } from '../../store/selectors/arch-project'
 import { Button, Callout, Dialog, Field, Input, Select, Textarea, toast } from '../../ui'
 
-const BLANK: ProjectFields = { name: '', projectType: 'office', ribaStage: 2, startDate: '', region: '', localAuthority: '', description: '' }
+const BLANK: ProjectFields = { name: '', projectType: 'office', projectTypeOther: '', ribaStage: 2, startDate: '', region: '', localAuthority: '', description: '' }
 
 export function EditProjectDialog({ projectId, trigger }: { projectId: string; trigger: ReactElement }) {
   const options = useView(newProjectOptions)

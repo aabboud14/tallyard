@@ -115,7 +115,7 @@ describe('material page', () => {
     expect(m.location.seller).toBeNull()
     expect(m.showPurchaseNote).toBe(true)
     const isla = sel.materialView(s, viewer(U.isla), 'L-9F4CQQ', MERROWGATE_ID)!
-    expect(isla.sellerLine).toBe('Listed by an asset owner in Central London')
+    expect(isla.sellerLine).toBe('Listed by a donor building owner in Central London')
     expect(isla.price!.range).toBe('£715 to £825 per tonne')
     expect(isla.location.seller).toBe('Asset owner')
     expect(isla.showPurchaseNote).toBe(false)
@@ -395,8 +395,8 @@ describe('inbox, navigation, routes and search', () => {
     expect(v.unread).toBe(1)
     expect(v.groups[0].items[0].timeAgo).toBe('Yesterday')
     expect(sel.inboxView(s, viewer(U.isla), 'unread').groups).toHaveLength(1)
-    expect(sel.bellView(s, viewer(U.tom)).unread).toBe(1)
-    expect(sel.notificationSettings(s, viewer(U.tom)).map((x) => x.kind)).toEqual(['reservation_requested', 'survey_submitted', 'item_captured', 'team'])
+    expect(sel.bellView(s, viewer(U.tom)).unread).toBe(2)
+    expect(sel.notificationSettings(s, viewer(U.tom)).map((x) => x.kind)).toEqual(['sent_to_client', 'reservation_requested', 'reservation_decided', 'survey_submitted', 'item_captured', 'team', 'building_claim', 'testing', 'availability_set', 'link_opened'])
   })
 
   it('relative times', () => {
@@ -413,14 +413,14 @@ describe('inbox, navigation, routes and search', () => {
     const titles = (id: string) => sel.navModel(s, viewer(id))!.sections.map((x) => [x.title, x.items.map((i) => i.label)])
     expect(titles(U.priya)).toEqual([[null, ['Home', 'Marketplace', 'Saved']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court', 'New project']]])
     expect(titles(U.isla)).toEqual([[null, ['Home']], ['Projects', ['Merrowgate Wharf']]])
-    expect(titles(U.tom)).toEqual([[null, ['Home']], ['Buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
-    expect(titles(U.dana)).toEqual([[null, ['Home']], ['Clients', ['Ostlea Estates', 'Brackwater Estates']]])
+    expect(titles(U.tom)).toEqual([[null, ['Home']], ['Donor buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
+    expect(titles(U.dana)).toEqual([[null, ['Home', 'Capture']], ['Clients', ['Ostlea Estates', 'Brackwater Estates', 'Not yet linked', 'Add building']]])
     expect(titles(U.marcus)).toEqual([[null, ['Home']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court']], ['Engagements', ['Durnley House']]])
     const isla = sel.navModel(s, viewer(U.isla))!
     const mg = isla.sections[1].items[0]
     expect(mg.badge).toBe(1)
     expect(mg.children.map((c) => [c.label, c.badge])).toEqual([['Overview', null], ['Approvals', 1], ['Reservations', null], ['Specification', null], ['Carbon', null]])
-    expect(sel.navModel(s, viewer(U.tom))!.sections[2].items[0].badge).toBe(1)
+    expect(sel.navModel(s, viewer(U.tom))!.sections[2].items[0].badge).toBe(2)
     const priya = sel.navModel(s, viewer(U.priya))!
     expect(priya.sections[1].items[0].children.find((c) => c.label === 'Matching')!.soon).toBe(true)
     expect(priya.org).toMatchObject({ name: 'Studio Oriel', typeLabel: 'Architecture practice' })
@@ -512,7 +512,7 @@ describe('inbox, navigation, routes and search', () => {
     expect(sel.savedView(arch.state, jo)!.empty).toBe(true)
     const owner = must(signUpState(s0, { name: 'Ash Reed', email: 'ash@reed.example', orgName: 'Reed Holdings', orgType: 'Asset owner', salt: 's', passwordHash: 'h', now: NOW }))
     const ash = viewer(owner.value)
-    expect(sel.buildingsList(owner.state, ash)).toEqual({ rows: [], canAdd: true, empty: true })
+    expect(sel.buildingsList(owner.state, ash)).toEqual({ rows: [], canAdd: true, empty: true, projects: [], unlinked: [] })
     expect(sel.requestsView(owner.state, ash)!.empty).toBe(true)
     const surveyor = must(signUpState(s0, { name: 'Lee Shaw', email: 'lee@shaw.example', orgName: 'Shaw Surveys', orgType: 'Deconstruction contractor', salt: 's', passwordHash: 'h', now: NOW }))
     expect(sel.surveyorHome(surveyor.state, viewer(surveyor.value))!.appointments).toEqual([])

@@ -220,7 +220,7 @@ describe('material page', () => {
   it('shows the client the seller line and the guide price', async () => {
     open('/app/marketplace/L-9F4CQQ', U.isla)
     await waitFor(() => document.querySelector('[data-testid="material-title"]'))
-    expect(byTestId('seller-line').textContent).toBe('Listed by an asset owner in Central London')
+    expect(byTestId('seller-line').textContent).toBe('Listed by a donor building owner in Central London')
     expect(byTestId('guide-price').textContent).toContain('£715 to £825 per tonne')
   })
 })

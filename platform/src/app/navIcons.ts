@@ -1,6 +1,6 @@
 // Icons for the sidebar's nav items, and which item is the current page.
 import type { LucideIcon } from 'lucide-react'
-import { Bell, Bookmark, Building2, CircleHelp, Compass, FileText, Folder, FolderPlus, House, Inbox, Plus, Recycle, Settings, Store, Users } from 'lucide-react'
+import { Bell, Bookmark, Building2, Camera, CircleHelp, Compass, FileText, Folder, FolderPlus, House, Inbox, Plus, Recycle, Settings, Store, Users } from 'lucide-react'
 import type { NavIcon } from '../store/selectors/nav'
 
 export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
@@ -19,6 +19,7 @@ export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   Plus,
   Bell,
   FileText,
+  Camera,
 }
 
 /**

@@ -4,7 +4,8 @@ import type { FamilyId, Project, PublicListing } from '../../domain/types'
 import type { Band, TimelineFit, Typology, WishStatus } from '../../domain/v1types'
 import { FAMILIES } from '../../domain/reference/families'
 import { facilityById } from '../../domain/reference/assumptions'
-import { PROJECT_TYPE_LABELS, TIMELINE_TEXT, TYPOLOGY_LABELS } from '../../domain/reference/labels'
+import { TIMELINE_TEXT, TYPOLOGY_LABELS } from '../../domain/reference/labels'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import { RIBA_STAGES } from '../../domain/reference/policy'
 import { daysBetween, formatDate, formatDateShort } from '../../domain/dates'
 import { typologyOf } from '../../domain/engines/typology'
@@ -16,7 +17,7 @@ import * as f from '../../domain/format'
 import type { ActivityEntry, AppData, ReservationStatus, Viewer } from '../types'
 import { roleForOrgType, orgTypeLabel } from '../../sandbox/accounts'
 import { generalWishlist, projectWishlist } from '../lots'
-import { buildingSide, canOpenEngagement, projectSide, roleOfUser, type BuildingSide, type ProjectSide } from '../access'
+import { buildingSide, canOpenEngagement, isBuildingContractor, projectSide, roleOfUser, type BuildingSide, type ProjectSide } from '../access'
 
 // ---------- Time ----------
 
@@ -78,7 +79,7 @@ export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = { pe
 
 export const FIT_LABELS = { now: 'Available now', in_time: 'In time', tight: 'Tight', late: 'Too late' } as const
 
-export const ROLE_TITLES = { architect: 'Architect', client: 'Client', consultant: 'Sustainability consultant', owner: 'Asset owner', surveyor: 'Site surveyor' } as const
+export const ROLE_TITLES = { architect: 'Architect', client: 'Client', consultant: 'Sustainability consultant', owner: 'Donor building owner', surveyor: 'Site surveyor' } as const
 
 export function stageLabel(stage: number): string {
   return `RIBA Stage ${stage}, ${RIBA_STAGES[stage] ?? ''}`.replace(/, $/, '')
@@ -88,9 +89,13 @@ export function familyLabel(family: FamilyId): string {
   return FAMILIES[family].label
 }
 
-/** "an asset owner", "a deconstruction contractor". */
+/** How a stored seller type reads in a sentence. The data value stays 'Asset owner'; the product calls it a donor building owner. */
+export const SELLER_TYPE_LABELS: Record<string, string> = { 'Asset owner': 'donor building owner' }
+
+/** "a donor building owner", "a deconstruction contractor". */
 export function sellerPhrase(sellerType: string): string {
-  const lower = sellerType.charAt(0).toLowerCase() + sellerType.slice(1)
+  const label = SELLER_TYPE_LABELS[sellerType] ?? sellerType
+  const lower = label.charAt(0).toLowerCase() + label.slice(1)
   return /^[aeiou]/i.test(lower) ? `an ${lower}` : `a ${lower}`
 }
 
@@ -212,7 +217,7 @@ export function projectRef(state: AppData, p: Project): ProjectRef {
     id: p.id,
     name: p.name,
     clientName: state.world.orgs[p.clientOrgId]?.name ?? '',
-    typeLabel: PROJECT_TYPE_LABELS[p.projectType],
+    typeLabel: projectTypeLabel(p),
     stage: p.ribaStage,
     stageLabel: stageLabel(p.ribaStage),
     region: p.region,
@@ -245,8 +250,9 @@ const PROJECT_TABS_OF: Record<ProjectSide, string[]> = {
   consultant: ['carbon', 'compliance', 'team', 'activity'],
 }
 const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
-  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing'],
-  surveyor: ['inventory', 'capture'],
+  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing'],
+  surveyor: ['inventory', 'capture', 'testing', 'availability'],
+  contractor: ['availability'],
 }
 
 /**
@@ -258,6 +264,7 @@ const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
 export function hrefForReader(state: AppData, userId: string, href: string | null): string | null {
   if (!href) return null
   const [, section, id, tab, ...rest] = href.split('?')[0].split('/').filter(Boolean)
+  if (section === 'projects' && id === 'requests') return roleOfUser(state, userId) === 'client' ? href : null
   if (section === 'projects' && id) {
     const side = projectSide(state, userId, id)
     if (!side) return null
@@ -270,10 +277,14 @@ export function hrefForReader(state: AppData, userId: string, href: string | nul
   if (section === 'buildings' && id) {
     const side = buildingSide(state, userId, id)
     if (!side) return null
+    if (tab === 'availability' && !isBuildingContractor(state, userId, id)) return `/app/buildings/${id}`
     if (tab === undefined || BUILDING_TABS_OF[side].includes(tab)) return href
     return `/app/buildings/${id}`
   }
   if (section === 'requests') return roleOfUser(state, userId) === 'owner' ? href : null
+  // Round 2: share links open for anyone signed in; standalone capture for owners and surveyors.
+  if (section === 'links') return href
+  if (section === 'capture') return roleOfUser(state, userId) === 'owner' || roleOfUser(state, userId) === 'surveyor' ? href : null
   if (section === 'engagements' && id) return roleOfUser(state, userId) === 'consultant' && canOpenEngagement(state, userId, id) ? href : null
   return href
 }

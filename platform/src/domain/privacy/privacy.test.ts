@@ -15,6 +15,7 @@ import { buyerPackage, sellerPackage, confirmedStorageMonths } from '../engines/
 import { negotiate } from '../engines/negotiation'
 import { facilityById } from '../reference/assumptions'
 import type { World } from '../types'
+import { referenceWorld } from '../../sandbox/seed'
 
 function publishTh01(w: World, reserve: number) {
   const lot = lotForItem(w, itemByTag(w, 'TH-01').id)
@@ -240,5 +241,52 @@ describe('P1b: the expected availability and the start date never reach a projec
   })
   it('every toBlindBuyer result is the same', () => {
     for (const id of Object.keys(o.projects)) expect(toBlindBuyer(t.projects[id])).toEqual(toBlindBuyer(o.projects[id]))
+  })
+})
+
+describe('round 2: the free type description never reaches a seller', () => {
+  it('toBlindBuyer of a project of type other holds the blind type only', () => {
+    const w = createSeed()
+    const p = { ...w.projects[SALLOW_ID], projectType: 'other' as const, projectTypeOther: 'Rooftop lido and spa', blind: { orgType: 'Design team', projectType: 'other project' } }
+    const blind = toBlindBuyer(p)
+    expect(JSON.stringify(blind)).not.toContain('Rooftop lido and spa')
+    expect(blindBuyerText(blind)).not.toContain('Rooftop')
+    expect(blind.projectType).toBe('other project')
+    expect(projectPrivateStrings(p, w)).toContain('Rooftop lido and spa')
+  })
+})
+
+describe('round 2: buildings a surveyor added, contractors and their dates stay private', () => {
+  const w = referenceWorld()
+
+  it('lists the unconfirmed building, its creator and the contractor among the private strings', () => {
+    const ah01 = itemByTag(w, 'AH-01')
+    const ah = lotPrivateStrings(lotForItem(w, ah01.id), ah01, w.buildings[ah01.buildingId], w)
+    expect(ah).toEqual(expect.arrayContaining(['Ambrey House', 'Quarrel Lane', 'Tarnbrook Deconstruction', 'SE1']))
+    expect(ah).not.toContain('Ostlea Estates')
+    const th07 = itemByTag(w, 'TH-07')
+    const th = lotPrivateStrings(lotForItem(w, th07.id), th07, w.buildings[TIVERNE_ID], w)
+    expect(th).toEqual(expect.arrayContaining(['Fennick Dismantling', ...dateFormats(th07.contractorAvailableFrom!)]))
+  })
+
+  it('every projection holds none of them, and none carries a contractor key', () => {
+    for (const p of allProjections(w)) {
+      expect(Object.keys(p.listing).sort()).toEqual([...PUBLIC_LISTING_KEYS].sort())
+      const text = JSON.stringify(p.listing)
+      for (const s of lotPrivateStrings(p.lot, p.item, p.building, w)) expect(text.includes(s), `${p.item.tag} leaks "${s}"`).toBe(false)
+      expect(text).not.toMatch(/contractorAvailableFrom|contractorDatedOn|contractorOrgId|createdByOrgId/)
+      expect(text).not.toContain('Fennick')
+    }
+  })
+
+  it('the contractor date changes no projection', () => {
+    const t = referenceWorld()
+    for (const item of Object.values(t.items)) item.contractorAvailableFrom = '2028-01-01'
+    expect(allProjections(t).map((p) => p.listing)).toEqual(allProjections(w).map((p) => p.listing))
+  })
+
+  it('a project with no architect yet still lists its private strings', () => {
+    const p = { ...w.projects[SALLOW_ID], architectOrgId: '', teamOrgIds: [] }
+    expect(projectPrivateStrings(p, w)).toEqual(expect.arrayContaining(['Sallow Court', 'Pellory Estates']))
   })
 })

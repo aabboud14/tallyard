@@ -291,7 +291,7 @@ export function Gallery() {
                 columns={2}
                 options={[
                   { value: 'architect', label: 'Architecture practice', description: 'Find, shortlist and specify', icon: LayoutGrid },
-                  { value: 'owner', label: 'Asset owner', description: 'List what your buildings hold', icon: Building2 },
+                  { value: 'owner', label: 'Donor building owner', description: 'List what your buildings hold', icon: Building2 },
                   { value: 'consultant', label: 'Sustainability consultancy', description: 'Prove the avoided carbon', icon: Leaf },
                   { value: 'surveyor', label: 'Surveying firm', description: 'Capture items on site', icon: MapPin, disabled: true },
                 ]}

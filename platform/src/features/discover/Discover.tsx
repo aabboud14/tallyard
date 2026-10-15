@@ -254,7 +254,7 @@ export function Discover() {
               variant="page"
               icon={LockKeyhole}
               title="Nothing is shared with your projects yet"
-              text="When an asset owner shares lots privately with one of your projects, they appear here behind the confidentiality terms for that project."
+              text="When a donor building owner shares lots privately with one of your projects, they appear here behind the confidentiality terms for that project."
               action={
                 <Button onClick={() => update({ tab: 'all' })} icon={Compass}>
                   Browse the marketplace
@@ -304,7 +304,7 @@ export function Discover() {
           </div>
 
           {view.empty === 'no_listings' ? (
-            <EmptyState variant="page" icon={PackageOpen} title="Nothing is listed yet" text="Materials appear here as asset owners publish them. Shared lots for your projects are under Shared with you." />
+            <EmptyState variant="page" icon={PackageOpen} title="Nothing is listed yet" text="Materials appear here as donor building owners publish them. Shared lots for your projects are under Shared with you." />
           ) : view.empty === 'no_results' ? (
             <EmptyState
               variant="page"

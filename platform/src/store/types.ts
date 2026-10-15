@@ -1,7 +1,8 @@
 // The platform's state beyond the world: people, invites, notifications, activity, reservations and the
 // working records of each role. Everything here is plain data so it persists as JSON.
-import type { CostLine, World } from '../domain/types'
+import type { CostLine, SteelGrade, World } from '../domain/types'
 import type { Fit } from '../domain/v1types'
+import type { TestService } from '../domain/reference/testing'
 
 /** The workspace an organisation's type gives its people (BRIEF section 1, principle 2). */
 export type PlatformRole = 'architect' | 'client' | 'owner' | 'surveyor' | 'consultant'
@@ -20,6 +21,11 @@ export const NOTIFICATION_KINDS = [
   'new_fit',
   'appointed',
   'team',
+  // Round 2: building confirmations, testing, contractor dates and share links.
+  'building_claim',
+  'testing',
+  'availability_set',
+  'link_opened',
 ] as const
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
 
@@ -140,6 +146,51 @@ export type SurveyRecord = {
   submittedByUserId: string | null
 }
 
+export type BuildingClaimStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn'
+
+/** A surveying firm asks the owner of a building it added to confirm it. Addressed by email, never by organisation. */
+export type BuildingClaim = {
+  /** 'clm_' minted. */
+  id: string
+  buildingId: string
+  surveyorOrgId: string
+  requestedByUserId: string
+  requestedAt: string
+  /** Normalised email of the owner the surveyor named. Only an owner organisation with a member using it may decide. */
+  ownerEmail: string
+  ownerName: string
+  message: string
+  status: BuildingClaimStatus
+  decidedAt: string | null
+  decidedByUserId: string | null
+  decisionNote: string | null
+}
+
+export type { TestService }
+export type TestingStatus = 'requested' | 'booked' | 'results' | 'cancelled'
+export type TestResult = { itemId: string; testStatus: 'inspected' | 'tested'; grade: SteelGrade | null; note: string }
+
+/** A request to one of the testing companies (reference data) to inspect or test items of a building. */
+export type TestingRequest = {
+  /** 'tst_' minted. */
+  id: string
+  buildingId: string
+  itemIds: string[]
+  companyId: string
+  services: TestService[]
+  /** ISO date, or null for no preference. */
+  preferredFrom: string | null
+  message: string
+  status: TestingStatus
+  requestedByUserId: string
+  requestedByOrgId: string
+  requestedAt: string
+  /** ISO date of the site visit. */
+  bookedFor: string | null
+  results: TestResult[]
+  history: { at: string; status: TestingStatus; byUserId: string; note: string }[]
+}
+
 /** The architect's own words on a project's specification: a header note and one note per clause. */
 export type SpecDoc = { header: string; clauseNotes: Record<string, string>; updatedAt: string | null }
 
@@ -161,10 +212,12 @@ export type UiState = {
   projectsLayout: 'cards' | 'table'
   /** The sidebar's project order and client filter, per person. Optional so older stored states still read. */
   navProjects?: Record<string, NavProjectView>
+  /** The building the standalone Capture page last used, per person. */
+  captureBuildingId: Record<string, string | null>
 }
 
 export type AppData = {
-  version: 1
+  version: 2
   /** The date the sandbox was seeded. */
   seededOn: string
   /** Counter for deterministic IDs. */
@@ -180,6 +233,10 @@ export type AppData = {
   surveys: Record<string, SurveyRecord>
   specs: Record<string, SpecDoc>
   orgProfiles: Record<string, OrgProfile>
+  /** Round 2: surveyors' requests to owners to confirm a building. */
+  buildingClaims: Record<string, BuildingClaim>
+  /** Round 2: testing requests per building. */
+  testingRequests: Record<string, TestingRequest>
   ui: UiState
 }
 
@@ -191,4 +248,4 @@ export type Viewer = { userId: string; now: string }
 
 export type ActionResult<V = null> = { state: AppData; error: string | null; value: V | null }
 
-export const DEFAULT_UI: UiState = { sidebarCollapsed: false, checkingProjectId: {}, shortlistLayout: 'board', projectsLayout: 'cards', navProjects: {} }
+export const DEFAULT_UI: UiState = { sidebarCollapsed: false, checkingProjectId: {}, shortlistLayout: 'board', projectsLayout: 'cards', navProjects: {}, captureBuildingId: {} }
