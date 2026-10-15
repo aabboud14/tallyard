@@ -79,7 +79,7 @@ export function AppShell() {
   const toggle = () => setUi({ sidebarCollapsed: !collapsed })
 
   return (
-    <div className="min-h-dvh bg-[#f4f3f1] lg:flex lg:h-dvh lg:overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white" data-testid="app-shell" data-role={nav.role}>
+    <div className="min-h-dvh bg-canvas lg:flex lg:h-dvh lg:overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white" data-testid="app-shell" data-role={nav.role}>
       <a href="#main" className="sr-only z-[100] rounded-md bg-ink px-3 py-2 text-sm font-medium text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
         Skip to content
       </a>
@@ -92,7 +92,7 @@ export function AppShell() {
         side="left"
         title={<Logo size="sm" />}
         testId="nav-drawer"
-        bodyClassName="p-0! bg-[#f4f3f1]"
+        bodyClassName="p-0! bg-canvas"
       >
         <Sidebar
           nav={nav}

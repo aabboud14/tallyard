@@ -15,11 +15,11 @@ const base =
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-600 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.10),0_1px_2px_rgb(28_25_23/0.14)] hover:bg-brand-700 active:bg-brand-800',
+    'bg-brand-600 text-white shadow-xs hover:bg-brand-700 active:bg-brand-800',
   secondary: 'border border-line bg-surface text-ink shadow-xs hover:border-line-strong hover:bg-subtle active:bg-hover',
   ghost: 'text-ink-soft hover:bg-hover hover:text-ink active:bg-line-soft',
   danger:
-    'bg-danger text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.10),0_1px_2px_rgb(28_25_23/0.14)] hover:bg-danger-strong',
+    'bg-danger text-white shadow-xs hover:bg-danger-strong',
   link: 'h-auto! px-0! text-brand-700 underline-offset-4 hover:underline',
 }
 

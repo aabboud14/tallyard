@@ -9,12 +9,12 @@ import { rngFor, svgId } from './illustration/rng'
 import { BOARD, illustrationLabel } from './illustration/helpers'
 import { MaterialArt } from './illustration/swatches'
 
-export function MaterialIllustration({ spec, publicId, className }: { spec: Spec; publicId: string; className?: string }) {
+export function MaterialIllustration({ spec, publicId, className, view = 'card' }: { spec: Spec; publicId: string; className?: string; /** `detail` draws the larger, dimensioned version where a family has one. */ view?: 'card' | 'detail' }) {
   const uid = svgId('mi', publicId, useId())
   const r = rngFor(`${publicId}:${spec.family}`)
   return (
     <svg viewBox={`0 0 ${BOARD.width} ${BOARD.height}`} preserveAspectRatio="xMidYMid slice" className={className} role="img" aria-label={illustrationLabel(spec)} data-family={spec.family}>
-      <MaterialArt spec={spec} r={r} uid={uid} />
+      <MaterialArt spec={spec} r={r} uid={uid} view={view} />
     </svg>
   )
 }
@@ -33,23 +33,25 @@ export type MaterialImageProps = {
   className?: string
   eager?: boolean
   testId?: string
+  /** Passed to the illustration: `detail` on the material page. */
+  view?: 'card' | 'detail'
 }
 
 const aspects = { '4/3': 'aspect-[4/3]', '3/2': 'aspect-[3/2]', '16/10': 'aspect-[16/10]', '1/1': 'aspect-square', fill: 'material-image-fill' }
 const radii = { none: '', md: 'rounded-md', lg: 'rounded-lg', xl: 'rounded-xl' }
 
-export function MaterialImage({ spec, publicId, photo, alt, aspect = '4/3', showKind = false, rounded = 'none', className, eager = false, testId }: MaterialImageProps) {
+export function MaterialImage({ spec, publicId, photo, alt, aspect = '4/3', showKind = false, rounded = 'none', className, eager = false, testId, view = 'card' }: MaterialImageProps) {
   const isPhoto = !!photo
   return (
-    <div data-testid={testId} data-kind={isPhoto ? 'photo' : 'illustration'} className={cx('material-image relative isolate overflow-hidden bg-subtle', aspects[aspect], radii[rounded], className)}>
+    <div data-testid={testId} data-kind={isPhoto ? 'photo' : 'illustration'} className={cx('material-image relative isolate overflow-hidden bg-paper', aspects[aspect], radii[rounded], className)}>
       {isPhoto ? (
         <img src={photo!} alt={alt ?? `Photo of ${FAMILIES[spec.family].label.toLowerCase()}`} loading={eager ? 'eager' : 'lazy'} decoding="async" className="absolute inset-0 size-full object-cover" />
       ) : (
-        <MaterialIllustration spec={spec} publicId={publicId} className="absolute inset-0 size-full" />
+        <MaterialIllustration spec={spec} publicId={publicId} view={view} className="absolute inset-0 size-full" />
       )}
       <div aria-hidden="true" className={cx('pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/[0.06]', radii[rounded])} />
       {showKind ? (
-        <span className="absolute bottom-2 left-2 inline-flex h-6 items-center gap-1.5 rounded-full bg-white/80 px-2 text-[11px] font-medium text-ink-soft shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
+        <span className="absolute bottom-2 left-2 inline-flex h-6 items-center gap-1.5 rounded-[5px] bg-surface/95 px-2 text-2xs font-medium text-ink-soft ring-1 ring-line">
           {isPhoto ? <Camera aria-hidden="true" className="size-3" /> : <PenTool aria-hidden="true" className="size-3" />}
           {isPhoto ? 'Photo' : 'Illustration'}
         </span>

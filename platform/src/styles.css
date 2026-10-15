@@ -24,9 +24,11 @@
   --text-xl: 1.125rem;
   --text-xl--line-height: 1.625rem;
   --text-xl--letter-spacing: -0.01em;
-  --text-2xl: 1.375rem;
-  --text-2xl--line-height: 1.75rem;
-  --text-2xl--letter-spacing: -0.015em;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 0.875rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-2xl--letter-spacing: -0.02em;
   --text-3xl: 1.75rem;
   --text-3xl--line-height: 2.125rem;
   --text-3xl--letter-spacing: -0.02em;
@@ -52,6 +54,13 @@
   --color-ink-soft: #57534e;
   --color-muted: #78716c;
   --color-faint: #a8a29e;
+  /* The app background behind the inset panel. */
+  --color-canvas: #f4f3f1;
+  /* Drawing and swatch ground. */
+  --color-paper: #f7f6f3;
+  /* The one dark band on public pages, and its hairline. */
+  --color-night: #10201b;
+  --color-night-line: #23362f;
 
   /* Brand: forest green. */
   --color-brand-50: #eef6f2;
@@ -78,6 +87,33 @@
   --color-danger-soft: #fee2e2;
   --color-danger-line: #fbc8c8;
 
+  /*
+    Data colours. Run through the dataviz palette validator against white.
+    Categorical, in fixed order and never cycled: adjacent pairs all pass (worst CVD dE 10.6, normal 15.9,
+    every contrast at least 3:1); slots 1 to 3 pass all pairs (worst CVD dE 10.8, normal 16.1), so they
+    carry the three typologies: Structure, Envelope and Finishes. Every chart keeps a text legend.
+  */
+  --color-viz-1: #2f6db5;
+  --color-viz-2: #c4562c;
+  --color-viz-3: #16917a;
+  --color-viz-4: #b07d00;
+  --color-viz-5: #8a56b8;
+  --color-viz-6: #d0688f;
+  --color-viz-other: #a8a29e;
+
+  /*
+    Status and fit marks: fills for bars, dots, rings and timeline windows, never for text. Good, warning
+    and critical pass all pairs (worst CVD dE 9.0). The neutral grey reads as grey on purpose, so a status
+    mark always ships with an icon and a word.
+  */
+  --color-mark-neutral: #a8a29e;
+  --color-mark-info: #2563eb;
+  --color-mark-good: #2d8064;
+  --color-mark-warning: #d97706;
+  --color-mark-critical: #b91c1c;
+  /* The unfilled part of a ring, meter or bar. */
+  --color-track: #efeeed;
+
   /* Shape and depth. Cards and inputs rounded-lg (8 px), buttons rounded-md (6 px). */
   --shadow-xs: 0 1px 1px rgb(28 25 23 / 0.04);
   --shadow-sm: 0 1px 2px rgb(28 25 23 / 0.05), 0 1px 1px rgb(28 25 23 / 0.02);
@@ -86,6 +122,8 @@
   --shadow-pop: 0 0 0 1px rgb(28 25 23 / 0.06), 0 4px 8px -2px rgb(28 25 23 / 0.06), 0 16px 32px -8px rgb(28 25 23 / 0.16);
   --shadow-overlay: 0 0 0 1px rgb(28 25 23 / 0.06), 0 24px 64px -12px rgb(28 25 23 / 0.28);
   --shadow-focus: 0 0 0 3px rgb(31 107 83 / 0.18);
+  /* Cards are flat: a border only. Shadows are kept for overlays (pop, overlay). */
+  --shadow-card: none;
 
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
 

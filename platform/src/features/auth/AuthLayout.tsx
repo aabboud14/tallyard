@@ -1,10 +1,10 @@
-// The frame for sign in, sign up, password reset and invites: the form on the left, a calm brand panel on the
-// right with a collage of material illustrations. The panel steps aside below 1024 px.
+// The frame for sign in, sign up, password reset and invites: the form on the left and, from 1024 px, a drawing
+// sheet on the right: a reclaimed steel member drawn from its survey record, with a title block.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { PRODUCT_NAME } from '../../domain/constants'
-import { cx, FitPill, Logo, LogoMark, MaterialImage, SANDBOX_LINE, SustainabilityBand } from '../../ui'
-import { BANDS, SAMPLE_MATERIALS } from '../../ui/samples'
+import { cx, Logo, MaterialIllustration, SANDBOX_LINE, SectionDrawing } from '../../ui'
+import { SAMPLE_MATERIALS } from '../../ui/samples'
 
 export function AuthHeading({ title, text, className }: { title: ReactNode; text?: ReactNode; className?: string }) {
   return (
@@ -15,55 +15,42 @@ export function AuthHeading({ title, text, className }: { title: ReactNode; text
   )
 }
 
-function Collage() {
-  const [steel, brick, stone, glass, precast, floor, timber, column] = SAMPLE_MATERIALS
-  const tile = 'overflow-hidden rounded-2xl shadow-[0_0_0_1px_rgb(28_25_23/0.06),0_24px_48px_-24px_rgb(28_25_23/0.45)]'
-  return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
-      <div className="absolute left-1/2 top-1/2 grid w-[136%] -translate-x-1/2 -translate-y-[56%] rotate-[-8deg] grid-cols-3 gap-5">
-        <div className="mt-24 flex flex-col gap-5">
-          <MaterialImage spec={stone.spec} publicId={stone.publicId} aspect="3/2" className={tile} />
-          <MaterialImage spec={steel.spec} publicId={steel.publicId} aspect="1/1" className={tile} />
-          <MaterialImage spec={timber.spec} publicId={timber.publicId} aspect="3/2" className={tile} />
-        </div>
-        <div className="flex flex-col gap-5">
-          <MaterialImage spec={glass.spec} publicId={glass.publicId} aspect="1/1" className={tile} />
-          <MaterialImage spec={brick.spec} publicId={brick.publicId} aspect="3/2" className={tile} />
-          <MaterialImage spec={floor.spec} publicId={floor.publicId} aspect="1/1" className={tile} />
-        </div>
-        <div className="mt-12 flex flex-col gap-5">
-          <MaterialImage spec={precast.spec} publicId={precast.publicId} aspect="3/2" className={tile} />
-          <MaterialImage spec={column.spec} publicId={column.publicId} aspect="1/1" className={tile} />
-          <MaterialImage spec={brick.spec} publicId="L-5RC3DR" aspect="3/2" className={tile} />
-        </div>
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(13_51_40/0.10)_0%,rgb(13_51_40/0)_30%,rgb(13_51_40/0.55)_70%,rgb(13_51_40/0.92)_100%)]" />
-    </div>
-  )
-}
+/** The member the sheet draws: the first sample steel section, at its recorded length. */
+const SHEET = { designation: 'UB 457x191x67', lengthM: 7.5, pieces: '48 pieces', location: 'Central London' } as const
 
+/**
+ * The brand panel: a straight drawing sheet on paper. A large axonometric of a reclaimed steel member at its
+ * recorded length, its dimensioned section beside it, and a title block in a 1 px ink frame. No rotation,
+ * gradient, glass or shadow. Steps aside below 1024 px.
+ */
 export function BrandPanel() {
-  const stone = SAMPLE_MATERIALS[2]
+  const steel = SAMPLE_MATERIALS[0]
   return (
-    <div className="relative hidden overflow-hidden rounded-[20px] bg-brand-900 lg:block">
-      <Collage />
-      <div className="absolute right-8 top-8 w-[260px] rounded-xl border border-white/40 bg-white/85 p-3 shadow-pop backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <MaterialImage spec={stone.spec} publicId={stone.publicId} aspect="1/1" rounded="md" className="size-11! shrink-0" />
-          <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-ink">{stone.title}</div>
-            <div className="text-xs text-muted">{stone.quantity}, {stone.location}</div>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between">
-          <FitPill fit="in_time" size="sm" />
-          <SustainabilityBand band={BANDS.medium} size="sm" />
-        </div>
+    <div className="relative hidden min-w-0 flex-col justify-center gap-10 border-l border-line bg-paper px-10 py-12 lg:flex xl:px-14" data-testid="auth-sheet">
+      <div aria-hidden="true" className="flex min-w-0 items-center justify-center gap-6">
+        <MaterialIllustration spec={steel.spec} publicId={steel.publicId} view="detail" className="block aspect-[4/3] w-full min-w-0 max-w-[560px] border border-line" />
+        <SectionDrawing designation={SHEET.designation} lengthM={SHEET.lengthM} caption={false} className="hidden h-auto w-[132px] shrink-0 xl:block" idPrefix="auth" />
       </div>
-      <div className="absolute inset-x-0 bottom-0 p-10 text-white">
-        <LogoMark size={28} tone="white" />
-        <p className="m-0 mt-5 max-w-[440px] text-2xl font-semibold leading-8 tracking-[-0.015em]">Every material shows when it comes out, and whether it arrives in time for your start on site.</p>
-        <p className="m-0 mt-3 max-w-[420px] text-md text-white/70">Owners, architects, clients, surveyors and consultants, working from one record.</p>
+      <div className="flex flex-col items-end gap-5">
+        <dl className="m-0 grid w-[300px] border border-ink text-sm" data-testid="title-block">
+          <div className="border-b border-ink px-3 py-2">
+            <dt className="text-2xs text-muted">Member</dt>
+            <dd className="m-0 font-semibold text-ink">
+              {SHEET.designation}, {SHEET.lengthM.toFixed(1)} m
+            </dd>
+          </div>
+          <div className="border-b border-ink px-3 py-2">
+            <dt className="text-2xs text-muted">Lot</dt>
+            <dd className="m-0 text-ink">
+              {SHEET.pieces}, {SHEET.location}
+            </dd>
+          </div>
+          <div className="px-3 py-2">
+            <dt className="text-2xs text-muted">Source</dt>
+            <dd className="m-0 text-ink">Illustration from the survey record</dd>
+          </div>
+        </dl>
+        <p className="m-0 max-w-[440px] text-right text-xl font-semibold leading-7 tracking-[-0.015em] text-ink">Every material shows when it comes out, and whether it arrives in time for your start on site.</p>
       </div>
     </div>
   )
@@ -72,7 +59,7 @@ export function BrandPanel() {
 /** `footer` replaces the sandbox line at the bottom; pass false to leave it out (the sign-in page says it beside the sample accounts). */
 export function AuthLayout({ children, footer, wide = false }: { children: ReactNode; footer?: ReactNode | false; wide?: boolean }) {
   return (
-    <div className="grid min-h-dvh grid-cols-1 bg-page text-md lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:p-3" data-testid="auth-layout">
+    <div className="grid min-h-dvh grid-cols-1 bg-page text-md lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]" data-testid="auth-layout">
       <div className="flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:min-h-0 lg:px-14 lg:py-8">
         <header>
           <Link to="/" className="inline-flex items-center rounded-md max-sm:min-h-11" aria-label={`${PRODUCT_NAME} home`}>

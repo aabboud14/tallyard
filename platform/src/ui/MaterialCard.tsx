@@ -1,6 +1,7 @@
 // The showroom card for Discover and every row of materials: the picture leads, then the title, a quiet line
 // of typology and family, the facts and the fit. The whole card opens the material; the action (Save) sits
-// over the picture, shown on hover and focus, always on touch screens.
+// over the picture, shown on hover and focus, always on touch screens. Hover strengthens the hairline frame;
+// nothing lifts, zooms or blurs.
 import type { ReactNode } from 'react'
 import { Link, useInRouterContext } from 'react-router'
 import type { Band, Fit } from '../domain/v1types'
@@ -30,16 +31,16 @@ export type MaterialCardProps = {
 
 export function MaterialCard({ href, title, eyebrow, image, facts = [], fit, band, action, badge, size = 'md', className, testId }: MaterialCardProps) {
   const inRouter = useInRouterContext()
-  const linkCls = 'text-ink outline-none after:absolute after:inset-0 after:z-[1] after:rounded-xl after:content-[""]'
+  const linkCls = 'text-ink outline-none after:absolute after:inset-0 after:z-[1] after:rounded-md after:content-[""]'
   return (
-    <article data-testid={testId} className={cx('group relative flex min-w-0 flex-col gap-3 rounded-xl has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-4 has-[a:focus-visible]:outline-brand-600', className)}>
-      <div className="relative overflow-hidden rounded-xl bg-subtle shadow-[0_0_0_1px_rgb(28_25_23/0.06)] transition-shadow duration-300 ease-out group-hover:shadow-[0_0_0_1px_rgb(28_25_23/0.08),0_18px_40px_-20px_rgb(28_25_23/0.35)]">
-        <div className="transition-transform duration-500 ease-out group-hover:scale-[1.025] motion-reduce:transform-none">{image}</div>
+    <article data-testid={testId} className={cx('group relative flex min-w-0 flex-col gap-3 rounded-md has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-4 has-[a:focus-visible]:outline-brand-600', className)}>
+      <div className="relative overflow-hidden rounded-md bg-paper shadow-[0_0_0_1px_var(--color-line)] transition-shadow duration-150 group-hover:shadow-[0_0_0_1px_var(--color-line-strong)]">
+        <div>{image}</div>
         {badge ? <div className="absolute left-3 top-3 z-[2]">{badge}</div> : null}
         {action ? <div className="absolute right-3 top-3 z-[2] opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">{action}</div> : null}
         {fit ? (
           <div className="absolute bottom-3 left-3 z-[2]">
-            <FitPill fit={fit} size="sm" className="bg-white/90! shadow-sm backdrop-blur-sm" />
+            <FitPill fit={fit} size="sm" className="bg-surface! ring-line!" />
           </div>
         ) : null}
       </div>

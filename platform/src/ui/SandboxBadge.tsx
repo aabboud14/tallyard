@@ -8,12 +8,12 @@ export const SANDBOX_LINE = 'Sample data that stays in this browser.'
 export function SandboxBadge({ className, href }: { className?: string; href?: string }) {
   const body = (
     <>
-      <FlaskConical aria-hidden="true" className="size-3" />
+      <FlaskConical aria-hidden="true" className="size-3 text-warning" />
       Sandbox
     </>
   )
   const cls = cx(
-    'inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-warning-soft/70 px-2.5 text-xs font-medium text-warning ring-1 ring-inset ring-warning-line transition-colors hover:bg-warning-soft',
+    'inline-flex h-6 shrink-0 items-center gap-1.5 rounded-[5px] bg-surface px-2.5 text-xs font-medium text-ink-soft ring-1 ring-inset ring-line transition-colors hover:bg-subtle',
     className,
   )
   return (

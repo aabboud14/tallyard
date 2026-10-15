@@ -1,12 +1,15 @@
-// Surfaces: Card and its parts, Stat tiles, Callout notes and a DescriptionList for key facts.
+// Surfaces: Card and its parts, Stat tiles and the MetricStrip, Callout notes and a DescriptionList for key facts.
+// Cards are flat (a border, no shadow); shadows are kept for overlays.
 import type { ComponentProps, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { CircleAlert, Info, TriangleAlert, CircleCheck } from 'lucide-react'
 import { cx } from './cx'
 import { IndicativeMarker, type Tone } from './Badge'
+import { MARK, METRIC_STATE, STATE_TONE, type MetricState } from './labels'
+import { ProgressBar } from './Progress'
 
 export type CardProps = Omit<ComponentProps<'div'>, 'ref'> & {
-  /** Lifts on hover; use when the whole card is a link. */
+  /** Strengthens the border on hover; use when the whole card is a link. */
   interactive?: boolean
   padding?: 'none' | 'sm' | 'md' | 'lg'
   as?: 'div' | 'section' | 'article' | 'li'
@@ -20,8 +23,8 @@ export function Card({ interactive = false, padding = 'none', as = 'div', classN
   return (
     <As
       className={cx(
-        'relative min-w-0 rounded-lg border border-line bg-surface shadow-sm',
-        interactive && 'transition-[box-shadow,border-color,transform] duration-200 ease-out hover:border-line-strong hover:shadow-raised has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-brand-600',
+        'relative min-w-0 rounded-lg border border-line bg-surface',
+        interactive && 'transition-colors duration-150 hover:border-line-strong has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-brand-600',
         pads[padding],
         className,
       )}
@@ -30,9 +33,9 @@ export function Card({ interactive = false, padding = 'none', as = 'div', classN
   )
 }
 
-export function CardHeader({ title, description, actions, icon: Icon, className, titleAs: H = 'h2' }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; icon?: LucideIcon; className?: string; titleAs?: 'h2' | 'h3' }) {
+export function CardHeader({ title, description, actions, icon: Icon, className, titleAs: H = 'h2', divider = true }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; icon?: LucideIcon; className?: string; titleAs?: 'h2' | 'h3'; /** A rule under the header. Turn it off when the body follows without a break. */ divider?: boolean }) {
   return (
-    <div className={cx('flex items-start justify-between gap-3 border-b border-line-soft px-4 py-3 sm:px-5', className)}>
+    <div className={cx('flex items-start justify-between gap-3 px-4 sm:px-5', divider ? 'border-b border-line-soft py-3' : 'pb-0 pt-3', className)}>
       <div className="flex min-w-0 items-start gap-2.5">
         {Icon ? <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" /> : null}
         <div className="min-w-0">
@@ -65,27 +68,72 @@ export type StatProps = {
   className?: string
   /** Render without the card border, for use inside another surface. */
   bare?: boolean
+  /** State against a target, from a pure domain function. Shown as a coloured dot and words under the value. */
+  state?: MetricState
+  /** Overrides the state's words, for example "Over a week". */
+  stateLabel?: string
+  /** A bar against a whole, with an optional target tick. Every figure comes in as a prop. */
+  meter?: { value: number; max: number; target?: number; label: string; valueText?: string }
+  /** `lg` for the hero figure. */
+  size?: 'md' | 'lg'
+  testId?: string
 }
 
-export function Stat({ label, value, unit, sub, icon: Icon, indicative = false, className, bare = false }: StatProps) {
+export function Stat({ label, value, unit, sub, icon: Icon, indicative = false, className, bare = false, state, stateLabel, meter, size = 'md', testId }: StatProps) {
   return (
-    <div className={cx('flex min-w-0 flex-col gap-2', !bare && 'rounded-lg border border-line bg-surface p-4 shadow-sm sm:p-5', className)}>
+    <div data-testid={testId} data-state={state} className={cx('flex min-w-0 flex-col gap-2', !bare && 'rounded-lg border border-line bg-surface p-4 sm:p-5', className)}>
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink-soft">
-          {Icon ? (
-            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-subtle text-muted ring-1 ring-inset ring-line-soft">
-              <Icon aria-hidden="true" className="size-3.5" />
-            </span>
-          ) : null}
+        <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-ink-soft">
+          {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0 text-faint" /> : null}
           <span className="truncate">{label}</span>
         </div>
         {indicative ? <IndicativeMarker /> : null}
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-3xl font-semibold tabular-nums text-ink">{value}</span>
+        <span className={cx('font-semibold text-ink', size === 'lg' ? 'text-4xl' : 'text-3xl')}>{value}</span>
         {unit ? <span className="text-base font-medium text-muted">{unit}</span> : null}
       </div>
+      {state ? <StateLine state={state} label={stateLabel} /> : null}
+      {meter ? <ProgressBar value={meter.value} max={meter.max} target={meter.target} label={meter.label} valueText={meter.valueText} tone={state ? STATE_TONE[state] : 'brand'} size="sm" /> : null}
       {sub ? <div className="text-sm text-muted">{sub}</div> : null}
+    </div>
+  )
+}
+
+/** A state as a coloured dot, its icon and its words. The words carry the meaning; the colour repeats it. */
+export function StateLine({ state, label, className }: { state: MetricState; label?: string; className?: string }) {
+  const m = METRIC_STATE[state]
+  const Icon = m.icon
+  return (
+    <span data-state={state} className={cx('inline-flex items-center gap-1.5 text-sm text-ink-soft', className)}>
+      <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: MARK[m.tone] }} />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted" />
+      <span>{label ?? m.label}</span>
+    </span>
+  )
+}
+
+/**
+ * Headline figures in one bordered strip: stacked on phones, two by two from 640 px and one row from 1280 px,
+ * with hairline dividers.
+ * Replaces ad hoc rows of stat cards on the homes.
+ */
+export function MetricStrip({ items, className, label, testId }: { items: readonly (StatProps & { key?: string })[]; className?: string; label?: string; testId?: string }) {
+  return (
+    <div
+      role={label ? 'group' : undefined}
+      aria-label={label}
+      data-testid={testId}
+      className={cx(
+        // A 1 px gap over the hairline colour draws the dividers in every layout: stacked, two by two or one row.
+        'grid min-w-0 gap-px overflow-hidden rounded-lg border border-line bg-line-soft',
+        items.length >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : items.length === 3 ? 'sm:grid-cols-3' : items.length === 2 ? 'sm:grid-cols-2' : null,
+        className,
+      )}
+    >
+      {items.map(({ key, ...it }, i) => (
+        <Stat key={key ?? i} {...it} bare className={cx('bg-surface p-5', it.className)} />
+      ))}
     </div>
   )
 }

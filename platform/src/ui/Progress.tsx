@@ -1,16 +1,9 @@
-// ProgressBar (one value against a whole) and SegmentedBar (counts by status in one bar, with a legend).
-// Widths come from SVG coordinates and flex growth, so no figure is worked out here.
+// ProgressBar (one value against a whole, with an optional target tick) and SegmentedBar (counts by status in
+// one bar, with a legend). Widths come from SVG coordinates and flex growth, so no figure is worked out here.
 import type { ReactNode } from 'react'
 import { cx } from './cx'
 import type { Tone } from './Badge'
-
-const fills: Record<Tone, string> = {
-  neutral: '#cdc8c4',
-  brand: '#2d8064',
-  info: '#4f7fe8',
-  warning: '#d08a2c',
-  danger: '#c94a43',
-}
+import { MARK } from './labels'
 
 export type ProgressBarProps = {
   value: number
@@ -19,14 +12,19 @@ export type ProgressBarProps = {
   label: string
   /** Text at the end of the label row, for example "3 of 8". */
   valueText?: ReactNode
+  /** A target on the same scale, drawn as an ink tick. */
+  target?: number
+  /** Words for the target, read out with the value, for example "Aim at least 20%". */
+  targetText?: string
   showLabel?: boolean
   tone?: Tone
   size?: 'sm' | 'md'
   className?: string
 }
 
-export function ProgressBar({ value, max, label, valueText, showLabel = false, tone = 'brand', size = 'md', className }: ProgressBarProps) {
+export function ProgressBar({ value, max, label, valueText, target, targetText, showLabel = false, tone = 'brand', size = 'md', className }: ProgressBarProps) {
   const ok = max > 0
+  const spoken = [typeof valueText === 'string' ? valueText : null, target !== undefined ? (targetText ?? `Target ${target} of ${max}`) : null].filter(Boolean).join('. ')
   return (
     <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
       {showLabel ? (
@@ -41,12 +39,13 @@ export function ProgressBar({ value, max, label, valueText, showLabel = false, t
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
-        aria-valuetext={typeof valueText === 'string' ? valueText : undefined}
-        className={cx('w-full overflow-hidden rounded-full bg-subtle ring-1 ring-inset ring-line-soft', size === 'sm' ? 'h-1' : 'h-1.5')}
+        aria-valuetext={spoken || undefined}
+        className={cx('w-full overflow-hidden rounded-full bg-subtle ring-1 ring-inset ring-line-soft', size === 'sm' ? 'h-1.5' : 'h-2')}
       >
         {ok ? (
           <svg viewBox={`0 0 ${max} 1`} preserveAspectRatio="none" className="block h-full w-full" aria-hidden="true">
-            <rect x="0" y="0" width={Math.min(value, max)} height="1" fill={fills[tone]} />
+            <rect x="0" y="0" width={Math.min(value, max)} height="1" fill={MARK[tone]} />
+            {target !== undefined ? <rect data-part="target" x={target} y="0" width={max / 200} height="1" fill="var(--color-ink)" /> : null}
           </svg>
         ) : null}
       </div>
@@ -54,7 +53,16 @@ export function ProgressBar({ value, max, label, valueText, showLabel = false, t
   )
 }
 
-export type Segment = { key: string; label: string; count: number; tone: Tone }
+export type Segment = {
+  key: string
+  label: string
+  count: number
+  tone: Tone
+  /** A categorical colour in place of the tone's mark, for identity rather than status (typology, factors). */
+  colour?: string
+}
+
+const fillOf = (s: Segment): string => s.colour ?? MARK[s.tone]
 
 /** Counts by status as one bar. Segments with no items are left out of the bar but stay in the legend. */
 export function SegmentedBar({ segments, label, legend = true, total, size = 'md', className }: { segments: Segment[]; label: string; legend?: boolean; total?: ReactNode; size?: 'sm' | 'md'; className?: string }) {
@@ -62,18 +70,18 @@ export function SegmentedBar({ segments, label, legend = true, total, size = 'md
   const any = segments.some((s) => s.count > 0)
   return (
     <div className={cx('flex min-w-0 flex-col gap-2', className)}>
-      <div role="img" aria-label={described} className={cx('flex w-full gap-[2px] overflow-hidden rounded-full', size === 'sm' ? 'h-1.5' : 'h-2', !any && 'bg-subtle ring-1 ring-inset ring-line-soft')}>
+      <div role="img" aria-label={described} className={cx('flex w-full gap-[2px] overflow-hidden', size === 'sm' ? 'h-1.5' : 'h-2.5', !any && 'rounded-[2px] bg-subtle ring-1 ring-inset ring-line-soft')}>
         {segments
           .filter((s) => s.count > 0)
           .map((s) => (
-            <span key={s.key} className="h-full first:rounded-l-full last:rounded-r-full" style={{ flexGrow: s.count, flexBasis: 0, background: fills[s.tone] }} />
+            <span key={s.key} className="h-full rounded-[2px]" style={{ flexGrow: s.count, flexBasis: 0, background: fillOf(s) }} />
           ))}
       </div>
       {legend ? (
         <ul aria-hidden="true" className="m-0 flex list-none flex-wrap items-center gap-x-4 gap-y-1 p-0 text-sm text-muted">
           {segments.map((s) => (
             <li key={s.key} className="inline-flex items-center gap-1.5">
-              <span className="size-2 rounded-full" style={{ background: fills[s.tone] }} />
+              <span className="size-2.5 rounded-[2px]" style={{ background: fillOf(s) }} />
               <span>{s.label}</span>
               <span className="font-medium tabular-nums text-ink">{s.count}</span>
             </li>

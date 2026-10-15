@@ -37,3 +37,20 @@ Code changes at the seams, not test changes: `home-consultant.ts` reads targets 
 ### End-to-end journeys
 
 No assertion changed. After the merge `npm run e2e` passes all four journeys in `e2e/journeys.spec.ts`.
+
+## Merge of r2-w (design system) onto the X, Y and Z merge
+
+No existing assertion changed in this merge. Three files conflicted:
+
+- `src/domain/sketch.ts` and `src/domain/sketch.test.ts`: r2-w carried the copy of stream X's first version. The merged branch's later version wins (it adds `frameOfBuilding` and the optional `structure` from the X and Y merge) and is a strict superset of r2-w's, so r2-w's tests all stand and the frame element test is kept.
+- `src/features/public/Landing.tsx`: the branch had only renamed labels in the old page (Marketplace, Donor buildings, Recovery plan, donor building owner); r2-w rewrote the page with the same words in `landingContent.ts`. Took r2-w's page and checked that no Discover, Priorities or asset owner wording is left.
+
+The landing role heading in `src/features/public/public.test.tsx`, "names every role and the three steps", 'Asset owners', now 'Donor buildings', was changed identically on both sides before the merge (BRIEF 14.1 "The owner role reads Donor building owner"; r2-w's own commit records it), so git took it without a conflict.
+
+Added, not changed: `src/domain/engines/chartScale.test.ts` (`niceMax`, `ticks`) and `src/domain/engines/metricState.test.ts` (`metricState`, `metricReading`, the state words), with every case in visual-qa.md section 7, plus r2-w's `charts.test.tsx`, `round2.test.tsx`, `massing.test.ts`, `tokens.test.ts` and its landing and sign-in tests.
+
+Code at the seams: `MetricState` and the state words now live in `src/domain/engines/metricState.ts`; `src/ui/labels.ts` re-exports the type and builds `METRIC_STATE` from those words, so the domain and the tiles cannot drift. `src/app/AppShell.tsx` uses the `bg-canvas` token in place of `bg-[#f4f3f1]` (visual-qa.md section 4).
+
+### End-to-end journeys
+
+No assertion changed. After the merge `npm run e2e` passes all four journeys in `e2e/journeys.spec.ts`.

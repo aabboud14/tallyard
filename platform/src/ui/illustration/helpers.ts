@@ -6,6 +6,15 @@ import { sectionOrThrow } from '../../domain/reference/sections'
 /** Every illustration is drawn on this board and sliced to fill its frame. */
 export const BOARD = { width: 480, height: 360 } as const
 
+/** Where a drawing keeps its content so that 16:10 and square frames, which slice the board, never cut it. */
+export const SAFE = { left: 64, right: BOARD.width - 64, top: 36, bottom: BOARD.height - 34 } as const
+
+/** `card` for cards and thumbnails; `detail` for the material page, drawn larger. */
+export type DrawingView = 'card' | 'detail'
+
+/** Text sizes in board units. A card shows the board at about half size, so its labels are drawn larger. */
+export const TEXT_SIZE: Record<DrawingView, number> = { card: 17, detail: 11 }
+
 /** "Illustration of clay brick". Names the family; never calls it a photo. */
 export function illustrationLabel(spec: Spec): string {
   const label = FAMILIES[spec.family].label
