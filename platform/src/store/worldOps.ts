@@ -112,6 +112,8 @@ export function addCapturedItem(world: World, input: CaptureFields, ids: { itemI
     capturedBy: by.name,
     capturedOn: by.today,
     expectedAvailableFrom: expected,
+    contractorAvailableFrom: null,
+    contractorDatedOn: null,
   }
   w.items[ids.itemId] = item
   const lot: Lot = {

@@ -1,7 +1,12 @@
 // P3: privacy by construction, proved on every view model. The buyer side (architect, client, consultant) never
 // receives a seller-private string; the seller never receives a buyer-private string before accepting a request.
 import { describe, it, expect } from 'vitest'
-import { actor, fresh, must, U, viewer } from './fixtures'
+import { actor, addTestUser, fresh, must, U, viewer } from './fixtures'
+import { openShareLink } from '../store/actions/links'
+import { setContractorDates } from '../store/actions/contractor'
+import { createOwnerProject } from '../store/actions/owner'
+import { FENNICK_ID, TIVERNE_LINK_ID } from '../sandbox/seed-owner-surveyor'
+import { dateFormats } from '../domain/dates'
 import type { AppData, Viewer } from '../store/types'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../domain/privacy/privateStrings'
 import { itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
@@ -260,5 +265,65 @@ describe('P3 on the platform, round 2: a project of type Other and the notes to 
     expect(priya).toContain('Lantern Quay Developments declined Corbel Yard')
     expect(priya).not.toContain('Isla Brennan')
     expect(priya).not.toContain('isla.brennan@lanternquay.example')
+  })
+})
+
+describe('P3 on the platform, round 2: share links, contractors and New projects', () => {
+  const LINK_LABEL = 'Primary steel for enquiries'
+
+  it('an architect who opened a link sees public listings only, and never the link name', () => {
+    const s = must(openShareLink(fresh(), actor(U.priya), TIVERNE_LINK_ID)).state
+    const views: [string, unknown][] = [...buyerViews(s, viewer(U.priya)), ['link', sel.linkView(s, viewer(U.priya), TIVERNE_LINK_ID)]]
+    expect(sel.linkView(s, viewer(U.priya), TIVERNE_LINK_ID).state).toBe('open')
+    expectNone(views, [...allLotStrings(s), LINK_LABEL], 'Priya')
+    expectNoInternalIds(views, 'Priya')
+    // Before opening, the terms page says nothing either.
+    expectNone([['terms', sel.linkView(fresh(), viewer(U.isla), TIVERNE_LINK_ID)]], [...allLotStrings(s), LINK_LABEL], 'Isla')
+  })
+
+  it('the owner learns only the type of who opened a link, never the organisation or the person', () => {
+    let s = must(openShareLink(fresh(), actor(U.priya), TIVERNE_LINK_ID)).state
+    s = must(openShareLink(s, actor(U.isla), TIVERNE_LINK_ID)).state
+    const v = viewer(U.tom)
+    const views: [string, unknown][] = [...ownerViews(s, v), ['links', sel.shareLinksView(s, v, TIVERNE_ID)], ['claims', sel.claimRowsForOwner(s, v)], ['testing', sel.testingView(s, v, TIVERNE_ID)]]
+    expectNone(views, [...allProjectStrings(s), 'Studio Oriel', 'Priya Nair', 'Isla Brennan', 'Lantern Quay Developments'], 'Tom')
+    expect(JSON.stringify(sel.shareLinksView(s, v, TIVERNE_ID))).toContain('architecture practice')
+  })
+
+  it('a deconstruction contractor sees no buyer, no project and no price', () => {
+    let s = busy()
+    const lee = addTestUser(s, { orgId: FENNICK_ID, name: 'Lee Shaw', email: 'lee.shaw@fennick.example' })
+    s = must(setContractorDates(lee.state, actor(lee.userId), TIVERNE_ID, [{ itemId: itemByTag(lee.state.world, 'TH-01').id, month: '2027-02' }])).state
+    const v = viewer(lee.userId)
+    const views: [string, unknown][] = [
+      ['availability', sel.availabilityView(s, v, TIVERNE_ID)],
+      ['overview', sel.buildingOverview(s, v, TIVERNE_ID)],
+      ['nav', sel.navModel(s, v)],
+      ['inbox', sel.inboxView(s, v)],
+      ['home', sel.surveyorHome(s, v)],
+      ['search', sel.searchIndex(s, v)],
+    ]
+    expect(sel.availabilityView(s, v, TIVERNE_ID)).not.toBeNull()
+    expectNone(views, allProjectStrings(s), 'Lee')
+    for (const [name, view] of views) expect(JSON.stringify(view), `Lee, ${name}`).not.toMatch(/"(ask|askPerUnit|reserve|reservePerUnit|price|guide)"/)
+  })
+
+  it("an owner's New project gives the buying side none of the owner's lot strings, and the surveyor none of the project", () => {
+    const s0 = fresh()
+    const input = { name: 'Wexcombe House', projectType: 'office' as const, localAuthority: 'Camden', region: 'Central London', ribaStage: 2, startDate: '2027-09-20' }
+    // With no architect yet, nobody else sees the project at all.
+    const alone = must(createOwnerProject(s0, actor(U.tom), { ...input, architectOrgId: null }))
+    for (const [who, id] of [['Priya', U.priya], ['Isla', U.isla], ['Marcus', U.marcus]] as const) expectNone(buyerViews(alone.state, viewer(id)), allLotStrings(alone.state), who)
+    // With Studio Oriel appointed, Priya knows her client by name; nothing else of the owner's buildings reaches her.
+    const r = must(createOwnerProject(s0, actor(U.tom), { ...input, architectOrgId: ORG_IDS.oriel }))
+    const s = r.state
+    const client = ['Ostlea Estates', 'Tom Ashby']
+    expectNone(buyerViews(s, viewer(U.priya)), allLotStrings(s).filter((x) => !client.includes(x)), 'Priya')
+    expect(JSON.stringify(sel.projectHeader(s, viewer(U.priya), r.value))).toContain('Ostlea Estates')
+    for (const [who, id] of [['Isla', U.isla], ['Marcus', U.marcus]] as const) expectNone(buyerViews(s, viewer(id)), allLotStrings(s), who)
+    const v = viewer(U.dana)
+    const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)], ['capture', sel.captureTargets(s, v)]]
+    for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)], [`inventory ${b.name}`, sel.inventoryView(s, v, b.id)], [`testing ${b.name}`, sel.testingView(s, v, b.id)])
+    expectNone(dana, ['Wexcombe House', ...dateFormats(s.world.projects[r.value].startDate)], 'Dana')
   })
 })

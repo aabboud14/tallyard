@@ -69,7 +69,7 @@ function validStage(stage: number): boolean {
 }
 
 /** The programme dates a new project gets: site start defaults to the materials date, completion to the typical length. */
-function newProgrammeDates(input: NewProjectInput, today: string): ProgrammeDates | null {
+export function newProgrammeDates(input: NewProjectInput, today: string): ProgrammeDates | null {
   const siteStart = input.siteStart || input.startDate
   return suggestProgramme(today, input.ribaStage, siteStart, input.practicalCompletion || defaultCompletion(siteStart))
 }
@@ -114,9 +114,13 @@ export function validateNewProject(input: NewProjectInput, today: string): [Proj
   return out
 }
 
-/** The practice's clients that have not declined: for the new project dialog and the change of client. */
+/**
+ * The practice's clients that have not declined: for the new project dialog and the change of client. Only client
+ * organisations: a donor building owner whose New project the practice works on is never offered or found by name
+ * (BRIEF 14.2); owners become a project's client only through their own New project.
+ */
 export function existingClientOrgIds(state: AppData, architectOrgId: string): string[] {
-  return [...new Set(Object.values(state.world.projects).filter((p) => p.architectOrgId === architectOrgId && p.clientLink.status !== 'declined').map((p) => p.clientOrgId))]
+  return [...new Set(Object.values(state.world.projects).filter((p) => p.architectOrgId === architectOrgId && p.clientLink.status !== 'declined').map((p) => p.clientOrgId))].filter((id) => roleOfOrg(state, id) === 'client')
 }
 
 function resolveClient(state: AppData, architectOrgId: string, client: ClientChoice): { orgId: string; createName: string | null } | { error: string } {

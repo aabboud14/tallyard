@@ -20,6 +20,7 @@ export const RESERVATION_ERRORS = {
   noReservation: 'That request could not be found.',
   notPending: 'This request has already been decided.',
   reservedElsewhere: 'Reserved for another buyer.',
+  ownLot: 'This lot is yours. Allocate it directly; reserving is for other sellers.',
 } as const
 
 /** Kept on a request declined because the seller accepted another one. */
@@ -37,6 +38,8 @@ export function requestReservation(state: AppData, actor: Actor, projectId: stri
   if (item.status !== 'approved') return fail(state, RESERVATION_ERRORS.notApproved)
   const lot = lotByPublicId(state.world, item.publicId)
   if (!lot || !projectCanSee(state.world, p, lot)) return fail(state, RESERVATION_ERRORS.notShared)
+  // Round 2: a donor building owner building a New project does not reserve from itself (self-allocation is version 2).
+  if (ownerOrgOfLot(state.world, lot) === p.clientOrgId) return fail(state, RESERVATION_ERRORS.ownLot)
   const mine = reservationsForLot(state, lot.id).filter((r) => r.projectId === projectId)
   if (mine.some((r) => r.status === 'accepted')) return fail(state, RESERVATION_ERRORS.held)
   if (mine.some((r) => r.status === 'pending')) return fail(state, RESERVATION_ERRORS.pending)

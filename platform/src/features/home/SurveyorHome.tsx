@@ -40,7 +40,7 @@ export function SurveyorHome() {
         <section aria-labelledby="appointments-title" className="flex min-w-0 flex-col gap-4">
           <SectionTitle id="appointments-title" title="Your appointments" description="Buildings you are appointed to survey, by client." />
           {v.appointments.length === 0 ? (
-            <EmptyState icon={ClipboardList} title="No appointments yet" text="When an asset owner appoints your firm to survey a building, it appears here. You will also get a notification." />
+            <EmptyState icon={ClipboardList} title="No appointments yet" text="When a donor building owner appoints your firm to survey a building, it appears here. You will also get a notification." />
           ) : (
             v.appointments.map((g) => (
               <Card key={g.orgId} data-testid={`client-${g.orgId}`}>

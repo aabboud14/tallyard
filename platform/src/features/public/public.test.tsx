@@ -23,7 +23,7 @@ describe('Landing', () => {
 
   it('names every role and the three steps', () => {
     render(<Landing />)
-    for (const r of ['Architects', 'Clients and developers', 'Asset owners', 'Site surveyors', 'Sustainability consultants', 'Capture and decide', 'Find and shortlist', 'Approve and reserve']) {
+    for (const r of ['Architects', 'Clients and developers', 'Donor buildings', 'Site surveyors', 'Sustainability consultants', 'Capture and decide', 'Find and shortlist', 'Approve and reserve']) {
       expect(byRole('heading', r)).toBeTruthy()
     }
   })

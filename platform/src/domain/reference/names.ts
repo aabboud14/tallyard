@@ -12,11 +12,13 @@ export const ALLOWED_ORGANISATIONS = [
   'Brackwater Estates',
   'Corvane Insurance',
   'Meridale Partners',
+  // Round 2: the deconstruction contractor on Tiverne House.
+  'Fennick Dismantling',
 ] as const
 
 export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Isla Brennan', 'Marcus Lindqvist'] as const
 
-export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House'] as const
+export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House', 'Ambrey House', '6 Quarrel Lane'] as const
 
 export const ALLOWED_PARTNERS = [
   'Open yard, Barking',
@@ -26,6 +28,10 @@ export const ALLOWED_PARTNERS = [
   'Haulier B',
   'Haulier C',
   'the testing partner',
+  // Round 2: testing companies held as reference data (src/domain/reference/testing.ts).
+  'Brindmoor Testing',
+  'Quenby Materials Lab',
+  'Calverd Inspection',
 ] as const
 
 // Group 2: standards bodies and publications that may be named as sources.

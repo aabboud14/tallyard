@@ -1,4 +1,4 @@
-// The asset owner's home: the portfolio in figures, requests awaiting a decision, each building and recent activity.
+// The donor building owner's home: the portfolio in figures, requests awaiting a decision, each building and recent activity.
 import { Link } from 'react-router'
 import { ArrowRight, Building2, EyeOff, Inbox, Plus } from 'lucide-react'
 import { selectors, useView } from '../../store'

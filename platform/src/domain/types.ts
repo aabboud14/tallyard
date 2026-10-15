@@ -63,6 +63,11 @@ export type Persona = {
   tier: 'active' | 'passive' | 'platform'
 }
 
+/** Round 2: the structure of a building, element by element, from a fixed table (reference/structure.ts). */
+export type StructuralElementKind = 'frame' | 'floors' | 'roof' | 'stability' | 'foundations' | 'facade'
+export type StructuralMaterial = 'steel' | 'concrete_in_situ' | 'concrete_precast' | 'composite' | 'timber' | 'masonry' | 'aluminium_glass' | 'stone' | 'other'
+export type StructuralElement = { kind: StructuralElementKind; material: StructuralMaterial | null; systemId: string | null; note: string }
+
 /** A source of lots: a building the owner is dismantling, or another seller's stock. Private. */
 export type SourceBuilding = {
   id: string
@@ -78,7 +83,14 @@ export type SourceBuilding = {
   eraBand: EraBand | null
   storeys: number | null
   giaM2: number | null
+  /** Free text: other notes on the structure. Shown as 'Other notes'. */
   structureType: string
+  /** Round 2: the structure element by element. Empty for market stock. */
+  structure: StructuralElement[]
+  /** The organisation that created the record: the owner, or a surveying firm before its owner confirmed it. Null for market stock. */
+  createdByOrgId: string | null
+  /** The deconstruction contractor invited to set availability dates, if any. Private. */
+  contractorOrgId: string | null
   tenants: string[]
   programme: { stripOutStart: string | null; dismantlingStart: string | null; clearBy: string | null }
   defaultHubId: string | null
@@ -111,6 +123,10 @@ export type InventoryItem = {
   capturedOn: string
   /** When the surveyor expects the material to be free (ISO date, shown as a month). Private; the owner sets the lot date. */
   expectedAvailableFrom: string | null
+  /** When the deconstruction contractor expects it to come out (ISO date, shown as a month). Private; the owner decides the lot date. */
+  contractorAvailableFrom: string | null
+  /** The day the contractor last set it. */
+  contractorDatedOn: string | null
 }
 
 export type Lot = {
@@ -432,6 +448,23 @@ export type Facility = { id: string; name: string; type: 'open' | 'covered'; reg
 
 export type Haulier = { name: string; fixed: number; perKm: number; noticeDays: number }
 
+/** A revocable link to some of an owner's shared lots. The id is the token in the address. */
+export type ShareLink = {
+  /** 'lnk_' and six characters, minted. */
+  id: string
+  ownerOrgId: string
+  buildingId: string
+  lotIds: string[]
+  /** The owner's own name for it. Never shown to people who open the link. */
+  label: string
+  /** ISO timestamp. */
+  createdAt: string
+  createdByPersonaId: string
+  revokedAt: string | null
+  /** Organisations that accepted the link's terms, first open only. */
+  opens: { orgId: string; at: string }[]
+}
+
 export type World = {
   orgs: Record<string, Org>
   personas: Record<string, Persona>
@@ -442,6 +475,8 @@ export type World = {
   deals: Record<string, Deal>
   engagements: Record<string, WasteEngagement>
   wishlists: Record<string, Wishlist>
+  /** Round 2: share links, kept in the world so the visibility rules can honour them. */
+  shareLinks: Record<string, ShareLink>
   snapshot: MarketSnapshot
   ledger: LedgerEntry[]
   publicIdPool: string[]

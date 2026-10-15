@@ -1,12 +1,13 @@
 // The sidebar for each role, with counts for its badges, and the route check every app page makes.
 import type { AppData, PlatformRole, Viewer } from '../types'
-import { buildingSide, buildingsOfUser, canOpenEngagement, isProjectClient, orgOfUser, projectSide, projectsOfUser, roleOfUser } from '../access'
+import { buildingSide, buildingsOfUser, canCaptureIn, canOpenEngagement, isBuildingContractor, isProjectClient, orgOfUser, projectSide, projectsOfUser, roleOfUser } from '../access'
 import { orgTypeLabel } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
 import { pendingLinkRequestCount, projectTabs } from './project'
 import { buildingTabs } from './owner'
-import { appointments } from './surveyor'
+import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
+import { pendingClaimCount } from './claims'
 import { engagementsOf } from './consultant'
 import { unreadCount } from './notifications'
 import { materialView } from './discover'
@@ -27,6 +28,7 @@ export type NavIcon =
   | 'Plus'
   | 'Bell'
   | 'FileText'
+  | 'Camera'
 
 export type NavItem = { id: string; label: string; href: string; icon: NavIcon | null; badge: number | null; soon: boolean; children: NavItem[] }
 
@@ -47,6 +49,11 @@ function item(id: string, label: string, href: string, icon: NavIcon | null = nu
 
 function badge(n: number): number | null {
   return n > 0 ? n : null
+}
+
+/** Whether a donor building owner is the client of at least one New project: it then reads the marketplace too. */
+export function ownerHasClientProject(state: AppData, userId: string): boolean {
+  return roleOfUser(state, userId) === 'owner' && projectsOfUser(state, userId).some((p) => projectSide(state, userId, p.id) === 'client')
 }
 
 function pendingRequests(state: AppData, orgId: string): number {
@@ -83,28 +90,36 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     sections.push({ id: 'projects', title: 'Projects', items: requests > 0 ? [...folders, item('project-requests', 'Project requests', '/app/projects/requests', 'Inbox', { badge: badge(requests) })] : folders })
   } else if (role === 'owner') {
     const buildings = buildingsOfUser(state, viewer.userId)
-    sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House')] })
+    const own = projects.filter((p) => isProjectClient(state, viewer.userId, p.id))
+    // An owner with a New project reads the marketplace for it, as its client would.
+    sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House'), ...(own.length > 0 ? [item('discover', 'Discover', '/app/discover', 'Compass')] : [])] })
     sections.push({
       id: 'buildings',
-      title: 'Buildings',
+      title: 'Donor buildings',
       items: [
         ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: buildingTabs('owner', b.id).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href)) })),
         item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
       ],
     })
-    sections.push({ id: 'trade', title: null, items: [item('requests', 'Requests', '/app/requests', 'Inbox', { badge: badge(pendingRequests(state, org.id)) })] })
+    if (own.length > 0) sections.push({ id: 'new-projects', title: 'New projects', items: own.map((p) => projectFolder(p.id, p.name)) })
+    // Reservation requests and buildings surveyors ask the owner to confirm both wait on Requests.
+    sections.push({ id: 'trade', title: null, items: [item('requests', 'Requests', '/app/requests', 'Inbox', { badge: badge(pendingRequests(state, org.id) + pendingClaimCount(state, org.id)) })] })
   } else if (role === 'surveyor') {
-    sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House')] })
+    const buildingItem = (id: string, name: string, href: string) => {
+      const side = buildingSide(state, viewer.userId, id)!
+      const tabs = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).filter((t) => t.id !== 'overview')
+      return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href)) })
+    }
+    const unlinked = unlinkedBuildings(state, viewer)
+    sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House'), item('capture', 'Capture', '/app/capture', 'Camera')] })
     sections.push({
       id: 'clients',
       title: 'Clients',
-      items: appointments(state, viewer).map((g) =>
-        item(`client-${g.orgId}`, g.clientName, g.buildings[0]?.href ?? '/app/buildings', 'Folder', {
-          children: g.buildings.map((b) =>
-            item(`building-${b.id}`, b.name, b.href, 'Building2', { children: buildingTabs('surveyor', b.id).filter((t) => t.id !== 'overview').map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href)) }),
-          ),
-        }),
-      ),
+      items: [
+        ...appointments(state, viewer).map((g) => item(`client-${g.orgId}`, g.clientName, g.buildings[0]?.href ?? '/app/buildings', 'Folder', { children: g.buildings.map((b) => buildingItem(b.id, b.name, b.href)) })),
+        ...(unlinked.length > 0 ? [item('client-unlinked', NOT_YET_LINKED, unlinked[0].href, 'Folder', { children: unlinked.map((b) => buildingItem(b.id, b.name, b.href)) })] : []),
+        item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
+      ],
     })
   } else {
     sections.push({ id: 'main', title: null, items: [item('home', 'Home', '/app/home', 'House')] })
@@ -136,15 +151,22 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
   if (section === undefined || section === 'home') return id === undefined ? 'ok' : 'not_found'
   if (section === 'notifications') return id === undefined ? 'ok' : 'not_found'
   if (section === 'settings' || section === 'help') return 'ok'
+  // Round 2: a donor building owner reads the marketplace and its projects once it is the client of a New project.
+  const buyer = (): RouteAccess => (roles('architect', 'client', 'consultant') === 'ok' || ownerHasClientProject(state, viewer.userId) ? 'ok' : 'forbidden')
   if (section === 'discover') {
-    if (id === undefined) return roles('architect', 'client', 'consultant')
+    if (id === undefined) return buyer()
     if (tab !== undefined) return 'not_found'
-    if (roles('architect', 'client', 'consultant') !== 'ok') return 'forbidden'
+    if (buyer() !== 'ok') return 'forbidden'
     return materialView(state, viewer, id, null) ? 'ok' : 'forbidden'
+  }
+  if (section === 'capture') return id === undefined ? roles('owner', 'surveyor') : 'not_found'
+  if (section === 'links') {
+    if (id === undefined || tab !== undefined) return 'not_found'
+    return ID.test(id) ? 'ok' : 'not_found'
   }
   if (section === 'saved') return id === undefined ? roles('architect') : 'not_found'
   if (section === 'projects') {
-    if (id === undefined) return roles('architect', 'client', 'consultant')
+    if (id === undefined) return buyer()
     if (id === 'new') return tab === undefined ? roles('architect') : 'not_found'
     if (id === 'requests') return tab === undefined ? roles('client') : 'not_found'
     if (!ID.test(id)) return 'not_found'
@@ -162,13 +184,16 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     const side = buildingSide(state, viewer.userId, id)
     if (!side) return 'forbidden'
     if (tab === undefined) return 'ok'
-    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing'].includes(tab)) return 'not_found'
+    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability'].includes(tab)) return 'not_found'
+    // The records (inventory, capture, testing) are for the owner and the surveyor; a contractor alone sets dates only.
+    const records = canCaptureIn(state, viewer.userId, id)
     if (tab === 'inventory' && sub !== undefined) {
       if (rest.length > 0) return 'not_found'
-      return state.world.items[sub]?.buildingId === id ? 'ok' : 'forbidden'
+      return records && state.world.items[sub]?.buildingId === id ? 'ok' : 'forbidden'
     }
     if (sub !== undefined) return 'not_found'
-    if (tab === 'inventory' || tab === 'capture') return 'ok'
+    if (tab === 'inventory' || tab === 'capture' || tab === 'testing') return records ? 'ok' : 'forbidden'
+    if (tab === 'availability') return isBuildingContractor(state, viewer.userId, id) ? 'ok' : 'forbidden'
     return side === 'owner' ? 'ok' : 'forbidden'
   }
   if (section === 'requests') return id === undefined ? roles('owner') : 'not_found'

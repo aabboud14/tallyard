@@ -25,10 +25,12 @@ export type AppStore = AppData & {
   setUi: (patch: Partial<UiState>) => void
   /** The project Discover checks fit against, for the signed-in person. */
   setCheckingProject: (projectId: string | null) => void
+  /** The building the standalone Capture page uses, for the signed-in person. */
+  setCaptureBuilding: (buildingId: string | null) => void
   resetSandbox: () => Promise<void>
 }
 
-const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'orgProfiles', 'ui'] as const satisfies readonly (keyof AppData)[]
+const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'orgProfiles', 'buildingClaims', 'testingRequests', 'ui'] as const satisfies readonly (keyof AppData)[]
 
 /** The data part of the store, without the functions. */
 export function dataOf(s: AppData): AppData {
@@ -38,7 +40,7 @@ export function dataOf(s: AppData): AppData {
 function looksValid(x: unknown): x is AppData {
   if (!x || typeof x !== 'object') return false
   const d = x as Partial<AppData>
-  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.ui
+  return d.version === STATE_VERSION && !!d.world && !!d.users && Array.isArray(d.notifications) && Array.isArray(d.activity) && !!d.reservations && !!d.buildingClaims && !!d.testingRequests && !!d.ui
 }
 
 function fresh(): AppData {
@@ -80,6 +82,11 @@ export const useApp = create<AppStore>()(
         const userId = getSessionUserId()
         if (!userId) return
         set({ ui: { ...get().ui, checkingProjectId: { ...get().ui.checkingProjectId, [userId]: projectId } } })
+      },
+      setCaptureBuilding: (buildingId) => {
+        const userId = getSessionUserId()
+        if (!userId) return
+        set({ ui: { ...get().ui, captureBuildingId: { ...(get().ui.captureBuildingId ?? {}), [userId]: buildingId } } })
       },
       resetSandbox: async () => {
         await clearPhotos()

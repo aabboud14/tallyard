@@ -10,15 +10,16 @@ export const SAMPLE_PASSWORD = 'sandbox'
 export const ORG_TYPES: { value: string; label: string; role: PlatformRole }[] = [
   { value: 'Architect', label: 'Architecture practice', role: 'architect' },
   { value: 'Developer', label: 'Developer or client', role: 'client' },
-  { value: 'Asset owner', label: 'Asset owner', role: 'owner' },
-  { value: 'Deconstruction contractor', label: 'Surveying firm', role: 'surveyor' },
+  // Round 2: the stored value stays 'Asset owner'; the product calls the organisation a donor building owner.
+  { value: 'Asset owner', label: 'Donor building owner', role: 'owner' },
+  { value: 'Deconstruction contractor', label: 'Surveying or deconstruction firm', role: 'surveyor' },
   { value: 'Sustainability consultant', label: 'Sustainability consultancy', role: 'consultant' },
 ]
 
 export const ROLE_LABELS: Record<PlatformRole, string> = {
   architect: 'Architect',
   client: 'Client (developer)',
-  owner: 'Asset owner',
+  owner: 'Donor building owner',
   surveyor: 'Site surveyor',
   consultant: 'Sustainability consultant',
 }

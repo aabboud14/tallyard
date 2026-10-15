@@ -1,8 +1,8 @@
 // A fresh sandbox at a fixed time, the sample people, and helpers to run actions in tests.
 import { expect } from 'vitest'
 import { firstRun } from '../sandbox/seed'
-import { SAMPLE_ACCOUNTS } from '../sandbox/accounts'
-import type { ActionResult, Actor, AppData, Viewer } from '../store/types'
+import { defaultNotificationPrefs, SAMPLE_ACCOUNTS } from '../sandbox/accounts'
+import type { ActionResult, Actor, AppData, User, Viewer } from '../store/types'
 import { PERSONA_IDS } from '../domain/seed/world'
 
 export const TODAY = '2026-10-08'
@@ -43,4 +43,27 @@ export function refused<V>(before: AppData, r: ActionResult<V>, error?: string):
   expect(r.error).not.toBeNull()
   if (error) expect(r.error).toBe(error)
   expect(r.state).toBe(before)
+}
+
+/** A person added straight to an existing organisation (one with no sample person, such as a contractor). Returns the user ID. */
+export function addTestUser(state: AppData, input: { orgId: string; name: string; email: string; now?: string }): { state: AppData; userId: string } {
+  const personaId = `per_t${Object.keys(state.world.personas).length.toString().padStart(5, '0')}`
+  const userId = `usr_t${Object.keys(state.users).length.toString().padStart(5, '0')}`
+  const world = structuredClone(state.world)
+  world.personas[personaId] = { id: personaId, name: input.name, orgId: input.orgId, role: '', tier: 'active' }
+  const user: User = {
+    id: userId,
+    email: input.email.trim().toLowerCase(),
+    name: input.name,
+    title: '',
+    personaId,
+    orgId: input.orgId,
+    salt: 's',
+    passwordHash: 'h',
+    avatarColour: 'slate',
+    createdAt: input.now ?? NOW,
+    sample: false,
+    notificationPrefs: defaultNotificationPrefs(),
+  }
+  return { state: { ...state, world, users: { ...state.users, [userId]: user } }, userId }
 }

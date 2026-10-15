@@ -42,11 +42,11 @@ function accessOrgId(world: World, personaId: string): string | null {
   return org.id
 }
 
-/** Buildings the persona's organisation owns or is appointed to survey, in seed order. */
+/** Buildings the persona's organisation owns, is appointed to survey, or is invited to as deconstruction contractor, in seed order. */
 export function buildingsFor(world: World, personaId: string): SourceBuilding[] {
   const orgId = accessOrgId(world, personaId)
   if (!orgId) return []
-  return Object.values(world.buildings).filter((b) => b.ownerOrgId === orgId || b.surveyorOrgId === orgId)
+  return Object.values(world.buildings).filter((b) => b.ownerOrgId === orgId || b.surveyorOrgId === orgId || b.contractorOrgId === orgId)
 }
 
 /** The surveyor's view of buildingsFor: each owning client with its buildings, in seed order. */

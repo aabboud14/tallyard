@@ -12,6 +12,7 @@ import { sustainabilityBand } from '../../domain/engines/band'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { projectSide, projectsOfUser, roleOfUser } from '../access'
+import { lotsSharedByLinkWithOrg } from '../../domain/visibility'
 import { acceptedReservation, generalWishlist, isLotAvailable, listingOf, lotByPublicId, marketplaceListings, projectCanSee, projectWishlist, saveBlock } from '../lots'
 import { familyLabel, listingCard, projectRef, sellerPhrase, storageText, todayOf, collectionPointText, type ListingCard, type ProjectRef, fitText, SHORTLIST_STATUS_LABELS } from './common'
 
@@ -92,9 +93,11 @@ export function sharedGroups(state: AppData, viewer: Viewer): SharedGroup[] {
   return pickerProjects(state, viewer)
     .filter((p) => projectSide(state, viewer.userId, p.id) !== 'consultant')
     .map((p) => {
+      // Before the project's terms, only lots reached through a share link show (the link had its own terms).
       const lots = Object.values(state.world.lots).filter((l) => l.visibility === 'matched_only' && projectCanSee(state.world, p, l) && isLotAvailable(state, l, p.id))
-      // Before the terms, lotsVisibleToProject hides them; count the lots the owners' approvals would show.
-      const pending = p.termsAccepted ? [] : Object.values(state.world.lots).filter((l) => l.visibility === 'matched_only' && approvedOwnerLot(state, p, l) && isLotAvailable(state, l, p.id))
+      const visible = new Set(lots.map((l) => l.id))
+      // Before the terms, lotsVisibleToProject hides owner-shared lots; count the ones the owners' approvals would show.
+      const pending = p.termsAccepted ? [] : Object.values(state.world.lots).filter((l) => l.visibility === 'matched_only' && !visible.has(l.id) && approvedOwnerLot(state, p, l) && isLotAvailable(state, l, p.id))
       const listings = lots.map((l) => listingOf(state.world, l)).sort((x, y) => (x.publicId < y.publicId ? -1 : 1))
       return {
         project: projectRef(state, p),
@@ -104,7 +107,7 @@ export function sharedGroups(state: AppData, viewer: Viewer): SharedGroup[] {
         canAccept: !p.termsAccepted,
       }
     })
-    .filter((g) => g.sharedCount > 0 || g.termsAccepted)
+    .filter((g) => g.sharedCount > 0 || g.termsAccepted || g.cards.length > 0)
 }
 
 function approvedOwnerLot(state: AppData, p: Project, l: Lot): boolean {
@@ -167,7 +170,7 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     priceSortHint: priceSortEnabled ? null : 'Choose a family to sort by price: prices are per tonne, per m2 or per piece.',
     canSave: roleOfUser(state, viewer.userId) === 'architect',
     shared,
-    sharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? g.cards.length : 0), 0),
+    sharedCount: shared.reduce((n, g) => n + g.cards.length, 0),
     pendingSharedCount: shared.reduce((n, g) => n + (g.termsAccepted ? 0 : g.sharedCount), 0),
     empty: all.length === 0 ? 'no_listings' : shown.length === 0 ? 'no_results' : null,
   }
@@ -234,12 +237,21 @@ function visibleLot(state: AppData, viewer: Viewer, publicId: string): Lot | nul
   const held = acceptedReservation(state, lot.id)
   if (held && !mine.some((p) => p.id === held.projectId)) return null
   if (lot.visibility === 'open') return lot
+  // Round 2: a lot reached through a share link the viewer's organisation opened reads as a public listing.
+  const orgId = state.users[viewer.userId]?.orgId ?? ''
+  if (lotsSharedByLinkWithOrg(state.world, orgId).includes(lot.id)) return lot
   return mine.some((p) => projectSide(state, viewer.userId, p.id) !== 'consultant' && projectCanSee(state.world, p, lot)) ? lot : null
 }
 
-export function materialView(state: AppData, viewer: Viewer, publicId: string, projectId: string | null): MaterialView | null {
+/** Roles that read material pages: the buying side, and a donor building owner that is the client of a New project. */
+function readsMaterials(state: AppData, viewer: Viewer): boolean {
   const role = roleOfUser(state, viewer.userId)
-  if (role !== 'architect' && role !== 'client' && role !== 'consultant') return null
+  if (role === 'architect' || role === 'client' || role === 'consultant') return true
+  return role === 'owner' && pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) === 'client')
+}
+
+export function materialView(state: AppData, viewer: Viewer, publicId: string, projectId: string | null): MaterialView | null {
+  if (!readsMaterials(state, viewer)) return null
   const lot = visibleLot(state, viewer, publicId)
   if (!lot) return null
   const today = todayOf(viewer)

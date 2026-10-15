@@ -24,7 +24,7 @@ export function Sharing() {
         ]}
       />
       <Callout icon={EyeOff} title="Both sides stay anonymous">
-        You see each project as a blind line. Its team sees your lots in confidence, as listed by an asset owner, and agrees not to pass them on. Names are exchanged only when you accept a reservation.
+        You see each project as a blind line. Its team sees your lots in confidence, as listed by a donor building owner, and agrees not to pass them on. Names are exchanged only when you accept a reservation.
       </Callout>
       {v.empty ? (
         <EmptyState icon={FolderLock} title="No projects to share with yet" text="Projects appear here as architects create them on the platform." />

@@ -31,7 +31,7 @@ import { BANDS, SAMPLE_MATERIALS } from '../../ui/samples'
 const ROLES: { icon: typeof Compass; role: string; line: string; tools: string[] }[] = [
   { icon: Compass, role: 'Architects', line: 'Browse a curated showroom of reclaimed stock, shortlist it per project and export the specification.', tools: ['Discover', 'Shortlist', 'Specification'] },
   { icon: ClipboardCheck, role: 'Clients and developers', line: 'Approve what your architect proposes and reserve it, with an indicative package for storage, testing and transport.', tools: ['Approvals', 'Reservations'] },
-  { icon: Building2, role: 'Asset owners', line: 'Know what your buildings hold and decide what is visible, to whom and from when.', tools: ['Inventory', 'Priorities', 'Sharing'] },
+  { icon: Building2, role: 'Donor buildings', line: 'Know what your buildings hold, decide what is visible, to whom and from when, and source materials for your new projects.', tools: ['Inventory', 'Recovery plan', 'Sharing'] },
   { icon: Camera, role: 'Site surveyors', line: 'Capture each item on site from a phone: photos, grades, quantities and when it comes out.', tools: ['Capture', 'Inventory'] },
   { icon: Leaf, role: 'Sustainability consultants', line: 'Prove the avoided carbon and reused content, and export the compliance workbook.', tools: ['Carbon', 'Compliance'] },
 ]
@@ -311,7 +311,7 @@ function RoleVisual({ role }: { role: string }) {
       </div>
     )
   }
-  if (role === 'Asset owners') {
+  if (role === 'Donor buildings') {
     return (
       <div className="flex flex-col items-start gap-2">
         <Pill tone="neutral" icon={Lock} size="sm">
@@ -500,7 +500,7 @@ function Cta() {
       <div className="flex flex-col items-center text-center">
         <AvatarStack size="md" people={[{ name: 'Priya Nair' }, { name: 'Isla Brennan' }, { name: 'Tom Ashby' }, { name: 'Dana Kowalski' }, { name: 'Marcus Lindqvist' }]} max={5} />
         <h2 className="m-0 mt-6 max-w-[640px] text-3xl font-semibold tracking-[-0.025em] text-ink sm:text-4xl">Step into the sandbox</h2>
-        <p className="m-0 mt-4 max-w-[540px] text-lg leading-7 text-ink-soft">Sign in as an architect, a client, an asset owner, a surveyor or a consultant in one click, and follow a material from survey to reservation.</p>
+        <p className="m-0 mt-4 max-w-[540px] text-lg leading-7 text-ink-soft">Sign in as an architect, a client, a donor building owner, a surveyor or a consultant in one click, and follow a material from survey to reservation.</p>
         <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row">
           <Button asChild variant="primary" size="lg" icon={Users}>
             <Link to="/signin">Open a sample account</Link>

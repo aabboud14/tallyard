@@ -26,10 +26,10 @@ export function BuildingsList() {
   return (
     <Page testId="buildings">
       <PageHeader
-        title={owner ? 'Buildings' : 'Appointments'}
+        title={owner ? 'Donor buildings' : 'Appointments'}
         subtitle={owner ? 'What your buildings hold, and what you choose to recover and list.' : 'Buildings you are appointed to survey, by client.'}
         actions={
-          v.canAdd ? (
+          owner && v.canAdd ? (
             <Button variant="primary" icon={Plus} onClick={() => setOpen(true)} data-testid="add-building">
               Add building
             </Button>
@@ -51,7 +51,7 @@ export function BuildingsList() {
               }
             />
           ) : (
-            <EmptyState variant="page" icon={ClipboardList} title="No appointments yet" text="When an asset owner appoints your firm to survey a building, it appears here with everything you need to capture it." />
+            <EmptyState variant="page" icon={ClipboardList} title="No appointments yet" text="When a donor building owner appoints your firm to survey a building, it appears here with everything you need to capture it." />
           )
         ) : owner ? (
           <OwnerTable rows={v.rows} />

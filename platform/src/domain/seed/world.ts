@@ -73,6 +73,9 @@ const tiverne: SourceBuilding = {
   storeys: 7,
   giaM2: 5200,
   structureType: 'Steel frame with composite slabs, stone and precast cladding, curtain wall added in 2003',
+  structure: [],
+  createdByOrgId: ORG_IDS.ostlea,
+  contractorOrgId: null,
   tenants: ['Corvane Insurance', 'Meridale Partners'],
   programme: { stripOutStart: '2027-01-04', dismantlingStart: '2027-01-25', clearBy: '2027-04-30' },
   defaultHubId: 'HUB-BARK',
@@ -100,6 +103,9 @@ const harrowden: SourceBuilding = {
   storeys: 5,
   giaM2: 4300,
   structureType: 'Steel frame with composite slabs, brick cladding and raised floors',
+  structure: [],
+  createdByOrgId: ORG_IDS.brackwater,
+  contractorOrgId: null,
   tenants: [],
   programme: { stripOutStart: '2027-06-14', dismantlingStart: '2027-07-05', clearBy: '2027-09-24' },
   defaultHubId: 'HUB-PARK',
@@ -409,8 +415,8 @@ function osBuildingId(itemId: string): string {
 
 export function createSeed(): World {
   const buildings: Record<string, SourceBuilding> = {
-    [tiverne.id]: { ...tiverne, distancesKm: { ...tiverne.distancesKm } },
-    [harrowden.id]: { ...harrowden, distancesKm: { ...harrowden.distancesKm } },
+    [tiverne.id]: structuredClone(tiverne),
+    [harrowden.id]: structuredClone(harrowden),
   }
   const items: Record<string, InventoryItem> = {}
   const lots: Record<string, Lot> = {}
@@ -432,6 +438,8 @@ export function createSeed(): World {
       capturedBy: 'Dana Kowalski',
       capturedOn: '2026-09-14',
       expectedAvailableFrom: r.availableFrom,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -466,6 +474,8 @@ export function createSeed(): World {
       capturedBy: 'Dana Kowalski',
       capturedOn: '2026-09-28',
       expectedAvailableFrom: HARROWDEN_AVAILABLE_FROM,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -499,6 +509,9 @@ export function createSeed(): World {
       storeys: null,
       giaM2: null,
       structureType: '',
+      structure: [],
+      createdByOrgId: null,
+      contractorOrgId: null,
       tenants: [],
       programme: { stripOutStart: null, dismantlingStart: null, clearBy: null },
       defaultHubId: r.hub?.id ?? null,
@@ -526,6 +539,8 @@ export function createSeed(): World {
       capturedBy: '',
       capturedOn: '2026-09-01',
       expectedAvailableFrom: null,
+      contractorAvailableFrom: null,
+      contractorDatedOn: null,
     }
     lots['lot_' + r.id.slice(4)] = {
       id: 'lot_' + r.id.slice(4),
@@ -554,6 +569,7 @@ export function createSeed(): World {
     deals: {},
     engagements: { [durnley.id]: structuredClone(durnley) },
     wishlists: Object.fromEntries(wishlistsSeed.map((l) => [l.id, structuredClone(l)])),
+    shareLinks: {},
     snapshot,
     ledger: ledgerSeed.map((l) => ({ ...l })),
     publicIdPool: [...PUBLIC_ID_POOL],

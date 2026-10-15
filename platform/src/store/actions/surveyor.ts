@@ -2,7 +2,7 @@
 import type { Condition, Photo, Quantity, Recoverability, Spec } from '../../domain/types'
 import { findSection } from '../../domain/reference/sections'
 import type { ActionResult, Actor, AppData } from '../types'
-import { ERRORS, buildingOrgIds, buildingSide } from '../access'
+import { ERRORS, buildingOrgIds, buildingSide, canCaptureIn } from '../access'
 import { mint, mintPublicId } from '../ids'
 import { lotOfItem } from '../lots'
 import { log, notify, plural } from '../notifications'
@@ -20,6 +20,7 @@ export const SURVEY_ERRORS = {
   locked: 'This item is shared or published. Its material, size and quantity cannot change.',
   nothingCaptured: 'Capture at least one item before submitting the survey.',
   submitted: 'This survey has already been submitted.',
+  unlinked: 'Link the building to its owner before submitting the survey.',
 } as const
 
 export type CaptureInput = {
@@ -53,7 +54,8 @@ export function captureItem(state: AppData, actor: Actor, input: CaptureInput): 
   const b = state.world.buildings[input.buildingId]
   if (!b) return fail(state, ERRORS.noBuilding)
   const side = buildingSide(state, actor.userId, input.buildingId)
-  if (!side) return fail(state, ERRORS.noAccess)
+  // A deconstruction contractor sets dates only; it never captures or edits the record.
+  if (!side || !canCaptureIn(state, actor.userId, input.buildingId)) return fail(state, ERRORS.noAccess)
   const bad = checkSpec(input.spec, input.quantity)
   if (bad) return fail(state, bad)
   if (input.expectedAvailableFrom !== null && !isIsoDate(input.expectedAvailableFrom)) return fail(state, SURVEY_ERRORS.badDate)
@@ -97,7 +99,7 @@ export function updateItem(state: AppData, actor: Actor, itemId: string, patch: 
   if (typeof a === 'string') return fail(state, a)
   const item = state.world.items[itemId]
   if (!item) return fail(state, ERRORS.noItem)
-  if (!buildingSide(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
+  if (!canCaptureIn(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
   const lot = lotOfItem(state.world, itemId)
   const locked = !!lot && lot.visibility !== 'private'
   const touchesListing = patch.condition !== undefined || patch.recoverability !== undefined || patch.expectedAvailableFrom !== undefined
@@ -121,7 +123,7 @@ export function addPhoto(state: AppData, actor: Actor, itemId: string, photoId: 
   if (typeof a === 'string') return fail(state, a)
   const item = state.world.items[itemId]
   if (!item) return fail(state, ERRORS.noItem)
-  if (!buildingSide(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
+  if (!canCaptureIn(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
   if (!PHOTO_ID.test(photoId)) return fail(state, SURVEY_ERRORS.photo)
   if (item.photos.some((p) => p.id === photoId)) return ok(state)
   const w = structuredClone(state.world)
@@ -134,7 +136,7 @@ export function removePhoto(state: AppData, actor: Actor, itemId: string, photoI
   if (typeof a === 'string') return fail(state, a)
   const item = state.world.items[itemId]
   if (!item) return fail(state, ERRORS.noItem)
-  if (!buildingSide(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
+  if (!canCaptureIn(state, actor.userId, item.buildingId)) return fail(state, ERRORS.noAccess)
   if (!item.photos.some((p) => p.id === photoId)) return fail(state, SURVEY_ERRORS.noPhoto)
   const w = structuredClone(state.world)
   w.items[itemId].photos = w.items[itemId].photos.filter((p) => p.id !== photoId)
@@ -148,6 +150,7 @@ export function submitSurvey(state: AppData, actor: Actor, buildingId: string): 
   const b = state.world.buildings[buildingId]
   if (!b) return fail(state, ERRORS.noBuilding)
   if (buildingSide(state, actor.userId, buildingId) !== 'surveyor') return fail(state, ERRORS.role)
+  if (b.ownerOrgId === null) return fail(state, SURVEY_ERRORS.unlinked)
   const count = Object.values(state.world.items).filter((i) => i.buildingId === buildingId).length
   if (count === 0) return fail(state, SURVEY_ERRORS.nothingCaptured)
   const prev = state.surveys[buildingId]

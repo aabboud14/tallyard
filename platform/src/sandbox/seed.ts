@@ -17,6 +17,7 @@ import { listJoin, log, notify, plural } from '../store/notifications'
 import { mint } from '../store/ids'
 import { SAMPLE_ACCOUNTS, sampleUsers } from './accounts'
 import { shiftWorld } from './shift'
+import { withOwnerSurveyorHistory, withOwnerSurveyorWorld } from './seed-owner-surveyor'
 
 /** The date the seed world is written for. */
 export const SEED_REFERENCE_DATE = DEMO_TODAY
@@ -47,7 +48,7 @@ export function referenceWorld(): World {
   let w = publishTh01(createSeed(), SEED_REFERENCE_DATE.slice(0, 7))
   // Priya accepted the confidentiality terms for Merrowgate Wharf when Ostlea Estates shared its lots.
   w = ops.setTermsAccepted(w, MERROWGATE_ID)
-  return w
+  return withOwnerSurveyorWorld(w)
 }
 
 type SeedItem = { publicId: string; added: number; note: string; status: WishlistItem['status']; sent?: number; message?: string; decided?: number; decisionNote?: string }
@@ -109,7 +110,9 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
     },
     specs: {},
     orgProfiles: Object.fromEntries(Object.keys(w.orgs).map((id) => [id, { address: '' }])),
-    ui: { ...DEFAULT_UI, checkingProjectId: {} },
+    buildingClaims: {},
+    testingRequests: {},
+    ui: { ...DEFAULT_UI, checkingProjectId: {}, captureBuildingId: {} },
   }
 
   const merrowgate = s.world.projects[MERROWGATE_ID]
@@ -185,7 +188,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'survey_submitted', title: 'Tarnbrook Deconstruction submitted the survey of Tiverne House', body: `${surveyed} captured by Dana Kowalski. Review the inventory and decide what to recover.`, href: `/app/buildings/${TIVERNE_ID}/priorities`, at: at(23, 16, 40), actorUserId: null })
   read(TOM)
   for (const [orgId, userId] of [[ORG_IDS.oriel, PRIYA], [ORG_IDS.lantern, ISLA]] as const) {
-    s = notify(s, { orgIds: [orgId], kind: 'lots_shared', title: `${sharedWithMerrowgate} shared with ${merrowgate.name}`, body: 'Shared in confidence by an asset owner. Accept the confidentiality terms to see them.', href: `/app/discover?tab=shared&project=${MERROWGATE_ID}`, at: at(21, 11), actorUserId: null })
+    s = notify(s, { orgIds: [orgId], kind: 'lots_shared', title: `${sharedWithMerrowgate} shared with ${merrowgate.name}`, body: 'Shared in confidence by a donor building owner. Accept the confidentiality terms to see them.', href: `/app/discover?tab=shared&project=${MERROWGATE_ID}`, at: at(21, 11), actorUserId: null })
     read(userId)
   }
   s = notify(s, { orgIds: [ORG_IDS.tarnbrook], kind: 'appointed', title: 'Brackwater Estates appointed you to survey Harrowden Court', body: 'Harrowden Court, 31 Brindle Road, London W13.', href: `/app/buildings/${HARROWDEN_ID}/capture`, at: at(14, 11), actorUserId: null })
@@ -211,6 +214,8 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   }
   s = notify(s, { orgIds: [ORG_IDS.lantern], kind: 'sent_to_client', title: '1 material to approve on Merrowgate Wharf', body: `Priya Nair: ${MERROWGATE_ITEMS[2].message}`, href: `${mgHref}/approvals`, at: at(1, 10), actorUserId: null })
   s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'reservation_requested', title: 'Reservation request for TH-02', body: `${title('L-WPX5A6')}. ${blind}.`, href: '/app/requests', at: hoursAgo(20), actorUserId: null })
+
+  s = withOwnerSurveyorHistory(s, { at, day, todayIso })
 
   // Keep everything newest first.
   const byTime = <T extends { at: string }>(xs: T[]) => [...xs].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0))

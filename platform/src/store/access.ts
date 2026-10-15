@@ -53,14 +53,17 @@ function personaOpens(state: AppData, userId: string, target: { projectId: strin
 
 export type ProjectSide = 'architect' | 'client' | 'consultant'
 
-/** How the person sits on a project: its architect practice, its client or its consultant; null otherwise. */
+/**
+ * How the person sits on a project: its architect practice, its client or its consultant; null otherwise. A donor
+ * building owner is the client of its own New projects (round 2), so it gets the client's workspace there.
+ */
 export function projectSide(state: AppData, userId: string, projectId: string): ProjectSide | null {
   const p = state.world.projects[projectId]
   const u = userOf(state, userId)
   if (!p || !u || !personaOpens(state, userId, { projectId })) return null
   const role = roleOfUser(state, userId)
   if (role === 'architect' && p.architectOrgId === u.orgId) return 'architect'
-  if (role === 'client' && p.clientOrgId === u.orgId) return 'client'
+  if ((role === 'client' || role === 'owner') && p.clientOrgId === u.orgId) return 'client'
   if (role === 'consultant' && p.consultantOrgId === u.orgId) return 'consultant'
   return null
 }
@@ -82,9 +85,12 @@ export function projectsOfUser(state: AppData, userId: string): Project[] {
   return Object.values(state.world.projects).filter((p) => projectSide(state, userId, p.id) !== null)
 }
 
-export type BuildingSide = 'owner' | 'surveyor'
+export type BuildingSide = 'owner' | 'surveyor' | 'contractor'
 
-/** How the person sits on a building: its owner or its appointed surveyor; null otherwise. */
+/**
+ * How the person sits on a building: its owner, its appointed surveyor, or the deconstruction contractor invited to
+ * set availability dates (when the firm is not also the surveyor); null otherwise.
+ */
 export function buildingSide(state: AppData, userId: string, buildingId: string): BuildingSide | null {
   const b = state.world.buildings[buildingId]
   const u = userOf(state, userId)
@@ -92,6 +98,7 @@ export function buildingSide(state: AppData, userId: string, buildingId: string)
   const role = roleOfUser(state, userId)
   if (role === 'owner' && b.ownerOrgId === u.orgId) return 'owner'
   if (role === 'surveyor' && b.surveyorOrgId === u.orgId) return 'surveyor'
+  if (role === 'surveyor' && b.contractorOrgId === u.orgId) return 'contractor'
   return null
 }
 
@@ -99,7 +106,21 @@ export function isBuildingOwner(state: AppData, userId: string, buildingId: stri
   return buildingSide(state, userId, buildingId) === 'owner'
 }
 
-/** The buildings the person owns or surveys, in seed order. */
+/** Whether the person's firm is the building's deconstruction contractor, whichever side it otherwise holds. */
+export function isBuildingContractor(state: AppData, userId: string, buildingId: string): boolean {
+  const b = state.world.buildings[buildingId]
+  const u = userOf(state, userId)
+  if (!b || !u || !b.contractorOrgId || roleOfUser(state, userId) !== 'surveyor') return false
+  return b.contractorOrgId === u.orgId && personaOpens(state, userId, { buildingId })
+}
+
+/** Whether the person may capture and edit the building's records: its owner or its surveyor, never a contractor alone. */
+export function canCaptureIn(state: AppData, userId: string, buildingId: string): boolean {
+  const side = buildingSide(state, userId, buildingId)
+  return side === 'owner' || side === 'surveyor'
+}
+
+/** The buildings the person owns, surveys or dates as contractor, in seed order. */
 export function buildingsOfUser(state: AppData, userId: string): SourceBuilding[] {
   return Object.values(state.world.buildings).filter((b) => buildingSide(state, userId, b.id) !== null)
 }
@@ -118,7 +139,7 @@ export function buyerSideOrgIds(p: Project): string[] {
   return [...new Set([p.architectOrgId, clientLinked(p) ? p.clientOrgId : ''].filter((x) => x))]
 }
 
-/** The organisations working on a building: its owner and its surveyor. */
+/** The organisations working on a building: its owner, its surveyor and its contractor, without blanks or repeats. */
 export function buildingOrgIds(building: SourceBuilding): string[] {
-  return [...new Set([building.ownerOrgId, building.surveyorOrgId].filter((x): x is string => !!x))]
+  return [...new Set([building.ownerOrgId, building.surveyorOrgId, building.contractorOrgId].filter((x): x is string => !!x))]
 }

@@ -5,16 +5,20 @@ import { roleOfUser } from '../access'
 import { dayLabel, hrefForReader, timeAgo } from './common'
 
 export const NOTIFICATION_KIND_INFO: Record<NotificationKind, { label: string; description: string; roles: PlatformRole[] }> = {
-  lots_shared: { label: 'Lots shared with a project', description: 'An asset owner shares lots in confidence with one of your projects.', roles: ['architect', 'client'] },
-  sent_to_client: { label: 'Materials sent for approval', description: 'The architect sends materials for your approval.', roles: ['client'] },
+  lots_shared: { label: 'Lots shared with a project', description: 'A donor building owner shares lots in confidence with one of your projects.', roles: ['architect', 'client'] },
+  sent_to_client: { label: 'Materials sent for approval', description: 'The architect sends materials for your approval.', roles: ['client', 'owner'] },
   client_decision: { label: 'Client decisions', description: 'The client approves or declines a material.', roles: ['architect', 'consultant'] },
   reservation_requested: { label: 'Reservation requests', description: 'A buyer asks to reserve one of your lots.', roles: ['owner'] },
-  reservation_decided: { label: 'Reservation decisions', description: 'The seller accepts or declines a reservation.', roles: ['client', 'architect'] },
+  reservation_decided: { label: 'Reservation decisions', description: 'The seller accepts or declines a reservation.', roles: ['client', 'architect', 'owner'] },
   survey_submitted: { label: 'Surveys submitted', description: 'A surveyor submits the survey of one of your buildings.', roles: ['owner'] },
   item_captured: { label: 'New items captured', description: 'A surveyor captures items in one of your buildings.', roles: ['owner'] },
   new_fit: { label: 'New materials for your projects', description: 'A material is published that is available in time for one of your projects.', roles: ['architect'] },
-  appointed: { label: 'Survey appointments', description: 'An owner appoints you to survey a building.', roles: ['surveyor'] },
+  appointed: { label: 'Appointments', description: 'An owner or surveyor appoints you to survey a building or set its dates.', roles: ['surveyor'] },
   team: { label: 'Team and projects', description: 'Someone joins your organisation, an architect asks to add you to a project, or a client answers your request.', roles: ['architect', 'client', 'owner', 'surveyor', 'consultant'] },
+  building_claim: { label: 'Building confirmations', description: 'A surveyor asks you to confirm a building, or an owner answers.', roles: ['owner', 'surveyor'] },
+  testing: { label: 'Testing', description: 'Testing is requested, booked or has results.', roles: ['owner', 'surveyor'] },
+  availability_set: { label: 'Availability dates', description: 'A deconstruction contractor is invited or sets expected dates.', roles: ['owner'] },
+  link_opened: { label: 'Share links', description: 'Someone opens a link you shared.', roles: ['owner'] },
 }
 
 export type InboxItem = { id: string; kind: NotificationKind; kindLabel: string; title: string; body: string; href: string; at: string; timeAgo: string; unread: boolean; count: number }

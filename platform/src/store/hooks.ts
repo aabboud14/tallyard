@@ -22,6 +22,8 @@ export function useData(): AppData {
       surveys: s.surveys,
       specs: s.specs,
       orgProfiles: s.orgProfiles,
+      buildingClaims: s.buildingClaims,
+      testingRequests: s.testingRequests,
       ui: s.ui,
     })),
   )

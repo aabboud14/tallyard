@@ -189,7 +189,7 @@ describe('material page', () => {
     await waitFor(() => document.querySelector('[data-testid="material-title"]'))
     expect(byTestId('material-title').textContent).toBe('UB 457x191x67, 7.5 m')
     expect(byTestId('fit-text').textContent).toContain('Merrowgate Wharf')
-    expect(byTestId('seller-line').textContent).toBe('Listed by an asset owner in Central London')
+    expect(byTestId('seller-line').textContent).toBe('Listed by a donor building owner in Central London')
     expect(byTestId('bim-family').textContent).toContain('version 2')
     const created = URL.createObjectURL as unknown as ReturnType<typeof vi.fn>
     created.mockClear()
