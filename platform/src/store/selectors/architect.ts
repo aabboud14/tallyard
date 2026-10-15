@@ -4,7 +4,8 @@
 import type { Fit, WishStatus } from '../../domain/v1types'
 import { daysBetween, formatDate } from '../../domain/dates'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
-import { stageOn } from '../../domain/engines/programme'
+import { programmeCheck, stageOn, type ProgrammeStatus } from '../../domain/engines/programme'
+import { niceMax } from '../../domain/engines/chartScale'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
@@ -12,7 +13,8 @@ import { projectWishlist } from '../lots'
 import { marketplaceHref } from '../paths'
 import { activityFor, firstName, greeting, longDate, projectRef, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf } from './shortlist'
-import { activitySummary, earliestStart, fitCounts, fitTone, thumbsOf, waitingTone, type ActivitySummary, type MetricTone, type ThumbMaterial } from './dashboard'
+import { effectiveTargets } from './sustainability'
+import { activitySummary, earliestStart, fitCounts, fitState, fitTone, programmeState, targetState, thumbsOf, waitingState, waitingTone, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
 import { newForProjectsFeed, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
 
 export { NEW_LISTING_DAYS, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
@@ -58,12 +60,18 @@ export type ArchitectHome = {
   metrics: {
     nextStart: { projectName: string; dateText: string } | null
     byStatus: Record<WishStatus, number>
-    waiting: { count: number; oldestDays: number | null; tone: MetricTone }
-    carbon: { approvedT: number; liveT: number; share: number; percentText: string }
+    waiting: { count: number; oldestDays: number | null; tone: MetricTone; state: TileState | null }
+    carbon: { approvedT: number; liveT: number; share: number; percentText: string; targetT: number; state: TileState | null }
+    /** Each project's declared stage against its programme dates. */
+    programme: { behind: number; state: TileState | null }
+    /** The live shortlists' fit against each project's start, summed. */
+    timing: { fits: Record<Fit, number>; state: TileState | null }
   }
   projects: ProjectCardView[]
   carbonByProject: { id: string; name: string; href: string; approvedT: number; liveT: number }[]
   carbonScaleMax: number
+  /** A round scale end for the carbon chart, at least carbonScaleMax. */
+  carbonAxisMax: number
   /** Oldest first. */
   waitingForApproval: WaitingItem[]
   /** The first of the Marketplace's New for your projects feed, for any screen that still lists it. */
@@ -81,6 +89,10 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
   let shortlisted = 0
   let avoidedApprovedT = 0
   let liveTotalT = 0
+  let carbonTargetT = 0
+  let approvedOnTargetedT = 0
+  const programmeStatuses: ProgrammeStatus[] = []
+  const allFits: Fit[] = []
   const byStatus = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, 0])) as Record<WishStatus, number>
   const waiting: WaitingItem[] = []
   const cards: ProjectCardView[] = projects.map((p) => {
@@ -110,6 +122,13 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     const counts = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, rows.filter((r) => r.status === s).length])) as Record<WishStatus, number>
     for (const s of BOARD_COLUMNS) byStatus[s] += counts[s]
     const fits = fitCounts(live.map((r) => r.card?.fit?.fit ?? null))
+    for (const r of live) if (r.card?.fit) allFits.push(r.card.fit.fit)
+    programmeStatuses.push(programmeCheck(p.programme, p.ribaStage, today).status)
+    const target = effectiveTargets(state, p.id).avoidedCarbonT
+    if (target > 0) {
+      carbonTargetT += target
+      approvedOnTargetedT += totals.approved.avoidedT
+    }
     const families = live.flatMap((r) => (r.card ? [r.card.family] : []))
     return {
       ...projectRef(state, p),
@@ -132,6 +151,9 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
   const next = earliestStart(projects, today)
   const share = liveTotalT > 0 ? avoidedApprovedT / liveTotalT : 0
   const activity = activityFor(state, viewer, {}, 8)
+  const timing = fitCounts(allFits)
+  const programme = programmeState(programmeStatuses)
+  const carbonScaleMax = cards.reduce((m, c) => Math.max(m, c.liveT), 0) || 1
   return {
     greeting: greeting(viewer.now, firstName(user.name)),
     dateText: longDate(today),
@@ -139,12 +161,15 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     metrics: {
       nextStart: next ? { projectName: next.name, dateText: formatDate(next.startDate) } : null,
       byStatus,
-      waiting: { count: waiting.length, oldestDays, tone: waitingTone(waiting.length, oldestDays) },
-      carbon: { approvedT: avoidedApprovedT, liveT: liveTotalT, share, percentText: f.percent(share) },
+      waiting: { count: waiting.length, oldestDays, tone: waitingTone(waiting.length, oldestDays), state: waitingState(waiting.length, oldestDays) },
+      carbon: { approvedT: avoidedApprovedT, liveT: liveTotalT, share, percentText: f.percent(share), targetT: carbonTargetT, state: targetState(approvedOnTargetedT, carbonTargetT) },
+      programme: { behind: programmeStatuses.filter((x) => x === 'behind').length, state: programme },
+      timing: { fits: timing, state: fitState(timing) },
     },
     projects: cards,
     carbonByProject: cards.map((c) => ({ id: c.id, name: c.name, href: c.href, approvedT: c.approvedT, liveT: c.liveT })),
-    carbonScaleMax: cards.reduce((m, c) => Math.max(m, c.liveT), 0) || 1,
+    carbonScaleMax,
+    carbonAxisMax: niceMax(carbonScaleMax),
     waitingForApproval: waiting,
     newForProjects: feed.slice(0, NEW_LISTING_LIMIT),
     activity,

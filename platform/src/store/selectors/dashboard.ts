@@ -4,6 +4,8 @@
 import type { FamilyId, Spec } from '../../domain/types'
 import type { Fit, Typology, WishStatus } from '../../domain/v1types'
 import { typologyOf } from '../../domain/engines/typology'
+import { metricReading, type MetricState } from '../../domain/engines/metricState'
+import type { ProgrammeStatus } from '../../domain/engines/programme'
 import type { ActivityRow } from './common'
 import type { ShortlistRow } from './shortlist'
 
@@ -81,4 +83,55 @@ export function thumbsOf(rows: ShortlistRow[], limit = 3): ThumbMaterial[] {
     .sort((a, b) => THUMB_ORDER[a.r.status] - THUMB_ORDER[b.r.status] || a.i - b.i)
     .slice(0, limit)
     .map(({ r }) => ({ publicId: r.publicId, spec: r.card!.listing.spec, title: r.card!.title }))
+}
+
+// ---------- Tile states (round 2, UI stage) ----------
+// A metric tile is coloured by its state against a target, always with a word (BRIEF 14.2). Each function below
+// names the target it reads; a tile with no target gets null and shows no state.
+
+export type TileState = { state: MetricState; label: string }
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`
+}
+
+/** Materials against the project's start on site: late wins, then tight, then all in time. */
+export function fitState(c: Record<Fit, number>): TileState | null {
+  if (c.late > 0) return { state: 'critical', label: `${c.late} arriving late` }
+  if (c.tight > 0) return { state: 'warning', label: `${c.tight} tight for time` }
+  if (c.in_time + c.now > 0) return { state: 'good', label: 'All in time' }
+  return null
+}
+
+/** Something sent for approval a week ago or more is a warning; otherwise no state. */
+export function waitingState(count: number, oldestDays: number | null): TileState | null {
+  return waitingTone(count, oldestDays) === 'warning' ? { state: 'warning', label: 'Over a week' } : null
+}
+
+/** Each project's declared stage against the stage its programme dates place today in. */
+export function programmeState(statuses: ProgrammeStatus[]): TileState | null {
+  const checked = statuses.filter((s) => s !== 'not_started')
+  if (checked.length === 0) return null
+  const behind = checked.filter((s) => s === 'behind').length
+  return behind > 0 ? { state: 'warning', label: `${plural(behind, 'project', 'projects')} behind programme` } : { state: 'good', label: 'On programme' }
+}
+
+/** A figure against a target (at least), in the words of metricState; null when no target is set. */
+export function targetState(value: number, target: number): TileState | null {
+  if (!(target > 0)) return null
+  const r = metricReading(value, target, 'at_least')
+  return { state: r.state, label: r.word }
+}
+
+/** Targets met against targets set: all met is good, any below is a warning, the rest wait for a figure; none set gives null. */
+export function targetsMetState(met: number, below: number, set: number): TileState | null {
+  if (set === 0) return null
+  if (met >= set) return { state: 'good', label: 'All met' }
+  if (below > 0) return { state: 'warning', label: `${below} below target` }
+  return { state: 'neutral', label: 'Waiting for figures' }
+}
+
+/** Decisions waiting on the viewer: a warning while any wait. */
+export function awaitingState(count: number): TileState | null {
+  return count > 0 ? { state: 'warning', label: 'Needs a decision' } : null
 }

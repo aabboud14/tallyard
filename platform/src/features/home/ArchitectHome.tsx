@@ -1,116 +1,270 @@
-// The architect's home: the day, three figures, the projects with their shortlist progress, what is new for them,
-// what waits on the client and what happened lately. A practice with no projects gets a short first-run setup.
+// The architect's home as a dashboard: four figures coloured by their state, the projects with a drawing, the
+// planned RIBA stage, fit and shortlist progress and how many new materials fit each, what is waiting for
+// approval, avoided carbon by project and recent activity (collapsed). A practice with no projects gets a
+// short first-run welcome. Every figure comes from architectHome (P2); this file only lays it out.
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, Clock, Compass, FolderKanban, FolderOpen, FolderPlus, Hourglass, Layers, Leaf, Send, Sparkle } from 'lucide-react'
+import { ArrowRight, CalendarDays, FolderKanban, FolderPlus, Hourglass, Layers, Leaf, Send, Sparkles, Store } from 'lucide-react'
 import * as f from '../../domain/format'
+import type { Fit } from '../../domain/v1types'
 import { useView } from '../../store'
 import { MARKETPLACE_PATH } from '../../store/paths'
-import { architectHome, type ProjectCardView, type WaitingItem } from '../../store/selectors/architect'
-import { Button, Card, CardHeader, cx, EmptyState, PageHeader, Stat } from '../../ui'
+import { architectHome, type ArchitectHome as ArchitectHomeView, type ProjectCardView, type WaitingItem } from '../../store/selectors/architect'
+import { FITS } from '../../store/selectors/dashboard'
+import { BarList, Button, Card, CardHeader, cx, Donut, FIT, IndicativeMarker, Legend, MARK, MaterialImage, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, SpotIllustration } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
-import { ListingTile } from '../discover/ListingTile'
 import { NewProjectDialog } from '../projects/NewProjectDialog'
-import { ActivityFeed, ProjectProgress } from '../projects/ProjectParts'
+import { ProjectProgress } from '../projects/ProjectParts'
+import { ActivityPanel } from './ActivityPanel'
+import { TileChart } from './TileChart'
 
-function ProjectCard({ p }: { p: ProjectCardView }) {
+/** Shortlist status, in the mark colours of the shortlist board: shortlisted neutral, waiting info, approved good. */
+const STATUS_SEGMENTS = [
+  { key: 'pending', label: 'Shortlisted', colour: MARK.neutral },
+  { key: 'sent', label: 'Waiting for approval', colour: MARK.info },
+  { key: 'approved', label: 'Approved', colour: MARK.brand },
+] as const
+
+const FIT_WORDS: Record<Fit, string> = { in_time: 'in time', tight: 'tight', late: 'late', now: 'available now' }
+
+function sentText(days: number | null): string {
+  if (days === null) return 'Sent'
+  if (days === 0) return 'Sent today'
+  if (days === 1) return 'Sent yesterday'
+  return `Sent ${days} days ago`
+}
+
+function waitingSub(count: number, oldestDays: number | null): string {
+  if (count === 0) return 'Nothing waiting'
+  if (oldestDays === null) return 'With your clients'
+  if (oldestDays === 0) return 'Sent today'
+  return `Oldest sent ${oldestDays} ${oldestDays === 1 ? 'day' : 'days'} ago`
+}
+
+function Metrics({ v }: { v: ArchitectHomeView }) {
+  const m = v.metrics
+  const statusSegments = STATUS_SEGMENTS.map((s) => ({ key: s.key, label: s.label, value: m.byStatus[s.key], colour: s.colour }))
   return (
-    <Card interactive as="article" className="flex flex-col" data-testid={`home-project-${p.id}`}>
-      <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-            <FolderOpen aria-hidden="true" className="size-[18px]" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="m-0 truncate text-md font-semibold text-ink">
-              <Link to={p.href} className="outline-none after:absolute after:inset-0 after:rounded-lg">
-                {p.name}
-              </Link>
-            </h3>
-            <p className="m-0 truncate text-sm text-muted">
-              {p.clientName} · {p.typeLabel}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-ink-soft">
-          <Clock aria-hidden="true" className="size-3.5 text-faint" />
-          Needed on site from <span className="font-medium text-ink">{p.startText}</span>
-        </div>
-        <div className="mt-auto">
-          <ProjectProgress counts={p.counts} total={p.total} size="sm" />
-        </div>
-      </div>
-    </Card>
+    <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
+      <MetricTile
+        testId="metric-projects"
+        label="Active projects"
+        icon={FolderKanban}
+        value={v.stats.activeProjects}
+        state={m.programme.state?.state}
+        stateLabel={m.programme.state?.label}
+        sub={m.nextStart ? `Next start on site ${m.nextStart.dateText}, ${m.nextStart.projectName}` : 'No start dates ahead'}
+        href="/app/projects"
+      />
+      <MetricTile
+        testId="metric-shortlisted"
+        label="Materials shortlisted"
+        icon={Layers}
+        value={v.stats.shortlisted}
+        state={m.timing.state?.state}
+        stateLabel={m.timing.state?.label}
+        sub="Shortlisted, waiting or approved"
+        footer={<TileChart label="Shortlist by status" chart={<Donut segments={statusSegments} label="Shortlist by status" size={48} />} legend={statusSegments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} />}
+      />
+      <MetricTile
+        testId="metric-waiting"
+        label="Waiting for approval"
+        icon={Hourglass}
+        value={m.waiting.count}
+        state={m.waiting.state?.state}
+        stateLabel={m.waiting.state?.label}
+        sub={waitingSub(m.waiting.count, m.waiting.oldestDays)}
+        href={v.waitingForApproval[0]?.href}
+      />
+      <MetricTile
+        testId="metric-carbon"
+        label="Carbon avoided"
+        icon={Leaf}
+        value={f.number(m.carbon.approvedT, 1)}
+        unit="tCO2e"
+        indicative
+        state={m.carbon.state?.state}
+        stateLabel={m.carbon.state ? `${m.carbon.state.label}, aim ${f.number(m.carbon.targetT, 0)} tCO2e` : undefined}
+        sub="On approved materials, against buying new"
+        footer={
+          <TileChart
+            label="Approved carbon of live shortlists"
+            chart={<ProgressRing value={m.carbon.approvedT} max={m.carbon.liveT} label="Approved carbon of live shortlists" valueText={`${f.number(m.carbon.approvedT, 1)} of ${f.number(m.carbon.liveT, 1)} tCO2e`} size={48} />}
+            note={`${m.carbon.percentText} of the ${f.number(m.carbon.liveT, 1)} tCO2e on live shortlists`}
+          />
+        }
+      />
+    </MetricGrid>
   )
 }
 
-function sentText(w: WaitingItem): string {
-  if (w.daysWaiting === null) return 'Sent'
-  if (w.daysWaiting === 0) return 'Sent today'
-  if (w.daysWaiting === 1) return 'Sent yesterday'
-  return `Sent ${w.daysWaiting} days ago`
+function FitPills({ fits }: { fits: Record<Fit, number> }) {
+  const shown = FITS.filter((k) => fits[k] > 0)
+  if (shown.length === 0) return <p className="m-0 text-sm text-muted">Nothing shortlisted to check yet</p>
+  return (
+    <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label="Timeline check of the shortlist">
+      {shown.map((k) => (
+        <li key={k}>
+          <Pill tone={FIT[k].tone} icon={FIT[k].icon} size="sm" data-fit={k}>
+            {fits[k]} {FIT_WORDS[k]}
+          </Pill>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ProjectCard({ p }: { p: ProjectCardView }) {
+  return (
+    <Card interactive as="article" className="flex flex-col overflow-hidden" data-testid={`home-project-${p.id}`}>
+      <ProjectThumbnail sketch={p.sketch} materials={p.materials} aspect="16/10" rounded="top" className="border-b border-line-soft" />
+      <div className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
+        <div className="min-w-0">
+          <h3 className="m-0 truncate text-md font-semibold text-ink">
+            <Link to={p.href} className="outline-none after:absolute after:inset-0 after:rounded-lg after:content-['']">
+              {p.name}
+            </Link>
+          </h3>
+          <p className="m-0 mt-0.5 truncate text-sm text-muted">
+            {p.clientName}, {p.typeLabel}
+          </p>
+        </div>
+        <RibaStageStrip stage={p.plannedStage ?? p.stage} showLabel size="sm" className="text-sm text-ink-soft" testId={`home-stage-${p.id}`} />
+        <p className="m-0 flex items-center gap-1.5 text-sm text-ink-soft">
+          <CalendarDays aria-hidden="true" className="size-3.5 shrink-0 text-faint" />
+          Materials needed from <span className="font-medium text-ink">{p.startText}</span>
+        </p>
+        <FitPills fits={p.fits} />
+        <div className="mt-auto pt-1">
+          <ProjectProgress counts={p.counts} total={p.total} size="sm" />
+        </div>
+      </div>
+      {p.newFits > 0 ? (
+        <div className="relative z-[1] border-t border-line-soft px-4 py-2 sm:px-5">
+          <Link
+            to={p.marketplaceHref}
+            data-testid={`home-new-fits-${p.id}`}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
+          >
+            <Sparkles aria-hidden="true" className="size-3.5" />
+            {p.newFits} new {p.newFits === 1 ? 'material fits' : 'materials fit'}
+            <ArrowRight aria-hidden="true" className="size-3.5" />
+          </Link>
+        </div>
+      ) : null}
+    </Card>
+  )
 }
 
 function Waiting({ items }: { items: WaitingItem[] }) {
   return (
     <Card>
-      <CardHeader title="Waiting for approval" icon={Hourglass} titleAs="h2" actions={items.length > 0 ? <span className="text-sm tabular-nums text-muted">{items.length}</span> : undefined} />
+      <CardHeader title="Waiting for approval" icon={Hourglass} titleAs="h2" description="Sent to your clients, oldest first" actions={items.length > 0 ? <span className="text-sm tabular-nums text-muted">{items.length}</span> : undefined} />
       {items.length === 0 ? (
-        <p className="m-0 px-5 py-6 text-sm text-muted">Nothing is waiting. Materials you send for approval appear here until your client decides.</p>
+        <p className="m-0 px-5 py-6 text-sm text-muted" data-testid="waiting-for-approval">
+          Nothing is waiting. Materials you send for approval appear here until your client decides.
+        </p>
       ) : (
         <ul className="m-0 list-none divide-y divide-line-soft p-0" data-testid="waiting-for-approval">
-          {items.map((w) => (
-            <li key={w.itemId}>
-              <Link to={w.href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
-                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info ring-1 ring-inset ring-info-line">
-                  <Send aria-hidden="true" className="size-3.5" />
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-base font-medium text-ink">{w.title}</span>
-                  <span className="truncate text-sm text-muted">
-                    {w.projectName}, {w.clientName}
+          {items.map((w) => {
+            const stale = (w.daysWaiting ?? 0) >= 7
+            return (
+              <li key={w.itemId}>
+                <Link to={w.href} className="flex min-h-11 items-center gap-3 px-4 py-3 transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+                  {w.card ? (
+                    <MaterialImage spec={w.card.listing.spec} publicId={w.publicId} aspect="1/1" rounded="md" className="size-10 shrink-0" />
+                  ) : (
+                    <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-subtle text-muted ring-1 ring-inset ring-line-soft">
+                      <Send className="size-4" />
+                    </span>
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-base font-medium text-ink">{w.title}</span>
+                    <span className="truncate text-sm text-muted">
+                      {w.projectName}, {w.clientName}
+                    </span>
                   </span>
-                </span>
-                <span className={cx('shrink-0 text-sm tabular-nums', (w.daysWaiting ?? 0) >= 7 ? 'font-medium text-warning' : 'text-muted')}>{sentText(w)}</span>
-              </Link>
-            </li>
-          ))}
+                  <span className={cx('inline-flex shrink-0 items-center gap-1.5 text-sm tabular-nums', stale ? 'font-medium text-warning' : 'text-muted')}>
+                    {stale ? <span aria-hidden="true" className="size-2 rounded-full" style={{ background: MARK.warning }} /> : null}
+                    {sentText(w.daysWaiting)}
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       )}
     </Card>
   )
 }
 
+function CarbonByProject({ v }: { v: ArchitectHomeView }) {
+  const rows = v.carbonByProject
+  const any = rows.some((r) => r.liveT > 0)
+  return (
+    <Card data-testid="carbon-by-project">
+      <CardHeader title="Carbon by project" icon={Leaf} titleAs="h2" description="Approved and on live shortlists" actions={<IndicativeMarker />} />
+      <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
+        {any ? (
+          <>
+            <BarList
+              label="Avoided carbon by project"
+              max={v.carbonAxisMax}
+              items={rows.map((r) => ({
+                key: r.id,
+                label: r.name,
+                href: `${r.href}/sustainability`,
+                value: r.approvedT,
+                valueText: f.carbon(r.approvedT),
+                colour: MARK.brand,
+                secondary: { value: r.liveT, valueText: `of ${f.number(r.liveT, 1)}` },
+              }))}
+            />
+            <Legend
+              label="Key"
+              className="text-xs"
+              items={[
+                { key: 'approved', label: 'Approved', colour: MARK.brand },
+                { key: 'live', label: 'On live shortlists', colour: 'var(--color-brand-200)' },
+              ]}
+            />
+          </>
+        ) : (
+          <p className="m-0 text-sm text-muted">Shortlist materials to see their avoided carbon here.</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function Welcome({ onCreate }: { onCreate: () => void }) {
   const steps = [
-    { icon: FolderPlus, title: 'Create your first project', text: 'Name it, add the client and the date materials are needed on site.' },
-    { icon: Compass, title: 'Find materials in the Marketplace', text: 'Every material is checked against your start date.' },
-    { icon: Send, title: 'Send your shortlist to the client', text: 'They approve; you export the specification.' },
+    { title: 'Create your first project', text: 'Name it, add the client and the date materials are needed on site.' },
+    { title: 'Find materials in the Marketplace', text: 'Every material is checked against your start date.' },
+    { title: 'Send your shortlist for approval', text: 'Your client approves; you export the specification.' },
   ]
   return (
     <Card className="overflow-hidden" data-testid="architect-welcome">
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <div className="flex flex-col justify-center gap-4 p-6 sm:p-8">
-          <span className="inline-flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-            <Sparkle aria-hidden="true" className="size-5" />
-          </span>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div className="flex flex-col justify-center gap-5 p-6 sm:p-8">
+          <SpotIllustration kind="project" className="h-[88px] w-[120px]" />
           <div>
             <h2 className="m-0 text-xl font-semibold text-ink">Welcome to your workspace</h2>
-            <p className="m-0 mt-1.5 text-base text-muted">Start with a project. Everything you shortlist, send and specify lives inside one.</p>
+            <p className="m-0 mt-1.5 max-w-md text-base text-muted">Start with a project. Everything you shortlist, send and specify lives inside one.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" icon={FolderPlus} onClick={onCreate} data-testid="welcome-create-project">
               Create a project
             </Button>
-            <Button asChild icon={Compass}>
+            <Button asChild icon={Store}>
               <Link to={MARKETPLACE_PATH}>Browse the Marketplace</Link>
             </Button>
           </div>
         </div>
-        <ol className="m-0 flex list-none flex-col gap-0 border-t border-line-soft bg-page p-0 lg:border-l lg:border-t-0">
+        <ol className="m-0 flex list-none flex-col border-t border-line-soft bg-page p-0 lg:border-l lg:border-t-0">
           {steps.map((s, i) => (
             <li key={s.title} className={cx('flex items-start gap-4 px-6 py-5 sm:px-8', i > 0 && 'border-t border-line-soft')}>
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-sm font-semibold tabular-nums text-ink-soft ring-1 ring-inset ring-line">{i + 1}</span>
+              <span className={cx('inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums', i === 0 ? 'bg-brand-600 text-white' : 'bg-surface text-ink-soft ring-1 ring-inset ring-line')}>{i + 1}</span>
               <div>
                 <p className="m-0 font-medium text-ink">{s.title}</p>
                 <p className="m-0 mt-0.5 text-sm text-muted">{s.text}</p>
@@ -142,7 +296,7 @@ export function ArchitectHome() {
         subtitle={view.dateText}
         actions={
           <>
-            <Button asChild icon={Compass}>
+            <Button asChild icon={Store}>
               <Link to={MARKETPLACE_PATH}>Marketplace</Link>
             </Button>
             <Button variant="primary" icon={FolderPlus} onClick={() => setCreating(true)} data-testid="home-new-project">
@@ -158,32 +312,20 @@ export function ArchitectHome() {
         </div>
       ) : (
         <>
-          <dl className="m-0 mt-6 grid grid-cols-3 divide-x divide-line-soft rounded-lg border border-line bg-surface shadow-sm sm:hidden" data-testid="home-stats-compact">
-            {[
-              { label: 'Projects', value: String(view.stats.activeProjects) },
-              { label: 'Shortlisted', value: String(view.stats.shortlisted) },
-              { label: 'tCO2e approved', value: f.number(view.stats.avoidedApprovedT, 1) },
-            ].map((x) => (
-              <div key={x.label} className="flex flex-col gap-0.5 px-3 py-3">
-                <dt className="order-2 text-xs text-muted">{x.label}</dt>
-                <dd className="order-1 m-0 text-xl font-semibold tabular-nums text-ink">{x.value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="mt-8 grid grid-cols-1 gap-4 max-sm:hidden sm:grid-cols-3" data-testid="home-stats">
-            <Stat label="Active projects" value={view.stats.activeProjects} icon={FolderKanban} sub="Where you are the architect" />
-            <Stat label="Materials shortlisted" value={view.stats.shortlisted} icon={Layers} sub="Shortlisted, waiting or approved" />
-            <Stat label="Carbon avoided" value={f.number(view.stats.avoidedApprovedT, 1)} unit="tCO2e" icon={Leaf} indicative sub="On approved materials, against buying new" />
-          </div>
+          <Metrics v={view} />
 
           <section aria-labelledby="your-projects" className="mt-10">
             <SectionTitle
               id="your-projects"
               title="Your projects"
+              description="The strip shows the RIBA stage your programme places today in."
               actions={
-                <Link to="/app/projects" className="inline-flex items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink">
-                  All projects <ArrowRight aria-hidden="true" className="size-3.5" />
-                </Link>
+                <>
+                  <IndicativeMarker />
+                  <Link to="/app/projects" className="inline-flex min-h-6 items-center gap-1 rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
+                    All projects <ArrowRight aria-hidden="true" className="size-3.5" />
+                  </Link>
+                </>
               }
             />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -192,48 +334,18 @@ export function ArchitectHome() {
               ))}
             </div>
           </section>
+
+          <div className="mt-10 grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+            <div className="min-w-0">
+              <Waiting items={view.waitingForApproval} />
+            </div>
+            <div className="min-w-0">
+              <CarbonByProject v={view} />
+            </div>
+          </div>
+          <ActivityPanel panelId="home-activity-architect" rows={view.activity} summary={view.activitySummary} emptyText="Saves, sends and decisions on your projects appear here." className="mt-6" />
         </>
       )}
-
-      <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-10 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section aria-labelledby="new-for-you" className="min-w-0">
-          <SectionTitle
-            id="new-for-you"
-            title="New for your projects"
-            description="Listed in the last 30 days and in time for at least one of your projects."
-            actions={
-              <Link to={MARKETPLACE_PATH} className="inline-flex items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink">
-                Marketplace <ArrowRight aria-hidden="true" className="size-3.5" />
-              </Link>
-            }
-          />
-          {view.newForProjects.length === 0 ? (
-            <EmptyState variant="inline" icon={Compass} title={first ? 'Create a project to see what fits it' : 'Nothing new fits your projects this month'} text="New listings that arrive before your start dates show up here." />
-          ) : (
-            <div className="@container mt-4">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-9 @lg:grid-cols-2" data-testid="new-for-projects">
-                {view.newForProjects.slice(0, 4).map((c) => (
-                  <div key={c.publicId} className="flex flex-col gap-2">
-                    <ListingTile card={c} canSave projectId={c.fitsProjects[0]?.id ?? null} />
-                    <p className="m-0 px-0.5 text-xs text-muted">
-                      In time for {c.fitsProjects.length === 1 ? c.fitsProjects[0].name : `${c.fitsProjects.length} of your projects`}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-        {first ? null : (
-          <div className="flex min-w-0 flex-col gap-6">
-            <Waiting items={view.waitingForApproval} />
-            <Card>
-              <CardHeader title="Recent activity" titleAs="h2" />
-              <ActivityFeed rows={view.activity.slice(0, 6)} />
-            </Card>
-          </div>
-        )}
-      </div>
 
       <NewProjectDialog open={creating} onOpenChange={closeDialog} short={first} title={first ? 'Create your first project' : 'New project'} />
     </Page>

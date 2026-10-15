@@ -1,11 +1,14 @@
 // The sidebar: the organisation at the top, the role's sections with projects (or clients and buildings) as
 // folders that expand, count badges, then Help and Settings. Collapses to icons; below 1024 px it is a drawer.
-import { useEffect, useState, type ReactNode } from 'react'
+// Project sections carry a menu to order the folders (by name, under each client, or by recent activity) and to
+// show one client only; in client order a small subheading names each client.
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ChevronRight, ChevronsUpDown, Folder, FolderOpen, LogOut, Settings, UserPlus } from 'lucide-react'
-import type { NavItem, NavModel } from '../store/selectors/nav'
+import type { NavItem, NavModel, NavSection } from '../store/selectors/nav'
 import { isActive, NAV_ICONS } from './navIcons'
 import { useSignOut } from './useSignOut'
+import { ClientFilterChip, ProjectsMenu } from './sidebar/ProjectsMenu'
 import { Avatar, cx, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Tooltip } from '../ui'
 
 function containsActive(pathname: string, item: NavItem): boolean {
@@ -169,7 +172,7 @@ function folderIds(items: NavItem[], pathname: string, out: string[] = []): stri
 const EXPANDED_KEY = 'tallyard-platform-v1-nav-open'
 
 /** Section titles that open the full list. */
-const SECTION_LISTS: Record<string, string> = { projects: '/app/projects', buildings: '/app/buildings' }
+const SECTION_LISTS: Record<string, string> = { projects: '/app/projects', buildings: '/app/buildings', clients: '/app/buildings' }
 
 function readExpanded(): Set<string> {
   try {
@@ -178,6 +181,44 @@ function readExpanded(): Set<string> {
   } catch {
     return new Set()
   }
+}
+
+/** A client's name above its first project, in client order. */
+function GroupLabel({ label, orgId }: { label: string; orgId: string | null }) {
+  return (
+    <li data-testid={orgId ? `nav-group-${orgId}` : undefined} className="flex h-5 min-w-0 items-end px-2 pb-0.5 text-[11px] font-medium text-muted [&:not(:first-child)]:mt-2 max-lg:h-7">
+      <span className="truncate">{label}</span>
+    </li>
+  )
+}
+
+/** A section's title: a link to the full list where there is one, the project menu, and the client filter chip. */
+function SectionHeader({ section, pathname, onNavigate }: { section: NavSection; pathname: string; onNavigate?: () => void }) {
+  const list = SECTION_LISTS[section.id]
+  const here = list !== undefined && pathname === list
+  return (
+    <>
+      <div className="mb-1 flex min-w-0 items-center gap-1">
+        {list ? (
+          <Link
+            to={list}
+            onClick={onNavigate}
+            aria-current={here ? 'page' : undefined}
+            className={cx('group/title flex h-6 min-w-0 flex-1 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-9', here ? 'text-ink' : 'text-muted')}
+          >
+            <span className="truncate">{section.title}</span>
+            <span className="text-[11px] font-normal text-faint opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-visible/title:opacity-100">View all</span>
+          </Link>
+        ) : (
+          <div className="flex h-6 min-w-0 flex-1 items-center px-2 text-xs font-medium text-muted max-lg:h-9">
+            <span className="truncate">{section.title}</span>
+          </div>
+        )}
+        {section.tools ? <ProjectsMenu tools={section.tools} /> : null}
+      </div>
+      {section.tools ? <ClientFilterChip tools={section.tools} /> : null}
+    </>
+  )
 }
 
 export function Sidebar({ nav, collapsed = false, onNavigate, footerExtra }: { nav: NavModel; collapsed?: boolean; onNavigate?: () => void; footerExtra?: ReactNode }) {
@@ -220,24 +261,17 @@ export function Sidebar({ nav, collapsed = false, onNavigate, footerExtra }: { n
       <nav aria-label="Workspace" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-4 pt-2 scrollbar-none">
         {nav.sections.map((section, i) => (
           <div key={section.id} className={cx(i > 0 && (collapsed ? 'mt-3 border-t border-line pt-3' : 'mt-5'))}>
-            {section.title && !collapsed ? (
-              SECTION_LISTS[section.id] ? (
-                <Link
-                  to={SECTION_LISTS[section.id]}
-                  onClick={onNavigate}
-                  aria-current={pathname === SECTION_LISTS[section.id] ? 'page' : undefined}
-                  className={cx('group/title mb-1 flex h-6 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-9', pathname === SECTION_LISTS[section.id] ? 'text-ink' : 'text-muted')}
-                >
-                  {section.title}
-                  <span className="text-[11px] font-normal text-faint opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-visible/title:opacity-100">View all</span>
-                </Link>
-              ) : (
-                <div className="mb-1 flex h-6 items-center px-2 text-xs font-medium text-muted">{section.title}</div>
-              )
-            ) : null}
+            {section.title && !collapsed ? <SectionHeader section={section} pathname={pathname} onNavigate={onNavigate} /> : null}
             <ul className="m-0 flex list-none flex-col gap-px p-0">
               {section.items.map((item) =>
-                collapsed ? <RailRow key={item.id} item={item} onNavigate={onNavigate} /> : <NavRow key={item.id} item={item} depth={0} parentHref={null} expanded={expanded} toggle={toggle} onNavigate={onNavigate} />,
+                collapsed ? (
+                  <RailRow key={item.id} item={item} onNavigate={onNavigate} />
+                ) : (
+                  <Fragment key={item.id}>
+                    {item.groupLabel ? <GroupLabel label={item.groupLabel} orgId={item.groupId} /> : null}
+                    <NavRow item={item} depth={0} parentHref={null} expanded={expanded} toggle={toggle} onNavigate={onNavigate} />
+                  </Fragment>
+                ),
               )}
             </ul>
           </div>

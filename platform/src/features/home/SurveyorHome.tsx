@@ -1,13 +1,21 @@
-// The surveyor's home: appointments by client, each building's survey progress, and recent activity.
+// The site surveyor's home as a dashboard: four figures, Capture as the main action, appointments by client with
+// each building drawn from its survey and its survey steps, the firm's own buildings not yet linked to an owner,
+// and recent activity (collapsed). Every figure comes from surveyorDashboard (P2).
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { Camera, ClipboardList, List } from 'lucide-react'
-import { selectors, useView } from '../../store'
-import type { AppointmentBuilding } from '../../store/selectors/surveyor'
+import { Building2, CalendarClock, Camera, ClipboardList, List, Mail, Plus, Users } from 'lucide-react'
+import type { Typology } from '../../domain/v1types'
 import { formatDate } from '../../domain/dates'
-import { Avatar, Button, Card, CardHeader, cx, EmptyState, PageHeader, Pill } from '../../ui'
+import { useView } from '../../store'
+import type { SurveyStatus } from '../../store'
+import { surveyorDashboard, type SurveyorDashboard } from '../../store/selectors/home-surveyor'
+import type { AppointmentBuilding } from '../../store/selectors/surveyor'
+import type { ClaimState } from '../../store/selectors/claims'
+import { Avatar, BuildingThumb, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
-import { ActivityFeed, StatStrip } from '../notifications/kit'
 import { SURVEY_TONE } from '../buildings/labels'
+import { ActivityPanel } from './ActivityPanel'
+import { TileChart } from './TileChart'
 
 const STEPS = [
   { key: 'appointed', label: 'Appointed' },
@@ -15,103 +23,222 @@ const STEPS = [
   { key: 'submitted', label: 'Submitted' },
 ] as const
 
-function stepState(status: AppointmentBuilding['status'], key: (typeof STEPS)[number]['key']): 'done' | 'current' | 'todo' {
+const STATUS_ORDER: { key: SurveyStatus; label: string }[] = [
+  { key: 'not_started', label: 'Not started' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'submitted', label: 'Submitted' },
+]
+
+const TYPOLOGIES: { key: Typology; label: string; word: string }[] = [
+  { key: 'structure', label: 'Structure', word: 'structure' },
+  { key: 'envelope', label: 'Envelope', word: 'envelope' },
+  { key: 'finishes', label: 'Finishes', word: 'finishes' },
+]
+
+const CLAIM_TONE: Record<ClaimState['status'], Tone> = { linked: 'brand', not_linked: 'neutral', pending: 'warning', declined: 'danger' }
+
+function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): 'done' | 'current' | 'todo' {
   const order = { not_started: 0, in_progress: 1, submitted: 2 }[status]
   const at = { appointed: 0, in_progress: 1, submitted: 2 }[key]
   return at < order || (at === order && status === 'submitted') ? 'done' : at === order ? 'current' : 'todo'
 }
 
+function Steps({ status }: { status: SurveyStatus }) {
+  return (
+    <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0" aria-label="Survey progress">
+      {STEPS.map((s, i) => {
+        const st = stepState(status, s.key)
+        return (
+          <li key={s.key} className="flex items-center gap-2">
+            {i > 0 ? <span aria-hidden="true" className={cx('h-px w-4 sm:w-6', st === 'todo' ? 'bg-line' : 'bg-brand-300')} /> : null}
+            <span className={cx('inline-flex items-center gap-1.5 text-xs font-medium', st === 'todo' ? 'text-faint' : st === 'current' ? 'text-ink' : 'text-brand-700')}>
+              <span aria-hidden="true" className={cx('size-2 rounded-full', st === 'todo' && 'border border-line-strong')} style={st === 'todo' ? undefined : { background: st === 'current' ? MARK.warning : MARK.brand }} />
+              {s.label}
+              {st === 'current' ? <span className="sr-only">, current step</span> : st === 'done' ? <span className="sr-only">, done</span> : null}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function TypologyBar({ counts }: { counts: Record<Typology, number> }) {
+  const total = counts.structure + counts.envelope + counts.finishes
+  return (
+    <div className="flex min-w-0 max-w-md flex-col gap-1.5">
+      <SegmentedBar label="Items by typology" size="sm" legend={false} segments={TYPOLOGIES.map((t) => ({ key: t.key, label: t.label, count: counts[t.key], tone: 'neutral', colour: TYPOLOGY_FILL[t.key] }))} />
+      <p className="m-0 text-xs text-muted">{total === 0 ? 'Nothing captured yet' : TYPOLOGIES.map((t) => `${counts[t.key]} ${t.word}`).join(', ')}</p>
+    </div>
+  )
+}
+
+function Metrics({ v }: { v: SurveyorDashboard }) {
+  const m = v.metrics
+  const status = STATUS_ORDER.map((s) => ({ key: s.key, label: s.label, value: m.byStatus[s.key], colour: MARK[SURVEY_TONE[s.key]] }))
+  return (
+    <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
+      <MetricTile testId="metric-clients" label="Clients" icon={Users} value={v.stats.clients} sub={v.stats.unlinked > 0 ? `Plus ${v.stats.unlinked} ${v.stats.unlinked === 1 ? 'building' : 'buildings'} not yet linked` : 'Owners who appointed your firm'} />
+      <MetricTile
+        testId="metric-buildings"
+        label="Buildings"
+        icon={Building2}
+        value={v.stats.buildings}
+        sub="Appointed, by survey status"
+        footer={<TileChart label="Buildings by survey status" chart={<Donut segments={status} label="Buildings by survey status" size={48} />} legend={status.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} />}
+      />
+      <MetricTile testId="metric-items" label="Items captured" icon={ClipboardList} value={v.stats.itemsCaptured} sub={m.lastCaptureText ? `Last on ${m.lastCaptureText}` : 'Nothing captured yet'} />
+      <MetricTile testId="metric-open" label="Surveys open" icon={CalendarClock} value={m.open} state={m.openState?.state} stateLabel={m.openState?.label} sub={m.open > 0 ? 'Not yet submitted to the owner' : 'Every survey submitted'} />
+    </MetricGrid>
+  )
+}
+
+function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuilding; extra: SurveyorDashboard['extras'][string] | undefined; children?: ReactNode; /** Offer to ask the owner to confirm the building. */ ask?: boolean }) {
+  const contractor = b.role === 'contractor'
+  return (
+    <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:px-5" data-testid={`home-building-${b.id}`}>
+      {extra ? <BuildingThumb sketch={extra.sketch} size="lg" decorative={false} className="shrink-0 max-sm:hidden" /> : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to={b.href} className="text-md font-semibold text-ink hover:underline hover:decoration-line-strong hover:underline-offset-4">
+              {b.name}
+            </Link>
+            <Pill tone={SURVEY_TONE[b.status]} dot size="sm">
+              {b.statusLabel}
+            </Pill>
+            {contractor ? (
+              <Pill tone="info" size="sm">
+                Contractor
+              </Pill>
+            ) : null}
+            {children}
+          </div>
+          <p className="m-0 mt-0.5 truncate text-sm text-muted">{b.address}</p>
+        </div>
+        {contractor ? null : <Steps status={b.status} />}
+        {extra ? <TypologyBar counts={extra.byTypology} /> : null}
+        <p className="m-0 text-sm text-ink-soft">
+          {contractor ? (
+            <>
+              Dates set for <span className="font-medium tabular-nums text-ink">{b.datedCount}</span> of {b.itemCount} items
+            </>
+          ) : (
+            <>
+              <span className="font-medium tabular-nums text-ink">{b.itemCount}</span> {b.itemCount === 1 ? 'item' : 'items'} captured
+              {b.lastCaptureOn ? <span className="text-muted">, last on {formatDate(b.lastCaptureOn)}</span> : null}
+            </>
+          )}
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2 sm:flex-col md:flex-row">
+        {contractor ? (
+          <Button asChild variant="primary" icon={CalendarClock} className="max-sm:flex-1">
+            <Link to={`${b.href}/availability`}>Set dates</Link>
+          </Button>
+        ) : (
+          <>
+            {ask ? (
+              <Button asChild icon={Mail} className="max-sm:flex-1">
+                <Link to={b.href} data-testid={`ask-owner-${b.id}`}>
+                  Ask the owner
+                </Link>
+              </Button>
+            ) : null}
+            <Button asChild icon={List} className="max-sm:flex-1">
+              <Link to={`${b.href}/inventory`}>Inventory</Link>
+            </Button>
+            <Button asChild variant="primary" icon={Camera} className="max-sm:flex-1">
+              <Link to={`${b.href}/capture`} data-testid={`capture-${b.id}`}>
+                Capture
+              </Link>
+            </Button>
+          </>
+        )}
+      </div>
+    </li>
+  )
+}
+
 export function SurveyorHome() {
-  const v = useView(selectors.surveyorHome)
+  const v = useView(surveyorDashboard)
   if (!v) return null
+  const none = v.appointments.length === 0
   return (
     <Page testId="surveyor-home">
-      <PageHeader title={v.greeting} subtitle={v.dateText} />
-      <StatStrip
-        className="mt-6"
-        items={[
-          { label: 'Clients', value: v.stats.clients },
-          { label: 'Buildings', value: v.stats.buildings },
-          { label: 'Items captured', value: v.stats.itemsCaptured },
-          { label: 'Surveys open', value: v.stats.inProgress, tone: v.stats.inProgress > 0 ? 'attention' : 'default' },
-        ]}
+      <PageHeader
+        title={v.greeting}
+        subtitle={v.dateText}
+        actions={
+          <>
+            <Button asChild icon={Plus}>
+              <Link to="/app/buildings?new=1">Add building</Link>
+            </Button>
+            <Button asChild variant="primary" icon={Camera}>
+              <Link to={v.quickCapture.href} data-testid="home-capture">
+                Capture
+              </Link>
+            </Button>
+          </>
+        }
       />
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section aria-labelledby="appointments-title" className="flex min-w-0 flex-col gap-4">
-          <SectionTitle id="appointments-title" title="Your appointments" description="Buildings you are appointed to survey, by client." />
-          {v.appointments.length === 0 ? (
-            <EmptyState icon={ClipboardList} title="No appointments yet" text="When a donor building owner appoints your firm to survey a building, it appears here. You will also get a notification." />
-          ) : (
-            v.appointments.map((g) => (
-              <Card key={g.orgId} data-testid={`client-${g.orgId}`}>
-                <div className="flex items-center gap-3 border-b border-line-soft px-4 py-3 sm:px-5">
-                  <Avatar name={g.clientName} shape="square" size="md" decorative />
-                  <div className="min-w-0">
-                    <h3 className="m-0 truncate text-base font-semibold text-ink">{g.clientName}</h3>
-                    <p className="m-0 text-sm text-muted">
-                      {g.buildings.length} {g.buildings.length === 1 ? 'building' : 'buildings'}
-                    </p>
-                  </div>
-                </div>
-                <ul className="m-0 list-none divide-y divide-line-soft p-0">
-                  {g.buildings.map((b) => (
-                    <li key={b.id} className="flex flex-col gap-4 px-4 py-4 sm:px-5 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link to={b.href} className="text-md font-semibold text-ink hover:underline hover:decoration-line-strong hover:underline-offset-4">
-                            {b.name}
-                          </Link>
-                          <Pill tone={SURVEY_TONE[b.status]} dot size="sm">
-                            {b.statusLabel}
-                          </Pill>
-                        </div>
-                        <p className="m-0 mt-0.5 text-sm text-muted">{b.address}</p>
-                        <ol className="m-0 mt-3 flex list-none items-center gap-2 p-0" aria-label="Survey progress">
-                          {STEPS.map((s, i) => {
-                            const st = stepState(b.status, s.key)
-                            return (
-                              <li key={s.key} className="flex items-center gap-2">
-                                {i > 0 ? <span aria-hidden="true" className={cx('h-px w-5 sm:w-8', st === 'todo' ? 'bg-line' : 'bg-brand-300')} /> : null}
-                                <span className={cx('inline-flex items-center gap-1.5 text-xs font-medium', st === 'todo' ? 'text-faint' : st === 'current' ? 'text-ink' : 'text-brand-700')}>
-                                  <span aria-hidden="true" className={cx('size-2 rounded-full', st === 'todo' ? 'border border-line-strong' : st === 'current' ? 'bg-[#d08a2c]' : 'bg-brand-600')} />
-                                  {s.label}
-                                  {st === 'current' ? <span className="sr-only">, current</span> : null}
-                                </span>
-                              </li>
-                            )
-                          })}
-                        </ol>
-                        <p className="m-0 mt-2 text-sm text-ink-soft">
-                          <span className="font-medium tabular-nums text-ink">{b.itemCount}</span> {b.itemCount === 1 ? 'item' : 'items'} captured
-                          {b.lastCaptureOn ? <span className="text-muted"> · last on {formatDate(b.lastCaptureOn)}</span> : null}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-2">
-                        <Button asChild icon={List} className="max-md:flex-1">
-                          <Link to={`${b.href}/inventory`}>Inventory</Link>
-                        </Button>
-                        <Button asChild variant="primary" icon={Camera} className="max-md:flex-1">
-                          <Link to={`${b.href}/capture`} data-testid={`capture-${b.id}`}>
-                            Capture
-                          </Link>
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))
-          )}
-        </section>
-        <aside className="min-w-0">
+      <Metrics v={v} />
+
+      <section aria-labelledby="appointments-title" className="mt-10 flex min-w-0 flex-col gap-4">
+        <SectionTitle id="appointments-title" title="Your appointments" description="Buildings owners appointed your firm to survey or to date, by client." className="mb-0" />
+        {none ? (
           <Card>
-            <CardHeader title="Recent activity" />
-            <div className="px-4 py-4 sm:px-5">
-              <ActivityFeed rows={v.activity} compact emptyText="Your captures and submissions appear here." />
-            </div>
+            <EmptyState
+              illustration="building"
+              title="No appointments yet"
+              text="When an owner appoints your firm, buildings appear here. You can also add a building yourself and start capturing now."
+              action={
+                <Button asChild variant="primary" icon={Plus}>
+                  <Link to="/app/buildings?new=1">Add building</Link>
+                </Button>
+              }
+            />
           </Card>
-        </aside>
-      </div>
+        ) : (
+          v.appointments.map((g) => (
+            <Card key={g.orgId} data-testid={`client-${g.orgId}`}>
+              <div className="flex items-center gap-3 border-b border-line-soft px-4 py-3 sm:px-5">
+                <Avatar name={g.clientName} shape="square" size="md" decorative />
+                <div className="min-w-0">
+                  <h3 className="m-0 truncate text-base font-semibold text-ink">{g.clientName}</h3>
+                  <p className="m-0 text-sm text-muted">
+                    {g.buildings.length} {g.buildings.length === 1 ? 'building' : 'buildings'}
+                  </p>
+                </div>
+              </div>
+              <ul className="m-0 list-none divide-y divide-line-soft p-0">
+                {g.buildings.map((b) => (
+                  <BuildingRow key={b.id} b={b} extra={v.extras[b.id]} />
+                ))}
+              </ul>
+            </Card>
+          ))
+        )}
+      </section>
+
+      {v.unlinked.length > 0 ? (
+        <section aria-labelledby="unlinked-title" className="mt-10" data-testid="home-unlinked">
+          <SectionTitle id="unlinked-title" title="Not yet linked" description="Buildings your firm added. They stay private to your firm until the owner confirms them, and the survey can be submitted only after that." />
+          <Card>
+            <ul className="m-0 list-none divide-y divide-line-soft p-0">
+              {v.unlinked.map((b) => (
+                <BuildingRow key={b.id} b={b} extra={v.unlinkedExtras[b.id]} ask={b.claim.status === 'not_linked' || b.claim.status === 'declined'}>
+                  <Pill tone={CLAIM_TONE[b.claim.status]} dot size="sm" data-testid={`claim-${b.id}`}>
+                    {b.claim.label}
+                  </Pill>
+                </BuildingRow>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
+      <ActivityPanel panelId="home-activity-surveyor" rows={v.activity} summary={v.activitySummary} emptyText="Your captures and submissions appear here." className="mt-10" />
     </Page>
   )
 }

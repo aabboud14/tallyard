@@ -7,7 +7,7 @@ import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
 import { itemsOf, ownerHome, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
 import { shortlistRows } from './shortlist'
-import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial } from './dashboard'
+import { activitySummary, awaitingState, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
 
 export type OwnerBuildingCard = BuildingCard & { kindLabel: 'Donor building'; sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string }
 
@@ -15,7 +15,16 @@ export type OwnerBuildingCard = BuildingCard & { kindLabel: 'Donor building'; sk
 export type OwnerProjectCard = OwnerProjectRow & { kindLabel: 'New project'; sketch: BuildingSketch; programmeText: string }
 
 export type OwnerDashboard = OwnerHome & {
-  metrics: { byTypology: Record<Typology, number>; listed: number; requestTone: MetricTone }
+  metrics: {
+    byTypology: Record<Typology, number>
+    listed: number
+    /** Items kept private across the donor buildings, for the visibility chart beside published and shared. */
+    privateCount: number
+    /** Reservation requests and building confirmations waiting on the owner, together. */
+    awaiting: number
+    requestTone: MetricTone
+    requestState: TileState | null
+  }
   buildingCards: OwnerBuildingCard[]
   newProjectCards: OwnerProjectCard[]
   /** The owner's own item behind each request on the home, by request ID. */
@@ -54,9 +63,17 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     const item = state.world.items[r.itemId]
     if (item) requestThumbs[r.id] = { publicId: r.publicId, spec: item.spec, title: r.title }
   }
+  const awaiting = home.stats.requestsAwaiting + home.stats.claimsAwaiting
   return {
     ...home,
-    metrics: { byTypology, listed: home.stats.listed + home.stats.shared, requestTone: home.stats.requestsAwaiting > 0 ? 'warning' : 'neutral' },
+    metrics: {
+      byTypology,
+      listed: home.stats.listed + home.stats.shared,
+      privateCount: home.buildings.reduce((n, c) => n + c.counts.private, 0),
+      awaiting,
+      requestTone: awaiting > 0 ? 'warning' : 'neutral',
+      requestState: awaitingState(awaiting),
+    },
     buildingCards,
     newProjectCards,
     requestThumbs,
