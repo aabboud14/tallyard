@@ -1,18 +1,23 @@
-// Discover: the marketplace as a calm showroom. Search, typology tabs with counts, one Filters surface, sort, the
-// project every card is checked against, and "Shared with you" for lots owners shared privately with a project.
+// The Marketplace (code name Discover): a calm showroom. It opens on three category folders, then New for your
+// projects (architects), then every material. The checking strip shows the project every card is checked against
+// with its fit counts; the sticky toolbar holds search, typology tabs, Filters (with the availability month slider)
+// and the sort each role is offered. "Shared with you" holds lots owners shared privately with a project.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ArrowDownWideNarrow, Compass, FolderOpen, LockKeyhole, PackageOpen, Search, SearchX, ShieldCheck, X } from 'lucide-react'
-import { useNow, useView } from '../../store'
+import { ArrowDownWideNarrow, FolderOpen, LockKeyhole, PackageOpen, Search, ShieldCheck, Store, X } from 'lucide-react'
+import { useView } from '../../store'
 import { discoverView, type DiscoverQuery, type DiscoverView, type SharedGroup } from '../../store/selectors/discover'
 import { clearDiscoverFilters } from '../../store/selectors/arch-discover'
-import { Button, Card, cx, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, EmptyState, IndicativeMarker, Input, Kbd, Pill } from '../../ui'
+import { Button, Card, cx, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, EmptyState, Input, Kbd, Pill } from '../../ui'
 import { Page } from '../../app/Page'
 import { useHotkey } from '../../app/hotkeys'
 import { useMediaQuery } from '../../app/media'
 import { ListingTile } from './ListingTile'
-import { ProjectPicker } from './ProjectPicker'
 import { ActiveFilters, FiltersButton } from './DiscoverFilters'
+import { CheckingBar } from './CheckingBar'
+import { CategoryFolders } from './CategoryFolders'
+import { NewForProjectsRow } from './NewForProjectsRow'
+import { FolderHeader } from './FamilyChips'
 import { TermsDialog } from './TermsDialog'
 import { useDiscoverQuery } from './useDiscoverQuery'
 
@@ -65,7 +70,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (q: string) =
           setText('')
         }
       }}
-      placeholder="Search beams, brick, stone, a location"
+      placeholder="Search beams, brick, stone"
       aria-label="Search materials"
       data-testid="discover-search"
       className="w-full min-w-0 xl:w-[320px] xl:shrink-0 [&_input::-webkit-search-cancel-button]:hidden"
@@ -96,7 +101,7 @@ function TypologyTabs({ view, onChange }: { view: DiscoverView; onChange: (t: Di
             onClick={() => onChange(t.value)}
             data-testid={`typology-${t.key}`}
             className={cx(
-              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-10',
+              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11',
               active ? 'bg-ink text-white' : 'text-ink-soft hover:bg-hover hover:text-ink',
             )}
           >
@@ -114,7 +119,7 @@ function SortMenu({ view, onChange }: { view: DiscoverView; onChange: (s: Discov
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" icon={ArrowDownWideNarrow} data-testid="sort-menu" className="text-ink-soft">
+        <Button variant="ghost" icon={ArrowDownWideNarrow} data-testid="sort-menu" aria-label={`Sort: ${current.label}`} className="text-ink-soft max-sm:size-11 max-sm:px-0">
           <span className="max-sm:sr-only">{current.label}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -176,9 +181,7 @@ function SharedGroupSection({ group }: { group: SharedGroup }) {
       ) : (
         <Card className="overflow-hidden">
           <div className="flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
-            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-subtle text-ink-soft ring-1 ring-inset ring-line">
-              <LockKeyhole aria-hidden="true" className="size-5" />
-            </span>
+            <LockKeyhole aria-hidden="true" className="size-5 shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
               <p className="m-0 font-semibold text-ink">
                 {group.sharedCount} {group.sharedCount === 1 ? 'lot is' : 'lots are'} shared privately with {p.name}
@@ -193,32 +196,50 @@ function SharedGroupSection({ group }: { group: SharedGroup }) {
   )
 }
 
+function ResultsLine({ view }: { view: DiscoverView }) {
+  return (
+    <p className="m-0 text-sm text-muted" data-testid="results-line" aria-live="polite">
+      <span className="font-medium tabular-nums text-ink">{view.cards.length}</span> {view.cards.length === 1 ? 'material' : 'materials'}
+      {view.cards.length !== view.total ? <span> of {view.total}</span> : null}
+    </p>
+  )
+}
+
 export function Discover() {
   const { query, update, replace, setProject } = useDiscoverQuery()
   const view = useView(discoverView, query)
-  const today = useNow().slice(0, 10)
   const wide = useMediaQuery('(min-width: 1280px)')
   if (!view) return null
   const shared = view.tab === 'shared'
   const clearFilters = () => replace(clearDiscoverFilters(query))
   const clearEverything = () => replace({ ...clearDiscoverFilters(query), q: '', typology: null })
   const pendingShared = view.pendingSharedCount
+  const folder = query.typology && !query.q.trim() ? (view.folders.find((f) => f.typology === query.typology) ?? null) : null
   const controls = (
     <>
-      <FiltersButton query={query} options={view.filterOptions} project={view.project} today={today} onChange={update} activeCount={view.activeFilterCount} onClear={clearFilters} />
+      <FiltersButton query={query} options={view.filterOptions} availability={view.availability} onChange={update} activeCount={view.activeFilterCount} onClear={clearFilters} />
       <SortMenu view={view} onChange={(sort) => update({ sort })} />
     </>
+  )
+  const checking = (
+    <CheckingBar
+      projects={view.projects}
+      project={view.project}
+      sketch={view.projectSketch}
+      summary={view.fitSummary}
+      fitsOnly={query.fitsOnly}
+      canCreateProject={view.canCreateProject}
+      onProject={setProject}
+      onFitsOnly={(fitsOnly) => update({ fitsOnly })}
+    />
   )
 
   return (
     <Page width="wide" testId="discover">
       <header className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0 flex-1">
-            <h1 className="m-0 text-2xl font-semibold text-ink">Marketplace</h1>
-            <p className="m-0 mt-1 max-w-xl text-base text-muted">Reclaimed structure, envelope and finishes from buildings coming down across London and the South East.</p>
-          </div>
-          {shared ? null : <ProjectPicker projects={view.projects} value={view.project} onChange={setProject} className="md:shrink-0" />}
+        <div className="min-w-0">
+          <h1 className="m-0 text-2xl font-semibold text-ink">Marketplace</h1>
+          <p className="m-0 mt-1 max-w-2xl text-base text-muted">Reclaimed structure, envelope and finishes from buildings coming down across London and the South East.</p>
         </div>
         <nav aria-label="Marketplace sections" className="-mb-px flex gap-6 border-b border-line">
           {[
@@ -239,7 +260,7 @@ export function Discover() {
                 )}
               >
                 {t.label}
-                <span className={cx('inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-medium tabular-nums', active ? 'bg-ink text-white' : 'bg-subtle text-muted ring-1 ring-inset ring-line-soft')}>{t.count}</span>
+                <span className={cx('inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] px-1.5 text-2xs font-medium tabular-nums', active ? 'bg-ink text-white' : 'bg-subtle text-muted ring-1 ring-inset ring-line-soft')}>{t.count}</span>
                 {t.dot ? <span aria-label={`${pendingShared} waiting for the terms`} className="size-1.5 rounded-full bg-brand-600" /> : null}
               </button>
             )
@@ -252,12 +273,12 @@ export function Discover() {
           {view.shared.length === 0 ? (
             <EmptyState
               variant="page"
-              icon={LockKeyhole}
+              illustration="inbox"
               title="Nothing is shared with your projects yet"
               text="When a donor building owner shares lots privately with one of your projects, they appear here behind the confidentiality terms for that project."
               action={
-                <Button onClick={() => update({ tab: 'all' })} icon={Compass}>
-                  Browse the marketplace
+                <Button onClick={() => update({ tab: 'all' })} icon={Store}>
+                  Browse the Marketplace
                 </Button>
               }
             />
@@ -267,7 +288,9 @@ export function Discover() {
         </div>
       ) : (
         <>
-          <div className="z-20 -mx-4 mt-5 flex flex-col gap-3 bg-surface/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:sticky md:top-14 lg:top-0 lg:-mx-8 lg:px-8">
+          {view.project ? null : <div className="mt-6">{checking}</div>}
+          <div className={cx('z-20 -mx-4 flex flex-col gap-3 bg-surface px-4 py-3 sm:-mx-6 sm:px-6 md:sticky md:top-14 lg:top-0 lg:-mx-8 lg:px-8', view.project ? 'mt-6' : 'mt-3')} data-testid="discover-toolbar">
+            {view.project ? checking : null}
             {wide ? (
               <div className="flex items-center gap-3">
                 <SearchBox value={query.q} onChange={(q) => update({ q })} />
@@ -285,30 +308,37 @@ export function Discover() {
                 <TypologyTabs view={view} onChange={(typology) => update({ typology, family: null })} />
               </>
             )}
-            <ActiveFilters query={query} options={view.filterOptions} project={view.project} today={today} onChange={update} onClear={clearFilters} />
+            <ActiveFilters query={query} availableByLabel={view.availableByLabel} project={view.project} onChange={update} onClear={clearFilters} />
           </div>
 
-          <div className="mb-5 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-muted" data-testid="results-line">
-            <span>
-              <span className="font-medium tabular-nums text-ink">{view.cards.length}</span> {view.cards.length === 1 ? 'material' : 'materials'}
-              {view.cards.length !== view.total ? <span> of {view.total}</span> : null}
-            </span>
-            {view.project ? (
-              <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-                Timeline checked against {view.project.name}, materials needed from {view.project.startText}
-                <IndicativeMarker />
-              </span>
-            ) : (
-              <span>Choose a project to check each material against its start date.</span>
-            )}
+          {view.landing && view.empty !== 'no_listings' ? (
+            <div className="mt-6 flex flex-col gap-12">
+              <CategoryFolders folders={view.folders} project={view.project} onOpen={(typology) => update({ typology, family: null }, { push: true })} />
+              <NewForProjectsRow cards={view.newForProjects} project={view.project} />
+            </div>
+          ) : null}
+
+          {folder && view.familyChips ? (
+            <div className="mt-4">
+              <FolderHeader folder={folder} chips={view.familyChips} total={view.typologyCounts[folder.typology]} onAll={() => update({ typology: null, family: null })} onFamily={(family) => update({ family })} />
+            </div>
+          ) : null}
+
+          <div className={cx('mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1', view.landing ? 'mt-12 border-t border-line-soft pt-8' : 'mt-5')}>
+            {view.landing ? (
+              <h2 className="m-0 text-lg font-semibold text-ink" id="all-materials-h">
+                All materials
+              </h2>
+            ) : null}
+            <ResultsLine view={view} />
           </div>
 
           {view.empty === 'no_listings' ? (
-            <EmptyState variant="page" icon={PackageOpen} title="Nothing is listed yet" text="Materials appear here as donor building owners publish them. Shared lots for your projects are under Shared with you." />
+            <EmptyState variant="page" illustration="materials" title="Nothing is listed yet" text="Materials appear here as donor building owners publish them. Shared lots for your projects are under Shared with you." />
           ) : view.empty === 'no_results' ? (
             <EmptyState
               variant="page"
-              icon={SearchX}
+              illustration="search"
               title="No materials match"
               text={query.q ? `Nothing matches "${query.q}" with these filters. Try fewer words or clear the filters.` : 'Nothing matches these filters. Try removing one.'}
               action={<Button onClick={clearEverything}>Clear search and filters</Button>}

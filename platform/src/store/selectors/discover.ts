@@ -21,7 +21,8 @@ import { projectSide, projectsOfUser, roleOfUser } from '../access'
 import { lotsSharedByLinkWithOrg } from '../../domain/visibility'
 import { acceptedReservation, generalWishlist, isLotAvailable, listingOf, lotByPublicId, marketplaceListings, projectCanSee, projectWishlist, saveBlock } from '../lots'
 import { familyLabel, listingCard, projectRef, sellerPhrase, storageText, todayOf, collectionPointText, type ListingCard, type ProjectRef, fitText, FIT_LABELS, SHORTLIST_STATUS_LABELS } from './common'
-import { availabilityFilterView, categoryFolders, fitSummary, newForProjectsFeed, type AvailabilityFilterView, type CategoryFolder, type FitSummary, type NewForProjects } from './marketplace'
+import { availabilityFilterView, categoryFolders, checkingProjectSketch, fitSummary, newForProjectsFeed, type AvailabilityFilterView, type CategoryFolder, type FitSummary, type NewForProjects } from './marketplace'
+import type { BuildingSketch } from '../../domain/sketch'
 
 export type DiscoverTab = 'all' | 'shared'
 
@@ -146,6 +147,10 @@ export type DiscoverView = {
   projects: ProjectRef[]
   /** The project being checked against, when the viewer works on it. */
   project: ProjectRef | null
+  /** The drawing of the project being checked, for the checking strip. */
+  projectSketch: BuildingSketch | null
+  /** Whether the viewer can start a project (architects): the checking strip offers it when they have none. */
+  canCreateProject: boolean
   /** Listings each typology tab would show, with the search and the other filters as they stand. */
   typologyCounts: Record<Typology | 'all', number>
   cards: ListingCard[]
@@ -214,6 +219,8 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     query,
     projects: projects.map((p) => projectRef(state, p)),
     project: project ? projectRef(state, project) : null,
+    projectSketch: checkingProjectSketch(state, viewer, project?.id ?? null),
+    canCreateProject: roleOfUser(state, viewer.userId) === 'architect',
     typologyCounts: { all: count(null), structure: count('structure'), envelope: count('envelope'), finishes: count('finishes') },
     cards,
     total: all.length,
@@ -368,8 +375,8 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
       { label: 'Mass', value: f.massT(listing.massT) },
       { label: 'Condition', value: listing.condition },
       { label: 'Test status', value: TEST_STATUS_LABELS[listing.testStatus] },
-      { label: 'Availability', value: card.availabilityText },
       { label: 'Location', value: listing.location.label },
+      { label: 'Collection point', value: collectionPointText(listing) },
     ],
     specSections: SPEC_SECTIONS.filter((s) => s !== 'Price')
       .map((section) => ({ section, rows: rows.filter((r) => r.section === section).map((r) => ({ label: r.label, value: r.value })) }))

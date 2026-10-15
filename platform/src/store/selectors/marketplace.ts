@@ -9,9 +9,10 @@ import { typologyOf } from '../../domain/engines/typology'
 import { timelineFit } from '../../domain/engines/timeline'
 import { availabilityScale, availableByLabel, scalePositionOf, type AvailabilityScale } from '../../domain/engines/availability'
 import { addDays, monthKey } from '../../domain/dates'
+import { projectSketch, type BuildingSketch } from '../../domain/sketch'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
-import { marketplaceListings } from '../lots'
+import { listingOf, lotByPublicId, marketplaceListings, projectWishlist } from '../lots'
 import { familyLabel, listingCard, todayOf, type ListingCard, type ProjectRef } from './common'
 import type { DiscoverQuery } from './discover'
 
@@ -128,4 +129,21 @@ export function availabilityFilterView(listings: PublicListing[], query: Discove
     projectIndex: project ? scalePositionOf(scale, project.startDate) : null,
     projectName: project?.name ?? null,
   }
+}
+
+/**
+ * The drawing for the project being checked, from the families on its shortlist (public listings only), for the
+ * checking strip. Null when the viewer does not work on the project.
+ */
+export function checkingProjectSketch(state: AppData, viewer: Viewer, projectId: string | null): BuildingSketch | null {
+  if (!projectId) return null
+  const p = projectsOfUser(state, viewer.userId).find((x) => x.id === projectId)
+  if (!p) return null
+  const families: FamilyId[] = []
+  for (const it of projectWishlist(state.world, p.id)?.items ?? []) {
+    if (it.status === 'declined') continue
+    const lot = lotByPublicId(state.world, it.publicId)
+    if (lot) families.push(listingOf(state.world, lot).family)
+  }
+  return projectSketch(p, families)
 }

@@ -1,25 +1,49 @@
-// "Checking against": the project whose start date every card's timeline check uses.
+// The project whose start date the timeline checks use: a menu of the viewer's projects and "No project". The
+// checking strip and the material page pass their own trigger; the default is a compact labelled select.
+import type { ReactElement } from 'react'
 import { CalendarRange, Check, ChevronDown } from 'lucide-react'
 import type { ProjectRef } from '../../store/selectors/common'
 import { cx, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../ui'
 
-export function ProjectPicker({ projects, value, onChange, className }: { projects: ProjectRef[]; value: ProjectRef | null; onChange: (projectId: string | null) => void; className?: string }) {
+export function ProjectPicker({
+  projects,
+  value,
+  onChange,
+  className,
+  trigger,
+  label = 'Check against',
+  align = 'end',
+}: {
+  projects: ProjectRef[]
+  value: ProjectRef | null
+  onChange: (projectId: string | null) => void
+  className?: string
+  /** A button to open the menu with, in place of the default select. */
+  trigger?: ReactElement
+  /** The default trigger's leading words. */
+  label?: string
+  align?: 'start' | 'end'
+}) {
   if (projects.length === 0) return null
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        data-testid="project-picker"
-        className={cx(
-          'group inline-flex h-9 min-w-0 max-w-full items-center gap-2 rounded-lg border border-line bg-surface pl-2.5 pr-2 text-sm shadow-xs outline-none transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:border-line-strong max-sm:h-11',
-          className,
-        )}
-      >
-        <CalendarRange aria-hidden="true" className="size-4 shrink-0 text-muted" />
-        <span className="shrink-0 text-muted">Checking against</span>
-        <span className="truncate font-medium text-ink">{value ? value.name : 'No project'}</span>
-        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-faint transition-transform group-data-[state=open]:rotate-180" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      {trigger ? (
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger
+          data-testid="project-picker"
+          className={cx(
+            'group inline-flex h-9 min-w-0 max-w-full items-center gap-2 rounded-md border border-line bg-surface pl-2.5 pr-2 text-sm shadow-xs outline-none transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 data-[state=open]:border-line-strong max-sm:h-11',
+            className,
+          )}
+        >
+          <CalendarRange aria-hidden="true" className="size-4 shrink-0 text-muted" />
+          <span className="shrink-0 text-muted">{label}</span>
+          <span className="truncate font-medium text-ink">{value ? value.name : 'No project'}</span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-faint transition-transform group-data-[state=open]:rotate-180" />
+        </DropdownMenuTrigger>
+      )}
+      <DropdownMenuContent align={align} className="w-80">
         <DropdownMenuLabel>Check availability against a project start</DropdownMenuLabel>
         {projects.map((p) => (
           <DropdownMenuItem key={p.id} onSelect={() => onChange(p.id)} data-testid={`pick-${p.id}`} className="py-2">
@@ -33,9 +57,12 @@ export function ProjectPicker({ projects, value, onChange, className }: { projec
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onChange(null)} className="py-2">
+        <DropdownMenuItem onSelect={() => onChange(null)} data-testid="pick-none" className="py-2">
           <span className="flex w-full items-center gap-3">
-            <span className="flex-1 text-ink-soft">No project</span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-ink-soft">No project</span>
+              <span className="text-xs text-muted">Browse without a timeline check</span>
+            </span>
             {value === null ? <Check aria-label="Selected" className="size-4 shrink-0 text-brand-600!" /> : null}
           </span>
         </DropdownMenuItem>

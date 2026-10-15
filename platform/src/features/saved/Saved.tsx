@@ -1,7 +1,7 @@
 // Saved: materials the practice likes with no project yet ("that is nice, but I have no project for it"). Each can
 // move to a project when one comes along, or be removed.
 import { Link } from 'react-router'
-import { Bookmark, Compass, FolderInput, Trash2, TriangleAlert } from 'lucide-react'
+import { FolderInput, Store, Trash2, TriangleAlert } from 'lucide-react'
 import * as f from '../../domain/format'
 import { formatDate } from '../../domain/dates'
 import { act, useView } from '../../store'
@@ -82,11 +82,11 @@ export function Saved() {
       {view.empty ? (
         <EmptyState
           variant="page"
-          icon={Bookmark}
+          illustration="materials"
           title="Nothing saved yet"
           text="When a material catches your eye but has no project yet, save it here from the Marketplace. It waits until a project comes along."
           action={
-            <Button asChild variant="primary" icon={Compass}>
+            <Button asChild variant="primary" icon={Store}>
               <Link to={MARKETPLACE_PATH}>Browse the Marketplace</Link>
             </Button>
           }
@@ -107,6 +107,19 @@ export function Saved() {
               </div>
             ))}
           </div>
+          <EmptyState
+            variant="inline"
+            icon={Store}
+            title="Keep a material for later"
+            text="Save anything that catches your eye from the Marketplace. It waits here until a project comes along."
+            action={
+              <Button asChild size="sm" icon={Store}>
+                <Link to={MARKETPLACE_PATH}>Browse the Marketplace</Link>
+              </Button>
+            }
+            className="mt-12"
+            testId="saved-more"
+          />
           {gone.length > 0 ? (
             <div className="mt-12">
               <h2 className="m-0 mb-3 text-md font-semibold text-ink">No longer available</h2>

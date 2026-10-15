@@ -148,7 +148,7 @@ describe('shell and Marketplace', () => {
   it('checks the cards against a project named in the address', async () => {
     open(`/app/marketplace?project=${MERROWGATE_ID}`)
     await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
-    expect(byTestId('results-line').textContent).toContain('Timeline checked against Merrowgate Wharf')
+    expect(byTestId('checking-bar').textContent).toContain('Checking against Merrowgate Wharf')
   })
 
   it('sends an old Discover link to the Marketplace, keeping the query', async () => {

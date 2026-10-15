@@ -71,7 +71,7 @@ export function SaveMenu({ publicId, title, trigger, align = 'end' }: { publicId
 }
 
 /** The Save control over a card's picture: "Save", or "Saved" in green once it is on any list. */
-export function CardSaveButton({ card }: { card: ListingCard }) {
+export function CardSaveButton({ card, testId = `save-${card.publicId}` }: { card: ListingCard; testId?: string }) {
   const saved = card.savedIn.length > 0
   const where = card.savedIn.map((s) => s.label).join(', ')
   return (
@@ -81,11 +81,11 @@ export function CardSaveButton({ card }: { card: ListingCard }) {
       trigger={
         <button
           type="button"
-          data-testid={`save-${card.publicId}`}
+          data-testid={testId}
           aria-label={saved ? `Saved to ${where}. Change where ${card.title} is saved` : `Save ${card.title}`}
           className={cx(
-            'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium shadow-[0_1px_2px_rgb(28_25_23/0.12),0_4px_12px_-4px_rgb(28_25_23/0.25)] ring-1 backdrop-blur-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-10 [&_svg]:size-4',
-            saved ? 'bg-brand-600 text-white ring-brand-700/40 hover:bg-brand-700' : 'bg-white/95 text-ink ring-black/5 hover:bg-white',
+            'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium shadow-xs ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:h-11 [&_svg]:size-4',
+            saved ? 'bg-brand-600 text-white ring-brand-700/40 hover:bg-brand-700' : 'bg-surface text-ink ring-line hover:ring-line-strong',
           )}
         >
           {saved ? <BookmarkCheck aria-hidden="true" /> : <Bookmark aria-hidden="true" />}

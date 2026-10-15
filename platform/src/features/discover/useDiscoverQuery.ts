@@ -1,6 +1,6 @@
 // Discover's state lives in the address bar, so Back, reload and shared links restore it. The project the cards
 // are checked against is remembered per person and can be set from a link (?project=).
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 import { useApp, useView } from '../../store'
 import { useSessionId } from '../../store/sessionId'
@@ -16,9 +16,17 @@ export function useCheckingProject(): [string | null, (projectId: string | null)
   const stored = useApp((s) => (userId ? s.ui.checkingProjectId[userId] : undefined))
   const setChecking = useApp((s) => s.setCheckingProject)
 
-  // A link that names a project makes it the person's choice from then on.
+  // A link that names a project makes it the person's choice from then on. This syncs once per address, so a
+  // change or clear made here is not undone in the moment before the address catches up.
+  const synced = useRef<string | null>(null)
   useEffect(() => {
-    if (fromAddress && projectId === fromAddress && stored !== fromAddress) setChecking(fromAddress)
+    if (!fromAddress) {
+      synced.current = null
+      return
+    }
+    if (projectId !== fromAddress || synced.current === fromAddress) return
+    synced.current = fromAddress
+    if (stored !== fromAddress) setChecking(fromAddress)
   }, [fromAddress, projectId, stored, setChecking])
 
   const set = useCallback(
@@ -39,19 +47,22 @@ export function useCheckingProject(): [string | null, (projectId: string | null)
   return [projectId, set]
 }
 
-export function useDiscoverQuery(): { query: DiscoverQuery; update: (patch: Partial<DiscoverQuery>) => void; replace: (q: DiscoverQuery) => void; setProject: (id: string | null) => void } {
+/** `push` adds a history entry (opening a category folder), so Back returns to where the person was. */
+export type QueryWrite = { push?: boolean }
+
+export function useDiscoverQuery(): { query: DiscoverQuery; update: (patch: Partial<DiscoverQuery>, opts?: QueryWrite) => void; replace: (q: DiscoverQuery, opts?: QueryWrite) => void; setProject: (id: string | null) => void } {
   const [params, setParams] = useSearchParams()
   const [projectId, setProject] = useCheckingProject()
   const query = useMemo(() => discoverQueryFromParams(params, projectId), [params, projectId])
   const keepProject = params.has(DISCOVER_PARAM.projectId)
   const replace = useCallback(
-    (q: DiscoverQuery) => {
+    (q: DiscoverQuery, opts: QueryWrite = {}) => {
       const next = discoverParamsFor(q)
       if (!keepProject) delete next[DISCOVER_PARAM.projectId]
-      setParams(next, { replace: true })
+      setParams(next, { replace: !opts.push })
     },
     [keepProject, setParams],
   )
-  const update = useCallback((patch: Partial<DiscoverQuery>) => replace({ ...query, ...patch }), [query, replace])
+  const update = useCallback((patch: Partial<DiscoverQuery>, opts?: QueryWrite) => replace({ ...query, ...patch }, opts), [query, replace])
   return { query, update, replace, setProject }
 }
