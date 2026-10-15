@@ -73,7 +73,7 @@ function RowMenu({ row, projectId, onDialog }: { row: ShortlistRow; projectId: s
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={`Actions for ${row.title}`} data-testid={`row-menu-${row.publicId}`} className="relative z-[2] inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover max-sm:size-10">
+        <button type="button" aria-label={`Actions for ${row.title}`} data-testid={`row-menu-${row.publicId}`} className="relative z-[2] inline-flex size-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-hover max-sm:size-11">
           <Ellipsis aria-hidden="true" className="size-4" />
         </button>
       </DropdownMenuTrigger>

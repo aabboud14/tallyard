@@ -48,6 +48,11 @@ describe('the sustainability seed', () => {
     expect(review).toMatchObject({ orgId: ORG_IDS.lantern, title: 'Circular economy statement ready for review', readBy: [U.isla] })
     const texts = s.activity.filter((a) => a.projectId === MERROWGATE_ID && a.actorUserId === U.marcus).map((a) => a.text)
     expect(texts).toEqual(['sent the circular economy statement to Lantern Quay Developments for review', 'marked BREEAM New Construction as at risk', 'recorded upfront carbon, modules A1 to A5: 820 kgCO2e per m2', 'set the targets for Merrowgate Wharf'])
-    expect(s.activity.find((a) => a.projectId === KILNWORTH_ID)).toMatchObject({ actor: 'Tessaly Architects', text: 'added Lantern Quay Developments as the client on Kilnworth Place' })
+    // BRIEF 14.3: a client joins a project by accepting the architect's request, so the history reads that way.
+    expect(s.activity.filter((a) => a.projectId === KILNWORTH_ID).map((a) => [a.actor, a.text])).toEqual([
+      ['Lantern Quay Developments', 'accepted the project as client'],
+      ['Tessaly Architects', 'asked to add Lantern Quay Developments as client'],
+    ])
+    expect(s.activity.some((a) => a.text.startsWith('added Lantern Quay Developments'))).toBe(false)
   })
 })

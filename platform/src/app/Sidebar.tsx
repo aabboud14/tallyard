@@ -196,6 +196,8 @@ function GroupLabel({ label, orgId }: { label: string; orgId: string | null }) {
 function SectionHeader({ section, pathname, onNavigate }: { section: NavSection; pathname: string; onNavigate?: () => void }) {
   const list = SECTION_LISTS[section.id]
   const here = list !== undefined && pathname === list
+  // Project requests has a sidebar item only while one waits; once answered, the page still belongs to Projects.
+  const within = here || (list !== undefined && section.id === 'projects' && pathname === `${list}/requests`)
   return (
     <>
       <div className="mb-1 flex min-w-0 items-center gap-1">
@@ -204,7 +206,8 @@ function SectionHeader({ section, pathname, onNavigate }: { section: NavSection;
             to={list}
             onClick={onNavigate}
             aria-current={here ? 'page' : undefined}
-            className={cx('group/title flex h-6 min-w-0 flex-1 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-9', here ? 'text-ink' : 'text-muted')}
+            className={cx('group/title flex h-6 min-w-0 flex-1 items-center justify-between rounded px-2 text-xs font-medium outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600 max-lg:h-9', within ? 'text-ink' : 'text-muted')}
+            data-within={within || undefined}
           >
             <span className="truncate">{section.title}</span>
             <span className="text-[11px] font-normal text-faint opacity-0 transition-opacity group-hover/title:opacity-100 group-focus-visible/title:opacity-100">View all</span>

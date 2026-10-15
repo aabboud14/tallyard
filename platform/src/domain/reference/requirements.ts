@@ -29,6 +29,8 @@ export type PlanningRequirement = {
 
 export const REQUIREMENTS_AS_AT = 'October 2026'
 export const REQUIREMENTS_NOTE = 'Indicative summaries as at October 2026. Check the current published documents before you rely on them.'
+/** The same note where an Indicative marker already stands in front of it, so the word is not said twice. */
+export const REQUIREMENTS_NOTE_AFTER_MARKER = 'Summaries as at October 2026. Check the current published documents before you rely on them.'
 
 export const KIND_LABELS: Record<RequirementKind, string> = {
   planning_policy: 'Planning policy',

@@ -26,7 +26,7 @@ export function RequirementsPicker({ choices, selected, onChange, selectedText, 
       <div className="flex flex-col gap-3 rounded-lg bg-subtle/70 px-3.5 py-3 ring-1 ring-inset ring-line-soft sm:flex-row sm:items-center sm:justify-between">
         <p className="m-0 flex min-w-0 items-start gap-2 text-sm text-ink-soft">
           <IndicativeMarker className="mt-px shrink-0" />
-          <span>{choices.note}</span>
+          <span>{choices.markerNote}</span>
         </p>
         <div className="flex shrink-0 gap-2">
           <Button size="sm" icon={Sparkles} onClick={() => onChange(new Set(choices.suggestedIds))} data-testid="requirements-suggested">

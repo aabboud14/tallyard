@@ -15,16 +15,8 @@ export function LinkRequests() {
   if (!v) return null
   const nothing = v.pending.length === 0 && v.answered.length === 0
   return (
-    <Page testId="link-requests" width="narrow">
-      <PageHeader
-        title="Project requests"
-        subtitle="Architects ask before they add you as the client on a project. Accept to see the project and approve materials for it."
-        leading={
-          <span className="inline-flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-            <Inbox aria-hidden="true" className="size-5" />
-          </span>
-        }
-      />
+    <Page testId="link-requests">
+      <PageHeader title="Project requests" subtitle="Architects ask before they add you as the client on a project. Accept to see the project and approve materials for it." />
       {v.pending.length === 0 ? (
         nothing ? (
           <EmptyState

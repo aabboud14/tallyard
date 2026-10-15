@@ -103,7 +103,9 @@ export function seedSustainability(state: AppData, todayIso: string, now: string
   const entry = (k: number, hh: number, text: string, path: string) => {
     s = log(s, { at: at(k, hh), orgIds: mgOrgs, projectId: MERROWGATE_ID, buildingId: null, actorUserId: MARCUS, actor: 'Marcus Lindqvist', text, href: `${mgHref}${path}` })
   }
-  s = log(s, { at: at(45, 10), orgIds: [TESSALY_ORG_ID, ORG_IDS.lantern], projectId: KILNWORTH_ID, buildingId: null, actorUserId: null, actor: 'Tessaly Architects', text: 'added Lantern Quay Developments as the client on Kilnworth Place', href: `/app/projects/${KILNWORTH_ID}` })
+  // Kilnworth Place's client joined the way every client now does: the practice asked, Lantern Quay accepted.
+  s = log(s, { at: at(45, 10), orgIds: [TESSALY_ORG_ID, ORG_IDS.lantern], projectId: KILNWORTH_ID, buildingId: null, actorUserId: null, actor: 'Tessaly Architects', text: 'asked to add Lantern Quay Developments as client', href: `/app/projects/${KILNWORTH_ID}` })
+  s = log(s, { at: at(45, 14), orgIds: [TESSALY_ORG_ID, ORG_IDS.lantern], projectId: KILNWORTH_ID, buildingId: null, actorUserId: null, actor: 'Lantern Quay Developments', text: 'accepted the project as client', href: `/app/projects/${KILNWORTH_ID}` })
   entry(40, 10, `set the targets for ${mg.name}`, '/targets')
   entry(18, 11, 'recorded upfront carbon, modules A1 to A5: 820 kgCO2e per m2', '/targets')
   const breeamTitle = applicableRequirements(mg).find((r) => r.id === BREEAM)?.title

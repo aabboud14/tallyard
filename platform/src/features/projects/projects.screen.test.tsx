@@ -11,10 +11,11 @@ import { setClockForTests } from '../../sandbox/clock'
 import { getData, useApp } from '../../store/app'
 import { signOut } from '../../store/session'
 import { setSessionUserId } from '../../store/sessionId'
-import { createProject, type NewProjectInput } from '../../store/actions/projects'
-import { MERROWGATE_ID } from '../../domain/seed/world'
+import { createProject, decideClientLink, type NewProjectInput } from '../../store/actions/projects'
+import { MERROWGATE_ID, SALLOW_ID } from '../../domain/seed/world'
 import { U } from '../../test/fixtures'
 import { routes } from '../../app/router'
+import { snapshot } from '../../ui/toastStore'
 
 const NOW = '2026-10-08T10:00:00.000Z'
 
@@ -145,6 +146,45 @@ describe('a new project', () => {
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 
+  it('keeps the checklist compact, with the waiting client folded in, and opens every step on request', async () => {
+    const id = corbel()
+    open(`/app/projects/${id}`)
+    await waitFor(() => q('setup-current'))
+    const setup = byTestId('project-setup')
+    expect(byTestId('setup-current').getAttribute('data-step')).toBe('programme')
+    expect(byTestId('setup-current').textContent).toContain('Confirm the dates or edit them.')
+    expect(setup.textContent).not.toContain('Indicative:')
+    // The waiting client is one line inside the checklist, with one way to change the client.
+    expect(setup.contains(byTestId('client-link-banner'))).toBe(true)
+    expect(byTestId('client-link-banner').getAttribute('data-variant')).toBe('inline')
+    expect(document.querySelectorAll('[data-testid="link-change-client"], [data-testid="setup-secondary-client"]')).toHaveLength(1)
+    // The programme follows the checklist directly.
+    expect(setup.nextElementSibling).toBe(byTestId('programme-card'))
+    const toggle = byTestId('setup-toggle')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    click(toggle)
+    await waitFor(() => q('setup-current') === null)
+    expect(byTestId('setup-toggle').getAttribute('aria-expanded')).toBe('true')
+    expect(byTestId('setup-step-programme').textContent).toContain('Check the programme')
+    expect(q('setup-action-programme')).not.toBeNull()
+    expect(allText()).not.toMatch(FORBIDDEN)
+  })
+
+  it('shows the full banner, outside the checklist, once the client declines', async () => {
+    const id = corbel()
+    const r = decideClientLink(getData(), { userId: U.isla, now: NOW }, id, 'declined', 'We are not the client on this scheme.')
+    expect(r.error).toBeNull()
+    useApp.getState().commit(r.state)
+    open(`/app/projects/${id}`)
+    await waitFor(() => q('client-link-banner'))
+    const banner = byTestId('client-link-banner')
+    expect(banner.getAttribute('data-status')).toBe('declined')
+    expect(banner.getAttribute('data-variant')).toBeNull()
+    expect(byTestId('project-setup').contains(banner)).toBe(false)
+    expect(banner.textContent).toContain('Their note: We are not the client on this scheme.')
+    expect(q('link-ask-again')).not.toBeNull()
+  })
+
   it('refuses a programme whose stages are out of order, on the field', async () => {
     const id = corbel()
     open(`/app/projects/${id}`)
@@ -189,6 +229,33 @@ describe('a new project', () => {
     open(`/app/projects/${id}/shortlist`)
     await waitFor(() => q('client-link-banner'))
     expect((byTestId('send-to-client') as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('editing project details', () => {
+  it('says which requirements a move drops, and offers to review them with the new suggestions', async () => {
+    open(`/app/projects/${SALLOW_ID}`)
+    await waitFor(() => Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Edit'))
+    click(Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Edit')!)
+    await waitFor(() => q('edit-project-region'))
+    expect(q('edit-project-requirements-note')).toBeNull()
+    choose(byTestId('edit-project-region'), 'Inner London East')
+    await waitFor(() => q('edit-project-local-authority'))
+    choose(byTestId('edit-project-local-authority'), 'Hackney')
+    await waitFor(() => q('edit-project-requirements-note'))
+    expect(byTestId('edit-project-requirements-note').textContent).toContain('2 chosen requirements no longer apply to Hackney, Inner London East. 1 more is suggested there.')
+    click(byTestId('edit-project-save'))
+    await waitFor(() => getData().world.projects[SALLOW_ID].localAuthority === 'Hackney')
+    expect(getData().world.projects[SALLOW_ID].planningRequirementIds).not.toContain('la-camden-cc1')
+    // The toast says it again and offers the review (the toaster is mounted above the router, so call its action).
+    const saved = snapshot().find((t) => t.title === 'Project details saved')!
+    expect(saved.description).toBe('2 chosen requirements no longer apply to Hackney, Inner London East. 1 more is suggested there.')
+    expect(saved.action!.label).toBe('Review requirements')
+    act(() => saved.action!.onClick())
+    await waitFor(() => q('requirements-picker'))
+    expect(byTestId('requirement-check-la-hackney-lp33').getAttribute('data-state')).toBe('checked')
+    expect(byTestId('requirement-check-lp-si7').getAttribute('data-state')).toBe('checked')
+    expect(allText()).not.toMatch(FORBIDDEN)
   })
 })
 

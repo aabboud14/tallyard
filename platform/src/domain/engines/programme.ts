@@ -33,7 +33,11 @@ export type ProgrammeStatus = 'on' | 'behind' | 'ahead' | 'not_started'
 export type ProgrammeCheck = { status: ProgrammeStatus; planned: number | null; declared: number }
 
 export type AxisTick = { iso: string; at: number; label: string | null; major: boolean }
-export type ProgrammeAxis = { start: string; end: string; spanDays: number; ticks: AxisTick[] }
+/**
+ * startLabel names the month at the left edge, for example 'Sep 2025', when the first tick there carries no label of
+ * its own (a long axis labels only Januaries), so the first band never floats without a date. Null otherwise.
+ */
+export type ProgrammeAxis = { start: string; end: string; spanDays: number; ticks: AxisTick[]; startLabel: string | null }
 
 /** A strict ISO calendar date: the right shape and a real day. */
 function isRealDate(s: string): boolean {
@@ -168,7 +172,9 @@ export function programmeAxis(start: string, end: string): ProgrammeAxis {
     else label = m === 1 ? year : null
     return { iso, at: at(iso), label, major: (m - 1) % 3 === 0 }
   })
-  return { start, end, spanDays, ticks }
+  const first = ticks[0]
+  const startLabel = first && first.at === 0 && first.label !== null ? null : `${MONTHS_SHORT[Number(start.slice(5, 7)) - 1]} ${start.slice(0, 4)}`
+  return { start, end, spanDays, ticks, startLabel }
 }
 
 /** A date's position along the axis, from 0 to 1. */

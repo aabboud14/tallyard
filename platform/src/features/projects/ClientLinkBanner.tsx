@@ -1,6 +1,8 @@
 // What the architect sees while the client organisation has not accepted the project: a banner on the overview and
 // the shortlist, and the dialog to ask again or ask another client. Only the organisation's name shows, never its
-// people (projects-timeline design D6).
+// people (projects-timeline design D6). While the client has not answered, the overview folds the banner into the
+// setup checklist as one line (variant 'inline'), so the programme stays on the first screen; a decline keeps the
+// full banner.
 import { useState } from 'react'
 import { Hourglass, Send, UserRoundX, Users } from 'lucide-react'
 import { act, useView } from '../../store'
@@ -13,12 +15,41 @@ const NEW_CLIENT = '__new__'
 export type ChangeClientMode = 'ask_again' | 'another'
 
 /** The banner, with its own dialog. Renders nothing once the client has accepted, or for anyone but the architect. */
-export function ClientLinkBanner({ projectId, onChangeClient }: { projectId: string; onChangeClient?: (mode: ChangeClientMode) => void }) {
+export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner' }: { projectId: string; onChangeClient?: (mode: ChangeClientMode) => void; variant?: 'banner' | 'inline' }) {
   const link = useView(clientLinkView, projectId)
   const [mode, setMode] = useState<ChangeClientMode | null>(null)
   if (!link) return null
   const open = (m: ChangeClientMode) => (onChangeClient ? onChangeClient(m) : setMode(m))
   const declined = link.status === 'declined'
+  const dialog = onChangeClient ? null : <ChangeClientDialog projectId={projectId} mode={mode} onClose={() => setMode(null)} />
+  if (variant === 'inline' && !declined) {
+    const Icon = link.clientHasMembers ? Hourglass : Users
+    return (
+      <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <p className="m-0 flex min-w-0 items-start gap-2.5 text-sm text-ink-soft">
+          <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
+          <span>
+            {link.clientHasMembers ? (
+              <>
+                <span className="font-medium text-ink">Waiting for {link.clientName} to accept this project.</span> Until they do, they cannot see it and you cannot send materials for approval. {link.requestedText}.
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-ink">
+                  Nobody from {link.clientName} uses {PRODUCT_NAME} yet.
+                </span>{' '}
+                Nobody can accept this project until someone joins. You can still shortlist materials.
+              </>
+            )}
+          </span>
+        </p>
+        <Button size="sm" variant="ghost" onClick={() => open('another')} data-testid="link-change-client" className="shrink-0 self-start max-md:ml-4 md:self-auto">
+          Change client
+        </Button>
+        {dialog}
+      </div>
+    )
+  }
   const buttons = (
     <div className="flex flex-wrap gap-2">
         {declined ? (
@@ -56,7 +87,7 @@ export function ClientLinkBanner({ projectId, onChangeClient }: { projectId: str
         )}
         <div className="mt-3">{buttons}</div>
       </Callout>
-      {onChangeClient ? null : <ChangeClientDialog projectId={projectId} mode={mode} onClose={() => setMode(null)} />}
+      {dialog}
     </div>
   )
 }

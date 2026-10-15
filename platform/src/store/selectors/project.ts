@@ -127,7 +127,8 @@ export type ProjectListRow = ProjectRef & {
   linkStatus: ClientLinkStatus
 }
 
-export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean }
+/** requestsHref: Project requests, for a client with any request, waiting or answered; null otherwise. */
+export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean; requestsHref: string | null }
 
 export function projectsListView(state: AppData, viewer: Viewer): ProjectsListView {
   const orgId = state.users[viewer.userId]?.orgId
@@ -150,7 +151,9 @@ export function projectsListView(state: AppData, viewer: Viewer): ProjectsListVi
     }
   })
   rows.sort((a, b) => ((a.lastActivityAt ?? '') < (b.lastActivityAt ?? '') ? 1 : (a.lastActivityAt ?? '') > (b.lastActivityAt ?? '') ? -1 : a.name.localeCompare(b.name, 'en-GB')))
-  return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0 }
+  const requests = clientLinkRequests(state, viewer)
+  const requestsHref = requests && requests.pending.length + requests.answered.length > 0 ? '/app/projects/requests' : null
+  return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
 }
 
 export type NewProjectOptions = {
@@ -387,13 +390,19 @@ export type SetupIntent = 'edit_programme' | 'keep_programme' | 'requirements' |
 export type SetupStep = {
   id: 'programme' | 'client' | 'requirements' | 'consultant' | 'shortlist' | 'send'
   title: string
+  /** One or two words for the compact strip, for example 'Programme'. */
+  short: string
   text: string
   state: SetupStepState
   optional: boolean
   action: { label: string; href: string | null; intent: SetupIntent } | null
   secondary: { label: string; intent: SetupIntent } | null
 }
-export type ProjectSetup = { visible: boolean; done: number; total: number; steps: SetupStep[]; nextText: string | null }
+/**
+ * focusId is the step the compact checklist leads with: the first that needs the architect (current or attention),
+ * otherwise the first not yet done. Null once every step is done.
+ */
+export type ProjectSetup = { visible: boolean; done: number; total: number; steps: SetupStep[]; nextText: string | null; focusId: SetupStep['id'] | null }
 
 function lowerFirst(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1)
@@ -413,7 +422,8 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'programme',
     title: 'Check the programme',
-    text: programmeSet ? 'Stage dates, site start and practical completion are set.' : 'Suggested from your site start and typical stage lengths. Indicative: confirm the dates or edit them.',
+    short: 'Programme',
+    text: programmeSet ? 'Stage dates, site start and practical completion are set.' : 'Suggested from your site start and typical stage lengths. Confirm the dates or edit them.',
     optional: false,
     action: programmeSet ? null : { label: 'Edit programme', href: null, intent: 'edit_programme' },
     secondary: programmeSet ? null : { label: 'Keep these dates', intent: 'keep_programme' },
@@ -425,6 +435,7 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'client',
     title: 'Client accepts the project',
+    short: 'Client',
     text: linked ? `${clientName} accepted the project.` : declined ? `${clientName} declined this project.` : `Waiting for ${clientName} to accept.`,
     optional: false,
     action: declined ? { label: 'Ask again', href: null, intent: 'change_client' } : null,
@@ -436,6 +447,7 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'requirements',
     title: 'Choose planning and sustainability requirements',
+    short: 'Requirements',
     text: p.requirementsReviewed ? plural(p.planningRequirementIds.length, 'requirement') + ' chosen.' : 'Pick the policies and standards to track for this location.',
     optional: true,
     action: { label: p.requirementsReviewed ? 'Edit requirements' : 'Choose requirements', href: null, intent: 'requirements' },
@@ -448,6 +460,7 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'consultant',
     title: 'Add a sustainability consultant',
+    short: 'Consultant',
     text: consultantName ? `${consultantName} is on the team.` : 'They can follow carbon and compliance on this project.',
     optional: true,
     action: { label: consultantName ? 'Open team' : 'Add consultant', href: `${base}/team`, intent: null },
@@ -459,6 +472,7 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'shortlist',
     title: 'Shortlist materials',
+    short: 'Shortlist',
     text: items.length > 0 ? `${plural(items.length, 'material')} on the shortlist.` : 'Find materials that arrive in time for this project.',
     optional: false,
     action: { label: 'Find materials', href: marketplaceHref(projectId), intent: null },
@@ -471,6 +485,7 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   drafts.push({
     id: 'send',
     title: 'Send materials for approval',
+    short: 'Send',
     text: sentAny ? 'Materials have gone to the client.' : linked ? `Send shortlisted materials to ${clientName}.` : 'Opens once the client accepts the project.',
     optional: false,
     action: { label: 'Open shortlist', href: `${base}/shortlist`, intent: null },
@@ -493,12 +508,14 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   const first = drafts.findIndex((d) => !d.done && !d.waiting)
   const doneCount = drafts.filter((d) => d.done).length
   const doneById = (id: SetupStep['id']) => drafts.find((d) => d.id === id)!.done
+  const focus = steps.find((x) => x.state === 'current' || x.state === 'attention') ?? steps.find((x) => x.state !== 'done') ?? null
   return {
     visible: !(doneById('programme') && doneById('client') && doneById('shortlist')),
     done: doneCount,
     total: drafts.length,
     steps,
     nextText: first >= 0 ? `Next: ${lowerFirst(drafts[first].title)}` : null,
+    focusId: focus ? focus.id : null,
   }
 }
 

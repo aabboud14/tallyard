@@ -7,9 +7,10 @@ import { projectRequirementsView, requirementChoiceSummary } from '../../store/s
 import { Button, Callout, Dialog, toast } from '../../ui'
 import { RequirementsPicker } from './RequirementsPicker'
 
-type Props = { projectId: string; open: boolean; onOpenChange: (open: boolean) => void }
+/** preselect starts the ticks from these IDs instead of what the project tracks, for example after a move. */
+type Props = { projectId: string; open: boolean; onOpenChange: (open: boolean) => void; preselect?: string[] | null }
 
-export function RequirementsDialog({ projectId, open, onOpenChange }: Props) {
+export function RequirementsDialog({ projectId, open, onOpenChange, preselect = null }: Props) {
   const view = useView(projectRequirementsView, projectId)
   if (!view || !view.canEdit) return null
   return (
@@ -29,7 +30,7 @@ export function RequirementsDialog({ projectId, open, onOpenChange }: Props) {
         </>
       }
     >
-      {open ? <RequirementsForm projectId={projectId} initial={view.selected.map((r) => r.id)} onDone={() => onOpenChange(false)} /> : null}
+      {open ? <RequirementsForm projectId={projectId} initial={preselect ?? view.selected.map((r) => r.id)} onDone={() => onOpenChange(false)} /> : null}
     </Dialog>
   )
 }

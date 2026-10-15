@@ -162,7 +162,7 @@ function StepCard({ step, n }: { step: Step; n: number }) {
         <h3 className="m-0 text-base font-semibold text-ink">{step.title}</h3>
         <p className="m-0 mt-0.5 text-sm text-ink-soft">{step.text}</p>
         {step.href ? (
-          <Link to={step.href} className="mt-2 inline-flex rounded-sm text-sm font-medium text-brand-700 hover:underline max-sm:min-h-11 max-sm:items-center">
+          <Link to={step.href} className="mt-2 inline-flex rounded-sm text-sm font-medium text-brand-700 hover:underline max-sm:-mx-2 max-sm:min-h-11 max-sm:min-w-11 max-sm:items-center max-sm:px-2">
             {step.cta}
           </Link>
         ) : null}
@@ -248,7 +248,7 @@ function Methodology() {
         </div>
         <nav aria-label="Factor groups" className="mt-3 flex flex-wrap gap-1.5">
           {m.groups.map((g) => (
-            <a key={g.group} href={`#group-${slug(g.group)}`} className="rounded-full bg-subtle px-2.5 py-1 text-sm text-ink-soft ring-1 ring-inset ring-line-soft hover:bg-hover hover:text-ink max-sm:py-2.5">
+            <a key={g.group} href={`#group-${slug(g.group)}`} className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-sm text-ink-soft ring-1 ring-inset ring-line-soft hover:bg-hover hover:text-ink max-sm:min-h-11">
               {g.group}
             </a>
           ))}
