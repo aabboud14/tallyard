@@ -213,3 +213,49 @@ These assertions change because the partner changed the product, not to make cod
 - Labels "Discover" and "Waiting on" become "Marketplace" and "Waiting for approval"; "Priorities" becomes "Recovery plan".
 - Quarter labels go on every surface, the seller side included: the blind buyer line "needed by Q2 2028" becomes "needed April to June 2028". It is the same three-month window, so `toBlindBuyer` discloses nothing more; its tests change to the new wording.
 - The category folders' fit count uses the same words as the checking strip, so the two read alike.
+
+### 14.5 Follow-up from the recording audit (16 October 2026)
+The recording audit found gaps between the round 2 build and the review. Seven packages closed them; each package's notes, decisions and changed assertions are in `feedback/r2f-<package>.md`, and the merge's own in `feedback/r2f-merge.md`.
+
+Owner, surveyor and contractor (`feedback/r2f-owner.md`)
+- A surveyor moves what she captured early into the building an owner later appointed her to (`mergeSurveyBuilding`), from a prompt on her home, Appointments and the building's Overview; an owner asked to confirm a building he already has confirms it into his own record.
+- A testing request carries its message, preferred date and a request sheet (`testingRequestText`) that both sides can view, copy and download; the toast keeps Undo.
+- Harrowden Court is seeded with Tarnbrook as contractor. Changing or removing a contractor clears its dates (Undo restores them). Contractors can be invited by email; an invite waits on the building until a firm with that email joins, and reveals nothing about other organisations.
+- Every owner gets the Marketplace with the client view (prices, no save) and never sees its own lots; the owner home shows recoverable value (Indicative) and, once it has a New project, the developer figures.
+- Add new project opens on New project; the last Priority labels read Recovery plan; a link this browser never saw says so instead of looking revoked; buildings get an activity page.
+
+Client and consultant (`feedback/r2f-client_consultant.md`)
+- A consultancy is asked only after the client accepts and sees the project only once it accepts too (`Project.consultantLink`); until then it is named as waiting to accept or declined, never as setting targets.
+- A new client contact email issues a project invite; signing up with that email joins the client organisation, and the open sign-up page names no organisation or project.
+- The consultant gets his own Overview section and Projects list, home meters read the Goals and targets rows (secured carbon), and Targets met counts every goal with a target.
+- The circular economy statement is rewritten, bulleted on screen and in Word, and frozen on send; later edits keep the sent copy with the client and offer "Send the updated statement".
+- Developer tracking shows every scheme cell with a rating state from one pure rule (`goalState`).
+
+Requirements (`feedback/r2f-requirements.md`)
+- An unreviewed project tracks the suggested requirements, and every screen says so; a move adds the new place's suggestions on saving.
+- London regions follow the ONS inner and outer split; the other English regions, Wales and Scotland are added with hub distances labelled as Tallyard estimates and "Not yet summarised" placeholders.
+- The local authority dropdown lists every authority grouped by region and sets the region; a listed authority is valid only in its own region, in project forms and donor building forms alike.
+- Donor buildings get requirements before demolition, tracked by the owner and the surveyor (a contractor alone and buyers cannot open them), with at-risk badges and lines on both homes.
+
+Marketplace and material pages (`feedback/r2f-market.md`)
+- The home link lands on the New for {project} row, also from a pasted or reloaded address, and Back returns to it (`scrollPlan`).
+- A project named in a link applies to that visit only; the material page keeps it on the way back.
+- The client waiting pill reads "Client to accept" with a neutral envelope icon; the sidebar menu names the current order.
+- The material page stage draws technical drawings on plain white; UC columns stand upright. Quarter helpers are fenced by a guard test.
+
+Look and first runs (`feedback/r2f-look.md`)
+- A project draws the same for every role (`projectVisual`), with the facade typical of its use where nothing shortlisted shows one, labelled as typical.
+- Marketplace steel cards lead with the cut end of the member at one common scale; the material page keeps the axonometric.
+- New projects lead the architect home with their setup and next step; Active projects counts only accepted projects; each card splits its new materials by fit and by likeness to its shortlist.
+- New architects, clients, consultancies, owners and surveying firms open on a first run with next steps instead of zero tiles. The landing product shot runs the real seed and lists the six frameworks.
+
+Programme (`feedback/r2f-programme.md`)
+- The programme card leads every overview, with Keep these dates and Edit programme on the card only; the setup checklist follows as one strip leading with the next required step.
+- Stage bands name themselves when they fit, today's stage always, with a key, keyboard focus and a tap panel; the whole programme ends 120 days after practical completion.
+- The axis labels months, never quarters, thinned by width so labels never collide and a year is always named.
+- The client may set the programme of their own new project until an architect is appointed; those dates then read as the client's until the architect confirms them.
+
+Returning visitors (`feedback/r2f-upgrade.md`)
+- The state key is versioned (`tallyard-platform-v2-state`), so a tab of an older build can no longer reseed the new one.
+- A replaced version 1 sandbox, or a version 2 sandbox carried over from the earlier round 2 build, shows a closable notice on every home with "See what changed" (Help, Updated on 16 October).
+- Sign-in after the update explains that earlier accounts need creating again, except for a likely typo, and sign-up starts with the typed email; open tabs offer Reload when a newer build is deployed.
