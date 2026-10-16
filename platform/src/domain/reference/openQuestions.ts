@@ -33,7 +33,7 @@ export const OPEN_QUESTIONS: { group: string; items: string[] }[] = [
   {
     group: 'Disclosure',
     items: [
-      'Are region and quarter coarse enough as defaults? A full frame listed openly may still be identifiable to someone who knows the local stock. Is private matching with owner approval attractive during underwriting? Should an owner be able to see or exclude a buyer before approving?',
+      'Are region and a three-month window coarse enough as defaults? A full frame listed openly may still be identifiable to someone who knows the local stock. Is private matching with owner approval attractive during underwriting? Should an owner be able to see or exclude a buyer before approving?',
       'Provenance: what do assessors and the steel reuse protocol need to know about the source building, and can the platform attest to it without naming the building?',
       'Market data: is there a version of vacancy and pipeline insight that owners would accept being sold? Is supply data aggregated across five or more organisations still worth buying? This prototype builds neither vacancy nor pipeline insight.',
     ],

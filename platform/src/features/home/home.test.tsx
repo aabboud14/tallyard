@@ -118,7 +118,7 @@ describe('architect home', () => {
     expect(document.querySelector('[data-testid="new-for-projects"]')).toBeNull()
     expect(document.body.textContent).not.toContain('Waiting on')
     const fits = byTestId(`home-new-fits-${MERROWGATE_ID}`)
-    expect(fits.getAttribute('href')).toBe(`/app/marketplace?project=${MERROWGATE_ID}`)
+    expect(fits.getAttribute('href')).toBe(`/app/marketplace?project=${MERROWGATE_ID}#new-for-projects`)
     expect(fits.textContent).toMatch(/^\d+ new materials? fits?$/)
     // The stage strip names the stage the programme places today in.
     expect(byTestId(`home-stage-${MERROWGATE_ID}`).querySelector('[role="img"]')!.getAttribute('aria-label')).toBe('RIBA stage 2 of 7, Concept Design')

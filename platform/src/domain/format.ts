@@ -110,6 +110,10 @@ export function date(iso: string): string {
   return formatDate(iso)
 }
 
+/**
+ * @deprecated Not for display: availability and programmes read as months or a month window (availabilityPhrase,
+ * formatMonth), never as a quarter (BRIEF 14.1). Kept only for its existing test.
+ */
 export function quarter(iso: string): string {
   return formatQuarter(iso)
 }

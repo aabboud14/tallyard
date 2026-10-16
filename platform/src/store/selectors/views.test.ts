@@ -233,7 +233,8 @@ describe('architect workspace', () => {
       expect(r.to).toBeLessThanOrEqual(1)
       expect(r.from).toBeLessThanOrEqual(r.to)
     }
-    expect(t.ticks[0].label).toBe('Q4 2026')
+    expect(t.ticks[0].label).toBe('October 2026')
+    expect(t.ticks.some((x) => /Q[1-4]/.test(x.label))).toBe(false)
     expect(o.nextSteps.map((x) => x.id)).toEqual(['send', 'spec'])
     expect(o.carbon.securedT).toBeGreaterThan(0)
     expect(o.carbon.shortlistedT).toBeGreaterThan(o.carbon.securedT)

@@ -2,6 +2,7 @@
 // its materials, the count, its families and, with a project checked, its fit counts in the checking strip's words
 // ("10 available now, 1 in time"), so the folders add up to the strip. On a narrow screen they
 // are compact rows, so the page never scrolls sideways.
+import type { ReactNode } from 'react'
 import { ChevronRight, FolderOpen } from 'lucide-react'
 import type { CategoryFolder, CategoryThumb } from '../../store/selectors/marketplace'
 import type { ProjectRef } from '../../store/selectors/common'
@@ -109,12 +110,15 @@ function FolderRow({ folder, project, onOpen }: { folder: CategoryFolder; projec
   )
 }
 
-export function CategoryFolders({ folders, project, onOpen }: { folders: CategoryFolder[]; project: ProjectRef | null; onOpen: (typology: CategoryFolder['typology']) => void }) {
+export function CategoryFolders({ folders, project, onOpen, aside }: { folders: CategoryFolder[]; project: ProjectRef | null; onOpen: (typology: CategoryFolder['typology']) => void; /** Beside the heading, for example the jump to New for your projects. */ aside?: ReactNode }) {
   return (
     <section aria-labelledby="browse-by-category" data-testid="category-folders">
-      <h2 id="browse-by-category" className="m-0 mb-4 text-lg font-semibold text-ink">
-        Browse by category
-      </h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 id="browse-by-category" className="m-0 text-lg font-semibold text-ink">
+          Browse by category
+        </h2>
+        {aside}
+      </div>
       <div className="grid grid-cols-3 gap-5 max-md:hidden">
         {folders.map((f) => (
           <FolderCard key={f.typology} folder={f} project={project} onOpen={() => onOpen(f.typology)} />

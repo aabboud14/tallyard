@@ -14,6 +14,8 @@ const DIM = '#78716c'
 export const FILL = '#f7f6f3'
 /** Paper ground for every drawing and swatch board. */
 export const PAPER = '#f7f6f3'
+/** The plain white ground of the material page stage. */
+export const PLAIN = '#ffffff'
 const FONT = 'Inter Variable, Inter, ui-sans-serif, sans-serif'
 
 /** Room for a caption at 12 px: about 6.8 px a character, plus a margin. */
@@ -239,8 +241,10 @@ const AREA = { left: SAFE.left, right: SAFE.right, top: SAFE.top + 8, bottom: SA
  * the far end is drawn, and the length is dimensioned along the bottom flange. The receding axis runs at 30
  * degrees; the length is foreshortened to a half and clamped so the drawing fits the board.
  */
-export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { designation: string; lengthM: number; uid: string; view?: DrawingView }) {
+export function SectionAxo({ designation, lengthM, uid, view = 'card', plain = false }: { designation: string; lengthM: number; uid: string; view?: DrawingView; /** A white board with no detail grid: the material page stage. */ plain?: boolean }) {
   const s = sectionOrThrow(designation)
+  // A UC is a column: it stands upright, as the 3D view and the IFC file place it.
+  if (s.type === 'UC') return <ColumnAxo designation={designation} lengthM={lengthM} uid={uid} view={view} plain={plain} />
   const size = TEXT_SIZE[view]
   const k = Math.min(140 / s.h, 104 / s.b)
   const h = s.h * k
@@ -288,8 +292,8 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
   return (
     <g data-part="section-axo">
       <Hatch id={hatch} />
-      <rect width={W} height={H} fill={PAPER} />
-      {view === 'detail' ? <DetailGrid /> : null}
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
+      {view === 'detail' && !plain ? <DetailGrid /> : null}
       {faces.map((f) => (
         <polygon key={f.i} points={pts([at(f.p), at(f.q), far(f.q), far(f.p)])} fill={f.n[1] < 0 ? FILL : '#e9e6df'} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
       ))}
@@ -302,8 +306,78 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
   )
 }
 
+/**
+ * A steel column standing upright, in isometric: the section seen from above at its top end (hatched), the plan
+ * axes at 30 degrees, and the column running straight down, clamped so the drawing fits the board. The length is
+ * dimensioned up its right edge.
+ */
+function ColumnAxo({ designation, lengthM, uid, view, plain }: { designation: string; lengthM: number; uid: string; view: DrawingView; plain: boolean }) {
+  const s = sectionOrThrow(designation)
+  const size = TEXT_SIZE[view]
+  const k = 130 / ((s.b + s.h) * C30)
+  const h = s.h * k
+  const b = s.b * k
+  const tw = Math.max(1.5, s.tw * k)
+  const tf = Math.max(1.5, s.tf * k)
+  const capH = (b + h) * S30
+  // Keep clear of the top corners, where a card puts its project chip and Save button.
+  const roomH = AREA.bottom - AREA.top - 50
+  const len = Math.min(lengthM * 1000 * k * 0.5, roomH - capH)
+  // Plan outline: u along the flanges, v along the web toward the viewer; anticlockwise with v up.
+  const wl = (b - tw) / 2
+  const wr = wl + tw
+  const plan: P[] = [
+    [0, 0],
+    [b, 0],
+    [b, tf],
+    [wr, tf],
+    [wr, h - tf],
+    [b, h - tf],
+    [b, h],
+    [0, h],
+    [0, h - tf],
+    [wl, h - tf],
+    [wl, tf],
+    [0, tf],
+  ]
+  // Centre the column on the board, leaving room for the length dimension on its right.
+  const ox = (AREA.left + AREA.right) / 2 + ((h - b) * C30) / 2 - 20
+  const oy = AREA.bottom - 6 - (capH + len)
+  const top = ([u, v]: P): P => [ox + (u - v) * C30, oy + (u + v) * S30]
+  const bottom = (p: P): P => {
+    const [x, y] = top(p)
+    return [x, y + len]
+  }
+  // A side face shows when its outward normal points toward the viewer (+u or +v); farther faces are painted first.
+  const faces = plan
+    .map((p, i) => {
+      const q = plan[(i + 1) % plan.length]
+      const n: P = [q[1] - p[1], -(q[0] - p[0])]
+      return { p, q, n, near: p[0] + p[1] + q[0] + q[1], i }
+    })
+    .filter((f) => f.n[0] + f.n[1] > 1e-6)
+    .sort((x, y) => x.near - y.near || x.i - y.i)
+  const hatch = `${uid}-hatch`
+  const edge: P = [b, 0]
+  return (
+    <g data-part="section-axo" data-orientation="upright">
+      <Hatch id={hatch} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
+      {view === 'detail' && !plain ? <DetailGrid /> : null}
+      {faces.map((f) => (
+        <polygon key={f.i} points={pts([top(f.p), top(f.q), bottom(f.q), bottom(f.p)])} fill={f.n[1] > 0 ? FILL : '#e9e6df'} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
+      ))}
+      <polygon points={pts(plan.map(top))} fill={FILL} />
+      <polygon points={pts(plan.map(top))} fill={`url(#${hatch})`} stroke={INK} strokeWidth="1.25" strokeLinejoin="round" />
+      <DimLine a={bottom(edge)} b={top(edge)} label={formatLength(lengthM)} offset={[16, 0]} anchor="start" size={size} />
+      {view === 'detail' ? <DimLine a={top([0, 0])} b={top(edge)} label={`${s.b}`} offset={[8, -13]} anchor="start" size={size} /> : null}
+      <TitleStrip text={designation} view={view} />
+    </g>
+  )
+}
+
 /** One curtain wall panel in elevation: frame, a spandrel band and flat glass with one soft reflection band. */
-export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }: { widthM: number; heightM: number; system: string; seed: number; view?: DrawingView }) {
+export function PanelElevation({ widthM, heightM, system, seed, view = 'card', plain = false }: { widthM: number; heightM: number; system: string; seed: number; view?: DrawingView; plain?: boolean }) {
   const size = TEXT_SIZE[view]
   const ratio = heightM / widthM
   // Fit the panel in the drawing area at its true proportion, leaving room for the dimensions.
@@ -319,7 +393,7 @@ export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }:
   const spandrel = panelH * 0.18
   return (
     <g data-part="panel-elevation">
-      <rect width={W} height={H} fill={PAPER} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
       <rect x={x0} y={y0} width={panelW} height={panelH} fill="#cfdbe1" />
       <rect x={band} y={y0} width="18" height={panelH - spandrel} fill="#ffffff" opacity="0.25" />
       <rect x={x0} y={y0 + panelH - spandrel} width={panelW} height={spandrel} fill="#8d969c" />
@@ -334,7 +408,7 @@ export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }:
 }
 
 /** One raised floor panel in axonometric on its four pedestals, edges drawn and the panel dimensioned. */
-export function PanelAxo({ sizeMm = [600, 600], view = 'card' }: { sizeMm?: [number, number]; view?: DrawingView }) {
+export function PanelAxo({ sizeMm = [600, 600], view = 'card', plain = false }: { sizeMm?: [number, number]; view?: DrawingView; plain?: boolean }) {
   const size = TEXT_SIZE[view]
   const [px, py] = sizeMm
   const k = (AREA.right - AREA.left - 60) / ((px + py) * C30)
@@ -364,7 +438,7 @@ export function PanelAxo({ sizeMm = [600, 600], view = 'card' }: { sizeMm?: [num
   }
   return (
     <g data-part="panel-axo">
-      <rect width={W} height={H} fill={PAPER} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
       <polygon points={pts([at(0, 0, 0), at(px, 0, 0), at(px, py, 0), at(0, py, 0)])} fill="none" stroke={DIM} strokeWidth="0.5" strokeDasharray="3 3" />
       {pedestal(0, 0, 'back')}
       {pedestal(px, 0, 'right')}

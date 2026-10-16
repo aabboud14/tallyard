@@ -83,6 +83,12 @@ describe('pageLocation', () => {
     expect(pageLocation(s, priya, '/app/marketplace').title).toBe('Marketplace')
   })
 
+  it('keeps the project of the visit on the Marketplace crumb of a material page, only for a project the viewer works on', () => {
+    expect(pageLocation(s, priya, '/app/marketplace/L-9F4CQQ', MERROWGATE_ID).crumbs[0].href).toBe(`/app/marketplace?project=${MERROWGATE_ID}`)
+    expect(pageLocation(s, priya, '/app/marketplace/L-9F4CQQ', null).crumbs[0].href).toBe('/app/marketplace')
+    expect(pageLocation(s, priya, '/app/marketplace/L-9F4CQQ', 'prj_nobody').crumbs[0].href).toBe('/app/marketplace')
+  })
+
   it('never names a project the viewer does not work on', () => {
     const loc = pageLocation(s, viewer(U.tom), `/app/projects/${MERROWGATE_ID}/shortlist`)
     expect(loc.crumbs).toEqual([{ label: 'Projects', href: null }])

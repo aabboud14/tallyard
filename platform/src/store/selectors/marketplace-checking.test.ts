@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { fresh, U, viewer } from '../../test/fixtures'
 import { FERRYMOOR_ID, MERROWGATE_ID } from '../../domain/seed/world'
 import { DEFAULT_DISCOVER_QUERY as Q, discoverView, materialView, SHOWN_ABOVE_SPEC } from './discover'
-import { checkingProjectSketch } from './marketplace'
+import { checkingProjectSketch, newForProjectsJump } from './marketplace'
+import { architectHome } from './architect'
 
 describe('checking project sketch', () => {
   it('draws the checked project from the families on its live shortlist', () => {
@@ -74,5 +75,29 @@ describe('new for your projects on the landing', () => {
     expect(new Set([...v.newForProjects, ...v.newForProjectsMore].map((c) => c.publicId)).size).toBe(10)
     const isla = discoverView(fresh(), viewer(U.isla), Q)
     expect([isla.newForProjects.length, isla.newForProjectsMore.length, isla.newForProjectsTotal]).toEqual([0, 0, 0])
+  })
+})
+
+describe('the jump to new for your projects', () => {
+  it('names the checked project, and is null when nothing is new', () => {
+    expect(newForProjectsJump(10, 'Merrowgate Wharf')).toEqual({ text: '10 new for Merrowgate Wharf', total: 10 })
+    expect(newForProjectsJump(1, null)).toEqual({ text: '1 new for your projects', total: 1 })
+    expect(newForProjectsJump(0, 'Merrowgate Wharf')).toBeNull()
+  })
+
+  it('is on the architect landing only, with the same count as the row', () => {
+    const s = fresh()
+    const v = discoverView(s, viewer(U.priya), { ...Q, projectId: MERROWGATE_ID })
+    expect(v.newForProjectsJump).toEqual({ text: `${v.newForProjectsTotal} new for Merrowgate Wharf`, total: v.newForProjectsTotal })
+    expect(discoverView(s, viewer(U.priya), Q).newForProjectsJump!.text).toBe('10 new for your projects')
+    expect(discoverView(s, viewer(U.priya), { ...Q, projectId: MERROWGATE_ID, typology: 'structure' }).newForProjectsJump).toBeNull()
+    expect(discoverView(s, viewer(U.isla), Q).newForProjectsJump).toBeNull()
+  })
+})
+
+describe('the home link to new materials', () => {
+  it('opens the Marketplace checked against the project, at the New for {project} row', () => {
+    const h = architectHome(fresh(), viewer(U.priya))!
+    for (const p of h.projects) expect(p.newFitsHref).toBe(`/app/marketplace?project=${p.id}#new-for-projects`)
   })
 })

@@ -6,7 +6,8 @@ import { listingOf, lotByPublicId } from '../lots'
 import { projectTabs } from './project'
 import { buildingTabs } from './owner'
 import { routeAccess } from './nav'
-import { MARKETPLACE_PATH } from '../paths'
+import { MARKETPLACE_PATH, marketplaceHref } from '../paths'
+import { addressProjectFor } from './arch-discover'
 import { linkPageTitle } from './links'
 import { NOT_YET_LINKED } from './surveyor'
 
@@ -45,8 +46,12 @@ function crumb(label: string, href: string | null = null): AppCrumb {
   return { label, href }
 }
 
-/** The breadcrumbs and tab title for an app route. The last crumb is the current page and carries no link. */
-export function pageLocation(state: AppData, viewer: Viewer, pathname: string): PageLocation {
+/**
+ * The breadcrumbs and tab title for an app route. The last crumb is the current page and carries no link.
+ * `addressProject` is the ?project= of the address: on a material page reached from a Marketplace checked against a
+ * project, the Marketplace crumb keeps that project for the rest of the visit.
+ */
+export function pageLocation(state: AppData, viewer: Viewer, pathname: string, addressProject: string | null = null): PageLocation {
   const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
   const [, section = 'home', id, tab, sub] = parts
   const access = routeAccess(state, viewer, pathname)
@@ -65,7 +70,8 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
 
   if (section === 'marketplace' || section === 'discover') {
     const lot = lotByPublicId(state.world, id)
-    return done([crumb(sectionLabel, sectionHref), crumb(lot ? listingOf(state.world, lot).title : id)])
+    const project = addressProjectFor(state, viewer, addressProject)
+    return done([crumb(sectionLabel, project ? marketplaceHref(project) : sectionHref), crumb(lot ? listingOf(state.world, lot).title : id)])
   }
   if (section === 'projects') {
     if (id === 'new') return done([crumb(sectionLabel, sectionHref), crumb('New project')])

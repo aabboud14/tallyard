@@ -3,7 +3,7 @@
 // consultant). Each tab is its own route. Until the client accepts, the architect sees a link status pill and no
 // client people.
 import { Link, Outlet, useLocation, useParams } from 'react-router'
-import { Building, CalendarCheck, CalendarClock, CalendarRange, Compass, Hourglass, MapPin, PencilLine, UserRoundX } from 'lucide-react'
+import { Building, CalendarCheck, CalendarClock, CalendarRange, Compass, MailQuestion, MapPin, PencilLine, UserRoundX } from 'lucide-react'
 import { useView } from '../../store'
 import { projectHeader } from '../../store/selectors/project'
 import { AvatarStack, Button, Pill, ProjectThumb, Tabs, type AvatarColourName } from '../../ui'
@@ -50,8 +50,8 @@ export function ProjectLayout() {
                         Client declined
                       </Pill>
                     ) : (
-                      <Pill tone="info" size="sm" icon={Hourglass} data-testid="link-status">
-                        Waiting for client
+                      <Pill tone="neutral" size="sm" icon={MailQuestion} title="The client organisation has not yet accepted the request to add them to this project" data-testid="link-status">
+                        Client to accept
                       </Pill>
                     )
                   ) : null}

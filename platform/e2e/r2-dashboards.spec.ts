@@ -110,7 +110,7 @@ test('the architect follows a project to the new materials that fit it, and open
   await page.getByTestId('activity-toggle').click()
   await expect(page.getByTestId('activity-feed')).toBeVisible()
   await page.getByTestId(`home-new-fits-${M}`).click()
-  await page.waitForURL(`**/app/marketplace?project=${M}`)
+  await page.waitForURL(`**/app/marketplace?project=${M}#new-for-projects`)
   await expect(page.getByTestId('discover-grid')).toBeVisible()
   // The panel stays open when the person comes back.
   await page.goto('/app/home')

@@ -21,7 +21,7 @@ import { projectSide, projectsOfUser, roleOfUser } from '../access'
 import { lotsSharedByLinkWithOrg } from '../../domain/visibility'
 import { acceptedReservation, generalWishlist, isLotAvailable, listingOf, lotByPublicId, marketplaceListings, projectCanSee, projectWishlist, saveBlock } from '../lots'
 import { familyLabel, listingCard, projectRef, sellerPhrase, storageText, todayOf, collectionPointText, type ListingCard, type ProjectRef, fitText, FIT_LABELS, SHORTLIST_STATUS_LABELS } from './common'
-import { availabilityFilterView, categoryFolders, checkingProjectSketch, fitSummary, newForProjectsFeed, type AvailabilityFilterView, type CategoryFolder, type FitSummary, type NewForProjects } from './marketplace'
+import { availabilityFilterView, categoryFolders, checkingProjectSketch, fitSummary, newForProjectsFeed, newForProjectsJump, type AvailabilityFilterView, type CategoryFolder, type FitSummary, type NewForProjects, type NewForProjectsJump } from './marketplace'
 import type { BuildingSketch } from '../../domain/sketch'
 
 export type DiscoverTab = 'all' | 'shared'
@@ -198,6 +198,8 @@ export type DiscoverView = {
   newForProjectsMore: NewForProjects[]
   /** The whole feed's length: the same figure as the home's per-project count. */
   newForProjectsTotal: number
+  /** The link at the top of the landing that jumps to the row; null when the row is not shown. */
+  newForProjectsJump: NewForProjectsJump | null
   availability: AvailabilityFilterView
   /** The chip label of the availability filter; null with no filter. */
   availableByLabel: string | null
@@ -263,6 +265,7 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
     newForProjects: newFeed.slice(0, NEW_FOR_PROJECTS_ON_LANDING),
     newForProjectsMore: newFeed.slice(NEW_FOR_PROJECTS_ON_LANDING),
     newForProjectsTotal: newFeed.length,
+    newForProjectsJump: newForProjectsJump(newFeed.length, project?.name ?? null),
     availability: availabilityFilterView(all, query, projectView, today),
     availableByLabel: query.availableBy ? availableByLabel(query.availableBy, today) : null,
   }

@@ -11,19 +11,34 @@ import { materialHref } from '../paths'
 
 export type SearchKind = 'page' | 'project' | 'building' | 'material' | 'item'
 
-export type SearchEntry = { id: string; kind: SearchKind; label: string; sublabel: string; href: string; keywords: string }
+export type SearchEntry = {
+  id: string
+  kind: SearchKind
+  label: string
+  sublabel: string
+  href: string
+  keywords: string
+  /** A tab inside a project or building folder ("Recovery plan" in Wexcombe House): found by a search, not listed before one. */
+  inside?: string
+}
 
 export const SEARCH_KIND_LABELS: Record<SearchKind, string> = { page: 'Pages', project: 'Projects', building: 'Buildings', material: 'Materials', item: 'Inventory' }
 
 /** Extra words a page answers to, by nav item id: the Marketplace was called Discover. */
 export const PAGE_KEYWORDS: Record<string, string> = { marketplace: 'marketplace discover browse materials' }
 
-function flatten(items: NavItem[], parent: string | null, out: SearchEntry[]): void {
+/** Project, building and client folders: the folder itself is indexed as a project or building, its tabs as pages. */
+function isFolderItem(it: NavItem): boolean {
+  return it.id.startsWith('project-') || it.id.startsWith('building-') || it.id.startsWith('client-')
+}
+
+function flatten(items: NavItem[], parent: string | null, out: SearchEntry[], folder: string | null = null): void {
   for (const it of items) {
     if (it.soon) continue
     const label = parent ? `${parent}, ${it.label}` : it.label
-    if (!it.id.startsWith('project-') && !it.id.startsWith('building-') && !it.id.startsWith('client-')) out.push({ id: `page:${it.id}`, kind: 'page', label: it.label, sublabel: parent ?? 'Go to', href: it.href, keywords: [label.toLowerCase(), PAGE_KEYWORDS[it.id] ?? ''].join(' ').trim() })
-    flatten(it.children, it.children.length ? it.label : parent, out)
+    if (!isFolderItem(it)) out.push({ id: `page:${it.id}`, kind: 'page', label: it.label, sublabel: parent ?? 'Go to', href: it.href, keywords: [label.toLowerCase(), PAGE_KEYWORDS[it.id] ?? ''].join(' ').trim() })
+    else if (it.children.length === 0 && folder) out.push({ id: `page:${it.id}`, kind: 'page', label: it.label, sublabel: folder, href: it.href, keywords: `${it.label} ${folder}`.toLowerCase(), inside: folder })
+    flatten(it.children, it.children.length ? it.label : parent, out, isFolderItem(it) && it.children.length ? it.label : folder)
   }
 }
 
@@ -69,7 +84,7 @@ export function searchIndex(state: AppData, viewer: Viewer): SearchEntry[] {
 /** Entries whose words all appear, best first: label starts, then label contains, then keywords. */
 export function searchEntries(index: SearchEntry[], query: string, limit = 20): SearchEntry[] {
   const q = query.trim().toLowerCase()
-  if (!q) return index.filter((e) => e.kind === 'page' || e.kind === 'project' || e.kind === 'building').slice(0, limit)
+  if (!q) return index.filter((e) => !e.inside && (e.kind === 'page' || e.kind === 'project' || e.kind === 'building')).slice(0, limit)
   const words = q.split(/\s+/)
   const scored = index
     .filter((e) => words.every((w) => e.keywords.includes(w) || e.label.toLowerCase().includes(w)))

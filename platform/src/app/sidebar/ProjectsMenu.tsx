@@ -1,11 +1,12 @@
 // The sidebar's project menu: the order of the project folders (by name, under each client, or by recent activity)
 // and a filter to one client. The choice is kept per person in the store (ui.navProjects); the arranging itself is
-// the pure arrangeNavProjects, so this only shows the choice and passes it on.
-import { ListFilter, X } from 'lucide-react'
+// the pure arrangeNavProjects, so this only shows the choice and passes it on. The button names the current order
+// ("A to Z", "By client", "Recent"), so the way in is visible without a hover.
+import { ChevronDown, ListFilter, X } from 'lucide-react'
 import type { NavProjectOrder } from '../../store/types'
 import type { NavProjectTools } from '../../store/selectors/nav'
 import { useApp } from '../../store/app'
-import { cx, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger, Tooltip } from '../../ui'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger, Tooltip } from '../../ui'
 
 const ORDERS: { value: NavProjectOrder; label: string }[] = [
   { value: 'name', label: 'Name, A to Z' },
@@ -13,31 +14,33 @@ const ORDERS: { value: NavProjectOrder; label: string }[] = [
   { value: 'recent', label: 'Recent activity' },
 ]
 
+/** The button's words for each order. */
+const ORDER_SHORT: Record<NavProjectOrder, string> = { name: 'A to Z', client: 'By client', recent: 'Recent' }
+
 const ALL = 'all'
 
 function isOrder(v: string): v is NavProjectOrder {
   return ORDERS.some((o) => o.value === v)
 }
 
-/** The menu button beside the Projects title. Shown only with two or more projects. */
+/** The menu button beside the Projects title, naming the current order. Shown only with two or more projects. */
 export function ProjectsMenu({ tools }: { tools: NavProjectTools }) {
   const setView = useApp((s) => s.setNavProjectView)
   if (tools.total < 2) return null
-  const filtered = tools.view.clientOrgId !== null
-  const ordered = tools.view.order !== 'name'
   return (
     <DropdownMenu>
       <Tooltip content="Sort and filter projects" side="right">
         <DropdownMenuTrigger
           data-testid="nav-projects-menu"
+          data-order={tools.view.order}
           aria-label="Sort and filter projects"
-          className={cx(
-            'relative inline-flex size-6 shrink-0 items-center justify-center rounded text-faint outline-none transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.06] data-[state=open]:text-ink max-lg:size-11',
-            (filtered || ordered) && 'text-ink-soft',
-          )}
+          className="inline-flex h-6 shrink-0 items-center gap-1 rounded px-1.5 text-[11px] font-medium text-ink-soft outline-none transition-colors hover:bg-black/[0.05] hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-brand-600 data-[state=open]:bg-black/[0.06] data-[state=open]:text-ink max-lg:h-11 max-lg:px-2.5 max-lg:text-xs [&_svg]:text-muted hover:[&_svg]:text-ink"
         >
-          <ListFilter aria-hidden="true" className="size-3.5 max-lg:size-4" />
-          {filtered || ordered ? <span aria-hidden="true" className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-brand-600 max-lg:right-2.5 max-lg:top-2.5" /> : null}
+          <ListFilter aria-hidden="true" className="size-3.5 shrink-0" />
+          <span className="whitespace-nowrap" data-testid="nav-projects-order">
+            {ORDER_SHORT[tools.view.order]}
+          </span>
+          <ChevronDown aria-hidden="true" className="size-3.5 shrink-0" />
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="start" side="bottom" className="w-60">

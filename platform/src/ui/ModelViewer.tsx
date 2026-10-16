@@ -97,6 +97,19 @@ export function ModelViewer({ mesh, family, title, size = 'stage', angles: contr
     drag.current = null
     e.currentTarget.releasePointerCapture?.(e.pointerId)
   }
+  // The browser took the gesture over (a vertical swipe that scrolls the page on a phone): the model goes back to
+  // where it was, so scrolling past the viewer never tilts it.
+  const onPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d) return
+    if (frameReq.current !== null) {
+      cancelAnimationFrame(frameReq.current)
+      frameReq.current = null
+    }
+    drag.current = null
+    set(d.start)
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+  }
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!interactive || e.target !== e.currentTarget) return
     const k = KEYS[e.key]
@@ -139,7 +152,7 @@ export function ModelViewer({ mesh, family, title, size = 'stage', angles: contr
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={onPointerCancel}
         className="cursor-grab rounded-md outline-none [touch-action:pan-y] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:cursor-grabbing"
       >
         {svg}

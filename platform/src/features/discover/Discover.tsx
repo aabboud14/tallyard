@@ -3,21 +3,24 @@
 // with its fit counts; the sticky toolbar holds search, typology tabs, Filters (with the availability month slider)
 // and the sort each role is offered. "Shared with you" holds lots owners shared privately with a project.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { ArrowDownWideNarrow, FolderOpen, LockKeyhole, PackageOpen, Search, ShieldCheck, Store, X } from 'lucide-react'
 import { useView } from '../../store'
+import { NEW_FOR_PROJECTS_ANCHOR } from '../../store/paths'
 import { discoverView, type DiscoverQuery, type DiscoverView, type SharedGroup } from '../../store/selectors/discover'
 import { clearDiscoverFilters } from '../../store/selectors/arch-discover'
 import { Button, Card, cx, DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, EmptyState, Input, Kbd, Pill } from '../../ui'
 import { Page } from '../../app/Page'
 import { useHotkey } from '../../app/hotkeys'
 import { useMediaQuery } from '../../app/media'
+import { scrollMemory } from '../../app/scrollMemory'
 import { ListingTile } from './ListingTile'
 import { ActiveFilters, FiltersButton } from './DiscoverFilters'
 import { CheckingBar } from './CheckingBar'
 import { OwnerBuildStrip } from '../buildings/OwnerBuildStrip'
 import { CategoryFolders } from './CategoryFolders'
-import { NewForProjectsRow } from './NewForProjectsRow'
+import { NewForProjectsJumpLink, NewForProjectsRow } from './NewForProjectsRow'
+import { scrollToNewForProjects } from './scrollToRow'
 import { FolderHeader } from './FamilyChips'
 import { TermsDialog } from './TermsDialog'
 import { useDiscoverQuery } from './useDiscoverQuery'
@@ -214,6 +217,16 @@ export function Discover() {
   const wide = useMediaQuery('(min-width: 1280px)')
   const phone = useMediaQuery('(max-width: 639px)')
   const placeholder = phone ? 'Search' : 'Search beams, brick, stone'
+  // A link to #new-for-projects (the home's "{n} new materials fit") lands on the row, clear of the sticky toolbar,
+  // whether it is followed, opened in a new tab, pasted or reloaded. Back and Forward return to the position the
+  // person left instead (the shell restores it).
+  const location = useLocation()
+  const rowShown = !!view && view.landing && view.newForProjects.length > 0
+  useEffect(() => {
+    if (location.hash !== `#${NEW_FOR_PROJECTS_ANCHOR}` || !rowShown || scrollMemory.restoring(location.key)) return
+    const frame = requestAnimationFrame(() => scrollToNewForProjects())
+    return () => cancelAnimationFrame(frame)
+  }, [location.key, location.hash, rowShown])
   if (!view) return null
   const shared = view.tab === 'shared'
   const clearFilters = () => replace(clearDiscoverFilters(query))
@@ -236,6 +249,7 @@ export function Discover() {
       canCreateProject={view.canCreateProject}
       onProject={setProject}
       onFitsOnly={(fitsOnly) => update({ fitsOnly })}
+      jump={view.landing ? view.newForProjectsJump : null}
     />
   )
 
@@ -319,7 +333,12 @@ export function Discover() {
 
           {view.landing && view.empty !== 'no_listings' ? (
             <div className="mt-6 flex flex-col gap-12">
-              <CategoryFolders folders={view.folders} project={view.project} onOpen={(typology) => update({ typology, family: null }, { push: true })} />
+              <CategoryFolders
+                folders={view.folders}
+                project={view.project}
+                onOpen={(typology) => update({ typology, family: null }, { push: true })}
+                aside={!view.project && view.newForProjectsJump ? <NewForProjectsJumpLink jump={view.newForProjectsJump} /> : null}
+              />
               <NewForProjectsRow key={view.project?.id ?? 'all'} cards={view.newForProjects} more={view.newForProjectsMore} total={view.newForProjectsTotal} project={view.project} />
             </div>
           ) : null}

@@ -10,7 +10,7 @@ import { Bookmark, BookmarkCheck, Box, CalendarRange, ChevronDown, Download, Fil
 import { LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
 import { getData, useNow, useView, useViewer } from '../../store'
-import { MARKETPLACE_PATH } from '../../store/paths'
+import { marketplaceHref } from '../../store/paths'
 import { geometryFile, materialView, type MaterialView } from '../../store/selectors/discover'
 import { SELLER_TYPE_LABELS } from '../../store/selectors/common'
 import { Badge, Button, Callout, cx, DescriptionList, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, FitPill, IndicativeMarker, METHODOLOGY_HREF, Pill, ProgressBar, SustainabilityBand, TimelineStrip, toast, Tooltip } from '../../ui'
@@ -20,7 +20,7 @@ import { AppNotFound } from '../../app/NoAccess'
 import { ListingTile } from '../discover/ListingTile'
 import { ProjectPicker } from '../discover/ProjectPicker'
 import { SaveMenu } from '../discover/SaveMenu'
-import { useCheckingProject } from '../discover/useDiscoverQuery'
+import { useAddressProject, useCheckingProject } from '../discover/useDiscoverQuery'
 import { MaterialGallery } from './MaterialGallery'
 
 type GeometryKind = 'dxf' | 'obj' | 'ifc'
@@ -164,7 +164,7 @@ function Availability({ view, today, onProject }: { view: MaterialView; today: s
           <TimelineStrip
             today={today}
             startDate={view.project.startDate}
-            startLabel={`${view.project.name} start`}
+            startLabel="Materials needed from"
             indicative={false}
             items={[{ id: card.publicId, window: a.windowStart && a.windowEnd ? { start: a.windowStart, end: a.windowEnd } : null, fit: card.fit.fit }]}
             testId="material-timeline"
@@ -247,6 +247,7 @@ function Sustainability({ view }: { view: MaterialView }) {
 export function MaterialPage() {
   const { publicId = '' } = useParams()
   const [projectId, setProject] = useCheckingProject()
+  const addressProject = useAddressProject()
   const view = useView(materialView, publicId, projectId)
   const today = useNow().slice(0, 10)
   const get = useGeometryDownload(publicId)
@@ -393,7 +394,7 @@ export function MaterialPage() {
             <h2 id="similar-h" className="m-0 text-lg font-semibold text-ink">
               Similar materials
             </h2>
-            <Link to={MARKETPLACE_PATH} className="rounded-sm text-sm font-medium text-ink-soft hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:py-3">
+            <Link to={marketplaceHref(addressProject)} data-testid="browse-marketplace" className="rounded-sm text-sm font-medium text-ink-soft hover:text-ink focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:py-3">
               Browse the Marketplace
             </Link>
           </div>

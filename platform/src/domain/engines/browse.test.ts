@@ -117,20 +117,25 @@ describe('filterOptions', () => {
 
   it('offers the next six quarter starts after the demo date', () => {
     expect(filterOptions(open).availability).toEqual([
-      { value: '2027-01-01', label: 'Q1 2027' },
-      { value: '2027-04-01', label: 'Q2 2027' },
-      { value: '2027-07-01', label: 'Q3 2027' },
-      { value: '2027-10-01', label: 'Q4 2027' },
-      { value: '2028-01-01', label: 'Q1 2028' },
-      { value: '2028-04-01', label: 'Q2 2028' },
+      { value: '2027-01-01', label: 'By 1 January 2027' },
+      { value: '2027-04-01', label: 'By 1 April 2027' },
+      { value: '2027-07-01', label: 'By 1 July 2027' },
+      { value: '2027-10-01', label: 'By 1 October 2027' },
+      { value: '2028-01-01', label: 'By 1 January 2028' },
+      { value: '2028-04-01', label: 'By 1 April 2028' },
     ])
   })
 
   it('counts from the next quarter even on a quarter start', () => {
     expect(nextQuarterStarts('2027-01-01', 2)).toEqual([
-      { value: '2027-04-01', label: 'Q2 2027' },
-      { value: '2027-07-01', label: 'Q3 2027' },
+      { value: '2027-04-01', label: 'By 1 April 2027' },
+      { value: '2027-07-01', label: 'By 1 July 2027' },
     ])
+  })
+
+  it('never labels an option as a quarter', () => {
+    for (const today of ['2026-10-07', '2027-01-01', '2027-06-30', '2028-12-31'])
+      for (const o of nextQuarterStarts(today, 8)) expect(o.label, `${today} ${o.value}`).not.toMatch(/Q[1-4]/)
   })
 })
 

@@ -39,3 +39,11 @@ export function marketplacePathFor(legacyPath: string): string {
   if (legacyPath.startsWith(`${LEGACY_MARKETPLACE_PATH}/`)) return MARKETPLACE_PATH + legacyPath.slice(LEGACY_MARKETPLACE_PATH.length)
   return legacyPath
 }
+
+/** The anchor of the Marketplace's New for your projects row. */
+export const NEW_FOR_PROJECTS_ANCHOR = 'new-for-projects'
+
+/** The Marketplace landing checked against a project, opened at its New for {project} row. */
+export function newForProjectHref(projectId: string): string {
+  return `${marketplaceHref(projectId)}#${NEW_FOR_PROJECTS_ANCHOR}`
+}

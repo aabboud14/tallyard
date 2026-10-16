@@ -15,22 +15,23 @@ const H = BOARD.height
 const FONT = 'Inter Variable, Inter, ui-sans-serif, sans-serif'
 
 /** The illustration for one family, drawn on the shared board. */
-export function MaterialArt({ spec, r, uid, view = 'card' }: { spec: Spec; r: Rng; uid: string; view?: 'card' | 'detail' }) {
+/** `plain` draws the technical drawings (steel, curtain wall, raised floor) on white with no grid; swatches are unchanged. */
+export function MaterialArt({ spec, r, uid, view = 'card', plain = false }: { spec: Spec; r: Rng; uid: string; view?: 'card' | 'detail'; plain?: boolean }) {
   switch (spec.family) {
     case 'clay_brick':
       return <Brick r={r} uid={uid} view={view} stock={/stock/i.test(spec.brickType)} lime={/lime/i.test(spec.mortar)} />
     case 'stone_cladding':
       return <Stone r={r} uid={uid} view={view} />
     case 'curtain_wall':
-      return <PanelElevation widthM={spec.panelWidthM} heightM={spec.panelHeightM} system={spec.system} seed={r()} view={view} />
+      return <PanelElevation widthM={spec.panelWidthM} heightM={spec.panelHeightM} system={spec.system} seed={r()} view={view} plain={plain} />
     case 'precast_cladding':
       return <Precast r={r} uid={uid} view={view} />
     case 'raised_floor':
-      return <PanelAxo sizeMm={panelSize(spec.panelSize)} view={view} />
+      return <PanelAxo sizeMm={panelSize(spec.panelSize)} view={view} plain={plain} />
     case 'timber_joist':
       return <Timber r={r} uid={uid} view={view} />
     case 'steel_section':
-      return <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} />
+      return <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} plain={plain} />
   }
 }
 

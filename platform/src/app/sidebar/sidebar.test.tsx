@@ -83,6 +83,8 @@ describe('sidebar projects', () => {
     expect(folders()).toEqual([FERRYMOOR_ID, MERROWGATE_ID, SALLOW_ID])
     expect(document.querySelector('[data-testid^="nav-group-"]')).toBeNull()
     expect(byTestId('nav-projects-menu').getAttribute('aria-label')).toBe('Sort and filter projects')
+    // The button names the order in words, so the way in shows without a hover.
+    expect(byTestId('nav-projects-menu').textContent).toBe('A to Z')
 
     await openMenu()
     click(byTestId('nav-order-client'))
@@ -91,6 +93,7 @@ describe('sidebar projects', () => {
     const expected = [MERROWGATE_ID, SALLOW_ID, FERRYMOOR_ID].map((id) => nameOf(clientOf(id))).sort((a, b) => a.localeCompare(b, 'en-GB'))
     expect(groups).toEqual(expected)
     expect(getData().ui.navProjects?.[U.priya]?.order).toBe('client')
+    await waitFor(() => byTestId('nav-projects-menu').textContent === 'By client')
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 
@@ -116,6 +119,30 @@ describe('sidebar projects', () => {
     await waitFor(() => folders().length === 3)
     expect(document.querySelector('[data-testid="nav-client-filter"]')).toBeNull()
     expect(getData().ui.navProjects?.[U.priya]?.clientOrgId).toBeNull()
+  })
+})
+
+describe('sidebar folders', () => {
+  const expandButton = (name: string) => byTestId('sidebar').querySelector<HTMLButtonElement>(`button[aria-label="Expand ${name}"], button[aria-label="Collapse ${name}"]`)!
+
+  it('opens the folder of the project shown, closes it on moving on, and keeps one the person opened', async () => {
+    sessionStorage.clear()
+    const router = open(`/app/projects/${MERROWGATE_ID}`, U.priya)
+    await waitFor(() => document.querySelector(`[data-testid="nav-project-${MERROWGATE_ID}"]`))
+    expect(expandButton('Merrowgate Wharf').getAttribute('aria-expanded')).toBe('true')
+    await act(async () => {
+      await router.navigate(`/app/projects/${FERRYMOOR_ID}`)
+    })
+    await waitFor(() => expandButton('Merrowgate Wharf').getAttribute('aria-expanded') === 'false')
+    expect(expandButton('Ferrymoor Yard').getAttribute('aria-expanded')).toBe('true')
+    // The person opens Sallow Court by hand: it stays open wherever they go.
+    click(expandButton('Sallow Court'))
+    await act(async () => {
+      await router.navigate('/app/home')
+    })
+    await waitFor(() => expandButton('Ferrymoor Yard').getAttribute('aria-expanded') === 'false')
+    expect(expandButton('Sallow Court').getAttribute('aria-expanded')).toBe('true')
+    expect(byTestId('sidebar').querySelectorAll('button[aria-expanded="true"]')).toHaveLength(1)
   })
 })
 
