@@ -17,7 +17,7 @@ export type PageLocation = { crumbs: AppCrumb[]; title: string }
 
 export const SETTINGS_SECTION_LABELS: Record<string, string> = { profile: 'Profile', organisation: 'Organisation', team: 'Team', notifications: 'Notifications', sandbox: 'Sandbox' }
 
-export const HELP_TOPIC_LABELS: Record<string, string> = { 'getting-started': 'Getting started', methodology: 'Methodology', 'version-2': 'Version 2' }
+export const HELP_TOPIC_LABELS: Record<string, string> = { 'getting-started': 'Getting started', methodology: 'Methodology', 'version-2': 'Version 2', updated: 'Updated on 16 October' }
 
 const SECTION_LABELS: Record<string, string> = {
   home: 'Home',

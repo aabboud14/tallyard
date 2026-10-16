@@ -3,9 +3,10 @@
 // for a client joins that client organisation instead, and finds the request on their home. This open page never
 // names the organisation or the project: only the invite link does.
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { getData, signUp } from '../../store'
 import { hasClientInvite } from '../../store/actions/clientInvite'
+import { signUpEmailFrom } from '../../store/upgrade'
 import { toast } from '../../ui'
 import { AuthLayout } from './AuthLayout'
 import { SignUpForm } from './SignUpForm'
@@ -13,6 +14,8 @@ import type { SignUpValues } from './constants'
 
 export function SignUpPage() {
   const navigate = useNavigate()
+  // From the sign-in hint after the update: the address the visitor already typed.
+  const defaultEmail = signUpEmailFrom(useLocation().state)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -33,7 +36,7 @@ export function SignUpPage() {
   return (
     <AuthLayout>
       <div data-testid="signup-page">
-        <SignUpForm onSubmit={submit} error={error} pending={pending} invitedTo={(email) => hasClientInvite(getData(), email)} />
+        <SignUpForm onSubmit={submit} error={error} pending={pending} invitedTo={(email) => hasClientInvite(getData(), email)} defaultEmail={defaultEmail} />
       </div>
     </AuthLayout>
   )

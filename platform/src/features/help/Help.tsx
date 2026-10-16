@@ -4,7 +4,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
-import { Award, BookOpen, Boxes, Building2, CalendarRange, Camera, ChevronDown, ClipboardCheck, Compass, Database, FileSpreadsheet, FileText, Gauge, GripHorizontal, Handshake, Inbox, Info, KeyRound, Landmark, Layers, Leaf, ListOrdered, Network, PackageCheck, Recycle, Rocket, Scale, Share2, ShieldCheck, Tag, Target, Timer, Users } from 'lucide-react'
+import { Award, BookOpen, Boxes, Building2, CalendarRange, Camera, ChevronDown, ClipboardCheck, Compass, Database, FileSpreadsheet, FileText, Gauge, GripHorizontal, Handshake, History, Inbox, Info, KeyRound, Landmark, Layers, Leaf, ListOrdered, Network, PackageCheck, Recycle, Rocket, Scale, Share2, ShieldCheck, Tag, Target, Timer, Users } from 'lucide-react'
 import { LABELS } from '../../domain/reference/labels'
 import { useSession, type PlatformRole } from '../../store'
 import { MARKETPLACE_PATH } from '../../store/paths'
@@ -13,12 +13,20 @@ import { methodologyNotes } from '../../store/selectors/help'
 import { scoreWeights } from '../../store/selectors/roles-views'
 import { Badge, Card, CardBody, cx, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../ui'
 import { Page } from '../../app/Page'
+import { UPGRADE_HELP_TOPIC, UPGRADE_TITLE } from '../../store/upgrade'
+import { WhatChanged } from './WhatChanged'
 
 const TOPICS = [
   { id: 'getting-started', label: 'Getting started', icon: Rocket },
   { id: 'methodology', label: 'Methodology', icon: BookOpen },
   { id: 'version-2', label: 'Version 2', icon: Boxes },
+  { id: UPGRADE_HELP_TOPIC, label: UPGRADE_TITLE, icon: History },
 ] as const
+
+/** On a phone the topics scroll sideways: bring the open one into view, so a later topic is never hidden. */
+function showActiveTopic(el: HTMLAnchorElement | null) {
+  el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+}
 
 export function Help() {
   const { topic = 'getting-started' } = useParams()
@@ -34,7 +42,7 @@ export function Help() {
               const active = t.id === current
               return (
                 <li key={t.id}>
-                  <Link to={`/app/help/${t.id}`} aria-current={active ? 'page' : undefined} className={cx('flex h-9 items-center gap-2.5 whitespace-nowrap rounded-md px-3 text-base transition-colors max-lg:h-11', active ? 'bg-subtle font-medium text-ink ring-1 ring-inset ring-line-soft' : 'text-ink-soft hover:bg-hover hover:text-ink')} data-testid={`help-${t.id}`}>
+                  <Link to={`/app/help/${t.id}`} ref={active ? showActiveTopic : undefined} aria-current={active ? 'page' : undefined} className={cx('flex h-9 items-center gap-2.5 whitespace-nowrap rounded-md px-3 text-base transition-colors max-lg:h-11', active ? 'bg-subtle font-medium text-ink ring-1 ring-inset ring-line-soft' : 'text-ink-soft hover:bg-hover hover:text-ink')} data-testid={`help-${t.id}`}>
                     <Icon aria-hidden="true" className={cx('size-4', active ? 'text-ink' : 'text-faint')} />
                     {t.label}
                   </Link>
@@ -43,7 +51,7 @@ export function Help() {
             })}
           </ul>
         </nav>
-        <div className="min-w-0 flex-1">{current === 'methodology' ? <Methodology /> : current === 'version-2' ? <VersionTwo /> : <GettingStarted />}</div>
+        <div className="min-w-0 flex-1">{current === 'methodology' ? <Methodology /> : current === 'version-2' ? <VersionTwo /> : current === UPGRADE_HELP_TOPIC ? <WhatChanged /> : <GettingStarted />}</div>
       </div>
     </Page>
   )

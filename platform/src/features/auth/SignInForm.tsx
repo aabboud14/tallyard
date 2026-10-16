@@ -1,5 +1,5 @@
 // Sign in with email and password. Presentational: the caller signs in and passes back an error.
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Eye, EyeOff, Mail } from 'lucide-react'
 import { Button, Callout, Checkbox, Field, Input } from '../../ui'
@@ -37,6 +37,10 @@ export type SignInFormProps = {
   onSubmit: (values: SignInValues) => void | Promise<void>
   /** A message from the caller, for example wrong email or password. */
   error?: string | null
+  /** A further line under the error, for example that accounts made before an upgrade are gone. */
+  errorHint?: ReactNode
+  /** Something to know before signing in, shown until there is an error. */
+  notice?: ReactNode
   pending?: boolean
   defaultEmail?: string
   forgotHref?: string
@@ -45,7 +49,7 @@ export type SignInFormProps = {
   heading?: boolean
 }
 
-export function SignInForm({ onSubmit, error, pending = false, defaultEmail = '', forgotHref = '/forgot-password', signUpHref = '/signup', heading = true }: SignInFormProps) {
+export function SignInForm({ onSubmit, error, errorHint, notice, pending = false, defaultEmail = '', forgotHref = '/forgot-password', signUpHref = '/signup', heading = true }: SignInFormProps) {
   const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -81,6 +85,15 @@ export function SignInForm({ onSubmit, error, pending = false, defaultEmail = ''
         {error ? (
           <Callout tone="danger" role="alert">
             {error}
+            {errorHint ? (
+              <div className="mt-1.5" data-testid="signin-error-hint">
+                {errorHint}
+              </div>
+            ) : null}
+          </Callout>
+        ) : notice ? (
+          <Callout tone="info" role="status">
+            <div data-testid="signin-notice">{notice}</div>
           </Callout>
         ) : null}
         <Field label="Email" error={errors.email}>
