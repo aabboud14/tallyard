@@ -6,12 +6,13 @@ import type { World } from '../domain/types'
 import { DEFAULT_NAV_PROJECT_VIEW, DEFAULT_UI, type ActionResult, type Actor, type AppData, type NavProjectView, type UiState } from './types'
 import { firstRun } from '../sandbox/seed'
 import { nowIso, today } from '../sandbox/clock'
-import { safeStorage, STATE_KEY } from './storage'
+import { safeStorage, STATE_KEY, STATE_VERSION } from './storage'
+import { clearUpgradeState, isCurrentStoredState, upgradeStoredState } from './upgrade'
 import { clearPhotos } from './photos'
 import { getSessionUserId, setSessionUserId } from './sessionId'
 import { ERRORS } from './access'
 
-export const STATE_VERSION = 2
+export { STATE_VERSION }
 
 export type Outcome<V> = { ok: boolean; error: string | null; value: V | null; undo: () => void }
 
@@ -54,6 +55,9 @@ function sameData(a: AppData, b: AppData): boolean {
 }
 
 const noop = () => {}
+
+// Data an earlier build left on its own key is carried over or replaced before the store first reads.
+upgradeStoredState()
 
 export const useApp = create<AppStore>()(
   persist(
@@ -99,6 +103,7 @@ export const useApp = create<AppStore>()(
       },
       resetSandbox: async () => {
         await clearPhotos()
+        clearUpgradeState()
         const next = fresh()
         set(next)
         const userId = getSessionUserId()
@@ -123,12 +128,19 @@ export function getData(): AppData {
   return dataOf(useApp.getState())
 }
 
-// Another tab of the same sandbox saved: pick up its state, so two tabs never overwrite each other's work.
+/**
+ * Another tab saved to this build's key: pick up its state, so two tabs never overwrite each other's work. Only a
+ * state of this version is read. Anything else (a cleared key, a damaged or another version's record) is left
+ * alone, because reading it would reseed this tab and write the seed back over the other tab's work.
+ */
+export function onStorageEvent(e: Pick<StorageEvent, 'key' | 'newValue'>): void {
+  if (e.key !== STATE_KEY || !isCurrentStoredState(e.newValue)) return
+  void useApp.persist.rehydrate()
+}
+
 if (typeof window !== 'undefined') {
   try {
-    window.addEventListener('storage', (e) => {
-      if (e.key === STATE_KEY) void useApp.persist.rehydrate()
-    })
+    window.addEventListener('storage', onStorageEvent)
   } catch {
     // no storage events in this environment
   }

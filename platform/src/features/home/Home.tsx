@@ -5,6 +5,7 @@ import { useSession } from '../../store'
 import { pickComponent, type PageModule } from '../../app/pages'
 import { Page } from '../../app/Page'
 import { MetricGrid, Skeleton } from '../../ui'
+import { UpgradeNotice } from './UpgradeNotice'
 
 function home(load: () => Promise<PageModule>, name: string) {
   return lazy(async () => ({ default: pickComponent(await load(), name) }))
@@ -43,8 +44,11 @@ export function Home() {
   if (!role) return null
   const Role = HOMES[role]
   return (
-    <Suspense fallback={<HomeSkeleton />}>
-      <Role />
-    </Suspense>
+    <>
+      <UpgradeNotice />
+      <Suspense fallback={<HomeSkeleton />}>
+        <Role />
+      </Suspense>
+    </>
   )
 }
