@@ -329,15 +329,79 @@ describe('ProgrammeChart', () => {
     expect(bands[7].getAttribute('data-visible')).toBe('false')
     expect(bands[2].className).toContain('bg-brand-600')
     expect(bands[2].className).toContain('text-white')
-    // Every band is its own container; the name shows whenever the band is wide enough, on any screen.
+    // Every band is its own container; the name shows whenever the band is wide enough, on any screen. Today's
+    // stage always shows its name in full, however narrow the band (recording audit follow-up, note 17).
     for (const b of bands) {
       expect(b.className).toContain('@container')
       const name = b.querySelector('[data-part="stage-name"]')!
       expect(name.textContent).toBe(stages[bands.indexOf(b)].name)
+      expect(name.className).not.toContain('max-lg:hidden')
+      if (b.getAttribute('data-state') === 'current') {
+        expect(name.className).not.toContain('hidden')
+        expect(name.className).not.toContain('truncate')
+        continue
+      }
       expect(name.className).toMatch(/@min-\[\d+px\]:block/)
       expect(name.className).toContain('truncate')
-      expect(name.className).not.toContain('max-lg:hidden')
     }
+  })
+
+  it("always names today's stage, running past a narrow band into the chart", () => {
+    const narrow = SAMPLE_PROGRAMME.stages.map((b) => (b.stage === 2 ? { ...b, from: 0.6, to: 0.605, nameAlign: 'end' as const } : b))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={narrow} />)
+    const band = byTestId('programme-chart').querySelector<HTMLElement>('[data-part="stage-band"][data-state="current"]')!
+    // Not clipped by the band, a minimum width, and the name above the neighbouring bands' numbers.
+    expect(band.className).not.toContain('overflow-hidden')
+    expect(band.className).toContain('min-w-2.5')
+    expect(band.className).toContain('justify-end')
+    const text = band.querySelector('[data-part="stage-text"]')!
+    expect(text.className).toContain('z-[3]')
+    expect(text.className).toContain('shrink-0')
+    expect(text.className).toContain('whitespace-nowrap')
+    expect(text.textContent).toBe('2Concept Design')
+    for (const other of byTestId('programme-chart').querySelectorAll('[data-part="stage-band"]:not([data-state="current"])')) expect(other.className).toContain('overflow-hidden')
+  })
+
+  it('makes each band a button that names it on focus and opens its name and dates on a tap', async () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, hoverText: `${b.label}, ${b.name}, 1 Jan 2026 to 2 Feb 2026`, datesText: '1 Jan 2026 to 2 Feb 2026', visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const bands = Array.from(byTestId('programme-chart').querySelectorAll<HTMLElement>('[data-part="stage-band"]'))
+    for (const b of bands.slice(0, 7)) {
+      expect(b.tagName).toBe('BUTTON')
+      expect(b.getAttribute('type')).toBe('button')
+      expect(b.tabIndex).toBe(0)
+      expect(b.getAttribute('aria-label')).toBe(stages[bands.indexOf(b)].hoverText)
+      expect(b.className).toContain('focus-visible:outline-2')
+      expect(b.className).toContain('focus-visible:outline-brand-600')
+    }
+    // A band that is not drawn is not focusable either.
+    expect(bands[7].tagName).toBe('DIV')
+    click(bands[2])
+    const panel = await vi.waitFor(() => byTestId('stage-panel'))
+    expect(panel.textContent).toBe('Stage 2, Concept Design1 Jan 2026 to 2 Feb 2026')
+  })
+
+  it('keys every stage drawn by number and name, under the lane on phones and under the chart from 640 px', () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const keys = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-key"]'))
+    expect(keys).toHaveLength(2)
+    expect(keys[0].className).toContain('sm:hidden')
+    expect(keys[0].closest('[role="img"]')).not.toBeNull()
+    expect(keys[1].className).toContain('max-sm:hidden')
+    for (const key of keys) {
+      expect(key.getAttribute('aria-hidden')).toBe('true')
+      expect(Array.from(key.querySelectorAll('li')).map((li) => li.textContent)).toEqual(['0Strategic Definition', '1Preparation and Briefing', '2Concept Design', '3Spatial Coordination', '4Technical Design', '5Manufacturing and Construction', '6Handover'])
+      expect(key.querySelector('li:nth-child(3) span')!.className).toContain('bg-brand-600')
+    }
+  })
+
+  it('keeps the axis labels above the today line, so the line never strikes through one', () => {
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} />)
+    const label = byTestId('programme-chart').querySelector('[data-part="tick-label"] > span')!
+    expect(label.className).toContain('z-[2]')
+    expect(label.className).toContain('bg-surface')
+    expect(byTestId('programme-chart').querySelector('[data-part="today"]')!.className).toContain('z-[1]')
   })
 
   it('shows each tier of axis labels from the plot width it was fitted to', () => {

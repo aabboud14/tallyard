@@ -25,14 +25,15 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
   if (variant === 'inline' && !declined) {
     const Icon = link.clientHasMembers ? Hourglass : Users
     return (
-      <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-3 md:flex-row md:items-center md:justify-between md:gap-4">
-        <p className="m-0 flex min-w-0 items-start gap-2.5 text-sm text-ink-soft">
+      <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p className="m-0 flex min-w-0 flex-1 basis-56 items-start gap-2.5 text-sm text-ink-soft">
           <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
           <span>
             {link.clientHasMembers ? (
-              <>
-                <span className="font-medium text-ink">Waiting for {link.clientName} to accept this project.</span> {link.requestedText}.
-              </>
+              // One sentence; when they were asked is its tooltip.
+              <span className="font-medium text-ink" title={`${link.requestedText}.`}>
+                Waiting for {link.clientName} to accept.
+              </span>
             ) : (
               <>
                 <span className="font-medium text-ink">
@@ -43,7 +44,7 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
             )}
           </span>
         </p>
-        <Button size="sm" variant="ghost" onClick={() => open('another')} data-testid="link-change-client" className="shrink-0 self-start max-md:ml-4 md:self-auto">
+        <Button size="sm" variant="ghost" onClick={() => open('another')} data-testid="link-change-client" className="shrink-0 max-sm:min-h-11">
           Change client
         </Button>
         {dialog}

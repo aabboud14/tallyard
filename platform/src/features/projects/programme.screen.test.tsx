@@ -141,7 +141,9 @@ describe("the programme on an owner's New project with no architect", () => {
     click(byTestId('appoint-architect-card-save'))
     await waitFor(() => getData().world.projects[id].architectOrgId === ORG_IDS.oriel)
     await waitFor(() => !q('edit-programme'))
-    expect(byTestId('programme-footer').textContent).toBe("Stages from the RIBA Plan of Work 2020. Dates are the architect's plan. Indicative.")
+    // The dates Tom set stay his until the architect keeps or edits them.
+    expect(byTestId('programme-footer').textContent).toBe('Stages from the RIBA Plan of Work 2020. Your dates until the architect confirms them. Indicative.')
+    expect(byTestId('programme-suggested').textContent).toBe("Client's dates")
   })
 })
 

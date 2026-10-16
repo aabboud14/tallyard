@@ -286,7 +286,11 @@ export type ProgrammeDates = {
   practicalCompletion: string
 }
 
-export type ProgrammeSource = 'suggested' | 'set'
+/**
+ * 'suggested' until someone keeps or edits the dates; 'set' once the architect (or, with no architect yet, the client)
+ * has; 'client' when the client set them before an architect was appointed, until that architect keeps or edits them.
+ */
+export type ProgrammeSource = 'suggested' | 'set' | 'client'
 export type ProjectProgramme = ProgrammeDates & { source: ProgrammeSource }
 
 export type ClientLinkStatus = 'pending' | 'accepted' | 'declined'

@@ -164,9 +164,32 @@ describe('programmeRange and programmeAxis', () => {
 
   it('labels months, never quarters, on an axis of up to three years', () => {
     const axis = programmeAxis('2026-10-01', '2028-09-30')
-    expect(axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['Oct 2026', 'Jan 2027', 'Apr', 'Jul', 'Oct', 'Jan 2028', 'Apr', 'Jul'])
-    // On a phone the first month, the Januaries and the half years show; the quarters come in on wider plots.
-    expect(axis.ticks.filter((t) => t.label && t.tier === 0).map((t) => t.label)).toEqual(['Oct 2026', 'Jul', 'Jan 2028', 'Jul'])
+    // 'Oct 2026' would run into 'Jan 2027' on a phone, so the January wins and the left edge names October 2026.
+    expect(axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['Jan 2027', 'Apr', 'Jul', 'Oct', 'Jan 2028', 'Apr', 'Jul'])
+    expect(axis.startLabel).toBe('Oct 2026')
+    // On a phone the Januaries and the half years show; the quarters come in on wider plots.
+    expect(axis.ticks.filter((t) => t.label && t.tier === 0).map((t) => t.label)).toEqual(['Jan 2027', 'Jul', 'Jan 2028', 'Jul'])
+  })
+
+  it('never shows a month without its year after a label of another year, at any plot width', () => {
+    // Recording audit follow-up: 'Oct 2026  Jul  Jan 2028' never named 2027, so 'Jul' read as July 2026.
+    for (const startMonth of ['01', '04', '07', '09', '10', '11', '12'])
+      for (let months = 1; months <= 60; months++) {
+        const start = `2026-${startMonth}-01`
+        const axis = programmeAxis(start, addDays(addMonths(start, months), -1))
+        const yearOf = new Map(axis.ticks.map((t) => [t, t.iso.slice(0, 4)]))
+        for (let tier = 0; tier < AXIS_LABEL_TIERS.length; tier++) {
+          const shown = axis.ticks.filter((t) => t.label !== null && t.tier <= tier)
+          let previous = axis.start.slice(0, 4)
+          for (const t of shown) {
+            const year = yearOf.get(t)!
+            if (year !== previous) expect(t.label, `${start}, ${months} months, tier ${tier}: ${shown.map((x) => x.label).join(' ')}`).toContain(year)
+            previous = year
+          }
+          // The start of the axis is named, by its own label or by startLabel.
+          if (shown[0] && shown[0].at > 0) expect(axis.startLabel, `${start}, ${months} months`).not.toBeNull()
+        }
+      }
   })
 
   it('never labels a quarter, for any span from 1 to 60 months', () => {
@@ -204,11 +227,14 @@ describe('programmeRange and programmeAxis', () => {
     // Corbel Yard style: a programme that starts in July.
     expect(programmeAxis('2026-07-01', '2030-03-31').startLabel).toBe('Jul 2026')
     // The first tick already carries a label: nothing to add. Up to three years that is the first month itself.
-    expect(programmeAxis('2026-11-01', '2028-09-30').startLabel).toBeNull()
-    expect(programmeAxis('2026-11-01', '2028-09-30').ticks[0]).toMatchObject({ label: 'Nov 2026', tier: 0 })
     expect(programmeAxis('2027-01-01', '2031-06-30').startLabel).toBeNull()
     expect(programmeAxis('2026-10-01', '2027-09-30').startLabel).toBeNull()
-    expect(programmeAxis('2026-10-01', '2028-09-30').startLabel).toBeNull()
+    expect(programmeAxis('2026-10-01', '2027-09-30').ticks[0]).toMatchObject({ label: 'Oct 2026', tier: 0 })
+    // The first month would run into 'Jan 2027' on a phone: the January keeps its label, the left edge names the
+    // first month, and the axis does not repeat it on wider plots.
+    expect(programmeAxis('2026-11-01', '2028-09-30').startLabel).toBe('Nov 2026')
+    expect(programmeAxis('2026-11-01', '2028-09-30').ticks[0].label).toBeNull()
+    expect(programmeAxis('2026-10-01', '2028-09-30').startLabel).toBe('Oct 2026')
   })
 })
 

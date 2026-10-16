@@ -195,8 +195,10 @@ function labelsFit(ticks: { at: number; label: string }[], widthPx: number): boo
 /**
  * Month ticks from start to end. Up to three years the labels are months, with the year on the first label and on
  * each January ('Oct 2026', 'Jan 2027', 'Apr'); beyond three years, years only ('2027'). Labels are thinned for each
- * width tier so none ever runs into another or past the right edge: tier 0 keeps the first month and the Januaries
- * that fit on a phone, and each tier adds the densest step of aligned months that fits at its width.
+ * width tier so none ever runs into another or past the right edge: tier 0 keeps the Januaries that fit on a phone,
+ * then the first month if it fits beside them (otherwise startLabel names it), and each tier adds the densest step of
+ * aligned months that fits at its width. A month shown without its year always follows a label of the same year (or
+ * the start of the axis, which startLabel names), so the year of every label can be read at every width.
  */
 export function programmeAxis(start: string, end: string): ProgrammeAxis {
   const spanDays = Math.max(1, daysBetween(start, end))
@@ -217,11 +219,25 @@ export function programmeAxis(start: string, end: string): ProgrammeAxis {
     if (!monthsOnly) return m === 1 ? year : null
     return (i === 0 && at(iso) === 0) || m === 1 ? `${MONTHS_SHORT[m - 1]} ${year}` : MONTHS_SHORT[m - 1]
   }
-  const all = firsts.map((iso, i) => ({ i, at: at(iso), label: text(iso, i), anchor: (i === 0 && at(iso) === 0) || month(iso) === 1 }))
-  type Candidate = { i: number; at: number; label: string }
-  const labelled = all.filter((c): c is Candidate & { anchor: boolean } => c.label !== null)
+  const firstIsLabel = firsts.length > 0 && at(firsts[0]) === 0
+  const all = firsts.map((iso, i) => ({ i, at: at(iso), label: text(iso, i), year: iso.slice(0, 4), withYear: !monthsOnly || (i === 0 && firstIsLabel) || month(iso) === 1 }))
+  type Candidate = { i: number; at: number; label: string; year: string; withYear: boolean }
+  const labelled = all.filter((c): c is Candidate => c.label !== null)
+  const januaries = labelled.filter((c) => month(firsts[c.i]) === 1)
   const tierOf = new Map<number, number>()
   const shownAt = () => labelled.filter((c) => tierOf.has(c.i))
+  /**
+   * Keeps, left to right, each label whose year can be read: one that carries its year, or a month that follows a
+   * label of the same year. Before any label the start of the axis counts, as startLabel or the first label names it.
+   */
+  const yearsReadable = (candidates: Candidate[]): Candidate[] => {
+    const kept: Candidate[] = []
+    for (const c of candidates) {
+      const previousYear = kept.length > 0 ? kept[kept.length - 1].year : start.slice(0, 4)
+      if (tierOf.has(c.i) || c.withYear || c.year === previousYear) kept.push(c)
+    }
+    return kept
+  }
   /** Adds each candidate, left to right, that fits between the labels already shown at this width. */
   const addGreedily = (candidates: Candidate[], tier: number) => {
     for (const c of candidates) {
@@ -232,10 +248,12 @@ export function programmeAxis(start: string, end: string): ProgrammeAxis {
       if (labelsFit([...before, c, ...after], AXIS_LABEL_TIERS[tier])) tierOf.set(c.i, tier)
     }
   }
-  // The first month and each January come first, kept left to right when they fit on a phone. Then, at each tier
-  // from the phone up, the densest step of aligned months that fits with every label already shown, and any
-  // January that still fits.
-  addGreedily(labelled.filter((c) => c.anchor), 0)
+  // Each January comes first, kept left to right when it fits on a phone, so a year is never left unnamed. The first
+  // month follows only if it fits beside them; otherwise it stays off the axis and startLabel names it. Then, at each
+  // tier from the phone up, the densest step of aligned months that fits with every label already shown and keeps
+  // every year readable, and any January that still fits.
+  addGreedily(januaries, 0)
+  if (firstIsLabel && labelled[0]?.i === 0) addGreedily([labelled[0]], 0)
   for (let tier = 0; tier < AXIS_LABEL_TIERS.length; tier++) {
     const width = AXIS_LABEL_TIERS[tier]
     // The label on the first month stays; a month it would run into, or one that would run past the right edge, is
@@ -243,13 +261,15 @@ export function programmeAxis(start: string, end: string): ProgrammeAxis {
     const lead = labelled.find((c) => c.i === 0 && tierOf.has(0))
     const clearOfLead = (c: Candidate) => labelsFit([c], width) && (!lead || c === lead || labelsFit([lead, c], width))
     for (const step of monthsOnly ? LABEL_STEPS : []) {
-      const shown = labelled.filter((c) => tierOf.has(c.i) || ((month(firsts[c.i]) - 1) % step === 0 && clearOfLead(c)))
+      // The first month is shown at tier 0 or never: once startLabel names it, the axis does not repeat it.
+      const aligned = (c: Candidate) => c.i !== 0 && (month(firsts[c.i]) - 1) % step === 0 && clearOfLead(c)
+      const shown = yearsReadable(labelled.filter((c) => tierOf.has(c.i) || aligned(c)))
       if (labelsFit(shown, width)) {
         for (const c of shown) if (!tierOf.has(c.i)) tierOf.set(c.i, tier)
         break
       }
     }
-    addGreedily(labelled.filter((c) => c.anchor), tier)
+    addGreedily(januaries, tier)
   }
   const ticks: AxisTick[] = firsts.map((iso, i) => {
     const t = tierOf.get(i)

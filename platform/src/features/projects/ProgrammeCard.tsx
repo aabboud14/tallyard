@@ -2,8 +2,9 @@
 // stage and each shortlisted material's availability coloured by its fit, over the whole programme or from today.
 // The pills compare the planned stage with the declared one and say when the dates are only suggested. The header
 // is one compact row (title and pills, then the range and the actions), so the chart starts on the first screen even
-// on a new project; while the dates are suggested, 'Keep these dates' sits beside 'Edit programme' here and nowhere
-// else. Whoever may set the programme (the architect, or the client while no architect is appointed) gets both.
+// on a new project; while the dates are suggested (or the client's, set before an architect was appointed), 'Keep
+// these dates' sits beside 'Edit programme' here and nowhere else. Whoever may set the programme (the architect, or
+// the client while no architect is appointed) gets both.
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { CalendarCheck, CalendarRange, ChevronDown, Compass, PencilLine } from 'lucide-react'
@@ -40,11 +41,11 @@ export function ProgrammeCard({ projectId, side, onEdit, onKeep }: Props) {
                 </Pill>
               </span>
             </Tooltip>
-            {view.source === 'suggested' ? (
+            {view.sourceLabel ? (
               <Tooltip content={view.suggestedText}>
                 <span tabIndex={0} className={pillWrap}>
-                  <Pill tone="warning" data-testid="programme-suggested">
-                    Suggested dates
+                  <Pill tone="warning" data-testid="programme-suggested" data-source={view.source}>
+                    {view.sourceLabel}
                   </Pill>
                 </span>
               </Tooltip>

@@ -80,6 +80,32 @@ test('a new project waits for the client to accept', async ({ page }) => {
   await page.locator('[data-part="stage-band"][data-state="current"]').hover()
   await expect(page.getByRole('tooltip')).toContainText('Stage 2, Concept Design, ')
   await page.mouse.move(0, 0)
+  // Today's stage names itself on its band at every width, inside the plot (follow-up to note 17).
+  for (const width of [1440, 1024, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    const name = page.locator('[data-part="stage-band"][data-state="current"] [data-part="stage-name"]')
+    await expect(name, `current stage name at ${width}`).toBeVisible()
+    await expect(name).toHaveText('Concept Design')
+    const plot = (await page.getByTestId('programme-chart').locator('[role="img"]').boundingBox())!
+    const box = (await name.boundingBox())!
+    expect(box.x, `current stage name at ${width}`).toBeGreaterThanOrEqual(plot.x)
+    expect(box.x + box.width, `current stage name at ${width}`).toBeLessThanOrEqual(plot.x + plot.width)
+    // A key under the lane names every stage drawn.
+    await expect(page.locator('[data-part="stage-key"]:visible')).toContainText('Spatial Coordination')
+  }
+  // Each band takes keyboard focus and names itself and its dates; on a phone a tap opens the same words.
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.locator('[data-part="stage-band"][data-state="current"]').focus()
+  await page.keyboard.press('Tab')
+  await expect(page.locator('[data-part="stage-band"]:focus')).toHaveAttribute('aria-label', /^Stage 3, Spatial Coordination, /)
+  await expect(page.getByRole('tooltip')).toContainText('Stage 3, Spatial Coordination, ')
+  await page.keyboard.press('Escape')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('[data-part="stage-band"][data-state="current"]').click()
+  await expect(page.getByTestId('stage-panel')).toContainText('Stage 2, Concept Design')
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('stage-panel')).toHaveCount(0)
+  await page.setViewportSize({ width: 1440, height: 900 })
 
   // Confirming the suggested dates moves the checklist on.
   await page.getByTestId('keep-programme').click()
@@ -158,5 +184,14 @@ test('a short project labels its programme in months, never quarters', async ({ 
       expect(await horizontalOverflow(page), `${range} at ${width}`).toBe(0)
     }
   }
+  // Ferrymoor Yard from today at 1024 px: 'Jan 2027' wins over the first month, which the left edge names, so every
+  // year on the axis is named and 'Jul' never reads as July 2026 (follow-up to note 14).
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto('/app/projects/prj_x6dq3n')
+  await page.getByTestId('programme-card').getByText('From today', { exact: true }).click()
+  await expect(page.getByTestId('programme-card')).toHaveAttribute('data-range', 'ahead')
+  const shown = await page.locator('[data-part="tick-label"]').evaluateAll((els) => els.filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent))
+  expect(shown).toEqual(['Jan 2027', 'Jul', 'Jan 2028', 'Jul'])
+  await expect(page.locator('[data-part="start-label"]')).toHaveText('Oct 2026')
   expect(errors).toEqual([])
 })

@@ -153,9 +153,15 @@ describe('a new project', () => {
     open(`/app/projects/${id}`)
     await waitFor(() => q('setup-current'))
     const setup = byTestId('project-setup')
-    // The programme card carries the programme step's buttons, so the checklist leads with the next step.
-    expect(byTestId('setup-current').getAttribute('data-step')).toBe('requirements')
-    expect(byTestId('setup-current').textContent).toContain('Choose requirements')
+    // The programme card carries the programme step's buttons, so the checklist leads with the next step the project
+    // needs: the shortlist before the optional requirements, as one strip with the step list folded away.
+    expect(byTestId('setup-current').getAttribute('data-step')).toBe('shortlist')
+    expect(byTestId('setup-current').textContent).toContain('Next: Shortlist materials')
+    expect(byTestId('setup-current').textContent).toContain('Find materials')
+    expect(byTestId('setup-current').textContent).not.toContain('Optional')
+    expect(document.getElementById('setup-steps')!.className).toContain('sr-only')
+    // The waiting client is one sentence.
+    expect(byTestId('client-link-banner').querySelector('p')!.textContent).toBe('Waiting for Lantern Quay Developments to accept.')
     expect(setup.textContent).not.toContain('Indicative:')
     // The waiting client is one line inside the checklist, with one way to change the client.
     expect(setup.contains(byTestId('client-link-banner'))).toBe(true)

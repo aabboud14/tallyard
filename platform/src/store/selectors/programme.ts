@@ -32,8 +32,13 @@ export type ProgrammeStageBand = {
   from: number
   to: number
   state: 'past' | 'current' | 'future'
-  /** False when the stage falls wholly outside the axis, for example an earlier stage on 'From today'. */
+  /**
+   * False when the stage falls wholly outside the axis, for example an earlier stage on 'From today', or covers less
+   * than MIN_BAND_SHARE of it (a sliver), unless it is today's stage. The description still lists a sliver.
+   */
   visible: boolean
+  /** Where the band's name sits: at its start, or at its end for a band in the right half, so a name wider than its band runs into the chart rather than off its edge. */
+  nameAlign: 'start' | 'end'
   /** True when the stage runs on past the right edge (stage 6 on the whole programme, and stage 7): drawn with an open edge. */
   open: boolean
 }
@@ -83,15 +88,17 @@ export type ProgrammeView = {
   check: { status: ProgrammeStatus; label: string; text: string }
   /** Drives the "Suggested dates" pill. */
   source: ProgrammeSource
+  /** The pill beside the title while the dates wait for someone to keep them: "Suggested dates" or "Client's dates"; null once set. */
+  sourceLabel: string | null
   /** "materials" is left out when it is the same day as site start. */
   milestones: ProgrammeMilestone[]
   /** Live shortlist rows, from the public listings only. */
   materials: ProgrammeMaterialRow[]
   /** The architect, or the client while no architect is appointed. */
   canEdit: boolean
-  /** 'Keep these dates' on the card: the dates are suggested and the viewer can confirm them. */
+  /** 'Keep these dates' on the card: the dates are suggested, or the client's, and the viewer can confirm them. */
   canKeep: boolean
-  /** The 'Suggested dates' pill's tooltip, worded for whoever is looking. */
+  /** The source pill's tooltip, worded for whoever is looking. */
   suggestedText: string
   /** The line under the chart: where the stages come from and whose dates they are. */
   footerText: string
@@ -124,30 +131,40 @@ function lowerFirst(s: string): string {
 
 const STAGES_SOURCE = 'Stages from the RIBA Plan of Work 2020.'
 
+/** A band narrower than this share of the axis is a sliver: it is not drawn, unless it is today's stage. */
+export const MIN_BAND_SHARE = 0.015
+
+const SOURCE_LABELS: Record<ProgrammeSource, string | null> = { suggested: 'Suggested dates', client: "Client's dates", set: null }
+
 /**
- * The card's words for whoever is looking: whose dates they are, what the Suggested pill means and what fills the
- * empty materials lane. A New project with no architect yet names no architect.
+ * The card's words for whoever is looking: whose dates they are, what the source pill means and what fills the
+ * empty materials lane. A New project with no architect yet names no architect; dates the client set before an
+ * architect was appointed stay the client's until the architect keeps or edits them.
  */
 function programmeWords(p: Project, side: 'architect' | 'client' | 'consultant', canEdit: boolean): { suggestedText: string; footerText: string; emptyText: string } {
   const architect = !!p.architectOrgId
-  const suggested = p.programme.source === 'suggested'
-  const whose = suggested
-    ? canEdit
-      ? 'Suggested dates until you keep or edit them.'
+  const source = p.programme.source
+  let whose: string
+  let suggestedText: string
+  if (source === 'suggested') {
+    whose = canEdit ? 'Suggested dates until you keep or edit them.' : architect ? 'Suggested dates until the architect confirms them.' : 'Suggested dates until an architect is appointed.'
+    suggestedText = canEdit
+      ? 'Worked out from your site start and typical stage lengths. Keep them or edit them to match your plan.'
       : architect
-        ? 'Suggested dates until the architect confirms them.'
-        : 'Suggested dates until an architect is appointed.'
-    : architect
-      ? "Dates are the architect's plan."
-      : canEdit
-        ? 'Dates are your plan until an architect is appointed.'
-        : "Dates are the client's plan until an architect is appointed."
+        ? 'Worked out from the site start and typical stage lengths, until the architect confirms them.'
+        : 'Worked out from the site start and typical stage lengths, until an architect is appointed.'
+  } else if (source === 'client') {
+    whose = canEdit ? "The client's dates until you keep or edit them." : side === 'client' ? 'Your dates until the architect confirms them.' : "The client's dates until the architect confirms them."
+    suggestedText = canEdit
+      ? 'The client set these dates before you were appointed. Keep them or edit them to match your plan.'
+      : side === 'client'
+        ? 'You set these dates before the architect was appointed. They are yours until the architect confirms them.'
+        : 'The client set these dates before the architect was appointed, until the architect confirms them.'
+  } else {
+    whose = architect ? "Dates are the architect's plan." : canEdit ? 'Dates are your plan until an architect is appointed.' : "Dates are the client's plan until an architect is appointed."
+    suggestedText = ''
+  }
   const footerText = `${STAGES_SOURCE} ${whose} Indicative.`
-  const suggestedText = canEdit
-    ? 'Worked out from your site start and typical stage lengths. Keep them or edit them to match your plan.'
-    : architect
-      ? 'Worked out from the site start and typical stage lengths, until the architect confirms them.'
-      : 'Worked out from the site start and typical stage lengths, until an architect is appointed.'
   const emptyText =
     side === 'architect'
       ? 'No materials on the programme yet. Shortlist materials and each one appears here against your programme.'
@@ -186,6 +203,7 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
     const name = RIBA_STAGES[s.stage] ?? ''
     const from = at(s.start)
     const to = s.end === null ? 1 : at(addDays(s.end, 1))
+    const state: ProgrammeStageBand['state'] = planned === null ? 'future' : s.stage < planned ? 'past' : s.stage === planned ? 'current' : 'future'
     return {
       stage: s.stage,
       label: `Stage ${s.stage}`,
@@ -197,8 +215,9 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
       weeksText: weeksText(s),
       from,
       to,
-      state: planned === null ? 'future' : s.stage < planned ? 'past' : s.stage === planned ? 'current' : 'future',
-      visible: to > from,
+      state,
+      visible: to > from && (state === 'current' || to - from >= MIN_BAND_SHARE),
+      nameAlign: (from + to) / 2 > 0.5 ? 'end' : 'start',
       open: s.end === null || daysBetween(axis.end, s.end) > 0,
     }
   })
@@ -238,7 +257,7 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
     `${plannedText}.`,
     `${label}.`,
     `Site start ${formatDate(p.programme.siteStart)}, practical completion ${formatDate(p.programme.practicalCompletion)}.`,
-    `Stages: ${stages.filter((b) => b.visible).map((b) => b.hoverText).join('; ')}.`,
+    `Stages: ${stages.filter((b) => b.to > b.from).map((b) => b.hoverText).join('; ')}.`,
     materials.length === 0 ? 'No materials on the programme.' : `${plural(materials.length, 'material')}: ${materials.map((m) => `${m.title}, ${m.windowText}, ${m.fitLabel.toLowerCase()}`).join('; ')}.`,
   ].join(' ')
   return {
@@ -249,10 +268,11 @@ export function programmeView(state: AppData, viewer: Viewer, projectId: string,
     plannedStageText: plannedText,
     check: { status: check.status, label, text: checkText(check.status, planned, p.ribaStage, p.programme.stageStarts[0]) },
     source: p.programme.source,
+    sourceLabel: SOURCE_LABELS[p.programme.source],
     milestones,
     materials,
     canEdit,
-    canKeep: canEdit && p.programme.source === 'suggested',
+    canKeep: canEdit && p.programme.source !== 'set',
     ...words,
     description,
   }

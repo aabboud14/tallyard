@@ -154,8 +154,9 @@ describe('projectSetup', () => {
     ])
     expect([setup.done, setup.total, setup.visible]).toEqual([1, 6, true])
     expect(setup.nextText).toBe('Next: check the programme')
-    // The programme card carries 'Keep these dates' and 'Edit programme', so the checklist leads with the next step.
-    expect(setup.focusId).toBe('requirements')
+    // The programme card carries 'Keep these dates' and 'Edit programme', so the checklist leads with the next step,
+    // a required one (the shortlist) before the optional requirements.
+    expect(setup.focusId).toBe('shortlist')
     expect(setup.steps.map((x) => x.short)).toEqual(['Programme', 'Client', 'Requirements', 'Consultant', 'Shortlist', 'Send'])
     // The Indicative marker beside the step says it once; the text does not repeat it.
     expect(setup.steps[0].text).toBe('Suggested from your site start and typical stage lengths. Keep these dates or edit them on the programme.')
@@ -167,7 +168,7 @@ describe('projectSetup', () => {
     const after = sel.projectSetup(kept, viewer(U.priya), id)!
     expect(after.steps.find((x) => x.state === 'current')!.id).toBe('requirements')
     expect(after.nextText).toBe('Next: choose planning and sustainability requirements')
-    expect(after.focusId).toBe('requirements')
+    expect(after.focusId).toBe('shortlist')
   })
 
   it('flags a declined client, and hides once programme, client and shortlist are done', () => {
@@ -175,7 +176,7 @@ describe('projectSetup', () => {
     const declined = must(decideClientLink(state, actor(U.isla), id, 'declined', '')).state
     expect(sel.projectSetup(declined, viewer(U.priya), id)!.steps[1]).toMatchObject({ state: 'attention', action: { label: 'Ask again', intent: 'change_client' } })
     // The declined client has its own banner and the programme its own buttons, so the checklist leads with the next step.
-    expect(sel.projectSetup(declined, viewer(U.priya), id)!.focusId).toBe('requirements')
+    expect(sel.projectSetup(declined, viewer(U.priya), id)!.focusId).toBe('shortlist')
     let s = must(decideClientLink(state, actor(U.isla), id, 'accepted', '')).state
     const p = s.world.projects[id]
     s = must(setProjectProgramme(s, actor(U.priya), id, { ribaStage: p.ribaStage, programme: p.programme, startDate: p.startDate })).state

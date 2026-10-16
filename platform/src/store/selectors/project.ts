@@ -424,8 +424,8 @@ export type SetupStep = {
   secondary: { label: string; intent: SetupIntent } | null
 }
 /**
- * focusId is the step the compact checklist leads with: the first the architect can act on, otherwise the first not
- * yet done (the waiting client). The programme step is never the focus, as its buttons sit on the programme card
+ * focusId is the step the compact checklist leads with: the first required step the architect can act on, then the
+ * first optional one, otherwise the first not yet done (the waiting client). The programme step is never the focus, as its buttons sit on the programme card
  * just above, nor a declined client, which has its own banner. Null once there is nothing left to lead with.
  */
 export type ProjectSetup = { visible: boolean; done: number; total: number; steps: SetupStep[]; nextText: string | null; focusId: SetupStep['id'] | null }
@@ -449,7 +449,11 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
     id: 'programme',
     title: 'Check the programme',
     short: 'Programme',
-    text: programmeSet ? 'Stage dates, site start and practical completion are set.' : 'Suggested from your site start and typical stage lengths. Keep these dates or edit them on the programme.',
+    text: programmeSet
+      ? 'Stage dates, site start and practical completion are set.'
+      : p.programme.source === 'client'
+        ? `${clientName} set these dates before you were appointed. Keep them or edit them on the programme.`
+        : 'Suggested from your site start and typical stage lengths. Keep these dates or edit them on the programme.',
     optional: false,
     // 'Keep these dates' and 'Edit programme' sit on the programme card, beside the dates, and only there.
     action: null,
@@ -537,7 +541,9 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   const doneById = (id: SetupStep['id']) => drafts.find((d) => d.id === id)!.done
   // The programme card carries the programme step's buttons, and a declined client gets its own banner.
   const here = steps.filter((x) => x.id !== 'programme' && !(x.id === 'client' && x.state === 'attention'))
-  const focus = here.find((x) => x.state === 'current' || x.state === 'todo') ?? here.find((x) => x.state !== 'done') ?? null
+  // A required step leads before an optional one, so the next step shown is one the project needs.
+  const open = (x: SetupStep) => x.state === 'current' || x.state === 'todo'
+  const focus = here.find((x) => open(x) && !x.optional) ?? here.find(open) ?? here.find((x) => x.state !== 'done') ?? null
   return {
     visible: !(doneById('programme') && doneById('client') && doneById('shortlist')),
     done: doneCount,
