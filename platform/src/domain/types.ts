@@ -347,6 +347,12 @@ export type Project = {
   /** Record data: km from each hub to the site. */
   hubDistancesKm: Record<string, number>
   consultantOrgId: string
+  /**
+   * The consultancy's answer to being added to the project (16 October 2026). Absent on seeded projects and on
+   * records from before, which count as accepted. The consultancy is asked once the client has accepted, and it
+   * reaches the project only when both have.
+   */
+  consultantLink?: ClientLink
   /** Targets set at inception by the consultant. Sample data, placeholder. */
   targets: { contentByValue: number; avoidedCarbonT: number }
 }

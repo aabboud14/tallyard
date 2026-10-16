@@ -8,6 +8,30 @@ import { cx } from './cx'
 import { Button } from './Button'
 import { Pill } from './Badge'
 import { Textarea } from './form'
+import { statementBlocks } from '../domain/engines/statement'
+
+/** A section's text as paragraphs and bulleted lists: lines that start with a bullet mark become list items. */
+export function StatementText({ text, className }: { text: string; className?: string }) {
+  return (
+    <div className={cx('flex min-w-0 flex-col gap-2.5 text-base leading-6', className ?? 'text-ink')}>
+      {statementBlocks(text).map((b, i) =>
+        b.kind === 'paragraph' ? (
+          <p key={i} className="m-0">
+            {b.text}
+          </p>
+        ) : (
+          <ul key={i} className="m-0 flex list-disc flex-col gap-1 pl-5 marker:text-faint">
+            {b.items.map((item, j) => (
+              <li key={j} className="pl-1">
+                {item}
+              </li>
+            ))}
+          </ul>
+        ),
+      )}
+    </div>
+  )
+}
 
 export type StatementSectionProps = {
   /** The section id, used in the test ids: statement-section-{id}, statement-edit-{id} and so on. */
@@ -102,7 +126,7 @@ export function StatementSection({ id, heading, text, edited = false, stale = fa
           </div>
         </div>
       ) : (
-        <p className="m-0 whitespace-pre-line text-base leading-6 text-ink">{text}</p>
+        <StatementText text={text} />
       )}
     </section>
   )

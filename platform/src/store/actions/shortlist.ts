@@ -3,7 +3,7 @@
 import type { Wishlist, WishlistItem } from '../../domain/v1types'
 import { addToWishlist, decideItem as decideWish, editNote, MOVE_REASONS, putItem, removeFromWishlist, reopenItem as reopenWish, takeItem } from '../../domain/engines/wishlist'
 import type { ActionResult, Actor, AppData } from '../types'
-import { ERRORS, isProjectArchitect, isProjectClient, projectOrgIds } from '../access'
+import { ERRORS, isProjectArchitect, isProjectClient, linkedConsultantOrgId, projectOrgIds } from '../access'
 import { generalWishlist, isLotAvailable, listIdFor, listingOf, listOfItem, lotByPublicId, projectCanSee, projectWishlist, saveBlock } from '../lots'
 import { log, notify, plural } from '../notifications'
 import { acting, clean, fail, ok, withWorld } from './common'
@@ -174,7 +174,7 @@ export function decideItem(state: AppData, actor: Actor, projectId: string, item
   const word = decision === 'approved' ? 'approved' : 'declined'
   s = log(s, { at: a.now, orgIds: projectOrgIds(p), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `${word} ${title}`, href: `/app/projects/${projectId}/shortlist` })
   s = notify(s, {
-    orgIds: [p.architectOrgId, p.consultantOrgId],
+    orgIds: [p.architectOrgId, linkedConsultantOrgId(p)],
     kind: 'client_decision',
     title: `${a.org.name} ${word} ${title}`,
     body: text ? `${a.user.name}: ${text}` : `On ${p.name}.`,

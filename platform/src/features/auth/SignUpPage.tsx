@@ -1,8 +1,10 @@
 // Create an account and its organisation, then go home. A new organisation starts empty; its home page runs the
-// short onboarding for its type (an architect creates a first project).
+// short onboarding for its type (an architect creates a first project). A person invited to answer a project request
+// for a client joins that client organisation instead, and finds the request on their home.
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { signUp } from '../../store'
+import { getData, signUp } from '../../store'
+import { clientInviteForEmail } from '../../store/actions/clientInvite'
 import { toast } from '../../ui'
 import { AuthLayout } from './AuthLayout'
 import { SignUpForm } from './SignUpForm'
@@ -29,7 +31,7 @@ export function SignUpPage() {
   return (
     <AuthLayout>
       <div data-testid="signup-page">
-        <SignUpForm onSubmit={submit} error={error} pending={pending} />
+        <SignUpForm onSubmit={submit} error={error} pending={pending} invitedTo={(email) => clientInviteForEmail(getData(), email)} />
       </div>
     </AuthLayout>
   )

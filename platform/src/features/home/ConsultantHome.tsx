@@ -1,5 +1,5 @@
 // The sustainability consultant's home as a dashboard: four figures, each project against its effective targets
-// (reused content by value and avoided carbon, as target meters) with links to its Sustainability, Goals and
+// (reused and recycled content by value and upfront carbon avoided by reuse, as on Goals and targets) with links to its Sustainability, Goals and
 // targets and Certification tabs, the waste engagements and recent activity (collapsed). Indicative throughout.
 // Every figure and state comes from consultantDashboard (P2).
 import { Link } from 'react-router'
@@ -11,6 +11,7 @@ import { NO_RESULT_TEXT } from '../../store/selectors/dashboard'
 import { Card, Donut, EmptyState, IndicativeMarker, MARK, METRIC_STATE, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, TargetMeter } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { ActivityPanel } from './ActivityPanel'
+import { PendingLinkRequests } from '../projects/LinkRequests'
 import { TileChart } from './TileChart'
 
 function Metrics({ v }: { v: ConsultantDashboard }) {
@@ -27,7 +28,7 @@ function Metrics({ v }: { v: ConsultantDashboard }) {
       <MetricTile testId="metric-projects" label="Projects" icon={FolderKanban} value={v.stats.projects} sub={m.targetsSetText} />
       <MetricTile
         testId="metric-carbon"
-        label="Avoided carbon, approved"
+        label="Avoided carbon, secured"
         icon={Leaf}
         value={m.carbonValueText}
         unit="tCO2e"
@@ -38,9 +39,9 @@ function Metrics({ v }: { v: ConsultantDashboard }) {
         footer={
           m.carbonTargetT > 0 ? (
             <TileChart
-              label="Approved avoided carbon against the targets"
-              chart={<ProgressRing value={m.carbonApprovedT} max={m.carbonTargetT} state={m.carbonState?.state} label="Approved avoided carbon against the targets" valueText={`${m.carbonValueText} of ${f.number(m.carbonTargetT, 0)} tCO2e`} size={48} />}
-              note={`${f.percent(m.carbonShare)} of the target`}
+              label="Secured avoided carbon against the targets"
+              chart={<ProgressRing value={m.carbonSecuredT} max={m.carbonTargetT} state={m.carbonState?.state} label="Secured avoided carbon against the targets" valueText={`${m.carbonValueText} of ${f.number(m.carbonTargetT, 0)} tCO2e`} size={48} />}
+              note={`${f.percent(m.carbonShare)} of the target. ${f.number(m.carbonApprovedT, 1)} tCO2e more with approved materials`}
             />
           ) : undefined
         }
@@ -57,7 +58,7 @@ function Metrics({ v }: { v: ConsultantDashboard }) {
         }
         state={m.targetsState?.state}
         stateLabel={m.targetsState?.label}
-        sub="Content by value and avoided carbon"
+        sub={m.targetsScopeText}
         footer={m.targetsSet > 0 ? <TileChart label="Targets" chart={<Donut segments={targets} label="Targets" size={48} />} legend={targets.map((t) => ({ key: t.key, label: t.label, colour: t.colour, valueText: String(t.value) }))} /> : undefined}
       />
       <MetricTile testId="metric-engagements" label="Waste engagements" icon={Recycle} value={v.stats.engagements} sub={`${m.billsReviewed} ${m.billsReviewed === 1 ? 'bill' : 'bills'} reviewed`} href={v.engagements[0]?.href} />
@@ -99,8 +100,8 @@ function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
         </div>
       </div>
       <div className="flex flex-col gap-4 border-t border-line-soft px-4 py-4 sm:px-5">
-        <Meter label="Reused content by value" t={r.content} testId={`meter-content-${r.id}`} />
-        <Meter label="Avoided carbon, approved" t={r.carbon} testId={`meter-carbon-${r.id}`} />
+        <Meter label={r.content.label} t={r.content} testId={`meter-content-${r.id}`} />
+        <Meter label={r.carbon.label} t={r.carbon} testId={`meter-carbon-${r.id}`} />
       </div>
       <nav aria-label={`${r.name} pages`} className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft px-4 py-2.5 sm:px-5">
         {r.links.map((l) => (
@@ -119,10 +120,11 @@ export function ConsultantHome() {
   return (
     <Page testId="consultant-home">
       <PageHeader title={v.greeting} subtitle={v.dateText} />
+      <PendingLinkRequests className="mt-6" />
       <Metrics v={v} />
 
       <section aria-labelledby="projects-title" className="mt-10">
-        <SectionTitle id="projects-title" title="Projects against targets" description="Reused content by value and avoided carbon against the targets set for each project." actions={<IndicativeMarker />} />
+        <SectionTitle id="projects-title" title="Projects against targets" description="Reused and recycled content by value and upfront carbon avoided by reuse, secured, against the targets set for each project." actions={<IndicativeMarker />} />
         {v.rows.length === 0 ? (
           <Card>
             <EmptyState illustration="targets" title="No projects yet" text="When an architect adds your consultancy to a project, it appears here with its targets and figures." />

@@ -5,7 +5,7 @@
 import type { GoalValue } from '../../domain/sustainabilityTypes'
 import type { StatementStatus, TrackStatus } from '../../domain/sustainabilityTypes'
 import { goalDef } from '../../domain/reference/goals'
-import { goalValueText } from '../../domain/engines/goals'
+import { goalState, goalValueText } from '../../domain/engines/goals'
 import { metricState, METRIC_STATE_WORDS, type MetricState } from '../../domain/engines/metricState'
 import { niceMax, ticks } from '../../domain/engines/chartScale'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
@@ -13,7 +13,7 @@ import { formatDateShort } from '../../domain/dates'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import type { ProjectSide } from '../access'
-import { inSentence, STATEMENT_STATUS_FOR_CLIENT, STATEMENT_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
+import { inSentence, statementStatusText } from '../../domain/reference/sustainabilityCopy'
 import { activitySummary, type ActivitySummary } from './dashboard'
 import { clientDashboard, type ClientDashboard } from './client-dashboard'
 import { programmeInput } from './portfolio'
@@ -37,15 +37,8 @@ export type GoalMeter = {
   axis: { start: string; end: string }
 }
 
-/** How far a rating may fall short and still read as near: one level. */
-export const RATING_NEAR_LEVELS = 1
-
-/** A rating against its target level: met is good, one level short is near, further is off target. */
-export function ratingState(actualLevel: number | null, targetLevel: number | null): MetricState {
-  if (targetLevel === null || actualLevel === null) return 'neutral'
-  if (actualLevel >= targetLevel) return 'good'
-  return targetLevel - actualLevel <= RATING_NEAR_LEVELS ? 'warning' : 'critical'
-}
+// The rating rule lives with the goals engine so the meters, the tracking table and the consultant home share it.
+export { RATING_NEAR_LEVELS, ratingState } from '../../domain/engines/goals'
 
 /** The right end of a meter: a nice number a little past the larger of the target and the result. */
 export function meterMax(target: number | null, actual: number | null): number {
@@ -71,7 +64,7 @@ export function goalMeter(row: GoalRow): GoalMeter {
     const level = (v: GoalValue | null) => (v === null ? null : row.scale!.indexOf(String(v)) + 1 || null)
     const t = level(row.target)
     const a = level(row.actual)
-    const state = ratingState(a, t)
+    const state = goalState(goalDef(row.id), row.target, row.actual)
     return {
       value: a ?? 0,
       max: row.scale.length,
@@ -86,7 +79,7 @@ export function goalMeter(row: GoalRow): GoalMeter {
   const t = numberOrNull(row.target)
   const a = numberOrNull(row.actual)
   const max = meterMax(t, a)
-  const state = a === null ? 'neutral' : metricState(a, t, row.direction)
+  const state = goalState(goalDef(row.id), t, a)
   return {
     value: a ?? 0,
     max,
@@ -226,6 +219,15 @@ export function approvalsStrip(v: ApprovalsView): { waiting: { count: number; su
   return { waiting: { count: v.finance.waiting.count, sub: sub(v.finance.waiting) }, approved: { count: v.finance.approved.count, sub: sub(v.finance.approved) }, avoidedIfApprovedT: v.finance.waiting.avoidedT }
 }
 
+/**
+ * A saving in whole pounds, for summary lines beside whole-pound totals: "Saving £8,525 (14.4%)", or "Costs £200
+ * more than new". The package panels keep pence; a summary line never mixes the two.
+ */
+export function savingWholeText(amount: number, ratio: number | null = null): string {
+  const share = ratio === null ? '' : ` (${f.percent(Math.abs(ratio))})`
+  return amount < 0 ? `Costs ${f.moneyWhole(-amount)} more than new${share}` : `Saving ${f.moneyWhole(amount)}${share}`
+}
+
 export const RESERVATION_GROUP_LABELS: Record<ReservationGroup, string> = { reserved: 'Reserved', requested: 'With the seller', to_request: 'To request' }
 const GROUPS: ReservationGroup[] = ['reserved', 'requested', 'to_request']
 
@@ -252,7 +254,7 @@ export function reservationCostBars(s: ReservationsView['summary']): { bars: Res
     bars,
     max,
     ticks: ticks(top, 2).map((v) => ({ value: v, label: f.moneyWhole(v) })),
-    total: { valueText: f.moneyWhole(s.total.total), savingText: f.saving(s.total.saving, s.total.savingPercent), count: s.total.count },
+    total: { valueText: f.moneyWhole(s.total.total), savingText: savingWholeText(s.total.saving, s.total.savingPercent), count: s.total.count },
   }
 }
 
@@ -295,7 +297,7 @@ export function readyText(ready: number, targeted: number): string {
 /** A scheme card's words: the target, the latest level (for the circular measures, the statement) and the readiness. */
 export function schemeCard(s: SchemeSummaryView, side: ProjectSide = 'consultant'): { targetText: string; latestLabel: string; predictedText: string; latestLine: string; readyText: string; atRiskText: string | null } {
   const circular = s.scheme === 'circular' ? s.circular : null
-  const statement = circular ? (circular.statement === null ? 'Not started' : side === 'client' ? STATEMENT_STATUS_FOR_CLIENT[circular.statement] : STATEMENT_STATUS_LABELS[circular.statement]) : null
+  const statement = circular ? statementStatusText(side, circular.statement) : null
   return {
     targetText: circular ? (circular.contentTarget > 0 ? `Content by value at least ${f.fixed(circular.contentTarget * 100, 0)}%` : 'Content by value not targeted') : (s.ratingTarget ?? 'Not targeted'),
     latestLabel: circular ? 'Statement' : 'Latest',

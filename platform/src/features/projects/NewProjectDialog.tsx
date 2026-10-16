@@ -5,9 +5,10 @@
 // site start and region; everything else takes its default.
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { ChevronDown, FolderPlus } from 'lucide-react'
+import { ChevronDown, FolderPlus, Mail } from 'lucide-react'
 import type { ProjectType } from '../../domain/v1types'
 import { PROJECT_TYPE_OTHER_MAX } from '../../domain/reference/projectTypes'
+import { PRODUCT_NAME } from '../../domain/constants'
 import { act, useView } from '../../store'
 import { newProjectOptions } from '../../store/selectors/project'
 import { requirementChoiceSummary, requirementChoices } from '../../store/selectors/requirements'
@@ -39,6 +40,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
   const [clientId, setClientId] = useState<string>('')
   const [clientName, setClientName] = useState('')
   const [clientMessage, setClientMessage] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
   const [projectType, setProjectType] = useState<ProjectType>('office')
   const [typeOther, setTypeOther] = useState('')
   const [region, setRegion] = useState('Central London')
@@ -70,6 +72,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
     setClientId('')
     setClientName('')
     setClientMessage('')
+    setClientEmail('')
     setProjectType('office')
     setTypeOther('')
     setLocalAuthority('')
@@ -100,6 +103,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
       practicalCompletion: completion || undefined,
       requirementIds: !short && requirementsOpen ? [...ticks] : undefined,
       clientMessage,
+      clientEmail: newClient ? clientEmail : undefined,
       description: description2,
       consultantOrgId: consultant || null,
     }
@@ -133,6 +137,11 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
       {newClient ? (
         <Field label={hasClients ? 'New client name' : 'Client'} error={errors.client} hint={hasClients ? undefined : 'The developer or organisation you are designing for.'} className={hasClients ? '' : 'sm:col-span-2'}>
           <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client organisation" data-testid="project-client-name" />
+        </Field>
+      ) : null}
+      {newClient ? (
+        <Field label="Client contact email" optional error={errors.clientEmail} hint={`If nobody from ${clientLabel || 'the client'} uses ${PRODUCT_NAME} yet, they are invited to join and accept the project.`} className="sm:col-span-2">
+          <Input type="email" icon={Mail} value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="name@company.example" data-testid="project-client-email" />
         </Field>
       ) : null}
     </>
@@ -265,7 +274,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
             </Section>
 
             <Section title="Team">
-              <Field label="Sustainability consultant" optional>
+              <Field label="Sustainability consultant" optional hint="Asked to accept once the client has accepted the project.">
                 <Select value={consultant} onChange={(e) => setConsultant(e.target.value)} placeholder="None yet" options={options.consultants.map((c) => ({ value: c.orgId, label: c.name }))} data-testid="project-consultant" />
               </Field>
               <Field label="Description" optional className="sm:col-span-2">

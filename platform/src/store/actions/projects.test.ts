@@ -30,7 +30,12 @@ describe('createProject', () => {
     expect(asked.href).toBe('/app/projects/requests')
     expect(p.clientLink.status).toBe('pending')
     expect(projectsOfUser(r.state, U.isla).map((x) => x.id)).not.toContain(r.value)
-    expect(r.state.notifications.some((n) => n.orgId === ORG_IDS.halewick)).toBe(true)
+    // Round 2 follow-up (audit of 16 October, note C2): Halewick is asked only once Lantern Quay accepts, and does not
+    // see the project before; the request reaches it on acceptance (see "the consultancy's consent" below).
+    const added = r.state.notifications.filter((n) => !s0.notifications.includes(n))
+    expect(added.some((n) => n.orgId === ORG_IDS.halewick)).toBe(false)
+    expect(p.consultantLink?.status).toBe('pending')
+    expect(projectsOfUser(r.state, U.marcus).map((x) => x.id)).not.toContain(r.value)
   })
 
   it('creates a new client organisation for a new name, and never reuses a seller', () => {
@@ -149,10 +154,12 @@ describe('createProject: programme, requirements, type and location', () => {
     expect(validateNewProject({ ...base, siteStart: '2027-02-30' }, '2026-10-08')).toEqual([['siteStart', PROJECT_ERRORS.badDate]])
   })
 
-  it('logs the creation to the practice and the consultant, and the request to the client only', () => {
+  it('logs the creation to the practice only, and the request to the client only', () => {
     const { state, id } = corbel()
     const created = state.activity.find((e) => e.projectId === id && e.text === 'created the project')!
-    expect(created.orgIds).toEqual([ORG_IDS.oriel, ORG_IDS.halewick])
+    // Round 2 follow-up (audit of 16 October, note C2): the consultancy named on the form is asked once the client
+    // accepts, so until then nothing about the project reaches it.
+    expect(created.orgIds).toEqual([ORG_IDS.oriel])
     const asked = state.activity.find((e) => e.text === 'asked to add you as client on Corbel Yard')!
     expect(asked).toMatchObject({ orgIds: [ORG_IDS.lantern], projectId: null, actor: 'Priya Nair', href: '/app/projects/requests' })
     expect(state.notifications.find((n) => n.orgId === ORG_IDS.lantern && n.kind === 'team')!.body).toBe('Accept to see the project and approve materials for it.')
@@ -179,6 +186,7 @@ describe('createProject: programme, requirements, type and location', () => {
       startDate: p.startDate,
       programme: p.programme,
       clientLink: p.clientLink,
+      consultantLink: p.consultantLink,
       requirementIds: [],
       description: '',
     })

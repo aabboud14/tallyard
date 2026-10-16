@@ -138,11 +138,14 @@ describe('projectSetup', () => {
       ['programme', 'current'],
       ['client', 'waiting'],
       ['requirements', 'todo'],
-      ['consultant', 'done'],
+      // Round 2 follow-up (audit of 16 October, note C2): the consultancy named on the form waits to be asked
+      // until the client accepts, so the step waits instead of reading done.
+      ['consultant', 'waiting'],
       ['shortlist', 'todo'],
       ['send', 'waiting'],
     ])
-    expect([setup.done, setup.total, setup.visible]).toEqual([1, 6, true])
+    expect([setup.done, setup.total, setup.visible]).toEqual([0, 6, true])
+    expect(setup.steps.find((x) => x.id === 'consultant')!.text).toBe('Halewick Sustainability is asked once the client accepts.')
     expect(setup.nextText).toBe('Next: check the programme')
     expect(setup.focusId).toBe('programme')
     expect(setup.steps.map((x) => x.short)).toEqual(['Programme', 'Client', 'Requirements', 'Consultant', 'Shortlist', 'Send'])
@@ -184,7 +187,9 @@ describe('projectSetup', () => {
       ['programme', 'done'],
       ['client', 'waiting'],
       ['requirements', 'done'],
-      ['consultant', 'done'],
+      // Round 2 follow-up (audit of 16 October, note C2): the consultancy named on the form waits to be asked
+      // until the client accepts, so the step waits instead of reading done.
+      ['consultant', 'waiting'],
       ['shortlist', 'done'],
       ['send', 'waiting'],
     ])
@@ -195,10 +200,13 @@ describe('projectSetup', () => {
   it('shows on the projects list for the architect while it is visible', () => {
     const { state, id } = corbel()
     const row = sel.projectsListView(state, viewer(U.priya)).rows.find((r) => r.id === id)!
-    expect(row.setup).toEqual({ done: 1, total: 6, nextText: 'Next: check the programme' })
+    // Round 2 follow-up (note C2): the consultant step waits for the client, so none of the six is done yet.
+    expect(row.setup).toEqual({ done: 0, total: 6, nextText: 'Next: check the programme' })
     expect(row.linkStatus).toBe('pending')
     expect(sel.projectsListView(state, viewer(U.priya)).rows.find((r) => r.id === MERROWGATE_ID)!.setup).toBeNull()
-    expect(sel.projectsListView(state, viewer(U.marcus)).rows.find((r) => r.id === id)!.setup).toBeNull()
+    // Round 2 follow-up (note C2): Marcus has no row for the project at all until Lantern Quay and Halewick accept,
+    // which is stricter than a row with no setup.
+    expect(sel.projectsListView(state, viewer(U.marcus)).rows.find((r) => r.id === id)).toBeUndefined()
   })
 })
 
@@ -219,7 +227,8 @@ describe('the client link', () => {
 
   it('gives the architect the client organisation only, until it accepts', () => {
     const { state, id } = corbel()
-    expect(sel.clientLinkView(state, viewer(U.priya), id)).toEqual({ status: 'pending', clientName: 'Lantern Quay Developments', clientHasMembers: true, requestedText: 'Asked on 8 October 2026', decidedText: null, note: null, canChange: true })
+    // Round 2 follow-up (audit note C3): the view also carries the invite to a client nobody uses yet; none here.
+    expect(sel.clientLinkView(state, viewer(U.priya), id)).toEqual({ status: 'pending', clientName: 'Lantern Quay Developments', clientHasMembers: true, requestedText: 'Asked on 8 October 2026', decidedText: null, note: null, canChange: true, invite: null })
     const declined = must(decideClientLink(state, actor(U.isla), id, 'declined', 'Not for us.')).state
     expect(sel.clientLinkView(declined, viewer(U.priya), id)).toMatchObject({ status: 'declined', decidedText: 'Declined on 8 October 2026', note: 'Not for us.' })
     expect(sel.clientLinkView(state, viewer(U.marcus), id)).toBeNull()

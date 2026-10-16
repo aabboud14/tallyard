@@ -10,13 +10,16 @@ import { applicableIds, keepApplicable } from '../../domain/reference/requiremen
 import { defaultCompletion, PROGRAMME_ERRORS, suggestProgramme, validateProgramme } from '../../domain/engines/programme'
 import { daysBetween, isOnOrBefore } from '../../domain/dates'
 import type { ActionResult, Actor, AppData } from '../types'
-import { ERRORS, isProjectArchitect, isProjectClient, projectOrgIds, roleOfOrg } from '../access'
+import { ERRORS, isProjectArchitect, isProjectClient, projectOrgIds, roleOfOrg, usersOfOrg } from '../access'
 import { mint } from '../ids'
 import { listIdFor } from '../lots'
 import { log, notify, plural } from '../notifications'
 import { setTermsAccepted } from '../worldOps'
 import { sharedWithProjectHref } from '../paths'
 import { acting, clean, fail, isIsoDate, ok, withWorld, type Acting } from './common'
+import { askConsultant, pendingConsultantLink } from './consultant'
+import { CLIENT_INVITE_ERRORS, clientInviteProblem, issueClientInvite } from './clientInvite'
+import { isEmail } from '../../sandbox/accounts'
 
 export { PROJECT_TYPES }
 
@@ -59,11 +62,13 @@ export type NewProjectInput = {
   requirementIds?: string[]
   /** The architect's note to the client with the request to join. */
   clientMessage?: string
+  /** A contact at a client nobody uses yet: they get an invite to join the client organisation and answer. */
+  clientEmail?: string
   description?: string
   consultantOrgId?: string | null
 }
 
-export type ProjectField = 'name' | 'client' | 'projectType' | 'projectTypeOther' | 'region' | 'localAuthority' | 'ribaStage' | 'startDate' | 'siteStart' | 'practicalCompletion' | 'consultantOrgId'
+export type ProjectField = 'name' | 'client' | 'clientEmail' | 'projectType' | 'projectTypeOther' | 'region' | 'localAuthority' | 'ribaStage' | 'startDate' | 'siteStart' | 'practicalCompletion' | 'consultantOrgId'
 
 function validStage(stage: number): boolean {
   return Number.isInteger(stage) && stage >= 0 && stage <= 7
@@ -81,6 +86,7 @@ export function validateNewProject(input: NewProjectInput, today: string): [Proj
   if (!input.name.trim()) out.push(['name', PROJECT_ERRORS.name])
   if ('name' in input.client && !input.client.name.trim()) out.push(['client', PROJECT_ERRORS.clientName])
   if ('orgId' in input.client && !input.client.orgId) out.push(['client', PROJECT_ERRORS.clientName])
+  if ('name' in input.client && input.clientEmail?.trim() && !isEmail(input.clientEmail)) out.push(['clientEmail', CLIENT_INVITE_ERRORS.email])
   if (input.projectType === null || !PROJECT_TYPES.includes(input.projectType)) out.push(['projectType', PROJECT_ERRORS.projectType])
   const regionOk = (REGIONS as readonly string[]).includes(input.region)
   if (!regionOk) out.push(['region', PROJECT_ERRORS.region])
@@ -163,6 +169,8 @@ export type ProjectRecordInput = {
   startDate: string
   programme: ProjectProgramme
   clientLink: ClientLink
+  /** The request to the consultancy, when one is named. */
+  consultantLink?: ClientLink
   requirementIds: string[]
   description: string
   /** What a seller reads as the buyer's organisation type; 'Design team' unless given. */
@@ -208,6 +216,7 @@ export function projectRecord(input: ProjectRecordInput): Project {
     seededDeals: [],
     hubDistancesKm: { ...V1_ASSUMPTIONS.regionHubKm[input.region] },
     consultantOrgId: input.consultantOrgId,
+    ...(input.consultantLink ? { consultantLink: { ...input.consultantLink } } : {}),
     targets: { contentByValue: 0, avoidedCarbonT: 0 },
   }
 }
@@ -272,6 +281,7 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
     startDate: input.startDate,
     programme: { ...dates, source: 'suggested' },
     clientLink: pendingClientLink(a.today, a.persona.id, input.clientMessage ?? ''),
+    consultantLink: consultantOrgId ? pendingConsultantLink(a.today, a.persona.id) : undefined,
     requirementIds: input.requirementIds ?? [],
     description: input.description ?? '',
   })
@@ -281,8 +291,21 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
   s = withWorld(s, w)
   s = log(s, { at: a.now, orgIds: projectOrgIds(project), projectId: id, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'created the project', href: `/app/projects/${id}` })
   s = askClient(s, a, clientOrgId, name, input.clientMessage ?? '')
-  if (consultantOrgId) s = notify(s, { orgIds: [consultantOrgId], kind: 'team', title: `${a.org.name} added you to ${name}`, body: 'You are the sustainability consultant on this project.', href: `/app/projects/${id}`, at: a.now, actorUserId: a.user.id })
-  return ok(s, id)
+  // The consultancy is asked once the client accepts (decideClientLink), never before.
+  const invited = inviteNewClient(s, a, project, input.clientEmail)
+  if (typeof invited === 'string') return fail(state, invited)
+  return ok(invited, id)
+}
+
+/**
+ * A contact email for a client nobody uses yet: invites them to join the client organisation and answer. Ignored when
+ * blank, or when someone from the organisation already uses the product (they answer on Project requests).
+ */
+function inviteNewClient(s: AppData, a: Acting, project: Project, email: string | undefined): AppData | string {
+  if (!email?.trim() || usersOfOrg(s, project.clientOrgId).length > 0) return s
+  const problem = clientInviteProblem(s, project, email)
+  if (problem) return problem
+  return issueClientInvite(s, project, email, { userId: a.user.id, name: a.user.name, now: a.now }).state
 }
 
 /** The client organisation accepts or declines being the client on a project. Only a pending request can be answered. */
@@ -303,6 +326,8 @@ export function decideClientLink(state: AppData, actor: Actor, projectId: string
     s = withWorld(state, w)
     s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: 'accepted the project as client', href })
     s = notify(s, { orgIds: [p.architectOrgId], kind: 'team', title: `${clientOrg} accepted ${p.name}`, body: 'They can now see the project and approve materials you send.', href, at: a.now, actorUserId: a.user.id })
+    // Now the client has agreed, the consultancy the architect named is asked.
+    s = askConsultant(s, next, a.now)
     return ok(s)
   }
   const text = clean(note, 1000)
@@ -315,7 +340,7 @@ export function decideClientLink(state: AppData, actor: Actor, projectId: string
 }
 
 /** The architect asks a client to accept the project again, or asks another client, while it is not accepted. */
-export function requestClientLink(state: AppData, actor: Actor, projectId: string, client: ClientChoice, message: string): ActionResult {
+export function requestClientLink(state: AppData, actor: Actor, projectId: string, client: ClientChoice, message: string, clientEmail?: string): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
   const p = state.world.projects[projectId]
@@ -343,7 +368,10 @@ export function requestClientLink(state: AppData, actor: Actor, projectId: strin
   const clientName = w.orgs[clientOrgId]?.name ?? ''
   s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `asked ${clientName} to join as client`, href: `/app/projects/${projectId}` })
   s = askClient(s, a, clientOrgId, p.name, message)
-  return ok(s)
+  if ('name' in client && clientEmail?.trim() && !isEmail(clientEmail)) return fail(state, CLIENT_INVITE_ERRORS.email)
+  const invited = inviteNewClient(s, a, next, clientEmail)
+  if (typeof invited === 'string') return fail(state, invited)
+  return ok(invited)
 }
 
 export type ProgrammeInput = { ribaStage: number; programme: ProgrammeDates; startDate: string }
@@ -461,7 +489,11 @@ export function acceptTerms(state: AppData, actor: Actor, projectId: string): Ac
   return ok(s)
 }
 
-/** The architect sets or clears the project's sustainability consultancy. */
+/**
+ * The architect names or clears the project's sustainability consultancy. A named consultancy is asked to join (at
+ * once if the client has accepted, otherwise when it does) and reaches the project only once it accepts. Naming the
+ * same consultancy again after it declined asks it again.
+ */
 export function setProjectConsultant(state: AppData, actor: Actor, projectId: string, consultantOrgId: string | null): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
@@ -470,15 +502,19 @@ export function setProjectConsultant(state: AppData, actor: Actor, projectId: st
   if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
   const next = consultantOrgId ?? ''
   if (next && roleOfOrg(state, next) !== 'consultant') return fail(state, PROJECT_ERRORS.consultant)
-  if (next === p.consultantOrgId) return ok(state)
+  const askAgain = !!next && next === p.consultantOrgId && p.consultantLink?.status === 'declined'
+  if (next === p.consultantOrgId && !askAgain) return ok(state)
   const w = structuredClone(state.world)
   const proj = w.projects[projectId]
   proj.teamOrgIds = [...proj.teamOrgIds.filter((x) => x !== p.consultantOrgId), ...(next ? [next] : [])]
   proj.consultantOrgId = next
+  if (next) proj.consultantLink = pendingConsultantLink(a.today, a.persona.id)
+  else delete proj.consultantLink
   let s = withWorld(state, w)
-  const text = next ? `added ${w.orgs[next].name} as sustainability consultant` : 'removed the sustainability consultant'
-  s = log(s, { at: a.now, orgIds: projectOrgIds(proj), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text, href: `/app/projects/${projectId}/team` })
-  if (next) s = notify(s, { orgIds: [next], kind: 'team', title: `${a.org.name} added you to ${p.name}`, body: 'You are the sustainability consultant on this project.', href: `/app/projects/${projectId}`, at: a.now, actorUserId: a.user.id })
+  // Logged to the organisations on the project before the change, so a consultancy that is removed reads it too.
+  const text = next ? `asked ${w.orgs[next].name} to join as sustainability consultant` : 'removed the sustainability consultant'
+  s = log(s, { at: a.now, orgIds: [...projectOrgIds(p), ...projectOrgIds(proj)], projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text, href: `/app/projects/${projectId}/team` })
+  s = askConsultant(s, proj, a.now)
   return ok(s)
 }
 

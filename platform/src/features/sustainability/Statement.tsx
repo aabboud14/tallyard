@@ -94,13 +94,20 @@ export function Statement() {
                   Download for Word
                 </Button>
                 {v.canEdit ? (
-                  <Button variant="primary" icon={sent ? SendHorizontal : Send} disabled={!v.canSend} onClick={send} data-testid="statement-send">
-                    {sent ? 'Sent for review' : `Send to ${clientName} for review`}
+                  <Button variant="primary" icon={sent && !v.canSend ? SendHorizontal : Send} disabled={!v.canSend} onClick={send} data-testid="statement-send">
+                    {v.sendLabel}
                   </Button>
                 ) : null}
               </>
             }
           />
+          {v.changedSinceSent ? (
+            <div data-testid="statement-changed">
+              <Callout tone="info" title="The figures have moved on" role="status">
+                {v.changedSinceSent}
+              </Callout>
+            </div>
+          ) : null}
           <Callout tone="warning" title="Check before you submit">
             {v.caveat}
           </Callout>

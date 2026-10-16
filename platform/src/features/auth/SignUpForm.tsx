@@ -15,6 +15,8 @@ export type SignUpFormProps = {
   error?: string | null
   pending?: boolean
   signInHref?: string
+  /** The client organisation an email was invited to join to answer a project request, if any. */
+  invitedTo?: (email: string) => { orgName: string; projectName: string; architectName: string } | null
 }
 
 type Errors = Partial<Record<'name' | 'email' | 'password' | 'orgName', string>>
@@ -31,7 +33,7 @@ function Steps({ step }: { step: 1 | 2 }) {
   )
 }
 
-export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/signin' }: SignUpFormProps) {
+export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/signin', invitedTo }: SignUpFormProps) {
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -88,6 +90,43 @@ export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/si
           <Button type="submit" variant="primary" size="lg" block data-testid="signup-continue">
             Continue
           </Button>
+        </form>
+      </div>
+    )
+  }
+
+  const invite = invitedTo ? invitedTo(email.trim()) : null
+  if (invite) {
+    return (
+      <div>
+        <AuthHeading title={`Join ${invite.orgName}`} text={`${invite.architectName} asked ${invite.orgName} to accept ${invite.projectName}, and invited this email to answer.`} />
+        <Steps step={2} />
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            void onSubmit({ name: name.trim(), email: email.trim(), password, orgName: invite.orgName, orgType: 'client' })
+          }}
+          className="flex flex-col gap-5"
+          aria-label="Join your organisation"
+          data-testid="signup-join"
+        >
+          {error ? (
+            <Callout tone="danger" role="alert">
+              {error}
+            </Callout>
+          ) : null}
+          <Callout tone="info" icon={Building2} title={`You join ${invite.orgName}`}>
+            Your account joins {invite.orgName} as its first member. The request to accept {invite.projectName} waits on your home.
+          </Callout>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            <Button size="lg" icon={ArrowLeft} onClick={() => setStep(1)} className="sm:w-auto" block>
+              Back
+            </Button>
+            <Button type="submit" variant="primary" size="lg" block loading={pending} data-testid="signup-submit" className="sm:flex-1">
+              Join {invite.orgName}
+            </Button>
+          </div>
         </form>
       </div>
     )

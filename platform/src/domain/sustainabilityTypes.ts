@@ -55,7 +55,14 @@ export type StatementDoc = {
   reviewedAt: string | null
   reviewedByUserId: string | null
   reviewNote: string | null
+  /**
+   * The sections exactly as sent for review, so the client reads what was sent while the consultant's live text
+   * moves on with the records. Absent in records written before 16 October 2026; sending again replaces it.
+   */
+  sentSections?: StatementSnapshotSection[] | null
 }
+
+export type StatementSnapshotSection = { id: StatementSectionId; heading: string; text: string }
 
 /** A project's sustainability records: the consultant's targets, results, credits and statement, and the tracking of its requirements. */
 export type ProjectSustainability = {

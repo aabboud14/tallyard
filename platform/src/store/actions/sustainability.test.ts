@@ -251,7 +251,9 @@ describe('the circular economy statement', () => {
     const w = structuredClone(s.world)
     w.projects[M].clientLink = { ...w.projects[M].clientLink, status: 'pending' }
     const pending = { ...s, world: w }
-    refused(pending, sendStatementForReview(pending, actor(U.marcus), M), E.noClient)
+    // Round 2 follow-up (audit of 16 October, note C2): while the client has not accepted, the consultancy does not
+    // reach the project at all, so the action is refused for its role before the client check.
+    refused(pending, sendStatementForReview(pending, actor(U.marcus), M), ERRORS.role)
   })
 })
 

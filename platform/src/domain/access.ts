@@ -66,11 +66,19 @@ export function clientLinked(p: Project): boolean {
   return p.clientLink.status === 'accepted'
 }
 
-/** Projects where the persona's organisation is the architect, the linked client or the consultant, in seed order. */
+/**
+ * Whether the consultancy reaches the project: it has accepted being added (a link absent on seeded projects counts
+ * as accepted), and the client has accepted the project too, so no third party sees a project before its client.
+ */
+export function consultantLinked(p: Project): boolean {
+  return !!p.consultantOrgId && (p.consultantLink?.status ?? 'accepted') === 'accepted' && clientLinked(p)
+}
+
+/** Projects where the persona's organisation is the architect, the linked client or the linked consultant, in seed order. */
 export function projectsFor(world: World, personaId: string): Project[] {
   const orgId = accessOrgId(world, personaId)
   if (!orgId) return []
-  return Object.values(world.projects).filter((p) => p.architectOrgId === orgId || (p.clientOrgId === orgId && clientLinked(p)) || p.consultantOrgId === orgId)
+  return Object.values(world.projects).filter((p) => p.architectOrgId === orgId || (p.clientOrgId === orgId && clientLinked(p)) || (p.consultantOrgId === orgId && consultantLinked(p)))
 }
 
 /** Waste engagements where the persona's organisation is the consultant or the building owner. */

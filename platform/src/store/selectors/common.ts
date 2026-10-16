@@ -278,7 +278,7 @@ export function hrefForReader(state: AppData, userId: string, href: string | nul
   const [, section, id, rawTab, ...rest] = href.split('?')[0].split('#')[0].split('/').filter(Boolean)
   // The Carbon tab became Sustainability (round 2); older lines still say carbon.
   const tab = rawTab === 'carbon' ? 'sustainability' : rawTab
-  if (section === 'projects' && id === 'requests') return roleOfUser(state, userId) === 'client' ? href : null
+  if (section === 'projects' && id === 'requests') return ['client', 'consultant'].includes(roleOfUser(state, userId) ?? '') ? href : null
   if (section === 'projects' && id) {
     const side = projectSide(state, userId, id)
     if (!side) return null

@@ -186,7 +186,10 @@ test('the review link lands on the statement on a phone, and the tracking, tiles
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(page.getByTestId('sustainability-tracking')).toHaveAttribute('data-layout', 'table')
   expect(await fits()).toBe(true)
-  await expect(page.getByTestId(`tracking-${K}`)).toContainText('No consultant appointed. Defaults from the requirements are shown.')
+  // Round 2 follow-up (audit of 16 October, note 36): Kilnworth Place keeps its BREEAM, LEED and WELL cells (each
+  // "Not targeted"), with the no consultant line under the project name.
+  await expect(page.getByTestId(`tracking-${K}`)).toContainText('No consultant appointed yet')
+  await expect(page.getByTestId(`tracking-${K}`).getByText('Not targeted', { exact: true })).toHaveCount(3)
 
   // The consultant's scheme tabs wrap on a phone; his long project tab strip keeps the current tab in view and shows
   // a chevron towards the tabs it hides.

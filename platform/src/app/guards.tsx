@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useSession, useView } from '../store'
 import { routeAccess } from '../store/selectors/nav'
+import { waitingRequestForPath } from '../store/selectors/consultant-requests'
 import { NoAccess, AppNotFound } from './NoAccess'
 import { justSignedOut, safeNext, signInHref } from './next'
 
@@ -30,7 +31,8 @@ export function GuestOnly({ children }: { children: ReactNode }) {
 export function AccessGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const access = useView(routeAccess, pathname)
-  if (access === 'forbidden') return <NoAccess />
+  const request = useView(waitingRequestForPath, pathname)
+  if (access === 'forbidden') return <NoAccess request={request} />
   if (access === 'not_found') return <AppNotFound />
   return <>{children}</>
 }

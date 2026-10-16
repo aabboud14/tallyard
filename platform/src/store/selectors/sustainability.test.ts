@@ -103,8 +103,9 @@ describe('the circular economy statement', () => {
     const carbon = v.sections.find((x) => x.id === 'carbon')!.text
     expect(carbon).toContain('47.8 tCO2e')
     expect(carbon).toContain('148.6 tCO2e')
-    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')[1]).toMatch(/^L-R8Q33F, /)
-    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')).toHaveLength(5)
+    // Round 2 follow-up (audit note 44): the materials are grouped by status and family, without listing codes.
+    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')[1]).toBe('Secured through earlier deals or accepted reservations:')
+    expect(v.sections.find((x) => x.id === 'reuse')!.text).not.toContain('L-R8Q33F')
     expect(v).toMatchObject({ status: 'ready_for_review', statusLabel: 'With the client for review', canSend: false, fileName: 'merrowgate-wharf-circular-economy-statement-2026-10-08.docx', title: 'Merrowgate Wharf: circular economy statement', subtitle: 'Prepared by Halewick Sustainability for Lantern Quay Developments, 8 October 2026' })
     expect(v.sentText).toBe('Sent to Lantern Quay Developments on 7 Oct 2026')
     expect(v.plainText.startsWith('Merrowgate Wharf: circular economy statement\n')).toBe(true)

@@ -3,6 +3,7 @@
 import type { ReferenceStatus } from '../types'
 import type { GoalOverride, GoalValue } from '../sustainabilityTypes'
 import { GOAL_DEFAULTS, type GoalDef } from '../reference/goals'
+import { metricState, METRIC_STATE_WORDS, type MetricState } from './metricState'
 import * as f from '../format'
 
 export type GoalTarget = { value: GoalValue | null; source: 'default' | 'override' | 'none'; requirementId: string | null; basis: string | null; status: ReferenceStatus | null }
@@ -47,6 +48,38 @@ export function goalProgress(def: GoalDef, target: GoalValue | null, actual: Goa
     return { status: a >= t ? 'met' : 'below', share }
   }
   return { status: a <= t ? 'met' : 'below', share: a <= t ? 1 : t / a }
+}
+
+/** How far a rating may fall short and still read as near: one level. */
+export const RATING_NEAR_LEVELS = 1
+
+/** A rating against its target level (1 for the first level): met is good, one level short is near, further is off target. */
+export function ratingState(actualLevel: number | null, targetLevel: number | null): MetricState {
+  if (targetLevel === null || actualLevel === null) return 'neutral'
+  if (actualLevel >= targetLevel) return 'good'
+  return targetLevel - actualLevel <= RATING_NEAR_LEVELS ? 'warning' : 'critical'
+}
+
+/**
+ * A goal's result against its target as one state, so every page that judges a goal judges it the same way: a
+ * rating by level (ratingState), a figure by metricState in the goal's direction. Neutral without both.
+ */
+export function goalState(def: GoalDef, target: GoalValue | null, actual: GoalValue | null): MetricState {
+  if (target === null || actual === null) return 'neutral'
+  if (def.unit === 'rating') {
+    const level = (v: GoalValue) => (def.scale ? def.scale.indexOf(String(v)) + 1 || null : null)
+    return ratingState(level(actual), level(target))
+  }
+  const t = Number(target)
+  const a = Number(actual)
+  if (!Number.isFinite(t) || !Number.isFinite(a)) return 'neutral'
+  return metricState(a, t, def.direction)
+}
+
+/** goalState with its word ("On target", "Near target", "Off target"); null when the goal cannot be judged. */
+export function goalReading(def: GoalDef, target: GoalValue | null, actual: GoalValue | null): { state: MetricState; word: string } | null {
+  const state = goalState(def, target, actual)
+  return state === 'neutral' ? null : { state, word: METRIC_STATE_WORDS[state] }
 }
 
 /** '25%', '19.9%', '47.8 tCO2e', '820 kgCO2e per m2', 'Excellent', or 'Not targeted'. */

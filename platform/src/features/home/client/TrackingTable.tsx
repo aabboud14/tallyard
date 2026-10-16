@@ -7,7 +7,7 @@ import { TriangleAlert } from 'lucide-react'
 import type { TrackingRow, TrackingScheme } from '../../../store/selectors/sustainability'
 import { readyText } from '../../../store/selectors/sustainability-screens'
 import { CERT_CAVEAT, inSentence } from '../../../domain/reference/sustainabilityCopy'
-import { Card, IndicativeMarker, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../../ui'
+import { Card, IndicativeMarker, METRIC_STATE, Pill, Table, TBody, TD, TH, THead, TR, type Tone } from '../../../ui'
 import { GoalMeterView } from '../../sustainability/parts'
 
 const SCHEMES = [
@@ -38,7 +38,8 @@ function useWideEnough(ref: RefObject<HTMLElement | null>, min: number): boolean
   return wide
 }
 
-const NO_CONSULTANT = 'No consultant appointed. Defaults from the requirements are shown.'
+/** Under the project name when no consultant is on it: the scheme cells still show the targets that apply. */
+const NO_CONSULTANT = 'No consultant appointed yet'
 
 function SchemeCell({ s }: { s: TrackingScheme }) {
   return (
@@ -50,10 +51,19 @@ function SchemeCell({ s }: { s: TrackingScheme }) {
           {s.predictedText ? `. Latest ${s.predictedText}` : ''}
         </span>
       ) : null}
-      {s.atRisk > 0 ? (
-        <Pill size="sm" tone="warning" icon={TriangleAlert} className="mt-1 self-start">
-          {s.atRisk} at risk
-        </Pill>
+      {s.state || s.atRisk > 0 ? (
+        <span className="mt-1 flex flex-wrap gap-1">
+          {s.state ? (
+            <Pill size="sm" tone={METRIC_STATE[s.state.state].tone} icon={METRIC_STATE[s.state.state].icon}>
+              {s.state.label}
+            </Pill>
+          ) : null}
+          {s.atRisk > 0 ? (
+            <Pill size="sm" tone="warning" icon={TriangleAlert}>
+              {s.atRisk} at risk
+            </Pill>
+          ) : null}
+        </span>
       ) : null}
     </div>
   )
@@ -118,19 +128,13 @@ export function TrackingTable({ rows }: { rows: TrackingRow[] }) {
                   <Link to={r.href} className="rounded-sm font-medium text-ink hover:underline">
                     {r.projectName}
                   </Link>
-                  {r.consultantName ? <span className="block text-xs text-muted">{r.consultantName}</span> : null}
+                  <span className="block text-xs text-muted">{r.consultantName ?? NO_CONSULTANT}</span>
                 </TD>
-                {r.consultantName === null ? (
-                  <TD colSpan={SCHEMES.length}>
-                    <span className="text-sm text-muted">{NO_CONSULTANT}</span>
+                {SCHEMES.map(([id]) => (
+                  <TD key={id}>
+                    <SchemeCell s={r.schemes[id]} />
                   </TD>
-                ) : (
-                  SCHEMES.map(([id]) => (
-                    <TD key={id}>
-                      <SchemeCell s={r.schemes[id]} />
-                    </TD>
-                  ))
-                )}
+                ))}
                 <TD className="min-w-48">
                   <CircularCell r={r} />
                 </TD>
@@ -150,22 +154,18 @@ export function TrackingTable({ rows }: { rows: TrackingRow[] }) {
                   <Link to={r.href} className="inline-flex min-h-11 items-center rounded-sm font-semibold text-ink hover:underline">
                     {r.projectName}
                   </Link>
-                  {r.consultantName ? <p className="m-0 text-xs text-muted">{r.consultantName}</p> : null}
+                  <p className="m-0 text-xs text-muted">{r.consultantName ?? NO_CONSULTANT}</p>
                 </div>
-                {r.consultantName === null ? (
-                  <p className="m-0 text-sm text-muted">{NO_CONSULTANT}</p>
-                ) : (
-                  <dl className="m-0 grid grid-cols-3 gap-3">
-                    {SCHEMES.map(([id, label]) => (
-                      <div key={id} className="min-w-0">
-                        <dt className="text-xs text-muted">{label}</dt>
-                        <dd className="m-0">
-                          <SchemeCell s={r.schemes[id]} />
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
+                <dl className="m-0 grid grid-cols-1 gap-3 min-[420px]:grid-cols-3">
+                  {SCHEMES.map(([id, label]) => (
+                    <div key={id} className="min-w-0">
+                      <dt className="text-xs text-muted">{label}</dt>
+                      <dd className="m-0">
+                        <SchemeCell s={r.schemes[id]} />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
                 <div className="border-t border-line-soft pt-3">
                   <p className="m-0 mb-2 text-xs text-muted">Circular economy</p>
                   <CircularCell r={r} />

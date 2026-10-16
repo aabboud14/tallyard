@@ -1,6 +1,6 @@
 // Who the signed-in person is in the world, and what they may open. Built on src/domain/access.ts.
 import type { Org, Persona, Project, SourceBuilding } from '../domain/types'
-import { canAccess, clientLinked } from '../domain/access'
+import { canAccess, clientLinked, consultantLinked } from '../domain/access'
 import { roleForOrgType } from '../sandbox/accounts'
 import type { AppData, PlatformRole, User } from './types'
 
@@ -129,9 +129,14 @@ export function canOpenEngagement(state: AppData, userId: string, engagementId: 
   return roleOfUser(state, userId) === 'consultant' && personaOpens(state, userId, { engagementId })
 }
 
-/** The organisations working on a project: architect, client once linked, and consultant, without blanks or repeats. */
+/** The consultancy once it reaches the project (it and the client have accepted), else ''. */
+export function linkedConsultantOrgId(project: Project): string {
+  return consultantLinked(project) ? project.consultantOrgId : ''
+}
+
+/** The organisations working on a project: architect, client once linked, and consultant once linked, without blanks or repeats. */
 export function projectOrgIds(project: Project): string[] {
-  return [...new Set([project.architectOrgId, clientLinked(project) ? project.clientOrgId : '', project.consultantOrgId].filter((x) => x))]
+  return [...new Set([project.architectOrgId, clientLinked(project) ? project.clientOrgId : '', linkedConsultantOrgId(project)].filter((x) => x))]
 }
 
 /** The buying side of a project: the architect, plus the client once it has accepted the project. */

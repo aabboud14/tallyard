@@ -3,7 +3,7 @@
 // other's organisation and contact; the architect and the consultant never see the seller.
 import { blindBuyerText, toBlindBuyer } from '../../domain/privacy/blindBuyer'
 import type { ActionResult, Actor, AppData, ExchangedContacts, Reservation } from '../types'
-import { ERRORS, isBuildingOwner, isProjectClient, usersOfOrg } from '../access'
+import { ERRORS, isBuildingOwner, isProjectClient, linkedConsultantOrgId, usersOfOrg } from '../access'
 import { mint } from '../ids'
 import { acceptedReservation, isLotAvailable, listingOf, lotByPublicId, ownerOrgOfLot, projectCanSee, projectWishlist, reservationsForLot } from '../lots'
 import { estimateForLot } from '../estimate'
@@ -67,7 +67,7 @@ export function requestReservation(state: AppData, actor: Actor, projectId: stri
   const blind = blindBuyerText(toBlindBuyer(p))
   const ownerOrgId = ownerOrgOfLot(s.world, lot)
   const item2 = s.world.items[lot.itemId]
-  s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, p.consultantOrgId], projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `requested a reservation of ${listing.title}`, href: `/app/projects/${projectId}/reservations` })
+  s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, linkedConsultantOrgId(p)], projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `requested a reservation of ${listing.title}`, href: `/app/projects/${projectId}/reservations` })
   if (ownerOrgId) {
     s = log(s, { at: a.now, orgIds: [ownerOrgId], projectId: null, buildingId: item2.buildingId, actorUserId: null, actor: 'A buyer', text: `requested a reservation of ${item2.tag}. ${blind}.`, href: '/app/requests' })
     s = notify(s, { orgIds: [ownerOrgId], kind: 'reservation_requested', title: `Reservation request for ${item2.tag}`, body: `${listing.title}. ${blind}.`, href: '/app/requests', at: a.now, actorUserId: null })
@@ -89,7 +89,7 @@ export function withdrawReservation(state: AppData, actor: Actor, reservationId:
   const listing = listingOf(s.world, lot)
   const item = s.world.items[lot.itemId]
   const ownerOrgId = ownerOrgOfLot(s.world, lot)
-  s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, p.consultantOrgId], projectId: p.id, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `withdrew the reservation request for ${listing.title}`, href: `/app/projects/${p.id}/reservations` })
+  s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, linkedConsultantOrgId(p)], projectId: p.id, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `withdrew the reservation request for ${listing.title}`, href: `/app/projects/${p.id}/reservations` })
   if (ownerOrgId) {
     s = log(s, { at: a.now, orgIds: [ownerOrgId], projectId: null, buildingId: item.buildingId, actorUserId: null, actor: 'A buyer', text: `withdrew a reservation request for ${item.tag}`, href: '/app/requests' })
     s = notify(s, { orgIds: [ownerOrgId], kind: 'reservation_requested', title: `Request withdrawn for ${item.tag}`, body: `The buyer withdrew their request for ${listing.title}.`, href: '/app/requests', at: a.now, actorUserId: null })
@@ -144,17 +144,17 @@ export function decideReservation(state: AppData, actor: Actor, reservationId: s
     s = log(s, { at: a.now, orgIds: [a.org.id], projectId: null, buildingId: item.buildingId, actorUserId: a.user.id, actor: a.user.name, text: `accepted the reservation of ${item.tag} by ${x.buyerOrg}`, href: '/app/requests' })
     // The client learns the seller; the architect and the consultant read a blind line.
     s = log(s, { at: a.now, orgIds: [p.clientOrgId], projectId: p.id, buildingId: null, actorUserId: a.user.id, actor: `${x.sellerContact}, ${x.sellerOrg}`, text: `accepted the reservation of ${listing.title}`, href: projectHref })
-    s = log(s, { at: a.now, orgIds: [p.architectOrgId, p.consultantOrgId], projectId: p.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `accepted the reservation of ${listing.title}`, href: `/app/projects/${p.id}` })
+    s = log(s, { at: a.now, orgIds: [p.architectOrgId, linkedConsultantOrgId(p)], projectId: p.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `accepted the reservation of ${listing.title}`, href: `/app/projects/${p.id}` })
     s = notify(s, { orgIds: [p.clientOrgId], kind: 'reservation_decided', title: `${x.sellerOrg} accepted your reservation`, body: `${listing.title} is reserved for ${p.name}. Contact ${x.sellerContact}, ${x.sellerEmail}.`, href: projectHref, at: a.now, actorUserId: a.user.id })
     s = notify(s, { orgIds: [p.architectOrgId], kind: 'reservation_decided', title: `${listing.title} is reserved`, body: `The seller accepted the client's reservation on ${p.name}.`, href: `/app/projects/${p.id}/shortlist`, at: a.now, actorUserId: null })
   } else {
     s = log(s, { at: a.now, orgIds: [a.org.id], projectId: null, buildingId: item.buildingId, actorUserId: a.user.id, actor: a.user.name, text: `declined a reservation request for ${item.tag}. ${blind}.`, href: '/app/requests' })
-    s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, p.consultantOrgId], projectId: p.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `declined the reservation of ${listing.title}`, href: projectHref })
+    s = log(s, { at: a.now, orgIds: [p.clientOrgId, p.architectOrgId, linkedConsultantOrgId(p)], projectId: p.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `declined the reservation of ${listing.title}`, href: projectHref })
     s = notify(s, { orgIds: [p.clientOrgId], kind: 'reservation_decided', title: `Reservation declined: ${listing.title}`, body: text ? `The seller's note: ${text}` : 'The seller declined this request.', href: projectHref, at: a.now, actorUserId: null })
   }
   for (const other of bumped) {
     const op = s.world.projects[other.projectId]
-    s = log(s, { at: a.now, orgIds: [op.clientOrgId, op.architectOrgId, op.consultantOrgId], projectId: op.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `reserved ${listing.title} for another buyer`, href: `/app/projects/${op.id}/reservations` })
+    s = log(s, { at: a.now, orgIds: [op.clientOrgId, op.architectOrgId, linkedConsultantOrgId(op)], projectId: op.id, buildingId: null, actorUserId: null, actor: 'The seller', text: `reserved ${listing.title} for another buyer`, href: `/app/projects/${op.id}/reservations` })
     s = notify(s, { orgIds: [op.clientOrgId], kind: 'reservation_decided', title: `Reservation declined: ${listing.title}`, body: RESERVED_ELSEWHERE_NOTE, href: `/app/projects/${op.id}/reservations`, at: a.now, actorUserId: null })
   }
   return ok(s)
