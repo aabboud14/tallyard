@@ -62,6 +62,23 @@ describe('specTable', () => {
   })
 })
 
+describe('specTable and price', () => {
+  it('has no guide price or market signal column for the architect; the client keeps both', async () => {
+    const s = fresh()
+    for (const mode of ['approved', 'draft'] as const) {
+      const priya = specificationView(s, viewer(U.priya), MERROWGATE_ID, mode)!
+      expect(specTable(priya).columns).not.toContain('Guide price')
+      expect(specTable(priya).columns).not.toContain('Market signal')
+      expect(specHeadLines(priya).caveats.some((c) => /market signal/i.test(c))).toBe(false)
+      const isla = specificationView(s, viewer(U.isla), MERROWGATE_ID, mode)!
+      expect(specTable(isla).columns).toEqual(expect.arrayContaining(['Guide price', 'Market signal']))
+    }
+    const wb = await reopen(await buildSpecWorkbook(specificationView(s, viewer(U.priya), MERROWGATE_ID, 'draft')!, '2026-10-08'))
+    const joined = allText(wb).join('\n')
+    expect(joined).not.toMatch(/Guide price|Market signal|£/)
+  })
+})
+
 describe('buildSpecWorkbook', () => {
   it('writes the title, the header note, the caveats and every clause, and no private string', async () => {
     let s = fresh()

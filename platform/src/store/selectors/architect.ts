@@ -10,7 +10,7 @@ import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
 import { projectWishlist } from '../lots'
-import { marketplaceHref } from '../paths'
+import { marketplaceHref, newForProjectHref } from '../paths'
 import { activityFor, firstName, greeting, longDate, projectRef, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf } from './shortlist'
 import { effectiveTargets } from './sustainability'
@@ -37,6 +37,8 @@ export type ProjectCardView = ProjectRef & {
   /** New listings in time for this project. */
   newFits: number
   marketplaceHref: string
+  /** The Marketplace checked against this project, opened at its New for {project} row. */
+  newFitsHref: string
 }
 
 export type WaitingItem = {
@@ -144,6 +146,7 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
       liveT,
       newFits: feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id)).length,
       marketplaceHref: marketplaceHref(p.id),
+      newFitsHref: newForProjectHref(p.id),
     }
   })
   waiting.sort((a, b) => (a.sentOn ?? '').localeCompare(b.sentOn ?? ''))

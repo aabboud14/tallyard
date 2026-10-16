@@ -1,33 +1,22 @@
 // Discover's state lives in the address bar, so Back, reload and shared links restore it. The project the cards
-// are checked against is remembered per person and can be set from a link (?project=).
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+// are checked against is the one a link names (?project=), for that visit only, else the one the person chose in
+// the checking strip, else none. Following a link never changes what the Marketplace opens on next time.
+import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { useApp, useView } from '../../store'
-import { useSessionId } from '../../store/sessionId'
 import { checkingProjectFor, discoverParamsFor, discoverQueryFromParams, DISCOVER_PARAM } from '../../store/selectors/arch-discover'
 import type { DiscoverQuery } from '../../store/selectors/discover'
 
-/** The project being checked against, and a setter that remembers the choice. */
+/**
+ * The project being checked against, and a setter for an explicit choice (Choose a project, Change project, Stop
+ * checking), which is remembered. A project in the address applies to this visit only and is never stored, so the
+ * Marketplace opened from the sidebar stays on No project until the person chooses one.
+ */
 export function useCheckingProject(): [string | null, (projectId: string | null) => void] {
   const [params, setParams] = useSearchParams()
   const fromAddress = params.get(DISCOVER_PARAM.projectId)
   const projectId = useView(checkingProjectFor, fromAddress) ?? null
-  const userId = useSessionId((s) => s.userId)
-  const stored = useApp((s) => (userId ? s.ui.checkingProjectId[userId] : undefined))
   const setChecking = useApp((s) => s.setCheckingProject)
-
-  // A link that names a project makes it the person's choice from then on. This syncs once per address, so a
-  // change or clear made here is not undone in the moment before the address catches up.
-  const synced = useRef<string | null>(null)
-  useEffect(() => {
-    if (!fromAddress) {
-      synced.current = null
-      return
-    }
-    if (projectId !== fromAddress || synced.current === fromAddress) return
-    synced.current = fromAddress
-    if (stored !== fromAddress) setChecking(fromAddress)
-  }, [fromAddress, projectId, stored, setChecking])
 
   const set = useCallback(
     (id: string | null) => {

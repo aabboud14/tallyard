@@ -68,6 +68,15 @@ export function fitSummaryText(summary: FitSummary | null): string | null {
 
 export type NewForProjects = ListingCard & { fitsProjects: { id: string; name: string }[] }
 
+/** The jump to the New for your projects row from the top of the Marketplace. */
+export type NewForProjectsJump = { text: string; total: number }
+
+/** "10 new for Merrowgate Wharf", or "10 new for your projects"; null when nothing is new. */
+export function newForProjectsJump(total: number, projectName: string | null): NewForProjectsJump | null {
+  if (total <= 0) return null
+  return { text: projectName ? `${total} new for ${projectName}` : `${total} new for your projects`, total }
+}
+
 export type AvailabilityFilterView = AvailabilityScale & {
   selectedIndex: number
   selectedLabel: string

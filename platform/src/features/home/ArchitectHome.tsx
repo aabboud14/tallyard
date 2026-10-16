@@ -138,7 +138,7 @@ function ProjectCard({ p }: { p: ProjectCardView }) {
       {p.newFits > 0 ? (
         <div className="relative z-[1] border-t border-line-soft px-4 py-2 sm:px-5">
           <Link
-            to={p.marketplaceHref}
+            to={p.newFitsHref}
             data-testid={`home-new-fits-${p.id}`}
             className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
           >

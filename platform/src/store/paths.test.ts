@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MARKETPLACE_PATH, marketplaceHref, marketplacePathFor, materialHref, sharedWithProjectHref } from './paths'
+import { MARKETPLACE_PATH, marketplaceHref, marketplacePathFor, materialHref, NEW_FOR_PROJECTS_ANCHOR, newForProjectHref, sharedWithProjectHref } from './paths'
 
 describe('Marketplace addresses', () => {
   it('builds the Marketplace address, with a project and extra parameters in order', () => {
@@ -14,6 +14,11 @@ describe('Marketplace addresses', () => {
     expect(materialHref('L-9F4CQQ')).toBe('/app/marketplace/L-9F4CQQ')
     expect(materialHref('L-9F4CQQ', 'prj_x')).toBe('/app/marketplace/L-9F4CQQ?project=prj_x')
     expect(sharedWithProjectHref('prj_x')).toBe('/app/marketplace?tab=shared&project=prj_x')
+  })
+
+  it('opens the Marketplace at the New for {project} row', () => {
+    expect(NEW_FOR_PROJECTS_ANCHOR).toBe('new-for-projects')
+    expect(newForProjectHref('prj_x')).toBe('/app/marketplace?project=prj_x#new-for-projects')
   })
 
   it('moves old Discover paths to the Marketplace and leaves everything else alone', () => {

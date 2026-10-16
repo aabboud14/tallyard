@@ -2,7 +2,7 @@
 // are needed, shortlist by status, last activity). Architects create projects here. A new project shows how far
 // its setup has gone and what comes next; one the client has not accepted says so.
 import { Link } from 'react-router'
-import { Clock, FolderPlus, Hourglass, Inbox, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
+import { Clock, FolderPlus, MailQuestion, Inbox, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
 import { formatDateShort } from '../../domain/dates'
 import { useApp, useNow, useView } from '../../store'
 import { projectsListView, type ProjectListRow } from '../../store/selectors/project'
@@ -18,7 +18,7 @@ const SIDE_EMPTY = {
   consultant: 'Projects appear here when an architect adds you as the sustainability consultant.',
 } as const
 
-/** 'Setting up, 2 of 6' and 'Waiting for client' or 'Client declined', where they apply. */
+/** 'Setting up, 2 of 6' and 'Client to accept' (the client has not accepted the project link yet) or 'Client declined', where they apply. */
 function StatusPills({ p }: { p: ProjectListRow }) {
   if (!p.setup && p.linkStatus === 'accepted') return null
   return (
@@ -29,8 +29,8 @@ function StatusPills({ p }: { p: ProjectListRow }) {
         </Pill>
       ) : null}
       {p.linkStatus === 'pending' ? (
-        <Pill tone="info" size="sm" icon={Hourglass} data-testid={`link-pill-${p.id}`}>
-          Waiting for client
+        <Pill tone="neutral" size="sm" icon={MailQuestion} title="The client organisation has not yet accepted the request to add them to this project" data-testid={`link-pill-${p.id}`}>
+          Client to accept
         </Pill>
       ) : p.linkStatus === 'declined' ? (
         <Pill tone="warning" size="sm" icon={UserRoundX} data-testid={`link-pill-${p.id}`}>

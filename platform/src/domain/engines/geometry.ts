@@ -183,7 +183,7 @@ export const PLACEHOLDER_NOTE = 'Panel depth is a placeholder, not a recorded di
 
 /** Proper rotations (determinant +1, so outward winding survives) that stand each family with Y up. */
 const TURN: Record<FamilyId, (v: Vec3) => Vec3> = {
-  // The member lies along X and the web stands up.
+  // A beam lies along X and the web stands up (a UC column stands upright instead: TURN_COLUMN).
   steel_section: ([x, y, z]) => [z, y, -x],
   // The sample panel stands 1,000 mm tall.
   precast_cladding: ([x, y, z]) => [x, z, -y],
@@ -196,15 +196,24 @@ const TURN: Record<FamilyId, (v: Vec3) => Vec3> = {
   timber_joist: (v) => v,
 }
 
+/** A UC column stands upright, as the IFC file places it (IfcColumn along Z): its length runs up Y. */
+const TURN_COLUMN = ([x, y, z]: Vec3): Vec3 => [x, z, -y]
+
+/** Whether a listing is a steel column (UC), drawn and exported standing up. */
+function isColumn(l: PublicListing): boolean {
+  return l.spec.family === 'steel_section' && findSection(l.spec.designation)?.type === 'UC'
+}
+
 function clean(x: number): number {
   const r = Math.round(x * 1000) / 1000
   return r === 0 ? 0 : r
 }
 
 /** The prism exactly as objFor writes it (0-based), turned and moved so it stands on Y 0, centred in X and Z. */
-function prism(family: FamilyId, p: Profile, depthMm: number): Mesh {
+function prism(family: FamilyId, p: Profile, depthMm: number, column = false): Mesh {
   const n = p.points.length
-  const raw: Vec3[] = [...p.points.map(([x, y]): Vec3 => [x, y, 0]), ...p.points.map(([x, y]): Vec3 => [x, y, depthMm])].map(TURN[family])
+  const turn = column ? TURN_COLUMN : TURN[family]
+  const raw: Vec3[] = [...p.points.map(([x, y]): Vec3 => [x, y, 0]), ...p.points.map(([x, y]): Vec3 => [x, y, depthMm])].map(turn)
   const faces: number[][] = []
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n
@@ -226,9 +235,10 @@ export function meshFor(l: PublicListing): ModelGeometry | { unavailable: string
   const ys = p.points.map((q) => q[1])
   const extent = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
   const closeUpMm = p.depthMm > 4 * extent ? Math.ceil((2 * extent) / 100) * 100 : null
+  const column = isColumn(l)
   return {
-    mesh: prism(l.family, p, p.depthMm),
-    closeUp: closeUpMm === null ? null : prism(l.family, p, closeUpMm),
+    mesh: prism(l.family, p, p.depthMm, column),
+    closeUp: closeUpMm === null ? null : prism(l.family, p, closeUpMm, column),
     lengthMm: p.depthMm,
     closeUpMm,
     placeholderNote: l.family === 'curtain_wall' || l.family === 'raised_floor' ? PLACEHOLDER_NOTE : null,

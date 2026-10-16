@@ -203,6 +203,62 @@ describe('checking strip', () => {
     expect(document.querySelector('[data-testid="discover-grid"] [data-fit]')).toBeNull()
   })
 
+  it('checks against a project a link names for that visit only, so the next visit opens on No project', async () => {
+    const router = open(`/app/marketplace?project=${MERROWGATE_ID}`)
+    await waitFor(() => byTestId('checking-bar').getAttribute('data-state') === 'checking')
+    expect(byTestId('checking-bar').textContent).toContain('Checking against Merrowgate Wharf')
+    expect(getData().ui.checkingProjectId[U.priya] ?? null).toBeNull()
+    // A card keeps the project for the rest of the visit.
+    expect(byTestId('card-L-9F4CQQ').getAttribute('href') ?? byTestId('card-L-9F4CQQ').querySelector('a')!.getAttribute('href')).toContain(`project=${MERROWGATE_ID}`)
+    await act(async () => {
+      await router.navigate('/app/home')
+    })
+    await act(async () => {
+      await router.navigate('/app/marketplace')
+    })
+    await waitFor(() => byTestId('checking-bar').getAttribute('data-state') === 'prompt')
+    expect(document.querySelector('[data-testid="category-fits-structure"]')).toBeNull()
+    expect(byTestId('new-for-projects').textContent).toContain('New for your projects')
+  })
+
+  it('remembers a project chosen in the strip, even on a visit a link opened', async () => {
+    const router = open(`/app/marketplace?project=${MERROWGATE_ID}`)
+    await waitFor(() => byTestId('checking-bar').getAttribute('data-state') === 'checking')
+    click(byTestId('checking-change'))
+    await waitFor(() => document.querySelector(`[data-testid="pick-${FERRYMOOR_ID}"]`))
+    click(byTestId(`pick-${FERRYMOOR_ID}`))
+    await waitFor(() => router.state.location.search.includes(`project=${FERRYMOOR_ID}`))
+    expect(getData().ui.checkingProjectId[U.priya]).toBe(FERRYMOOR_ID)
+    await act(async () => {
+      await router.navigate('/app/marketplace')
+    })
+    await waitFor(() => byTestId('checking-bar').textContent?.includes('Checking against Ferrymoor Yard'))
+  })
+
+  it('jumps from the top of the landing to what is new: in the strip with a project, beside the folders without one', async () => {
+    open(`/app/marketplace?project=${MERROWGATE_ID}`)
+    await waitFor(() => byTestId('checking-bar').getAttribute('data-state') === 'checking')
+    const jump = byTestId('new-for-projects-jump')
+    expect(byTestId('checking-bar').contains(jump)).toBe(true)
+    expect(jump.getAttribute('href')).toBe('#new-for-projects')
+    expect(jump.textContent).toBe('10 new for Merrowgate Wharf')
+    expect(byTestId('new-for-projects').id).toBe('new-for-projects')
+    click(jump)
+    await waitFor(() => document.activeElement === byTestId('new-for-projects'))
+    cleanup()
+    open('/app/marketplace')
+    await waitFor(() => document.querySelector('[data-testid="category-folders"]'))
+    expect(byTestId('category-folders').contains(byTestId('new-for-projects-jump'))).toBe(true)
+    expect(byTestId('new-for-projects-jump').textContent).toBe('10 new for your projects')
+    expectClean()
+  })
+
+  it('has no jump when the row is not shown', async () => {
+    open(`/app/marketplace?project=${MERROWGATE_ID}&type=structure`)
+    await waitFor(() => document.querySelector('[data-testid="folder-header"]'))
+    expect(document.querySelector('[data-testid="new-for-projects-jump"]')).toBeNull()
+  })
+
   it('tells the consultant why Shared with you is empty', async () => {
     open('/app/marketplace?tab=shared', U.marcus)
     await waitFor(() => document.querySelector('[data-testid="shared-with-you"]'))
@@ -245,7 +301,7 @@ describe('filters and sort', () => {
     await waitFor(() => document.querySelector('[data-testid="discover-grid"]'))
     click(byTestId('filters-button'))
     await waitFor(() => document.querySelector('[data-testid="availability-project-marker"]'))
-    expect(byTestId('filter-availability').textContent).toContain('Ferrymoor Yard start')
+    expect(byTestId('filter-availability').textContent).toContain('Materials needed for Ferrymoor Yard')
   })
 
   it('offers the price sort to clients only', async () => {

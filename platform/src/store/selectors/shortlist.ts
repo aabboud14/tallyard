@@ -3,7 +3,7 @@
 import type { Lot, Project } from '../../domain/types'
 import type { WishStatus, WishTotals, Wishlist, WishlistItem, SpecSheet } from '../../domain/v1types'
 import { MOVE_REASONS, wishlistTotals } from '../../domain/engines/wishlist'
-import { specSheet } from '../../domain/engines/specSheet'
+import { specSheet, specSheetWithoutPrice } from '../../domain/engines/specSheet'
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import type { AppData, ReservationStatus, Viewer } from '../types'
 import { isProjectArchitect, projectSide, projectsOfUser, roleOfUser } from '../access'
@@ -188,7 +188,8 @@ function slug(s: string): string {
 
 /**
  * The specification schedule: approved items, or a draft of every item not declined. Rows the project can no
- * longer see are left out. The architect edits the notes; the client reads.
+ * longer see are left out. The architect edits the notes; the client reads. The architect's schedule has no Price
+ * section (guide price, market signal) and no market signal caveat; the client's keeps both.
  */
 export function specificationView(state: AppData, viewer: Viewer, projectId: string, mode: SpecMode): SpecificationView | null {
   const side = projectSide(state, viewer.userId, projectId)
@@ -198,10 +199,12 @@ export function specificationView(state: AppData, viewer: Viewer, projectId: str
   const rows = (list ? shortlistRows(state, viewer, list, p) : []).filter((r) => r.card)
   const pick = (m: SpecMode) => rows.filter((r) => (m === 'approved' ? r.status === 'approved' : r.status !== 'declined'))
   const chosen = pick(mode)
-  const sheet = specSheet(
+  const full = specSheet(
     { name: p.name, typeLabel: projectTypeLabel(p), startDate: p.startDate },
     chosen.map((r) => ({ listing: r.card!.listing, fit: r.card!.fit, status: r.status })),
   )
+  // Architects get no guide price or market signal, on screen, in print or in the spreadsheet; the client keeps them.
+  const sheet = side === 'architect' ? specSheetWithoutPrice(full) : full
   const spec = state.specs[projectId] ?? { header: '', clauseNotes: {}, updatedAt: null }
   return {
     project: projectRef(state, p),

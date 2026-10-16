@@ -14,6 +14,8 @@ const DIM = '#78716c'
 export const FILL = '#f7f6f3'
 /** Paper ground for every drawing and swatch board. */
 export const PAPER = '#f7f6f3'
+/** The plain white ground of the material page stage. */
+export const PLAIN = '#ffffff'
 const FONT = 'Inter Variable, Inter, ui-sans-serif, sans-serif'
 
 /** Room for a caption at 12 px: about 6.8 px a character, plus a margin. */
@@ -239,7 +241,7 @@ const AREA = { left: SAFE.left, right: SAFE.right, top: SAFE.top + 8, bottom: SA
  * the far end is drawn, and the length is dimensioned along the bottom flange. The receding axis runs at 30
  * degrees; the length is foreshortened to a half and clamped so the drawing fits the board.
  */
-export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { designation: string; lengthM: number; uid: string; view?: DrawingView }) {
+export function SectionAxo({ designation, lengthM, uid, view = 'card', plain = false }: { designation: string; lengthM: number; uid: string; view?: DrawingView; /** A white board with no detail grid: the material page stage. */ plain?: boolean }) {
   const s = sectionOrThrow(designation)
   const size = TEXT_SIZE[view]
   const k = Math.min(140 / s.h, 104 / s.b)
@@ -288,8 +290,8 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
   return (
     <g data-part="section-axo">
       <Hatch id={hatch} />
-      <rect width={W} height={H} fill={PAPER} />
-      {view === 'detail' ? <DetailGrid /> : null}
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
+      {view === 'detail' && !plain ? <DetailGrid /> : null}
       {faces.map((f) => (
         <polygon key={f.i} points={pts([at(f.p), at(f.q), far(f.q), far(f.p)])} fill={f.n[1] < 0 ? FILL : '#e9e6df'} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
       ))}
@@ -303,7 +305,7 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
 }
 
 /** One curtain wall panel in elevation: frame, a spandrel band and flat glass with one soft reflection band. */
-export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }: { widthM: number; heightM: number; system: string; seed: number; view?: DrawingView }) {
+export function PanelElevation({ widthM, heightM, system, seed, view = 'card', plain = false }: { widthM: number; heightM: number; system: string; seed: number; view?: DrawingView; plain?: boolean }) {
   const size = TEXT_SIZE[view]
   const ratio = heightM / widthM
   // Fit the panel in the drawing area at its true proportion, leaving room for the dimensions.
@@ -319,7 +321,7 @@ export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }:
   const spandrel = panelH * 0.18
   return (
     <g data-part="panel-elevation">
-      <rect width={W} height={H} fill={PAPER} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
       <rect x={x0} y={y0} width={panelW} height={panelH} fill="#cfdbe1" />
       <rect x={band} y={y0} width="18" height={panelH - spandrel} fill="#ffffff" opacity="0.25" />
       <rect x={x0} y={y0 + panelH - spandrel} width={panelW} height={spandrel} fill="#8d969c" />
@@ -334,7 +336,7 @@ export function PanelElevation({ widthM, heightM, system, seed, view = 'card' }:
 }
 
 /** One raised floor panel in axonometric on its four pedestals, edges drawn and the panel dimensioned. */
-export function PanelAxo({ sizeMm = [600, 600], view = 'card' }: { sizeMm?: [number, number]; view?: DrawingView }) {
+export function PanelAxo({ sizeMm = [600, 600], view = 'card', plain = false }: { sizeMm?: [number, number]; view?: DrawingView; plain?: boolean }) {
   const size = TEXT_SIZE[view]
   const [px, py] = sizeMm
   const k = (AREA.right - AREA.left - 60) / ((px + py) * C30)
@@ -364,7 +366,7 @@ export function PanelAxo({ sizeMm = [600, 600], view = 'card' }: { sizeMm?: [num
   }
   return (
     <g data-part="panel-axo">
-      <rect width={W} height={H} fill={PAPER} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
       <polygon points={pts([at(0, 0, 0), at(px, 0, 0), at(px, py, 0), at(0, py, 0)])} fill="none" stroke={DIM} strokeWidth="0.5" strokeDasharray="3 3" />
       {pedestal(0, 0, 'back')}
       {pedestal(px, 0, 'right')}

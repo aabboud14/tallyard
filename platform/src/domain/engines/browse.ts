@@ -2,7 +2,8 @@
 import type { Condition, FamilyId, PublicListing } from '../types'
 import type { BrowseFilters, BrowseSort, Typology } from '../v1types'
 import { DEMO_TODAY } from '../constants'
-import { addDays, formatQuarter, isOnOrBefore, quarterWindow } from '../dates'
+import { addDays, isOnOrBefore, quarterWindow } from '../dates'
+import { availableByLabel } from './availability'
 import { FAMILY_IDS } from '../reference/families'
 import { V1_ASSUMPTIONS } from '../reference/v1assumptions'
 import { typologyOf } from './typology'
@@ -50,16 +51,19 @@ export type BrowseOptions = {
   families: FamilyId[]
   regions: string[]
   conditions: Condition[]
-  /** The next six quarter starts after today, for "available by". */
+  /** The next six three-month window starts after today, for "available by", in words. */
   availability: AvailabilityOption[]
 }
 
-/** The first days of the next `count` quarters after `today`. */
+/**
+ * The first days of the next `count` three-month windows after `today`, labelled in words ("By 1 January 2027"),
+ * never as a quarter. The Marketplace's availability filter is the month slider; these stay as plain options.
+ */
 export function nextQuarterStarts(today: string = DEMO_TODAY, count = 6): AvailabilityOption[] {
   const out: AvailabilityOption[] = []
   let start = addDays(quarterWindow(today).end, 1)
   for (let i = 0; i < count; i++) {
-    out.push({ value: start, label: formatQuarter(start) })
+    out.push({ value: start, label: availableByLabel(start, today) })
     start = addDays(quarterWindow(start).end, 1)
   }
   return out

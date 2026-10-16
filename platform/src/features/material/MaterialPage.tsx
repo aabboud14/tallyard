@@ -164,7 +164,7 @@ function Availability({ view, today, onProject }: { view: MaterialView; today: s
           <TimelineStrip
             today={today}
             startDate={view.project.startDate}
-            startLabel={`${view.project.name} start`}
+            startLabel="Materials needed from"
             indicative={false}
             items={[{ id: card.publicId, window: a.windowStart && a.windowEnd ? { start: a.windowStart, end: a.windowEnd } : null, fit: card.fit.fit }]}
             testId="material-timeline"

@@ -12,6 +12,7 @@ import * as f from '../../domain/format'
 import type { GalleryEntry } from '../../store/selectors/discover'
 import { cx, MaterialDrawing, MaterialImage, ModelViewer } from '../../ui'
 import { usePhotoSrc } from '../discover/photo'
+import { useMediaQuery } from '../../app/media'
 
 type StageEntry = GalleryEntry | { kind: 'model' }
 
@@ -48,6 +49,8 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
   const captionId = useId()
   const current = all[Math.min(index, all.length - 1)]
   const closeUp = model && model.closeUp && !fullLength ? model.closeUp : null
+  // A touch screen has no arrow keys, and a vertical swipe scrolls the page: say to drag sideways.
+  const touch = useMediaQuery('(pointer: coarse)')
 
   let caption: string
   let CaptionIcon = Ruler
@@ -55,7 +58,7 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
     caption = 'Photo from the survey, published by the owner'
     CaptionIcon = Camera
   } else if (current.kind === 'model') {
-    caption = [`${LABELS.L42} Drag or use the arrow keys to turn it.`, closeUp && model?.closeUpMm ? `Shown ${f.number(model.closeUpMm)} mm long so the section reads. The download is the full ${f.number(model.lengthMm)} mm.` : null, model?.placeholderNote ?? null].filter(Boolean).join(' ')
+    caption = [`${LABELS.L42} ${touch ? 'Drag sideways to turn it.' : 'Drag or use the arrow keys to turn it.'}`, closeUp && model?.closeUpMm ? `Shown ${f.number(model.closeUpMm)} mm long so the section reads. The download is the full ${f.number(model.lengthMm)} mm.` : null, model?.placeholderNote ?? null].filter(Boolean).join(' ')
     CaptionIcon = Box
   } else {
     caption = current.caption
@@ -84,7 +87,7 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
             }
           />
         ) : current.kind === 'illustration' ? (
-          <MaterialImage spec={spec} publicId={publicId} aspect="fill" view="detail" eager />
+          <MaterialImage spec={spec} publicId={publicId} aspect="fill" view="detail" plain eager />
         ) : (
           <DrawingView spec={spec} big />
         )}

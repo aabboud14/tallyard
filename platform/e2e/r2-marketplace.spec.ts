@@ -125,8 +125,11 @@ test('the Marketplace, a folder, the Filters sheet, a material and Saved fit a p
   expect(await horizontalOverflow(page)).toBe(0)
   // Touch targets on the phone layout.
   await page.keyboard.press('Escape')
-  // The project chosen earlier through the address is remembered, so the strip is checking against it.
+  // A project named in the address applies to that visit only (recording audit C4), so the plain address opens on
+  // No project; the address that names one checks against it.
   await page.goto('/app/marketplace')
+  await expect(page.getByTestId('checking-bar')).toHaveAttribute('data-state', 'prompt')
+  await page.goto(`/app/marketplace?project=${M}`)
   await expect(page.getByTestId('checking-bar')).toHaveAttribute('data-state', 'checking')
   for (const id of ['checking-change', 'checking-clear-compact']) expect((await page.getByTestId(id).boundingBox())!.height, id).toBeGreaterThanOrEqual(44)
   await page.getByTestId('checking-clear-compact').click()

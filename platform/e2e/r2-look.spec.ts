@@ -91,7 +91,7 @@ test('the Marketplace row reaches every new material the home counts for a proje
   const link = page.getByTestId(`home-new-fits-${M}`)
   const n = Number(((await link.textContent()) ?? '').match(/(\d+) new/)![1])
   await link.click()
-  await page.waitForURL(`**/app/marketplace?project=${M}`)
+  await page.waitForURL(`**/app/marketplace?project=${M}#new-for-projects`)
   const row = page.getByTestId('new-for-projects')
   await expect(row).toBeVisible()
   const cards = row.locator('[data-testid^="new-card-"]')

@@ -251,6 +251,29 @@ describe('meshFor', () => {
     expect(m.placeholderNote).toBeNull()
   })
 
+  it('stands a UC column upright, as the IFC file places it (IfcColumn along Z)', () => {
+    const m = model('L-2MAC36')
+    const p = profileOf(L('L-2MAC36'))
+    if ('unavailable' in p) throw new Error(p.unavailable)
+    const xs = p.points.map((q) => q[0])
+    const ys = p.points.map((q) => q[1])
+    const b = Math.round((Math.max(...xs) - Math.min(...xs)) * 1000) / 1000
+    const h = Math.round((Math.max(...ys) - Math.min(...ys)) * 1000) / 1000
+    // Flange width along X, the length up Y, the section depth along Z.
+    expect(bounds(m.mesh).size).toEqual([b, 4200, h])
+    expect(bounds(m.mesh).lo[1]).toBe(0)
+    expect(m.lengthMm).toBe(4200)
+    expect(bounds(m.closeUp!).size).toEqual([b, m.closeUpMm!, h])
+    // Every other steel member is a beam and still lies along X.
+    for (const l of all.filter((x) => x.spec.family === 'steel_section' && x.publicId !== 'L-2MAC36')) {
+      const mm = meshFor(l)
+      if ('unavailable' in mm) continue
+      const size = bounds(mm.mesh).size
+      const column = /^UC /.test((l.spec as { designation: string }).designation)
+      expect(column ? size[1] : size[0], l.publicId).toBe(mm.lengthMm)
+    }
+  })
+
   it('stands panels up, lays floors flat and keeps bricks face on', () => {
     const cw = model('L-9XXQC3')
     expect(bounds(cw.mesh).size).toEqual([1500, 3300, 150])

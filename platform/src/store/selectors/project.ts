@@ -9,7 +9,7 @@ import { isLondonRegion, localAuthoritiesFor } from '../../domain/reference/plac
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import { clientLinked } from '../../domain/access'
 import { CONSTRUCTION_DAYS } from '../../domain/engines/programme'
-import { addDays, daysBetween, formatDate, formatQuarter, maxDate, quarterWindow } from '../../domain/dates'
+import { addDays, daysBetween, formatDate, formatMonth, maxDate, quarterWindow } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { marketplaceHref } from '../paths'
 import { projectSide, projectsOfUser, roleOfOrg, roleOfUser, usersOfOrg, type ProjectSide } from '../access'
@@ -251,7 +251,8 @@ export type ProgrammeTimeline = {
   rows: TimelineRow[]
 }
 
-/** The programme strip: today, each shortlisted item's availability window and the start date, as positions. */
+/** The programme strip: today, each shortlisted item's availability window and the start date, as positions. Ticks fall
+ * every three months and read as months ("October 2026"), never as quarters. */
 export function programmeTimeline(today: string, startDate: string, rows: ShortlistRow[]): ProgrammeTimeline {
   const live = rows.filter((r) => r.card && r.status !== 'declined')
   const ends = live.map((r) => (r.card!.listing.availability.kind === 'window' ? (r.card!.listing.availability as { windowEnd: string }).windowEnd : today))
@@ -261,7 +262,7 @@ export function programmeTimeline(today: string, startDate: string, rows: Shortl
   const span = Math.max(1, daysBetween(rangeStart, rangeEnd))
   const at = (d: string) => Math.min(1, Math.max(0, daysBetween(rangeStart, d) / span))
   const ticks: ProgrammeTimeline['ticks'] = []
-  for (let d = rangeStart; daysBetween(d, rangeEnd) >= 0; d = addDays(quarterWindow(d).end, 1)) ticks.push({ date: d, label: formatQuarter(d), at: at(d) })
+  for (let d = rangeStart; daysBetween(d, rangeEnd) >= 0; d = addDays(quarterWindow(d).end, 1)) ticks.push({ date: d, label: formatMonth(d), at: at(d) })
   return {
     rangeStart,
     rangeEnd,

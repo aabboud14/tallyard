@@ -2,13 +2,14 @@
 // folders that expand, count badges, then Help and Settings. Collapses to icons; below 1024 px it is a drawer.
 // Project sections carry a menu to order the folders (by name, under each client, or by recent activity) and to
 // show one client only; in client order a small subheading names each client.
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ChevronRight, ChevronsUpDown, Folder, FolderOpen, LogOut, Settings, UserPlus } from 'lucide-react'
 import type { NavItem, NavModel, NavSection } from '../store/selectors/nav'
 import { isActive, NAV_ICONS } from './navIcons'
 import { useSignOut } from './useSignOut'
 import { ClientFilterChip, ProjectsMenu } from './sidebar/ProjectsMenu'
+import { expandFor, parseExpansion, revealFolder, toggleFolder, type Expansion } from './sidebar/expansion'
 import { Avatar, cx, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, Tooltip } from '../ui'
 
 function containsActive(pathname: string, item: NavItem): boolean {
@@ -29,7 +30,7 @@ function Soon() {
   return <span className="ml-auto inline-flex h-[18px] shrink-0 items-center rounded-full bg-subtle px-1.5 text-[11px] font-medium text-muted ring-1 ring-inset ring-line">Soon</span>
 }
 
-type RowProps = { item: NavItem; depth: number; parentHref: string | null; expanded: Set<string>; toggle: (id: string) => void; onNavigate?: () => void }
+type RowProps = { item: NavItem; depth: number; parentHref: string | null; expanded: Set<string>; /** `reveal` opens a folder for the page being opened, which closes again when the person moves on. */ toggle: (id: string, reveal?: boolean) => void; onNavigate?: () => void }
 
 function NavRow({ item, depth, parentHref, expanded, toggle, onNavigate }: RowProps) {
   const { pathname, search } = useLocation()
@@ -45,7 +46,7 @@ function NavRow({ item, depth, parentHref, expanded, toggle, onNavigate }: RowPr
         <Link
           to={item.href}
           onClick={() => {
-            if (hasChildren && !open) toggle(item.id)
+            if (hasChildren && !open) toggle(item.id, true)
             onNavigate?.()
           }}
           aria-current={active || folderExact ? 'page' : undefined}
@@ -174,12 +175,11 @@ const EXPANDED_KEY = 'tallyard-platform-v1-nav-open'
 /** Section titles that open the full list. */
 const SECTION_LISTS: Record<string, string> = { projects: '/app/projects', buildings: '/app/buildings', clients: '/app/buildings' }
 
-function readExpanded(): Set<string> {
+function readExpanded(): Expansion {
   try {
-    const raw = sessionStorage.getItem(EXPANDED_KEY)
-    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+    return parseExpansion(sessionStorage.getItem(EXPANDED_KEY))
   } catch {
-    return new Set()
+    return { open: [], auto: [] }
   }
 }
 
@@ -226,35 +226,25 @@ function SectionHeader({ section, pathname, onNavigate }: { section: NavSection;
 
 export function Sidebar({ nav, collapsed = false, onNavigate, footerExtra }: { nav: NavModel; collapsed?: boolean; onNavigate?: () => void; footerExtra?: ReactNode }) {
   const { pathname } = useLocation()
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    const s = readExpanded()
-    for (const id of folderIds(nav.sections.flatMap((x) => x.items), pathname)) s.add(id)
-    return s
-  })
+  const [expansion, setExpansion] = useState<Expansion>(() => expandFor(readExpanded(), folderIds(nav.sections.flatMap((x) => x.items), pathname)))
 
-  // Opening a page inside a folder opens the folder.
+  // Opening a page inside a folder opens the folder; moving on closes it again unless the person chose it open.
   const [seenPath, setSeenPath] = useState(pathname)
   if (seenPath !== pathname) {
     setSeenPath(pathname)
-    const ids = folderIds(nav.sections.flatMap((x) => x.items), pathname)
-    if (ids.some((id) => !expanded.has(id))) setExpanded(new Set([...expanded, ...ids]))
+    setExpansion(expandFor(expansion, folderIds(nav.sections.flatMap((x) => x.items), pathname)))
   }
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded]))
+      sessionStorage.setItem(EXPANDED_KEY, JSON.stringify(expansion))
     } catch {
       // storage blocked: the folders simply start closed next time
     }
-  }, [expanded])
+  }, [expansion])
 
-  const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  const expanded = useMemo(() => new Set(expansion.open), [expansion])
+  const toggle = (id: string, reveal = false) => setExpansion((prev) => (reveal ? revealFolder(prev, id) : toggleFolder(prev, id)))
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="sidebar">

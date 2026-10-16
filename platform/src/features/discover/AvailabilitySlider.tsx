@@ -1,6 +1,6 @@
 // "Available by": a month slider over the marketplace with a histogram of when materials arrive. Positions run
 // "Available now", then the end of each month, then "Any time". Bars up to the thumb are filled; a dashed line
-// marks the checked project's start. The scale, counts and bar heights come from the domain (availabilityScale);
+// marks when the checked project needs its materials. The scale, counts and bar heights come from the domain (availabilityScale);
 // the bars and the thumb share one layout, so each bar sits over its slider position without any arithmetic here.
 import { useId } from 'react'
 import { ANY_TIME } from '../../domain/engines/availability'
@@ -88,7 +88,7 @@ export function AvailabilitySlider({ view, onChange }: { view: AvailabilityFilte
         {view.projectName ? (
           <span className="inline-flex items-center gap-1.5 text-muted">
             <span aria-hidden="true" className="h-3 border-l-[1.5px] border-dashed border-ink" />
-            {view.projectName} start
+            Materials needed for {view.projectName}
           </span>
         ) : null}
       </div>

@@ -131,3 +131,15 @@ export function specSheet(project: SpecSheetProject, items: SpecSheetItem[]): Sp
     blocks,
   }
 }
+
+/**
+ * The schedule without the Price section (guide price and market signal) and without the market signal caveat:
+ * what an architect sees and exports, since price is for the client (BRIEF 14.1). The client's schedule keeps them.
+ */
+export function specSheetWithoutPrice(sheet: SpecSheet): SpecSheet {
+  return {
+    ...sheet,
+    caveats: sheet.caveats.filter((c) => c !== LABELS.L10),
+    blocks: sheet.blocks.map((b) => ({ ...b, rows: b.rows.filter((r) => r.section !== 'Price') })),
+  }
+}

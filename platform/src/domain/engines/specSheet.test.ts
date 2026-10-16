@@ -5,7 +5,7 @@ import { GRADE_UNKNOWN, LABELS } from '../reference/labels'
 import { createSeed } from '../seed/world'
 import { listingFor } from '../visibility'
 import { lotPrivateStrings } from '../privacy/privateStrings'
-import { availabilityText, priceRangeText, quantityText, specFieldRows, specSheet, specSheetRows } from './specSheet'
+import { availabilityText, priceRangeText, quantityText, specFieldRows, specSheet, specSheetRows, specSheetWithoutPrice } from './specSheet'
 import { timelineFit } from './timeline'
 
 const w = createSeed()
@@ -157,5 +157,24 @@ describe('specSheet', () => {
   it('leaves out listings that are no longer available', () => {
     const s = specSheet(project, [item('L-R8Q33F', 'approved'), item('L-A945G6', 'pending')])
     expect(s.blocks.map((b) => b.publicId)).toEqual(['L-A945G6'])
+  })
+})
+
+describe('specSheetWithoutPrice', () => {
+  const project = { name: 'Merrowgate Wharf', typeLabel: 'Office', startDate: '2028-04-03' }
+  const item = (publicId: string) => ({ listing: L(publicId), fit: timelineFit(L(publicId).availability, project.startDate), status: 'approved' as const })
+
+  it('drops the Price section and the market signal caveat, and keeps everything else in order', () => {
+    const full = specSheet(project, [item('L-9F4CQQ'), item('L-A945G6')])
+    const bare = specSheetWithoutPrice(full)
+    expect(bare.title).toBe(full.title)
+    expect(bare.projectLine).toBe(full.projectLine)
+    expect(bare.caveats).toEqual(full.caveats.filter((c) => c !== LABELS.L10))
+    expect(bare.blocks.map((b) => b.publicId)).toEqual(full.blocks.map((b) => b.publicId))
+    for (const [i, b] of bare.blocks.entries()) expect(b.rows).toEqual(full.blocks[i].rows.filter((r) => r.section !== 'Price'))
+    expect(JSON.stringify(bare)).not.toMatch(/Guide price|Market signal|£/)
+    // The full sheet is unchanged: the client's schedule keeps the price.
+    expect(full.blocks[0].rows.some((r) => r.label === 'Guide price')).toBe(true)
+    expect(full.caveats).toContain(LABELS.L10)
   })
 })

@@ -137,7 +137,7 @@ describe('a new project', () => {
     expect(byTestId('setup-step-programme').getAttribute('data-state')).toBe('current')
     expect(byTestId('setup-step-client').getAttribute('data-state')).toBe('waiting')
     expect(q('programme-suggested')).not.toBeNull()
-    expect(byTestId('link-status').textContent).toContain('Waiting for client')
+    expect(byTestId('link-status').textContent).toContain('Client to accept')
     // No client people before the client accepts.
     expect(document.body.textContent).not.toContain('Isla Brennan')
     click(byTestId('setup-secondary-programme'))
@@ -221,7 +221,7 @@ describe('a new project', () => {
     open('/app/projects')
     await waitFor(() => q(`setup-pill-${id}`))
     expect(byTestId(`setup-pill-${id}`).textContent).toBe('Setting up, 0 of 6')
-    expect(byTestId(`link-pill-${id}`).textContent).toBe('Waiting for client')
+    expect(byTestId(`link-pill-${id}`).textContent).toBe('Client to accept')
     expect(byTestId(`setup-next-${id}`).textContent).toBe('Next: check the programme')
   })
 

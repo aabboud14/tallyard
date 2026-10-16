@@ -1,13 +1,15 @@
 // "Checking against": the project every card's timeline check uses, as a visible strip under the tabs. With no
 // project it is a dashed prompt; with one it is a brand-tinted bar with the project's drawing, the fit counts over
-// the shown cards in their fit colours, the "Only show what arrives in time" switch, and change and clear.
+// the shown cards in their fit colours, the jump to what is new for the project, the "Only show what arrives in
+// time" switch, and change and clear.
 import { Link } from 'react-router'
 import { CalendarRange, ChevronDown, FolderPlus, X } from 'lucide-react'
 import type { BuildingSketch } from '../../domain/sketch'
 import type { ProjectRef } from '../../store/selectors/common'
-import { fitSummaryParts, type FitSummary } from '../../store/selectors/marketplace'
+import { fitSummaryParts, type FitSummary, type NewForProjectsJump } from '../../store/selectors/marketplace'
 import { Button, cx, FIT, IconButton, IndicativeMarker, Pill, ProjectThumb, Switch } from '../../ui'
 import { ProjectPicker } from './ProjectPicker'
+import { NewForProjectsJumpLink } from './NewForProjectsRow'
 
 export type CheckingBarProps = {
   projects: ProjectRef[]
@@ -18,10 +20,12 @@ export type CheckingBarProps = {
   canCreateProject: boolean
   onProject: (projectId: string | null) => void
   onFitsOnly: (on: boolean) => void
+  /** With a project checked, the link down to New for {project} on the landing; null when there is nothing new. */
+  jump?: NewForProjectsJump | null
   className?: string
 }
 
-export function CheckingBar({ projects, project, sketch, summary, fitsOnly, canCreateProject, onProject, onFitsOnly, className }: CheckingBarProps) {
+export function CheckingBar({ projects, project, sketch, summary, fitsOnly, canCreateProject, onProject, onFitsOnly, jump = null, className }: CheckingBarProps) {
   if (projects.length === 0) {
     if (!canCreateProject) return null
     return (
@@ -76,16 +80,21 @@ export function CheckingBar({ projects, project, sketch, summary, fitsOnly, canC
         </div>
         <span className="shrink-0 lg:hidden">{clear('checking-clear-compact')}</span>
       </div>
-      {chips.length > 0 ? (
-        <ul aria-label="Fit of the materials shown" className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0" data-testid="fit-summary">
-          {chips.map((c) => (
-            <li key={c.fit}>
-              <Pill tone={FIT[c.fit].tone} icon={FIT[c.fit].icon} className="bg-surface" data-fit={c.fit}>
-                <span className="tabular-nums">{c.text}</span>
-              </Pill>
-            </li>
-          ))}
-        </ul>
+      {chips.length > 0 || jump ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chips.length > 0 ? (
+            <ul aria-label="Fit of the materials shown" className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0" data-testid="fit-summary">
+              {chips.map((c) => (
+                <li key={c.fit}>
+                  <Pill tone={FIT[c.fit].tone} icon={FIT[c.fit].icon} className="bg-surface" data-fit={c.fit}>
+                    <span className="tabular-nums">{c.text}</span>
+                  </Pill>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {jump ? <NewForProjectsJumpLink jump={jump} /> : null}
+        </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 max-lg:border-t max-lg:border-brand-100 max-lg:pt-1.5 lg:ml-auto">
         <Switch label="Only show what arrives in time" checked={fitsOnly} onCheckedChange={onFitsOnly} data-testid="fits-only" className="[&_label]:whitespace-nowrap [&_label]:text-sm max-sm:[&_label]:inline-flex max-sm:[&_label]:min-h-11 max-sm:[&_label]:items-center" />

@@ -163,9 +163,9 @@ Overall look and dashboards
 
 Marketplace and material pages
 - The Marketplace opens on three category folders (Structure, Envelope, Finishes) with thumbnail mosaics, then New for your projects (architects), then All materials. Inner tabs: "All listings" and "Shared with you".
-- "Checking against" defaults to no project and becomes a visible strip with fit counts and an "Only show what arrives in time" switch.
+- "Checking against" defaults to no project and becomes a visible strip with fit counts and an "Only show what arrives in time" switch. A project named in a link (?project=) applies to that visit only; only a choice made in the strip or on the material page is remembered.
 - Quarter labels go: availability reads "Expected January to March 2027", "Expected November 2026" or "Available now", from the disclosed window only. The availability filter becomes a month slider with a histogram.
-- Architects and consultants no longer see the guide price, the price sort or seller details. Clients keep them.
+- Architects and consultants no longer see the guide price, the price sort or seller details. Clients keep them. The architect's specification (on screen, in print and in the spreadsheet) has no Price section and no market signal caveat; the client's keeps both.
 - Material page order: pictures and 3D, save to project and downloads, availability, sustainability, key facts, specification. A plain white stage, sections divided by hairlines.
 - Spinnable 3D view: a custom SVG renderer (`view3d.ts`, `ModelViewer.tsx`), not three.js. Revit-compatible download: IFC4 generated as text (`ifc.ts`). OBJ and DXF stay.
 
