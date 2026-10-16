@@ -295,7 +295,7 @@ describe('certification', () => {
 })
 
 describe('circular economy statement', () => {
-  it('edits a section back to draft, sends it for review and downloads it for Word', async () => {
+  it('edits a section, sends the update for review and downloads it for Word', async () => {
     await page(`/app/projects/${M}/statement`, U.marcus, 'statement-page')
     expect(byTestId('statement-status').textContent).toContain('review')
     expect(document.querySelectorAll('[data-testid^="statement-section-"]')).toHaveLength(8)
@@ -305,8 +305,9 @@ describe('circular economy statement', () => {
     typeInto(text, 'Update the statement at planning with the final bill of materials.')
     click(byTestId('statement-save-next_steps'))
     await settle()
-    expect(record().statement?.status).toBe('draft')
-    expect(byTestId('statement-status').textContent).toContain('Draft')
+    // Round 2 follow-up review: an edit keeps the statement with the client (no return to draft) and offers the update.
+    expect(record().statement?.status).toBe('ready_for_review')
+    expect(byTestId('statement-send').textContent).toBe('Send the updated statement')
     click(byTestId('statement-send'))
     await settle()
     expect(record().statement?.status).toBe('ready_for_review')

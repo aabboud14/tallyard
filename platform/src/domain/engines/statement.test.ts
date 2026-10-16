@@ -83,7 +83,9 @@ describe('the circular economy statement', () => {
     expect(s.map((x) => x.id)).toEqual(['context', 'approach', 'reuse', 'content', 'carbon', 'targets', 'certification', 'next_steps'])
     expect(s.map((x) => x.heading)).toEqual(STATEMENT_SECTIONS.map((x) => x.heading))
     const text = (id: string) => s.find((x) => x.id === id)!.text
-    for (const p of ['19.91%', '20.29%', '17.62%', '25%']) expect(text('content')).toContain(p)
+    // Round 2 follow-up (review of the r2f fixes): one decimal, as the targets and next steps of the same statement.
+    for (const p of ['19.9%', '20.3%', '17.6%', '25%']) expect(text('content')).toContain(p)
+    for (const p of ['19.91%', '20.29%', '17.62%']) expect(text('content')).not.toContain(p)
     expect(text('carbon')).toContain('47.8 tCO2e')
     expect(text('carbon')).toContain('148.6 tCO2e')
     expect(text('carbon')).toContain('The project target is 150.0 tCO2e.')
@@ -149,6 +151,25 @@ describe('the circular economy statement', () => {
     const after = statementSections({ ...MERROWGATE_INPUT, avoidedSecuredT: 60 }).find((x) => x.id === 'carbon')!.text
     expect(isStale(edit, after)).toBe(true)
     expect(isStale(undefined, after)).toBe(false)
+  })
+
+  // Round 2 follow-up review: an approved material whose reservation request is with the seller is not "to reserve".
+  it('tells apart approved materials to request and those already with the seller', () => {
+    const step = (items: StatementInput['items']) => statementSections({ ...MERROWGATE_INPUT, items }).find((x) => x.id === 'next_steps')!.text.split('\n')[1]
+    const [a, b] = MERROWGATE_INPUT.items.filter((x) => x.status === 'Approved')
+    const rest = MERROWGATE_INPUT.items.filter((x) => x.status !== 'Approved')
+    expect(step([...rest, { ...a, withSeller: true }, b])).toBe(`${BULLET}Request a reservation for 1 approved material; 1 more is with the seller. Each counts as secured in the content and carbon figures once the seller accepts.`)
+    expect(step([...rest, { ...a, withSeller: true }, { ...b, withSeller: true }])).toBe(`${BULLET}Follow up the 2 reservation requests with the seller so they count as secured in the content and carbon figures.`)
+    expect(step([...rest, { ...a, withSeller: false }, b])).toBe(`${BULLET}Reserve the 2 approved materials so they count as secured in the content and carbon figures.`)
+    expect(step([...rest, { ...a, withSeller: true }])).toBe(`${BULLET}Follow up the 1 reservation request with the seller so it counts as secured in the content and carbon figures.`)
+  })
+
+  // Round 2 follow-up review: the scheme whose measure is this statement says its count leaves the statement out.
+  it("says a scheme's count is besides this statement when the statement is one of its measures", () => {
+    const input: StatementInput = { ...MERROWGATE_INPUT, credits: [{ schemeLabel: 'Circular economy', code: 'CE1', title: 'Pre-redevelopment audit', statusLabel: 'In progress', status: 'in_progress', kind: 'measure' }] }
+    const line = (i: StatementInput) => statementSections(i).find((x) => x.id === 'certification')!.text.split('\n')[1]
+    expect(line({ ...input, selfMeasureScheme: 'Circular economy' })).toBe(`${BULLET}Circular economy: 1 measure targeted besides this statement, 1 in progress.`)
+    expect(line({ ...input, selfMeasureScheme: null })).toBe(`${BULLET}Circular economy: 1 measure targeted, 1 in progress.`)
   })
 
   it('reads as plain text with its caveat at the end', () => {

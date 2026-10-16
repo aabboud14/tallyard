@@ -126,13 +126,16 @@ test('the developer reviews and follows the figures; the consultant sets targets
   await cell.click()
   await expect(cell).toHaveAttribute('data-state', 'checked')
 
-  // Circular economy: an edit returns the reviewed statement to draft; he sends it again and downloads it.
+  // Circular economy: an edit keeps the reviewed statement with the client and offers the update (round 2 follow-up
+  // review: an edit no longer returns it to draft); he sends it again and downloads it.
   await page.goto(`/app/projects/${M}/statement`)
   await expect(page.getByTestId('statement-status')).toContainText('Reviewed')
   await page.getByTestId('statement-edit-next_steps').click()
   await page.getByTestId('statement-text-next_steps').fill('Update the statement at planning with the final bill of materials.')
   await page.getByTestId('statement-save-next_steps').click()
-  await expect(page.getByTestId('statement-status')).toContainText('Draft')
+  await expect(page.getByTestId('statement-status')).toContainText('Reviewed')
+  await expect(page.getByTestId('statement-changed')).toContainText('Send the updated statement')
+  await expect(page.getByTestId('statement-send')).toHaveText('Send the updated statement')
   await page.getByTestId('statement-send').click()
   await expect(page.getByTestId('statement-send')).toBeDisabled()
   const [docx] = await Promise.all([page.waitForEvent('download'), page.getByTestId('statement-docx').click()])

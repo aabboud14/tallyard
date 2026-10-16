@@ -154,7 +154,9 @@ describe('the statement (note 44)', () => {
     cleanup()
     apply((s) => must(setGoalTarget(s, actor(U.marcus, NOW), M, 'content_by_value', 0.3, '')))
     await page(`/app/projects/${M}/statement`, U.marcus, 'statement-page')
-    expect(byTestId('statement-changed').textContent).toContain('The figures have changed since you sent this')
+    // Round 2 follow-up review: the title says it changed; the body gives the long date and what to do.
+    expect(byTestId('statement-changed').textContent).toContain('Changed since you sent it')
+    expect(byTestId('statement-changed').textContent).toContain('Sent on 7 October 2026. Send the updated statement')
     expect(byTestId('statement-send').textContent).toBe('Send the updated statement')
     expect((byTestId('statement-send') as HTMLButtonElement).disabled).toBe(false)
     cleanup()
@@ -181,6 +183,31 @@ describe('consent and invites (notes C2 and C3)', () => {
     click(byTestId(`accept-link-${id}`))
     await settle()
     expect(getData().world.projects[id].consultantLink!.status).toBe('accepted')
+    expectClean()
+  })
+
+  // Round 2 follow-up review: the open sign-up page names nothing; the invite link names the project.
+  it('keeps names off the open sign-up page and gives them on the invite link', async () => {
+    const id = apply((s) => must(createProject(s, actor(U.priya, NOW), { name: 'Pellow Row', client: { name: 'Harrowgate Homes' }, projectType: 'residential', localAuthority: 'Hackney', region: 'Inner London East', ribaStage: 2, startDate: '2027-09-06', consultantOrgId: null, clientEmail: 'ada.quist@harrowgate.example' })))
+    signOut()
+    render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/signup'] })} />, { router: false })
+    typeInto(await waitFor(() => q('signup-name')), 'Ada Quist')
+    typeInto(byTestId('signup-email'), 'ada.quist@harrowgate.example')
+    typeInto(document.querySelector<HTMLInputElement>('input[type=password]')!, 'sandbox-pass')
+    click(byTestId('signup-continue'))
+    const join = await waitFor(() => q('signup-join'))
+    await settle()
+    const page1 = allText()
+    expect(join.textContent).toContain('Join')
+    for (const name of ['Harrowgate Homes', 'Pellow Row', 'Studio Oriel', 'Priya Nair']) expect(page1, name).not.toContain(name)
+    expect(page1).toContain('Open the link you were sent to see who invited you')
+    expectClean()
+    cleanup()
+
+    const token = Object.values(getData().invites).find((i) => i.projectId === id && i.status === 'pending')!.token
+    render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [`/invite/${token}`] })} />, { router: false })
+    const text = await waitFor(() => q('invite-text'))
+    expect(text.textContent).toBe('Studio Oriel asked Harrowgate Homes to accept Pellow Row, and invited this email to answer. Your account joins Harrowgate Homes as its first member, and the request waits on your home.')
     expectClean()
   })
 

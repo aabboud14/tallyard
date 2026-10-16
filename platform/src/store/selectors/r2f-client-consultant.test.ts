@@ -113,12 +113,14 @@ describe('the statement the client reviews is the one that was sent (note 44)', 
     const content = isla.sections.find((x) => x.id === 'content')!.text
     expect(content).toContain('this project targets at least 25%')
     expect(content).not.toContain('30%')
-    expect(isla.changedSinceSent).toBe("This is the version sent on 7 Oct 2026. Halewick Sustainability's figures have moved on since, so ask them for an updated statement if you need the latest.")
+    // Round 2 follow-up review: long dates as in the subtitle, and words that also fit an edit of the text.
+    expect(isla.changedSinceSent).toBe('This is the version sent on 7 October 2026. Halewick Sustainability has updated the statement since, so ask them for the latest if you need it.')
     expect(isla.status).toBe('ready_for_review')
     const marcus = sel.statementView(changed, viewer(U.marcus), M)!
     expect(marcus.sections.find((x) => x.id === 'content')!.text).toContain('this project targets at least 30%')
     expect(marcus).toMatchObject({ canSend: true, sendLabel: 'Send the updated statement' })
-    expect(marcus.changedSinceSent).toBe('The figures have changed since you sent this on 7 Oct 2026. Send the updated statement again so Lantern Quay Developments reviews the latest version.')
+    // Round 2 follow-up review: the callout's title already says it changed, so the body does not repeat it.
+    expect(marcus.changedSinceSent).toBe('Sent on 7 October 2026. Send the updated statement so Lantern Quay Developments reviews the latest version.')
     expect(sel.sustainabilityView(changed, viewer(U.marcus), M)!.statement!.changedSinceSent).toBe(true)
     expect(sel.sustainabilityView(changed, viewer(U.isla), M)!.statement!.changedSinceSent).toBe(false)
 
@@ -149,7 +151,9 @@ describe('the statement reads as a statement from the project records (note 44)'
     expect(cert).not.toContain('Statement')
     expect(cert).toContain('WELL: 3 credits targeted, 1 in progress, 1 at risk and 1 not started. At risk: X01, material restrictions (precondition).')
     const steps = merrow.sections.find((x) => x.id === 'next_steps')!.text
-    expect(steps).toContain('Reserve the 2 approved materials')
+    // Round 2 follow-up review: UB 533x210x92 already has a reservation request with the seller.
+    expect(steps).toContain('Request a reservation for 1 approved material; 1 more is with the seller.')
+    expect(steps).not.toContain('Reserve the 2 approved materials')
     expect(steps).toContain('Resolve WELL X01, material restrictions (precondition), which is at risk.')
     const ferry = sel.statementView(s, viewer(U.marcus), FERRYMOOR_ID)!
     expect(ferry.sections.find((x) => x.id === 'next_steps')!.text).toContain('Set a target for WELL certification, as WELL Building Standard is recorded as a requirement.')

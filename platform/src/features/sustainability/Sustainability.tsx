@@ -191,16 +191,16 @@ export function StatementCard({ v, projectId }: { v: SustainabilityView; project
   const isClient = v.side === 'client'
   const line = s.canReview
     ? `${s.sentText ?? 'Sent'}. Read it and mark it reviewed, with any comments for the consultant.`
-    : s.status === 'reviewed'
-      ? isClient
+    : isClient
+      ? s.status === 'reviewed'
         ? 'You reviewed this statement. The consultant sees your comments.'
-        : 'The client has reviewed it. Editing returns it to draft.'
-      : isClient
-        ? s.status === 'draft'
+        : s.status === 'draft'
           ? 'The consultant is drafting it. You will be asked to review it.'
           : (s.sentText ?? '')
-        : s.changedSinceSent
-          ? `${s.sentText ?? 'Sent'}. The figures have changed since, so send the updated statement.`
+      : s.changedSinceSent
+        ? `${s.sentText ?? 'Sent'}. It has changed since, so send the updated statement.`
+        : s.status === 'reviewed'
+          ? 'The client has reviewed it. If you change it, send the updated statement for another review.'
           : s.status === 'ready_for_review'
             ? `${s.sentText ?? 'Sent'}. Waiting for the client's review.`
             : 'Drafted from the project records. Edit it, then send it to the client for review.'

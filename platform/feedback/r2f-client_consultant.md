@@ -37,3 +37,44 @@ What the recording audit of 16 October 2026 found missing in the developer and c
 
 - `src/store/selectors/r2f-client-consultant.test.ts` (goal state, tracking states, Kilnworth, the consultant home against goal rows and overrides, the frozen statement and resending, statement labels by side, the statement's certification and next steps, the Reservations caveat and whole-pound savings), `src/store/actions/consent.test.ts` (consultant consent, decline and ask again, the request page, the no-access pointer, the client invite, joining on sign-up and acceptance), additions to `statement.test.ts`, `statementDocx.test.ts` (bullets and the numbering part) and `access.test.ts`, `src/features/sustainability/r2f.screens.test.tsx` (the screens through the router) and `e2e/r2f-client-consultant.spec.ts` (consent, the invite and sign-up, the consultant's pages and the tracking at 390, 1024 and 1440 px).
 - New fictional test names in `names.ts` (`TEST_ONLY_NAMES_R2F`): Tamsin Wharf, Pellow Row, Harrowgate Homes, Ada Quist.
+
+## Review follow-up (second fixer, 16 October 2026)
+
+The adversarial review of commit 6aba86a resolved every note but found two major and eight minor issues. All ten were checked in the code and in the running build (preview on port 4512, 390, 1024 and 1440 px, no horizontal scroll) and fixed.
+
+- **[major] An edit after sending pulled the statement back from the client (fixed).** `editStatementSection` and `resetStatementSection` keep the status: a statement with the client stays "With the client for review" and a reviewed one stays "Reviewed". The client goes on reading the frozen `sentSections`, keeps the "Review the circular economy statement" to-do and can still mark it reviewed. They see "This is the version sent on {date}. {Consultancy} has updated the statement since...". The consultant sees "Send the updated statement", and resending replaces the frozen copy. The consultant's Sustainability card now says "It has changed since, so send the updated statement" or "If you change it, send the updated statement for another review" in place of "Editing returns it to draft". The save toast now says the client keeps the version sent.
+- **[major] A consultancy that had not joined was named as setting targets (fixed).** `targetsNote(state, p)` is a new exported selector. It returns "Targets are set by {name}." only when `consultantLinked(p)`. Otherwise it returns "{name} has not accepted the project yet.", "{name} declined to join." or "{name} is asked to join once the client accepts.", each followed by "Defaults from the requirements are shown.". The tracking row's `consultantName` now comes from the new `consultantText` in `selectors/project.ts`: the name once joined, "{name}, waiting to accept" or "{name}, declined" before, and null when none is named. `projectHeader.consultantLinkText` now reaches the client too, so the Overview's Consultant row reads the same. The statement subtitle names only a joined consultancy.
+- **[minor] Next steps told the consultant to reserve a material already with the seller (fixed).** `StatementItem.withSeller` comes from the shortlist row's pending reservation. The step now reads "Request a reservation for 1 approved material; 1 more is with the seller...", or "Follow up the N reservation requests with the seller..." when all are with the seller.
+- **[minor] Two precisions for one figure (fixed).** The statement's content section uses one decimal (`ratioText`): 19.9%, 20.3%, 17.6%.
+- **[minor] Certification counts differed between the statement and the Overview (fixed).** The statement line now reads "Circular economy: 3 measures targeted besides this statement, ...", from `StatementInput.selfMeasureScheme`.
+- **[minor] The Projects list hard-coded goal labels (fixed).** `CONSULTANT_GOAL_LABELS` takes both labels from `goalDef`, for the cards and the table headers ("Reused and recycled content by value", "Upfront carbon avoided by reuse, secured"). The two long headers wrap so the table fits at 1024 px.
+- **[minor] The statement callout said the same thing twice and mixed date forms (fixed).** The title is now "Changed since you sent it" and the body "Sent on 15 October 2026. Send the updated statement so ... reviews the latest version.". `statementView` gives `sentText`, `reviewedText` and the change notices as long dates.
+- **[minor] The invite link did not name the project (fixed).** `inviteDetails` carries `project` (the project's name and the practice) for a project client invite. `InviteForm` then reads "Studio Oriel asked Harrowgate Homes to accept Pellow Row, and invited this email to answer...".
+- **[minor] The Team card lost a consultancy's decline note (fixed).** The note now reads "{name} declined to join this project on {date}. Their note: "{note}" Ask again or choose another consultancy.".
+- **[minor] The open sign-up page disclosed a pending project's names (fixed).** `SignUpForm` now gets only a yes or no (`hasClientInvite`). The join step reads "Join the organisation that invited you" and "Open the link you were sent to see who invited you, or join now", with no organisation, project or practice name, and its button reads "Join". Signing up with the email still joins the client organisation, as note C3 asks. The names show only through the invite link.
+- **Not changed:** the workflows document (`docs/workflows/areas/06-consultant.json`) still describes the old return to draft, as it describes the state before both fix rounds. It is left for the PDF update that follows the merge.
+
+### Existing assertions changed in this follow-up (P8)
+
+- `src/store/actions/sustainability.test.ts`: "editing after a review returns it to draft" becomes "keeps it reviewed" (`status` `'draft'` becomes `'reviewed'`). Clearing a seeded edit leaves the status `'ready_for_review'` instead of `'draft'`. Reason: the major finding, an edit no longer pulls the statement back from the client.
+- `src/store/selectors/sustainability.test.ts`: the client's sections after an edit are the sent version, not `[]`. A statement never sent (Kilnworth) still gives `[]`. `sentText` reads "7 October 2026" instead of "7 Oct 2026". The content figures are `19.9%`, `20.3%` and `17.6%` instead of `19.91%`, `20.29%` and `17.62%`, and the two-decimal forms are checked as absent. Reasons: the major finding and the long-date and one-decimal minors.
+- `src/domain/engines/statement.test.ts`: the same content figures, at one decimal. Reason: the one-decimal minor.
+- `src/store/selectors/r2f-client-consultant.test.ts`: both change notices take the new wording and long dates, and Merrowgate's next step reads "Request a reservation for 1 approved material; 1 more is with the seller." instead of "Reserve the 2 approved materials". Reason: the callout and reservation minors.
+- `src/features/sustainability/sustainability.screens.test.tsx`: after an edit the record stays `ready_for_review` and the button reads "Send the updated statement" (was `draft` and the "Draft" label). Reason: the major finding.
+- `src/features/sustainability/r2f.screens.test.tsx`: the callout reads "Changed since you sent it" and "Sent on 7 October 2026. Send the updated statement". Reason: the callout minor.
+- `e2e/r2-sustainability.spec.ts`: after Marcus's edit the status still reads "Reviewed" and the page offers "Send the updated statement" (was "Draft"). Reason: the major finding.
+- `e2e/r2f-client-consultant.spec.ts`: the sign-up join step reads "Join the organisation that invited you" and does not name Harrowgate Homes or Pellow Row (was "Join Harrowgate Homes"). Reason: the disclosure minor.
+
+### Added in this follow-up
+
+- `src/store/r2f-review.test.ts`:
+  - send, edit, reset and resend: the client keeps the sent sections and the review to-do throughout.
+  - The statement's own words: certification besides this statement, the request with the seller, one decimal.
+  - A pending, declined and joined consultancy on the tab, the tracking and the header, and a project with no consultancy.
+  - The decline note and date on Team.
+  - The Projects list labels.
+  - `inviteDetails` with and without a project, and `hasClientInvite`.
+- `src/domain/engines/statement.test.ts`: the next step for every mix of materials to request and materials with the seller, and the "besides this statement" clause.
+- `src/features/sustainability/r2f.screens.test.tsx`: the open sign-up page names nothing, and the invite link names the project.
+
+Gate: `npm run check` passes (1321 tests). `PW_PORT=4502 npm run e2e` passes (32 tests). In one earlier full run, `r2-sustainability.spec.ts:164` timed out after its account switch, still signed in as Isla. That test does not touch the changed code. Run alone three times it passed each time, and the next full run passed.

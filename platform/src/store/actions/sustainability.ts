@@ -278,7 +278,11 @@ function isSection(id: string): id is StatementSectionId {
   return STATEMENT_SECTIONS.some((s) => s.id === id)
 }
 
-/** The consultant's text for a section, with the generated text it replaces. Empty text returns to the generated text. Editing after sending returns the statement to draft. */
+/**
+ * The consultant's text for a section, with the generated text it replaces. Empty text returns to the generated text.
+ * Editing after sending keeps the status: the client goes on reading (and reviewing) the version that was sent, and
+ * the consultant is offered to send the updated statement.
+ */
 export function editStatementSection(state: AppData, actor: Actor, projectId: string, sectionId: StatementSectionId, text: string, basis: string): ActionResult {
   const o = onProject(state, actor, projectId, ['consultant'])
   if (typeof o === 'string') return fail(state, o)
@@ -291,7 +295,7 @@ export function editStatementSection(state: AppData, actor: Actor, projectId: st
   const edits = { ...doc.edits }
   if (body) edits[sectionId] = { text: body, basis, editedAt: o.a.now, editedByUserId: o.a.user.id }
   else delete edits[sectionId]
-  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits, status: 'draft' } })))
+  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits } })))
 }
 
 export function resetStatementSection(state: AppData, actor: Actor, projectId: string, sectionId: StatementSectionId): ActionResult {
@@ -302,7 +306,7 @@ export function resetStatementSection(state: AppData, actor: Actor, projectId: s
   if (!doc.edits[sectionId]) return ok(state)
   const edits = { ...doc.edits }
   delete edits[sectionId]
-  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits, status: 'draft' } })))
+  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits } })))
 }
 
 function sameSnapshot(a: StatementDoc['sentSections'], b: StatementDoc['sentSections']): boolean {

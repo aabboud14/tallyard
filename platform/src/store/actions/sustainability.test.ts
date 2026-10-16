@@ -219,10 +219,12 @@ describe('the circular economy statement', () => {
     refused(reviewed, reviewStatement(reviewed, actor(U.isla), M, ''), E.notSent)
   })
 
-  it('editing after a review returns it to draft; sending again reaches Lantern with a to-do', () => {
+  it('editing after a review keeps it reviewed; sending again reaches Lantern with a to-do', () => {
     let s = must(reviewStatement(fresh(), actor(U.isla), M, '')).state
     s = must(editStatementSection(s, actor(U.marcus), M, 'carbon', 'Our own words on carbon.', 'the generated text')).state
-    expect(sustainabilityOf(s, M).statement).toMatchObject({ status: 'draft' })
+    // Round 2 follow-up review: an edit no longer returns a sent statement to draft (which pulled it back from the
+    // client mid-review); the status stays and the consultant is offered to send the update.
+    expect(sustainabilityOf(s, M).statement).toMatchObject({ status: 'reviewed' })
     expect(sustainabilityOf(s, M).statement!.edits.carbon).toMatchObject({ text: 'Our own words on carbon.', basis: 'the generated text', editedByUserId: U.marcus })
     refused(s, reviewStatement(s, actor(U.isla), M, ''), E.notSent)
     const before = s
@@ -240,7 +242,8 @@ describe('the circular economy statement', () => {
     refused(s, editStatementSection(s, actor(U.marcus), M, 'nothing' as never, 'x', 'y'), E.noSection)
     const cleared = must(editStatementSection(s, actor(U.marcus), M, 'approach', '   ', '')).state
     expect(sustainabilityOf(cleared, M).statement!.edits.approach).toBeUndefined()
-    expect(sustainabilityOf(cleared, M).statement!.status).toBe('draft')
+    // Round 2 follow-up review: the seeded statement is with the client, and an edit keeps it there.
+    expect(sustainabilityOf(cleared, M).statement!.status).toBe('ready_for_review')
     const reset = must(resetStatementSection(s, actor(U.marcus), M, 'approach')).state
     expect(sustainabilityOf(reset, M).statement!.edits).toEqual({})
     expect(resetStatementSection(reset, actor(U.marcus), M, 'approach').state).toBe(reset)

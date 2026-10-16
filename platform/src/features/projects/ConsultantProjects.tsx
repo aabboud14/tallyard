@@ -4,7 +4,7 @@
 import { Link } from 'react-router'
 import { TriangleAlert } from 'lucide-react'
 import type { ProjectListRow } from '../../store/selectors/project'
-import type { ConsultantGoalLine, ConsultantProjectSummary } from '../../store/selectors/consultant-projects'
+import { CONSULTANT_GOAL_LABELS, type ConsultantGoalLine, type ConsultantProjectSummary } from '../../store/selectors/consultant-projects'
 import { inSentence } from '../../domain/reference/sustainabilityCopy'
 import { IndicativeMarker, METRIC_STATE, Pill, Table, TBody, TD, TH, THead, TR } from '../../ui'
 
@@ -65,8 +65,8 @@ export function ConsultantProjectsTable({ rows, summaries, lastActivity }: { row
       <THead>
         <tr>
           <TH>Project</TH>
-          <TH>Content by value</TH>
-          <TH>Avoided carbon, secured</TH>
+          <TH className="min-w-[8rem] whitespace-normal! py-2">{CONSULTANT_GOAL_LABELS.content}</TH>
+          <TH className="min-w-[8rem] whitespace-normal! py-2">{CONSULTANT_GOAL_LABELS.carbon}, secured</TH>
           <TH>Statement</TH>
           <TH>Requirements</TH>
           <TH className="max-xl:hidden">Last activity</TH>

@@ -124,7 +124,11 @@ test('a contact at a new client joins it on sign-up and accepts the project', as
   await page.getByTestId('signup-email').fill('ada.quist@harrowgate.example')
   await page.locator('input[type=password]').fill('sandbox-pass')
   await page.getByTestId('signup-continue').click()
-  await expect(page.getByTestId('signup-join')).toContainText('Join Harrowgate Homes')
+  // Round 2 follow-up review: the open sign-up page no longer names the organisation or the project.
+  await expect(page.getByTestId('signup-join')).toContainText('Your account joins the client organisation that invited this email')
+  await expect(page.getByTestId('signup-page')).toContainText('Join the organisation that invited you')
+  await expect(page.getByTestId('signup-page')).not.toContainText('Harrowgate Homes')
+  await expect(page.getByTestId('signup-page')).not.toContainText('Pellow Row')
   await page.getByTestId('signup-submit').click()
   await page.waitForURL('**/app/home**')
   await expect(page.getByTestId(`link-request-${id}`)).toContainText('Studio Oriel wants to add you as client')

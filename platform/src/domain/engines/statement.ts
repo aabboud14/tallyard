@@ -10,7 +10,8 @@ import { goalDef } from '../reference/goals'
 import { goalValueText, type GoalProgress } from './goals'
 import * as f from '../format'
 
-export type StatementItem = { publicId: string; description: string; quantityLabel: string; family: FamilyId; status: 'Confirmed' | 'Reserved' | 'Approved' }
+/** A reclaimed material on the statement. `withSeller`: an approved material whose reservation request waits on the seller. */
+export type StatementItem = { publicId: string; description: string; quantityLabel: string; family: FamilyId; status: 'Confirmed' | 'Reserved' | 'Approved'; withSeller?: boolean }
 
 export type StatementInput = {
   projectName: string
@@ -40,6 +41,8 @@ export type StatementInput = {
   credits: { schemeLabel: string; code: string; title: string; statusLabel: string; status: TrackStatus; kind: 'credit' | 'measure' }[]
   /** Rating goals with no target although their scheme is recorded as a requirement: "WELL certification" and its requirement's title. */
   untargeted: { label: string; requirementTitle: string }[]
+  /** The scheme whose targeted measure is this statement itself, left out of `credits`: its line says so, as the scheme's own counts include it. */
+  selfMeasureScheme?: string | null
 }
 
 export type StatementSection = { id: StatementSectionId; heading: string; text: string }
@@ -151,7 +154,8 @@ function reuse(i: StatementInput): string {
 
 function content(i: StatementInput): string {
   if (!i.hasBill) return 'The bill of materials is not yet on record, so content by value cannot be worked out.'
-  let t = `Reused and recycled content by value is ${f.percent2(i.contentSecured)} with what is secured and ${f.percent2(i.contentWithApproved)} with the approved materials. Without reuse it would be ${f.percent2(i.contentWithoutReuse)}. The guidance aims for at least ${ratioText(i.aim)}`
+  // One decimal, as the targets and next steps of the same statement give it.
+  let t = `Reused and recycled content by value is ${ratioText(i.contentSecured)} with what is secured and ${ratioText(i.contentWithApproved)} with the approved materials. Without reuse it would be ${ratioText(i.contentWithoutReuse)}. The guidance aims for at least ${ratioText(i.aim)}`
   if (i.contentTarget !== null && i.contentTarget !== i.aim) t += `; this project targets at least ${ratioText(i.contentTarget)}`
   return t + '.\n' + LABELS.L15
 }
@@ -178,10 +182,10 @@ const STATUS_ORDER: TrackStatus[] = ['evidence_ready', 'in_progress', 'at_risk',
 const STATUS_WORDS: Record<TrackStatus, string> = { evidence_ready: 'with evidence ready', in_progress: 'in progress', at_risk: 'at risk', not_started: 'not started', not_applicable: 'not applicable' }
 
 /** "BREEAM: 4 credits targeted, 2 in progress and 2 not started." Then the credits at risk or ready by name. */
-function schemeLine(scheme: string, credits: StatementInput['credits']): string {
+function schemeLine(scheme: string, credits: StatementInput['credits'], besidesStatement: boolean): string {
   const noun = credits[0].kind === 'measure' ? ['measure', 'measures'] : ['credit', 'credits']
   const parts = STATUS_ORDER.map((st) => ({ st, n: credits.filter((c) => c.status === st).length })).filter((x) => x.n > 0)
-  let t = `${scheme}: ${count(credits.length, noun[0], noun[1])} targeted, ${listJoin(parts.map((x) => `${x.n} ${STATUS_WORDS[x.st]}`))}.`
+  let t = `${scheme}: ${count(credits.length, noun[0], noun[1])} targeted${besidesStatement ? ' besides this statement' : ''}, ${listJoin(parts.map((x) => `${x.n} ${STATUS_WORDS[x.st]}`))}.`
   const named = (st: TrackStatus) => credits.filter((c) => c.status === st).map((c) => `${c.code}, ${inSentence(c.title)}`)
   const risk = named('at_risk')
   const ready = named('evidence_ready')
@@ -193,7 +197,7 @@ function schemeLine(scheme: string, credits: StatementInput['credits']): string 
 function certification(i: StatementInput): string {
   if (i.credits.length === 0) return 'No certification credits are targeted yet.\n' + CERT_CAVEAT
   const schemes = [...new Set(i.credits.map((c) => c.schemeLabel))]
-  const lines = schemes.map((sc) => schemeLine(sc, i.credits.filter((c) => c.schemeLabel === sc)))
+  const lines = schemes.map((sc) => schemeLine(sc, i.credits.filter((c) => c.schemeLabel === sc), sc === i.selfMeasureScheme))
   return ['Tallyard provides evidence towards these credits and measures:', ...lines, CERT_CAVEAT].join('\n')
 }
 
@@ -206,8 +210,13 @@ function stageStep(stage: number): string {
 
 function nextSteps(i: StatementInput): string {
   const steps: string[] = []
-  const approved = i.items.filter((x) => x.status === 'Approved').length
-  if (approved > 0) steps.push(`Reserve the ${count(approved, 'approved material', 'approved materials')} so ${approved === 1 ? 'it counts' : 'they count'} as secured in the content and carbon figures.`)
+  const approved = i.items.filter((x) => x.status === 'Approved')
+  const toRequest = approved.filter((x) => !x.withSeller).length
+  const withSeller = approved.length - toRequest
+  const secured = `so ${approved.length === 1 ? 'it counts' : 'they count'} as secured in the content and carbon figures`
+  if (toRequest > 0 && withSeller === 0) steps.push(`Reserve the ${count(toRequest, 'approved material', 'approved materials')} ${secured}.`)
+  else if (toRequest > 0) steps.push(`Request a reservation for ${count(toRequest, 'approved material', 'approved materials')}; ${withSeller} more ${withSeller === 1 ? 'is' : 'are'} with the seller. Each counts as secured in the content and carbon figures once the seller accepts.`)
+  else if (withSeller > 0) steps.push(`Follow up the ${count(withSeller, 'reservation request', 'reservation requests')} with the seller ${secured}.`)
   for (const t of i.targets.filter((x) => x.status === 'below')) steps.push(`Close the gap on ${inSentence(t.label)}: now ${t.actualText}, target ${t.targetText}.`)
   const noResult = i.targets.filter((x) => x.status === 'no_data').map((x) => inSentence(x.label))
   if (noResult.length > 0) steps.push(`Record a result for ${listJoin(noResult)}.`)

@@ -28,7 +28,7 @@ export function Statement() {
       toast.error(r.error ?? 'Could not save the section.')
       return
     }
-    toast.success('Section saved', { description: v.status !== 'draft' ? 'The statement is back to draft.' : undefined, action: { label: 'Undo', onClick: r.undo } })
+    toast.success('Section saved', { description: v.status !== 'draft' ? 'The client keeps the version you sent until you send the update.' : undefined, action: { label: 'Undo', onClick: r.undo } })
   }
   const reset = (id: StatementSectionId) => {
     const r = act.resetStatementSection(projectId, id)
@@ -103,7 +103,7 @@ export function Statement() {
           />
           {v.changedSinceSent ? (
             <div data-testid="statement-changed">
-              <Callout tone="info" title="The figures have moved on" role="status">
+              <Callout tone="info" title="Changed since you sent it" role="status">
                 {v.changedSinceSent}
               </Callout>
             </div>

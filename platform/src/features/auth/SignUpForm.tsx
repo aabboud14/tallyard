@@ -15,8 +15,8 @@ export type SignUpFormProps = {
   error?: string | null
   pending?: boolean
   signInHref?: string
-  /** The client organisation an email was invited to join to answer a project request, if any. */
-  invitedTo?: (email: string) => { orgName: string; projectName: string; architectName: string } | null
+  /** Whether an email was invited to join a client organisation to answer a project request. No names: see SignUpPage. */
+  invitedTo?: (email: string) => boolean
 }
 
 type Errors = Partial<Record<'name' | 'email' | 'password' | 'orgName', string>>
@@ -95,17 +95,17 @@ export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/si
     )
   }
 
-  const invite = invitedTo ? invitedTo(email.trim()) : null
-  if (invite) {
+  const invited = invitedTo ? invitedTo(email.trim()) : false
+  if (invited) {
     return (
       <div>
-        <AuthHeading title={`Join ${invite.orgName}`} text={`${invite.architectName} asked ${invite.orgName} to accept ${invite.projectName}, and invited this email to answer.`} />
+        <AuthHeading title="Join the organisation that invited you" text="This email has an invite to answer a project request. Open the link you were sent to see who invited you, or join now." />
         <Steps step={2} />
         <form
           noValidate
           onSubmit={(e) => {
             e.preventDefault()
-            void onSubmit({ name: name.trim(), email: email.trim(), password, orgName: invite.orgName, orgType: 'client' })
+            void onSubmit({ name: name.trim(), email: email.trim(), password, orgName: '', orgType: 'client' })
           }}
           className="flex flex-col gap-5"
           aria-label="Join your organisation"
@@ -116,15 +116,15 @@ export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/si
               {error}
             </Callout>
           ) : null}
-          <Callout tone="info" icon={Building2} title={`You join ${invite.orgName}`}>
-            Your account joins {invite.orgName} as its first member. The request to accept {invite.projectName} waits on your home.
+          <Callout tone="info" icon={Building2} title="No organisation to set up">
+            Your account joins the client organisation that invited this email, as its first member. The request to accept the project waits on your home.
           </Callout>
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button size="lg" icon={ArrowLeft} onClick={() => setStep(1)} className="sm:w-auto" block>
               Back
             </Button>
             <Button type="submit" variant="primary" size="lg" block loading={pending} data-testid="signup-submit" className="sm:flex-1">
-              Join {invite.orgName}
+              Join
             </Button>
           </div>
         </form>

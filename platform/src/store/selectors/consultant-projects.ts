@@ -7,6 +7,7 @@ import type { AppData, Viewer } from '../types'
 import { projectSide, projectsOfUser } from '../access'
 import { sustainabilityOf } from '../sustainabilityRecord'
 import { statementStatusText } from '../../domain/reference/sustainabilityCopy'
+import { goalDef } from '../../domain/reference/goals'
 import type { StatementStatus } from '../../domain/sustainabilityTypes'
 import { goalRows, requirementsRollup, type GoalRow } from './sustainability'
 import { goalMeter, STATEMENT_TONE } from './sustainability-screens'
@@ -20,6 +21,9 @@ export type ConsultantProjectSummary = {
   statement: { status: StatementStatus | null; label: string; tone: 'neutral' | 'info' | 'brand'; href: string }
   requirements: { total: number; ready: number; atRisk: number; text: string; href: string }
 }
+
+/** The two goals' names, as Goals and targets and the consultant home give them; also the Projects table's headers. */
+export const CONSULTANT_GOAL_LABELS = { content: goalDef('content_by_value').label, carbon: goalDef('avoided_carbon').label } as const
 
 function line(label: string, row: GoalRow | undefined): ConsultantGoalLine {
   if (!row) return { label, valueText: 'No result yet', targetText: null, state: 'neutral', stateText: 'No target set' }
@@ -42,8 +46,8 @@ export function consultantProjectSummaries(state: AppData, viewer: Viewer): Reco
     const req = requirementsRollup(state, p)
     const base = `/app/projects/${p.id}`
     out[p.id] = {
-      content: line('Content by value', rows.find((r) => r.id === 'content_by_value')),
-      carbon: line('Avoided carbon', rows.find((r) => r.id === 'avoided_carbon')),
+      content: line(CONSULTANT_GOAL_LABELS.content, rows.find((r) => r.id === 'content_by_value')),
+      carbon: line(CONSULTANT_GOAL_LABELS.carbon, rows.find((r) => r.id === 'avoided_carbon')),
       statement: { status, label: statementStatusText('consultant', status), tone: STATEMENT_TONE[status ?? 'draft'], href: `${base}/statement` },
       requirements: { total: req.total, ready: req.ready, atRisk: req.atRisk, text: requirementsText(req.ready, req.total), href: `${base}/requirements` },
     }

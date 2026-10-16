@@ -88,7 +88,7 @@ export type ProjectHeader = ProjectRef & {
   description: string
   /** The consultancy once it has accepted (and the client has); '' otherwise. */
   consultantName: string
-  /** For the architect while a named consultancy has not joined: "Halewick Sustainability, waiting to accept". */
+  /** For the architect and the client while a named consultancy has not joined: "Halewick Sustainability, waiting to accept". */
   consultantLinkText: string | null
   /** The practice's name, or '' while an owner's New project has none. */
   architectName: string
@@ -127,6 +127,12 @@ export function consultantLinkText(state: AppData, p: Project): string | null {
   return clientLinked(p) ? `${name}, waiting to accept` : `${name}, asked once the client accepts`
 }
 
+/** The consultancy as the client and the architect should read it: its name once it has joined, its state while it has not, null when none is named. */
+export function consultantText(state: AppData, p: Project): string | null {
+  if (!p.consultantOrgId) return null
+  return consultantLinked(p) ? (state.world.orgs[p.consultantOrgId]?.name ?? null) : consultantLinkText(state, p)
+}
+
 /** The workspace header and tabs for a project the viewer works on; null otherwise. Client members appear only once the client has accepted. */
 export function projectHeader(state: AppData, viewer: Viewer, projectId: string): ProjectHeader | null {
   const side = projectSide(state, viewer.userId, projectId)
@@ -142,7 +148,7 @@ export function projectHeader(state: AppData, viewer: Viewer, projectId: string)
     team,
     description: p.description,
     consultantName: consultantLinked(p) ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
-    consultantLinkText: side === 'architect' ? consultantLinkText(state, p) : null,
+    consultantLinkText: side === 'architect' || side === 'client' ? consultantLinkText(state, p) : null,
     architectName: state.world.orgs[p.architectOrgId]?.name ?? '',
     architectText: state.world.orgs[p.architectOrgId]?.name ?? NO_ARCHITECT_TEXT,
     canAppointArchitect: canAppointArchitect(state, viewer, p),
@@ -712,7 +718,10 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
   if (p.consultantOrgId) {
     const name = state.world.orgs[p.consultantOrgId]?.name ?? 'The consultancy'
     const declined = p.consultantLink?.status === 'declined'
-    const note = consultantLinked(p) ? null : declined ? `${name} declined to join this project. Ask again or choose another consultancy.` : clientLinked(p) ? `${name} has not accepted this project yet. Their people appear here once they do.` : `${name} is asked to join once the client accepts the project.`
+    const link = p.consultantLink
+    const reason = declined && link?.decisionNote ? ` Their note: "${link.decisionNote}"` : ''
+    const when = declined && link?.decidedOn ? ` on ${formatDate(link.decidedOn)}` : ''
+    const note = consultantLinked(p) ? null : declined ? `${name} declined to join this project${when}.${reason} Ask again or choose another consultancy.` : clientLinked(p) ? `${name} has not accepted this project yet. Their people appear here once they do.` : `${name} is asked to join once the client accepts the project.`
     sections.push(section(p.consultantOrgId, 'Sustainability consultant', !consultantLinked(p), declined, note))
   }
   return {

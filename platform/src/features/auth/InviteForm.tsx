@@ -13,6 +13,8 @@ export type InviteDetails = {
   orgTypeLabel: string
   invitedBy: string
   email: string
+  /** Set for an invite to answer a project request: the project and the practice that asked. */
+  project?: { projectName: string; architectName: string } | null
 }
 
 export type InviteValues = { name: string; password: string }
@@ -65,8 +67,10 @@ export function InviteForm({ invite, onSubmit, error, pending = false, signInHre
       <div className="mb-8 flex flex-col items-start">
         <Avatar name={invite.orgName} shape="square" size="xl" decorative />
         <h1 className="m-0 mt-5 text-2xl font-semibold text-ink sm:text-[26px] sm:leading-8">Join {invite.orgName}</h1>
-        <p className="m-0 mt-2 text-md text-muted">
-          {invite.invitedBy} invited you to join {invite.orgName} on {PRODUCT_NAME}.
+        <p className="m-0 mt-2 text-md text-muted" data-testid="invite-text">
+          {invite.project
+            ? `${invite.project.architectName || invite.invitedBy} asked ${invite.orgName} to accept ${invite.project.projectName}, and invited this email to answer. Your account joins ${invite.orgName} as its first member, and the request waits on your home.`
+            : `${invite.invitedBy} invited you to join ${invite.orgName} on ${PRODUCT_NAME}.`}
         </p>
         <Badge tone="outline" className="mt-3">
           {invite.orgTypeLabel}

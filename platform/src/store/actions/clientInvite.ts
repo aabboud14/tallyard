@@ -37,6 +37,15 @@ export function clientInviteForEmail(state: AppData, email: string): { invite: I
   return { invite, orgName: state.world.orgs[invite.orgId]?.name ?? '', projectName: p.name, architectName: state.world.orgs[p.architectOrgId]?.name ?? '' }
 }
 
+/**
+ * Whether this email has a pending invite to answer a project request, and nothing more: the open sign-up page uses
+ * it, so whoever types an address learns no organisation, project or practice name. The names show only through the
+ * invite link (inviteDetails), which is the proof that the person was sent it.
+ */
+export function hasClientInvite(state: AppData, email: string): boolean {
+  return clientInviteForEmail(state, email) !== null
+}
+
 /** Why an invite to this email cannot be made for the project's client; null when it can. No permission checks. */
 export function clientInviteProblem(state: AppData, project: Project, email: string): string | null {
   if (!isEmail(email)) return CLIENT_INVITE_ERRORS.email
