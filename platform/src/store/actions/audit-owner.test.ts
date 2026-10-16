@@ -74,8 +74,9 @@ describe('moving early captures into an appointment (note 26)', () => {
     // Never anything for the owner side, or for anyone else.
     expect(sel.mergeCandidates(s, viewer(U.tom))).toEqual([])
     expect(sel.mergeCandidates(s, viewer(U.priya))).toEqual([])
-    // The manual route lists every appointment of the firm's.
-    expect(sel.mergeTargets(s, viewer(U.dana), mine).map((t) => t.id)).toEqual(expect.arrayContaining([toms, TIVERNE_ID, HARROWDEN_ID]))
+    // The manual route lists the firm's appointments whose survey is still open; Tiverne's is submitted.
+    expect(sel.mergeTargets(s, viewer(U.dana), mine).map((t) => t.id)).toEqual(expect.arrayContaining([toms, HARROWDEN_ID]))
+    expect(sel.mergeTargets(s, viewer(U.dana), mine).map((t) => t.id)).not.toContain(TIVERNE_ID)
     expect(sel.mergeTargets(s, viewer(U.dana), toms)).toEqual([])
   })
 
@@ -208,16 +209,16 @@ describe('inviting a contractor by email (note 28)', () => {
   it('appoints a firm already on Tallyard at once', () => {
     const s0 = fresh()
     const r = must(inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, ' Dana.Kowalski@tarnbrook.example '))
-    expect(r.value).toEqual({ status: 'appointed', orgName: 'Tarnbrook Deconstruction', cleared: 5 })
+    expect(r.value).toEqual({ status: 'appointed', orgName: 'Tarnbrook Deconstruction', cleared: 5, clearsOnJoin: 0, previousName: 'Fennick Dismantling' })
     expect(r.state.world.buildings[TIVERNE_ID].contractorOrgId).toBe(ORG_IDS.tarnbrook)
   })
 
   it('waits for a firm not on Tallyard, which becomes the contractor when it signs up with that email', () => {
     const s0 = fresh()
     const r = must(inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, 'Lee@Shaw.example'))
-    expect(r.value).toEqual({ status: 'waiting', orgName: null, cleared: 0 })
+    expect(r.value).toEqual({ status: 'waiting', orgName: null, cleared: 0, clearsOnJoin: 5, previousName: 'Fennick Dismantling' })
     expect(r.state.world.buildings[TIVERNE_ID].contractorInvite).toEqual({ email: 'lee@shaw.example', invitedAt: NOW, invitedByOrgId: ORG_IDS.ostlea, invitedByUserId: U.tom })
-    expect(sel.buildingOverview(r.state, viewer(U.tom), TIVERNE_ID)!.contractorInvite).toEqual({ email: 'lee@shaw.example', invitedText: '8 October 2026' })
+    expect(sel.buildingOverview(r.state, viewer(U.tom), TIVERNE_ID)!.contractorInvite).toEqual({ email: 'lee@shaw.example', invitedText: '8 October 2026', clearsText: "Fennick Dismantling's 5 dates are cleared when they join." })
     // Fennick stays until the new firm joins.
     expect(r.state.world.buildings[TIVERNE_ID].contractorOrgId).toBe(FENNICK_ID)
     const lee = must(signUpState(r.state, { name: 'Lee Shaw', email: 'lee@shaw.example', orgName: 'Shaw Surveys', orgType: 'Surveying or deconstruction firm', salt: 's', passwordHash: 'h', now: NOW }))
@@ -228,6 +229,8 @@ describe('inviting a contractor by email (note 28)', () => {
     expect(Object.values(lee.state.world.items).filter((i) => i.buildingId === TIVERNE_ID && i.contractorAvailableFrom !== null)).toEqual([])
     expect(lee.state.notifications.find((n) => n.orgId === shaw)).toMatchObject({ kind: 'appointed', title: 'Ostlea Estates invited you to set availability dates at Tiverne House' })
     expect(lee.state.notifications.find((n) => n.orgId === ORG_IDS.ostlea)).toMatchObject({ kind: 'availability_set', title: 'Shaw Surveys joined and can set dates at Tiverne House' })
+    // The owner is told the previous contractor's dates went (review finding on note 28).
+    expect(lee.state.notifications.find((n) => n.orgId === ORG_IDS.ostlea)!.body).toBe("They accepted your invitation. Fennick Dismantling's 5 dates were cleared. Their dates appear in the inventory once set.")
     // A firm that only dates buildings reads as a deconstruction contractor, with no Capture page.
     const nav = sel.navModel(lee.state, viewer(lee.value))!
     expect(nav.org.roleLabel).toBe('Deconstruction contractor')
@@ -240,7 +243,12 @@ describe('inviting a contractor by email (note 28)', () => {
     const reed = must(signUpState(r.state, { name: 'Ash Reed', email: 'ash@reed.example', orgName: 'Reed Holdings', orgType: 'Asset owner', salt: 's', passwordHash: 'h', now: NOW }))
     expect(reed.state.world.buildings[TIVERNE_ID].contractorOrgId).toBe(FENNICK_ID)
     expect(resolveContractorInvites(r.state, U.priya, NOW)).toBe(r.state)
-    refused(s0, inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, 'priya.nair@studiooriel.example'), CONTRACTOR_ERRORS.notFirm)
+    // An email at an organisation of another kind is treated like an unknown one: it waits, and says nothing of who is on Tallyard.
+    const priya = must(inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, 'priya.nair@studiooriel.example'))
+    const unknown = must(inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, 'nobody@unknown.example'))
+    expect(priya.value).toEqual(unknown.value)
+    expect(priya.value).toEqual({ status: 'waiting', orgName: null, cleared: 0, clearsOnJoin: 5, previousName: 'Fennick Dismantling' })
+    expect(priya.state.world.buildings[TIVERNE_ID].contractorOrgId).toBe(FENNICK_ID)
     refused(s0, inviteContractorByEmail(s0, actor(U.tom), TIVERNE_ID, 'not an email'), CONTRACTOR_ERRORS.email)
     refused(s0, inviteContractorByEmail(s0, actor(U.priya), TIVERNE_ID, 'lee@shaw.example'), ERRORS.role)
   })

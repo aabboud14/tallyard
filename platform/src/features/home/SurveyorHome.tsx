@@ -112,6 +112,18 @@ function Metrics({ v }: { v: SurveyorDashboard }) {
   )
 }
 
+/** A firm that only dates buildings as their contractor: buildings to date and dates set, no capture or survey counts. */
+function ContractorMetrics({ v, t }: { v: SurveyorDashboard; t: NonNullable<SurveyorDashboard['contractorTiles']> }) {
+  return (
+    <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
+      <MetricTile testId="metric-clients" label="Clients" icon={Users} value={v.stats.clients} sub="Owners who invited your firm" />
+      <MetricTile testId="metric-to-date" label="Buildings to date" icon={Building2} value={t.buildings} sub={t.buildingsSubText} />
+      <MetricTile testId="metric-dated" label="Dates set" icon={CalendarClock} value={t.dated} sub={t.datedSubText} />
+      <MetricTile testId="metric-undated" label="Still to date" icon={ClipboardList} value={t.undated} state={t.undatedState?.state} stateLabel={t.undatedState?.label} sub={t.undatedSubText} />
+    </MetricGrid>
+  )
+}
+
 function BuildingRow({
   b,
   extra,
@@ -223,15 +235,17 @@ export function SurveyorHome() {
             <Button asChild icon={Plus}>
               <Link to="/app/buildings?new=1">Add building</Link>
             </Button>
-            <Button asChild variant="primary" icon={Camera}>
-              <Link to={v.quickCapture.href} data-testid="home-capture">
-                Capture
-              </Link>
-            </Button>
+            {v.contractorTiles ? null : (
+              <Button asChild variant="primary" icon={Camera}>
+                <Link to={v.quickCapture.href} data-testid="home-capture">
+                  Capture
+                </Link>
+              </Button>
+            )}
           </>
         }
       />
-      <Metrics v={v} />
+      {v.contractorTiles ? <ContractorMetrics v={v} t={v.contractorTiles} /> : <Metrics v={v} />}
 
       <section aria-labelledby="appointments-title" className="mt-10 flex min-w-0 flex-col gap-4">
         <SectionTitle id="appointments-title" title="Your appointments" description="Buildings owners appointed your firm to survey or to date, by client." className="mb-0" />

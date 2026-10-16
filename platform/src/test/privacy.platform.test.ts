@@ -3,13 +3,14 @@
 import { describe, it, expect } from 'vitest'
 import { actor, addTestUser, fresh, must, U, viewer } from './fixtures'
 import { openShareLink } from '../store/actions/links'
-import { setContractorDates } from '../store/actions/contractor'
-import { createOwnerProject } from '../store/actions/owner'
+import { inviteContractorByEmail, setContractorDates } from '../store/actions/contractor'
+import { createBuilding, createOwnerProject } from '../store/actions/owner'
+import { createSurveyBuilding } from '../store/actions/claims'
 import { FENNICK_ID, TIVERNE_LINK_ID } from '../sandbox/seed-owner-surveyor'
 import { dateFormats } from '../domain/dates'
 import type { AppData, Viewer } from '../store/types'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../domain/privacy/privateStrings'
-import { itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
+import { HARROWDEN_ID, itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
 import { DEFAULT_DISCOVER_QUERY } from '../store/selectors/discover'
 import * as sel from '../store/selectors'
 import { projectsOfUser, buildingsOfUser } from '../store/access'
@@ -469,6 +470,34 @@ describe('P3, audit 16 October: a donor building owner browsing the marketplace'
     // The client view: prices kept, nothing to save to without a project.
     expect(grid.canSave).toBe(false)
     expect(grid.sortOptions).toContain('price')
+  })
+})
+
+describe('Privacy, review of 16 October: who is on Tallyard, and the owner\'s own buildings', () => {
+  it('inviting a contractor by email tells nobody whether an address is registered, or what kind of organisation it is at', () => {
+    const s = fresh()
+    const registered = must(inviteContractorByEmail(s, actor(U.tom), TIVERNE_ID, 'priya.nair@studiooriel.example'))
+    const owner = must(inviteContractorByEmail(s, actor(U.dana), HARROWDEN_ID, 'tom.ashby@ostlea.example'))
+    const unknown = must(inviteContractorByEmail(s, actor(U.tom), TIVERNE_ID, 'nobody@unknown.example'))
+    const unknownAtHarrowden = must(inviteContractorByEmail(s, actor(U.dana), HARROWDEN_ID, 'nobody@unknown.example'))
+    expect(registered.value).toEqual(unknown.value)
+    expect(owner.value).toEqual(unknownAtHarrowden.value)
+    expect(JSON.stringify(sel.buildingOverview(registered.state, viewer(U.tom), TIVERNE_ID))).not.toContain('Studio Oriel')
+  })
+
+  it("a surveyor never learns that the owner already had the building it asked about", () => {
+    let s = fresh()
+    const corbel = { name: 'Corbel Yard', address: '9 Lantry Street, London E1', postcodeDistrict: 'E1', localAuthority: 'Tower Hamlets', region: 'Inner London East', yearBuilt: null, storeys: null, giaM2: null, structureType: '', structure: [], stripOutStart: null, dismantlingStart: null, clearBy: null }
+    s = must(createSurveyBuilding(s, actor(U.dana), { ...corbel, owner: { email: 'tom.ashby@ostlea.example', name: '', message: '' } })).state
+    const toms = must(createBuilding(s, actor(U.tom), { ...corbel, address: 'Corbel Yard, Lantry Street', surveyorOrgId: null }))
+    s = toms.state
+    const claimId = Object.values(s.buildingClaims).find((c) => c.status === 'pending' && c.id !== 'clm_ambrey')!.id
+    // Not surveyed by Tarnbrook, so not offered as the same building to Tom either.
+    expect(sel.claimDuplicateOf(s, viewer(U.tom), claimId)).toBeNull()
+    const v = viewer(U.dana)
+    const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['candidates', sel.mergeCandidates(s, v)], ['duplicate', sel.claimDuplicateOf(s, v, claimId)]]
+    for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)])
+    expectNone(dana, ['Corbel Yard, Lantry Street', toms.value], 'Dana')
   })
 })
 

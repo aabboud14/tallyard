@@ -2,10 +2,10 @@
 // donor buildings with what was captured; declining keeps it with the firm, which never learns who declined.
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Building2, Check, MapPin, X } from 'lucide-react'
+import { Building2, Check, Copy, GitMerge, MapPin, Plus, X } from 'lucide-react'
 import { act } from '../../store'
 import type { ClaimRow } from '../../store/selectors/claims'
-import { Button, Card, Dialog, EmptyState, Field, Pill, Textarea, toast } from '../../ui'
+import { Button, Callout, Card, Dialog, EmptyState, Field, Pill, Textarea, toast } from '../../ui'
 import { SectionTitle } from '../../app/Page'
 
 export function BuildingClaims({ waiting, answered }: { waiting: ClaimRow[]; answered: ClaimRow[] }) {
@@ -16,6 +16,17 @@ export function BuildingClaims({ waiting, answered }: { waiting: ClaimRow[]; ans
     if (!r.ok) return toast.error(r.error ?? 'Could not confirm the building.')
     toast.success(`${c.buildingName} added to your donor buildings`, { description: `${c.surveyorName} stays appointed as its surveyor.` })
     navigate(`/app/buildings/${c.buildingId}`)
+  }
+  // The owner already has this building with the same surveyor: the surveyor's record joins it (note 26).
+  const confirmInto = (c: ClaimRow, intoId: string) => {
+    const r = act.confirmBuildingClaimInto(c.id, intoId, '')
+    if (!r.ok || !r.value) return toast.error(r.error ?? 'Could not confirm the building.')
+    const { moved, intoName } = r.value
+    toast.success(intoName === c.buildingName ? `${c.buildingName} confirmed` : `${c.buildingName} joined your ${intoName}`, {
+      description: `${moved} ${moved === 1 ? 'item' : 'items'} added to your ${intoName}. ${c.surveyorName} stays appointed as its surveyor.`,
+      action: { label: 'Undo', onClick: r.undo },
+    })
+    navigate(`/app/buildings/${r.value.intoId}`)
   }
   if (waiting.length === 0 && answered.length === 0)
     return (
@@ -35,7 +46,7 @@ export function BuildingClaims({ waiting, answered }: { waiting: ClaimRow[]; ans
         <ul className="m-0 flex list-none flex-col gap-4 p-0">
           {waiting.map((c) => (
             <li key={c.id}>
-              <ClaimCard c={c} onConfirm={() => confirm(c)} onDecline={() => setDeclining(c)} />
+              <ClaimCard c={c} onConfirm={() => confirm(c)} onConfirmInto={(intoId) => confirmInto(c, intoId)} onDecline={() => setDeclining(c)} />
             </li>
           ))}
         </ul>
@@ -66,7 +77,8 @@ export function BuildingClaims({ waiting, answered }: { waiting: ClaimRow[]; ans
   )
 }
 
-function ClaimCard({ c, onConfirm, onDecline }: { c: ClaimRow; onConfirm: () => void; onDecline: () => void }) {
+function ClaimCard({ c, onConfirm, onConfirmInto, onDecline }: { c: ClaimRow; onConfirm: () => void; onConfirmInto: (intoId: string) => void; onDecline: () => void }) {
+  const dup = c.duplicate
   return (
     <Card padding="none" className="overflow-hidden" data-testid={`claim-${c.buildingId}`}>
       <div className="flex flex-col gap-4 p-5 sm:p-6">
@@ -108,15 +120,36 @@ function ClaimCard({ c, onConfirm, onDecline }: { c: ClaimRow; onConfirm: () => 
             {c.message}
           </blockquote>
         ) : null}
+        {dup ? (
+          <div data-testid={`claim-duplicate-${c.buildingId}`}>
+            <Callout tone="warning" icon={Copy} title={`You may already have ${c.buildingName}`}>
+              <p className="m-0">{dup.warning}</p>
+              <p className="m-0 mt-1 text-sm text-muted">
+                Yours: {dup.intoName}, {dup.intoAddress}
+              </p>
+            </Callout>
+          </div>
+        ) : null}
         <p className="m-0 text-sm text-muted">Confirming adds it to your donor buildings with what was captured. Nothing is shared or listed until you decide.</p>
         {c.canDecide ? (
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line-soft pt-4">
             <Button icon={X} onClick={onDecline} data-testid={`claim-decline-${c.buildingId}`}>
               Not ours
             </Button>
-            <Button variant="primary" icon={Check} onClick={onConfirm} data-testid={`claim-confirm-${c.buildingId}`}>
-              Confirm it is ours
-            </Button>
+            {dup ? (
+              <Button variant={dup.canMerge ? 'secondary' : 'primary'} icon={Plus} onClick={onConfirm} data-testid={`claim-confirm-${c.buildingId}`}>
+                Add as a separate building
+              </Button>
+            ) : (
+              <Button variant="primary" icon={Check} onClick={onConfirm} data-testid={`claim-confirm-${c.buildingId}`}>
+                Confirm it is ours
+              </Button>
+            )}
+            {dup?.canMerge ? (
+              <Button variant="primary" icon={GitMerge} onClick={() => onConfirmInto(dup.intoId)} data-testid={`claim-confirm-into-${c.buildingId}`}>
+                {dup.confirmLabel}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>

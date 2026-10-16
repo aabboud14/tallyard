@@ -70,6 +70,7 @@ export const act = {
   decideBuildingClaim: bind(claims.decideBuildingClaim),
   deleteSurveyBuilding: bind(claims.deleteSurveyBuilding),
   mergeSurveyBuilding: bind(claims.mergeSurveyBuilding),
+  confirmBuildingClaimInto: bind(claims.confirmBuildingClaimInto),
   // Deconstruction contractor
   appointContractor: bind(contractor.appointContractor),
   setContractorDates: bind(contractor.setContractorDates),

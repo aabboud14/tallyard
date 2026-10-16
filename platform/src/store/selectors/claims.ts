@@ -3,7 +3,7 @@
 import type { SourceBuilding } from '../../domain/types'
 import type { AppData, BuildingClaim, BuildingClaimStatus, SurveyStatus, Viewer } from '../types'
 import { buildingSide, roleOfUser } from '../access'
-import { claimAddressedTo } from '../actions/claims'
+import { claimAddressedTo, surveySubmitted } from '../actions/claims'
 import { timeAgo } from './common'
 
 export type ClaimState = { status: 'linked' | 'not_linked' | 'pending' | 'declined'; label: string; email: string | null; note: string | null; claimId: string | null }
@@ -54,6 +54,49 @@ export type ClaimRow = {
   statusLabel: string
   decisionNote: string | null
   canDecide: boolean
+  /** One of the owner's own buildings that looks like this one, with the same surveyor; null when there is none. */
+  duplicate: ClaimDuplicate | null
+}
+
+export type ClaimDuplicate = {
+  intoId: string
+  intoName: string
+  intoAddress: string
+  /** False when the owner's record has a submitted survey, which takes no more items. */
+  canMerge: boolean
+  /** 'You already have Corbel Yard with Tarnbrook Deconstruction as surveyor. Confirming adds the surveyor's 2 items to it.' */
+  warning: string
+  /** 'Confirm as your Corbel Yard'. */
+  confirmLabel: string
+}
+
+/**
+ * For an owner deciding a request to confirm a building: one of their own buildings, surveyed by the same firm, that
+ * looks like the same place (the matcher the surveyor's side uses), so confirming does not leave two copies.
+ */
+export function claimDuplicateOf(state: AppData, viewer: Viewer, claimId: string): ClaimDuplicate | null {
+  if (roleOfUser(state, viewer.userId) !== 'owner') return null
+  const orgId = state.users[viewer.userId]?.orgId
+  const c = state.buildingClaims[claimId]
+  const from = c ? state.world.buildings[c.buildingId] : undefined
+  if (!orgId || !c || !from || c.status !== 'pending' || from.ownerOrgId !== null || !claimAddressedTo(state, c, orgId)) return null
+  const into = Object.values(state.world.buildings)
+    .filter((b) => b.id !== from.id && b.ownerOrgId === orgId && b.surveyorOrgId === c.surveyorOrgId && matchReason(from, b) !== null)
+    .sort((x, y) => x.name.localeCompare(y.name, 'en-GB') || x.id.localeCompare(y.id))[0]
+  if (!into) return null
+  const firm = state.world.orgs[c.surveyorOrgId]?.name ?? 'the surveyor'
+  const n = Object.values(state.world.items).filter((i) => i.buildingId === from.id).length
+  const items = `${n} ${n === 1 ? 'item' : 'items'}`
+  const canMerge = !surveySubmitted(state, into.id)
+  const lead = `You already have ${into.name} with ${firm} as surveyor.`
+  return {
+    intoId: into.id,
+    intoName: into.name,
+    intoAddress: into.address,
+    canMerge,
+    warning: canMerge ? `${lead} Confirming adds the surveyor's ${items} to it, so you keep one record.` : `${lead} Its survey is submitted, so the surveyor's ${items} cannot join it. Add this as a separate building, or say it is not yours.`,
+    confirmLabel: `Confirm as your ${into.name}`,
+  }
 }
 
 /**
@@ -90,6 +133,7 @@ export function claimRowsForOwner(state: AppData, viewer: Viewer): ClaimRow[] {
         statusLabel: CLAIM_STATUS_LABELS[c.status],
         decisionNote: c.decisionNote,
         canDecide: c.status === 'pending',
+        duplicate: c.status === 'pending' ? claimDuplicateOf(state, viewer, c.id) : null,
       }
     })
 }
@@ -139,6 +183,10 @@ export type MergeCandidate = {
   /** 'Merge into Corbel Yard for Ostlea Estates', the heading on the unlinked building's own overview. */
   mergeTitle: string
   actionLabel: string
+  /** The prompt on the unlinked building's own overview, where the items leave: 'Ostlea Estates has since appointed you to Corbel Yard. Move this building's 2 captured items into it?' */
+  unlinkedPrompt: string
+  /** 'Move into their Corbel Yard'. */
+  unlinkedActionLabel: string
 }
 
 function candidate(state: AppData, from: SourceBuilding, into: SourceBuilding, reason: MergeCandidate['reason']): MergeCandidate {
@@ -158,7 +206,17 @@ function candidate(state: AppData, from: SourceBuilding, into: SourceBuilding, r
     prompt: `You added ${from.name} yourself before ${ownerName} appointed you. ${what}`,
     mergeTitle: `Merge into ${into.name} for ${ownerName}`,
     actionLabel: itemCount === 0 ? 'Merge here' : 'Move items here',
+    unlinkedPrompt: `${ownerName} has since appointed you to ${into.name}. ${itemCount === 0 ? 'Merge this record into it?' : `Move this building's ${itemCount === 1 ? 'captured item' : `${itemCount} captured items`} into it?`}`,
+    unlinkedActionLabel: `Move into their ${into.name}`,
   }
+}
+
+/** Why two records look like the same building: the same name or address once normalised, or the same postcode district with a similar name. */
+function matchReason(from: SourceBuilding, into: SourceBuilding): MergeCandidate['reason'] | null {
+  const sameName = normaliseForMatch(from.name) === normaliseForMatch(into.name)
+  const sameAddress = !!normaliseForMatch(from.address) && normaliseForMatch(from.address) === normaliseForMatch(into.address)
+  const samePostcode = !!from.postcodeDistrict && from.postcodeDistrict === into.postcodeDistrict && similarNames(from.name, into.name)
+  return sameName ? 'name' : sameAddress ? 'address' : samePostcode ? 'postcode' : null
 }
 
 /**
@@ -172,27 +230,25 @@ export function mergeCandidates(state: AppData, viewer: Viewer): MergeCandidate[
   if (!orgId) return []
   const buildings = Object.values(state.world.buildings)
   const own = buildings.filter((b) => b.ownerOrgId === null && b.createdByOrgId === orgId && b.surveyorOrgId === orgId && buildingSide(state, viewer.userId, b.id) === 'surveyor')
-  const appointed = buildings.filter((b) => b.ownerOrgId !== null && b.surveyorOrgId === orgId && buildingSide(state, viewer.userId, b.id) === 'surveyor')
+  // A submitted survey takes no more items, so it is never offered.
+  const appointed = buildings.filter((b) => b.ownerOrgId !== null && b.surveyorOrgId === orgId && buildingSide(state, viewer.userId, b.id) === 'surveyor' && !surveySubmitted(state, b.id))
   const out: MergeCandidate[] = []
   for (const from of own) {
     for (const into of appointed) {
-      const sameName = normaliseForMatch(from.name) === normaliseForMatch(into.name)
-      const sameAddress = !!normaliseForMatch(from.address) && normaliseForMatch(from.address) === normaliseForMatch(into.address)
-      const samePostcode = !!from.postcodeDistrict && from.postcodeDistrict === into.postcodeDistrict && similarNames(from.name, into.name)
-      const reason = sameName ? 'name' : sameAddress ? 'address' : samePostcode ? 'postcode' : null
+      const reason = matchReason(from, into)
       if (reason) out.push(candidate(state, from, into, reason))
     }
   }
   return out
 }
 
-/** The appointed buildings the firm may move an unlinked building's captures into, for cases the matcher misses. */
+/** The appointed buildings the firm may move an unlinked building's captures into, for cases the matcher misses. Submitted surveys are left out. */
 export function mergeTargets(state: AppData, viewer: Viewer, fromId: string): { id: string; label: string }[] {
   const from = state.world.buildings[fromId]
   const orgId = state.users[viewer.userId]?.orgId
   if (!from || !orgId || roleOfUser(state, viewer.userId) !== 'surveyor' || from.ownerOrgId !== null || from.createdByOrgId !== orgId) return []
   return Object.values(state.world.buildings)
-    .filter((b) => b.ownerOrgId !== null && b.surveyorOrgId === orgId && buildingSide(state, viewer.userId, b.id) === 'surveyor')
+    .filter((b) => b.ownerOrgId !== null && b.surveyorOrgId === orgId && buildingSide(state, viewer.userId, b.id) === 'surveyor' && !surveySubmitted(state, b.id))
     .map((b) => ({ id: b.id, label: `${b.name}, ${b.address} (${state.world.orgs[b.ownerOrgId ?? '']?.name ?? ''})` }))
     .sort((a, b) => a.label.localeCompare(b.label, 'en-GB'))
 }

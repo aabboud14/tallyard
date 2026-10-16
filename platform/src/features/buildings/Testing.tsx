@@ -175,7 +175,7 @@ function RequestCard({ r, owner, onView, onBook, onRecord, onCancel }: { r: Test
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
           <p className="m-0 text-sm text-muted">{r.canRecord && r.recordLocked && !owner ? 'Some items are shared or published. The owner records those results.' : r.canBook ? 'Record what the company tells you. Nothing is sent from the sandbox.' : 'What was asked of the company stays here for reference.'}</p>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="ghost" icon={FileText} onClick={onView} data-testid="testing-view">
+            <Button size="sm" variant="ghost" icon={FileText} className="max-sm:min-h-11" onClick={onView} data-testid="testing-view">
               View request
             </Button>
               {r.canCancel ? (
@@ -234,6 +234,12 @@ function SheetDialog({ row, onClose }: { row: TestingRow; onClose: () => void })
       }
     >
       <div className="flex flex-col gap-5 text-base">
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-muted" data-testid="testing-sheet-simulated">
+          <Pill tone="neutral" size="sm" variant="quiet">
+            Simulated
+          </Pill>
+          A sample request. No testing company receives it.
+        </p>
         <dl className="m-0 grid gap-3 sm:grid-cols-2">
           <div className="min-w-0">
             <dt className="text-xs text-muted">To</dt>
@@ -259,7 +265,9 @@ function SheetDialog({ row, onClose }: { row: TestingRow; onClose: () => void })
           <div className="min-w-0">
             <dt className="text-xs text-muted">Requested</dt>
             <dd className="m-0 mt-0.5 text-ink">{sh.requestedText}</dd>
-            <dd className="m-0 text-sm text-muted">Preferred from {sh.preferredText ?? 'any date'}</dd>
+            <dd className="m-0 text-sm text-muted" data-testid="testing-sheet-preferred">
+              {sh.preferredLine}
+            </dd>
           </div>
         </dl>
         <div>

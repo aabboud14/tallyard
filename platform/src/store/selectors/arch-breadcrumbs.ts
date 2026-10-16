@@ -8,6 +8,7 @@ import { buildingTabs } from './owner'
 import { routeAccess } from './nav'
 import { MARKETPLACE_PATH } from '../paths'
 import { linkPageTitle } from './links'
+import { NOT_YET_LINKED } from './surveyor'
 
 export type AppCrumb = { label: string; href: string | null }
 
@@ -81,7 +82,9 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
     const b = state.world.buildings[id]
     const side = buildingSide(state, viewer.userId, id)
     if (!b || !side) return done([crumb(sectionLabel, sectionHref)])
-    const base = [crumb(sectionLabel, sectionHref), crumb(b.name, `/app/buildings/${id}`)]
+    // A building the firm added itself is not an appointment yet: it sits under Not yet linked on that page.
+    const group = side === 'surveyor' && b.ownerOrgId === null ? [crumb(NOT_YET_LINKED, `${sectionHref}#not-yet-linked`)] : []
+    const base = [crumb(sectionLabel, sectionHref), ...group, crumb(b.name, `/app/buildings/${id}`)]
     if (tab === undefined) return done(base)
     const t = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).find((x) => x.id === tab)
     const tabCrumb = crumb(t ? t.label : slugLabel(tab), `/app/buildings/${id}/${tab}`)

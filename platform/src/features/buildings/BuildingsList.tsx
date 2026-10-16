@@ -326,7 +326,7 @@ function SurveyorGroups({ v, sketches }: { v: BuildingsListView; sketches: Recor
         </section>
       ))}
       {v.unlinked.length > 0 ? (
-        <section aria-label="Not yet linked" data-testid="unlinked-buildings">
+        <section id="not-yet-linked" aria-label="Not yet linked" className="scroll-mt-20" data-testid="unlinked-buildings">
           <SectionTitle title="Not yet linked" description="Buildings your firm added. Private to you until each owner confirms it." />
           <div className="grid gap-3">
             {v.unlinked.map((b) => (

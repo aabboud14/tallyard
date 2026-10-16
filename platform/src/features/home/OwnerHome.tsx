@@ -41,7 +41,7 @@ function Metrics({ v }: { v: OwnerDashboard }) {
         label="Items surveyed"
         icon={Layers}
         value={f.number(s.itemsSurveyed)}
-        sub={`Across ${plural(s.donorBuildings, 'donor building', 'donor buildings')}. ${m.listed} listed: ${s.listed} published, ${s.shared} shared, ${s.reserved} reserved`}
+        sub={m.itemsSub}
         footer={<TileChart label="Items by typology" chart={<Donut segments={typology} label="Items by typology" size={48} />} legend={typology.map((t) => ({ key: t.key, label: t.label, colour: t.colour, valueText: String(t.value) }))} />}
       />
       <MetricTile

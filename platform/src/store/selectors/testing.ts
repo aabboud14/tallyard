@@ -31,8 +31,15 @@ export type TestingSheet = {
   items: { tag: string; title: string; quantityText: string; location: string }[]
   tests: string[]
   preferredText: string | null
+  /** 'Preferred from: 20 October 2026', or 'Preferred from: no preference'; the same words on screen and in the text. */
+  preferredLine: string
   message: string
   requestedText: string
+}
+
+/** The preferred date line of a request sheet. */
+export function preferredLine(preferredText: string | null): string {
+  return `Preferred from: ${preferredText ?? 'no preference'}`
 }
 
 function slug(text: string): string {
@@ -57,7 +64,7 @@ export function testingRequestText(sheet: TestingSheet): string {
     `Items (${sheet.items.length}):`,
     ...sheet.items.map((i) => `- ${i.tag}: ${i.title}, ${i.quantityText}${i.location ? `. ${i.location}` : ''}`),
     '',
-    `Preferred from: ${sheet.preferredText ?? 'No preference'}`,
+    sheet.preferredLine,
   ]
   if (sheet.message) lines.push('', 'Message:', sheet.message)
   return lines.join('\n')
@@ -126,6 +133,7 @@ export function testingView(state: AppData, viewer: Viewer, buildingId: string):
         items: items.map((i) => ({ tag: i.tag, title: titleFor(i.spec), quantityText: itemQuantityText(i), location: i.location })),
         tests: services,
         preferredText,
+        preferredLine: preferredLine(preferredText),
         message: t.message,
         requestedText,
       }

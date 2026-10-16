@@ -16,7 +16,6 @@ export const CONTRACTOR_ERRORS = {
   badMonth: 'Choose a valid month.',
   unknownItem: 'That item is not in this building.',
   email: "Enter the contractor's email address.",
-  notFirm: 'That email belongs to someone who is not at a surveying or deconstruction firm.',
 } as const
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -25,6 +24,22 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 export function isoForMonth(dismantlingStart: string | null, key: string): string {
   if (dismantlingStart && monthKey(dismantlingStart) === key) return dismantlingStart
   return `${key}-01`
+}
+
+/**
+ * The sentence that says a contractor's dates go: 'Fennick Dismantling's 5 dates were cleared.' in the past, or
+ * 'Fennick Dismantling's 5 dates are cleared when they join.' for an invite still waiting. Null when there are none.
+ */
+export function datesClearedText(previousName: string | null, count: number, when: 'done' | 'on_join'): string | null {
+  if (count === 0 || !previousName) return null
+  const what = count === 1 ? 'date' : `${count} dates`
+  const verb = when === 'done' ? (count === 1 ? 'was cleared' : 'were cleared') : count === 1 ? 'is cleared when they join' : 'are cleared when they join'
+  return `${previousName}'s ${what} ${verb}.`
+}
+
+/** How many dates the building's current contractor has set, which go when another contractor takes over. */
+export function datedByContractor(world: World, buildingId: string): number {
+  return Object.values(world.items).filter((i) => i.buildingId === buildingId && i.contractorAvailableFrom !== null).length
 }
 
 /** What changing the contractor did: how many of the previous contractor's dates were cleared, and whose. */
@@ -79,14 +94,17 @@ export function appointContractor(state: AppData, actor: Actor, buildingId: stri
 }
 
 /** The surveying or deconstruction firm with a member at this email, if any. */
-function contractorOrgByEmail(state: AppData, email: string): { orgId: string | null; otherRole: boolean } {
+function contractorOrgByEmail(state: AppData, email: string): string | null {
   const key = normaliseEmail(email)
   const user = Object.values(state.users).find((u) => normaliseEmail(u.email) === key)
-  if (!user) return { orgId: null, otherRole: false }
-  return roleOfOrg(state, user.orgId) === 'surveyor' ? { orgId: user.orgId, otherRole: false } : { orgId: null, otherRole: true }
+  return user && roleOfOrg(state, user.orgId) === 'surveyor' ? user.orgId : null
 }
 
-export type ContractorInviteResult = { status: 'appointed' | 'waiting'; orgName: string | null; cleared: number }
+/**
+ * `cleared` counts the dates cleared now (appointed at once); `clearsOnJoin` the current contractor's dates that go
+ * when an invite still waiting is taken up, with `previousName` naming that contractor.
+ */
+export type ContractorInviteResult = { status: 'appointed' | 'waiting'; orgName: string | null; cleared: number; clearsOnJoin: number; previousName: string | null }
 
 /**
  * The owner or the surveyor invites a deconstruction company by email. A firm already on Tallyard with a member at
@@ -101,20 +119,23 @@ export function inviteContractorByEmail(state: AppData, actor: Actor, buildingId
   const side = buildingSide(state, actor.userId, buildingId)
   if (side !== 'owner' && side !== 'surveyor') return fail(state, ERRORS.role)
   if (!isEmail(email)) return fail(state, CONTRACTOR_ERRORS.email)
+  // An email at an organisation of another kind is treated like an unknown one, so the invite never tells anyone who
+  // is on Tallyard: it waits, and only a surveying or deconstruction firm joining with it takes it up.
   const found = contractorOrgByEmail(state, email)
-  if (found.otherRole) return fail(state, CONTRACTOR_ERRORS.notFirm)
-  if (found.orgId) {
-    const r = appointContractor(state, actor, buildingId, found.orgId)
+  const previousName = b.contractorOrgId ? (state.world.orgs[b.contractorOrgId]?.name ?? null) : null
+  if (found) {
+    const r = appointContractor(state, actor, buildingId, found)
     if (r.error || !r.value) return fail(state, r.error ?? CONTRACTOR_ERRORS.contractor)
-    return ok(r.state, { status: 'appointed', orgName: state.world.orgs[found.orgId]?.name ?? null, cleared: r.value.cleared })
+    return ok(r.state, { status: 'appointed', orgName: state.world.orgs[found]?.name ?? null, cleared: r.value.cleared, clearsOnJoin: 0, previousName: r.value.previousName })
   }
+  const waiting: ContractorInviteResult = { status: 'waiting', orgName: null, cleared: 0, clearsOnJoin: b.contractorOrgId ? datedByContractor(state.world, buildingId) : 0, previousName }
   const invite = { email: normaliseEmail(email), invitedAt: a.now, invitedByOrgId: a.org.id, invitedByUserId: a.user.id }
-  if (b.contractorInvite?.email === invite.email) return ok(state, { status: 'waiting', orgName: null, cleared: 0 })
+  if (b.contractorInvite?.email === invite.email) return ok(state, waiting)
   const w = structuredClone(state.world)
   w.buildings[buildingId].contractorInvite = invite
   let s = withWorld(state, w)
   s = log(s, { at: a.now, orgIds: buildingOrgIds(b), buildingId, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: `invited ${invite.email} to set availability dates`, href: `/app/buildings/${buildingId}` })
-  return ok(s, { status: 'waiting', orgName: null, cleared: 0 })
+  return ok(s, waiting)
 }
 
 /** Withdraws an invite by email that no firm has taken up yet. */
@@ -146,18 +167,19 @@ export function resolveContractorInvites(state: AppData, userId: string, now: st
   const w = structuredClone(state.world)
   let s = state
   const orgName = w.orgs[user.orgId]?.name ?? ''
-  const notes: { b: (typeof waiting)[number]; inviterOrgId: string }[] = []
+  const notes: { b: (typeof waiting)[number]; inviterOrgId: string; clearedText: string | null }[] = []
   for (const b of waiting) {
-    notes.push({ b, inviterOrgId: b.contractorInvite?.invitedByOrgId ?? '' })
-    setContractorIn(w, b.id, user.orgId)
+    const previousName = b.contractorOrgId && b.contractorOrgId !== user.orgId ? (w.orgs[b.contractorOrgId]?.name ?? null) : null
+    const cleared = setContractorIn(w, b.id, user.orgId)
+    notes.push({ b, inviterOrgId: b.contractorInvite?.invitedByOrgId ?? '', clearedText: datesClearedText(previousName, cleared, 'done') })
   }
   s = withWorld(s, w)
-  for (const { b, inviterOrgId } of notes) {
+  for (const { b, inviterOrgId, clearedText } of notes) {
     const href = `/app/buildings/${b.id}`
     const inviter = s.world.orgs[inviterOrgId]?.name ?? 'The owner'
     s = log(s, { at: now, orgIds: buildingOrgIds(s.world.buildings[b.id]), buildingId: b.id, projectId: null, actorUserId: userId, actor: user.name, text: `joined Tallyard as the deconstruction contractor for ${b.name}`, href })
     s = notify(s, { orgIds: [user.orgId], kind: 'appointed', title: `${inviter} invited you to set availability dates at ${b.name}`, body: 'Say when each item is expected to come out. The owner decides what buyers see.', href: `${href}/availability`, at: now, actorUserId: null })
-    s = notify(s, { orgIds: [inviterOrgId, ...(b.ownerOrgId && b.ownerOrgId !== inviterOrgId ? [b.ownerOrgId] : [])], kind: 'availability_set', title: `${orgName} joined and can set dates at ${b.name}`, body: 'They accepted your invitation. Their dates appear in the inventory once set.', href, at: now, actorUserId: null })
+    s = notify(s, { orgIds: [inviterOrgId, ...(b.ownerOrgId && b.ownerOrgId !== inviterOrgId ? [b.ownerOrgId] : [])], kind: 'availability_set', title: `${orgName} joined and can set dates at ${b.name}`, body: ['They accepted your invitation.', clearedText, 'Their dates appear in the inventory once set.'].filter(Boolean).join(' '), href, at: now, actorUserId: null })
   }
   return s
 }

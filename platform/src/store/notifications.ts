@@ -40,6 +40,11 @@ export function notify(state: AppData, n: NotifyInput): AppData {
   return s
 }
 
+/** The key on an owner's notification of a request to confirm a building, so it can be removed once the request ends. */
+export function claimNoticeKey(claimId: string): string {
+  return `claim:${claimId}`
+}
+
 export type LogInput = Omit<ActivityEntry, 'id'>
 
 /** Adds an activity entry, newest first. */

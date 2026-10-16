@@ -30,6 +30,7 @@ import { buildingSide, buildingsOfUser, isBuildingContractor, projectSide, proje
 import { acceptedReservation, lotOfItem, projectWishlist } from '../lots'
 import { checkPrices, disclosureWith, type LotVisibilityChoice, type PriceCheck } from '../actions/owner'
 import { PROJECT_TYPES } from '../actions/projects'
+import { datesClearedText } from '../actions/contractor'
 import { claimRowsForOwner, claimStateFor, type ClaimRow, type ClaimState } from './claims'
 import { activitySummary, type ActivitySummary } from './dashboard'
 import { activityFor, firstName, greeting, listingCard, longDate, RESERVATION_STATUS_LABELS, stageLabel, timeAgo, todayOf, type ActivityRow, type ListingCard } from './common'
@@ -460,7 +461,7 @@ export type BuildingOverview = {
   /** Firms that can be invited as contractor (owner and surveyor sides). */
   contractorOptions: { orgId: string; name: string }[]
   /** A contractor invited by email that has not joined Tallyard yet (owner and surveyor sides). */
-  contractorInvite: { email: string; invitedText: string } | null
+  contractorInvite: { email: string; invitedText: string; clearsText: string | null } | null
   /** The collapsed activity panel's one line: how many updates and the latest. */
   activitySummary: ActivitySummary
   /** Testing requests still open, for the owner and surveyor sides; null for a contractor. */
@@ -516,7 +517,15 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
     },
     contractor: b.contractorOrgId ? { orgId: b.contractorOrgId, name: state.world.orgs[b.contractorOrgId]?.name ?? '', datedCount, itemCount: items.length } : null,
     contractorOptions: records ? surveyorOptions(state) : [],
-    contractorInvite: records && b.contractorInvite ? { email: b.contractorInvite.email, invitedText: formatDate(b.contractorInvite.invitedAt.slice(0, 10)) } : null,
+    contractorInvite:
+      records && b.contractorInvite
+        ? {
+            email: b.contractorInvite.email,
+            invitedText: formatDate(b.contractorInvite.invitedAt.slice(0, 10)),
+            // The current contractor's dates go when the invited firm joins (note 28): said before it happens.
+            clearsText: b.contractorOrgId ? datesClearedText(state.world.orgs[b.contractorOrgId]?.name ?? null, datedCount, 'on_join') : null,
+          }
+        : null,
     testing: records ? { open: openTests, href: `/app/buildings/${buildingId}/testing` } : null,
   }
 }

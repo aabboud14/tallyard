@@ -40,12 +40,12 @@ function CandidateCallout({ c, userId, where }: { c: MergeCandidate; userId: str
       className="max-sm:flex-wrap"
     >
       <div className="flex flex-col gap-3" data-testid={`merge-callout-${c.fromId}`}>
-        <p className="m-0">{c.prompt}</p>
+        <p className="m-0">{where === 'unlinked' ? c.unlinkedPrompt : c.prompt}</p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" icon={FolderInput} onClick={() => merge(c.fromId, c.intoId)} data-testid={`merge-move-${c.fromId}`}>
-            {c.actionLabel}
+          <Button variant="primary" size="sm" icon={FolderInput} className="max-sm:min-h-11" onClick={() => merge(c.fromId, c.intoId)} data-testid={`merge-move-${c.fromId}`}>
+            {where === 'unlinked' ? c.unlinkedActionLabel : c.actionLabel}
           </Button>
-          <Button size="sm" icon={X} onClick={() => setKept(true)} data-testid={`merge-keep-${c.fromId}`}>
+          <Button size="sm" icon={X} className="max-sm:min-h-11" onClick={() => setKept(true)} data-testid={`merge-keep-${c.fromId}`}>
             Keep separate
           </Button>
         </div>
@@ -79,14 +79,14 @@ export function MoveIntoAppointment({ fromId, fromName }: { fromId: string; from
   if (!targets || targets.length === 0) return null
   return (
     <>
-      <Button size="sm" icon={FolderInput} onClick={() => setOpen(true)} data-testid="move-into-appointment">
+      <Button size="sm" icon={FolderInput} className="max-sm:min-h-11" onClick={() => setOpen(true)} data-testid="move-into-appointment">
         Move into an appointment
       </Button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
         title={`Move ${fromName} into an appointment`}
-        description="When an owner has since appointed your firm to this building, move what you captured into their record. This record is then removed."
+        description="When an owner has since appointed your firm to this building, move what you captured into their record. This record is then removed. Appointments with a submitted survey are not listed."
         size="sm"
         testId="move-into-dialog"
         footer={

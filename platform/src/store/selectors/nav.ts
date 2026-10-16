@@ -265,7 +265,9 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     const side = buildingSide(state, viewer.userId, id)
     if (!side) return 'forbidden'
     if (tab === undefined) return 'ok'
-    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability'].includes(tab)) return 'not_found'
+    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability', 'activity'].includes(tab)) return 'not_found'
+    // Everyone with a side on the building reads its activity, filtered to what their organisation may read.
+    if (tab === 'activity') return sub === undefined ? 'ok' : 'not_found'
     // The records (inventory, capture, testing) are for the owner and the surveyor; a contractor alone sets dates only.
     const records = canCaptureIn(state, viewer.userId, id)
     if (tab === 'inventory' && sub !== undefined) {

@@ -8,7 +8,7 @@ import { HARROWDEN_ID, itemByTag, lotForItem, ORG_IDS, PERSONA_IDS, TIVERNE_ID }
 import { V1_ASSUMPTIONS } from '../domain/reference/v1assumptions'
 import { formatDate } from '../domain/dates'
 import type { AppData, BuildingClaim, TestingRequest } from '../store/types'
-import { log, notify } from '../store/notifications'
+import { claimNoticeKey, log, notify } from '../store/notifications'
 import { SAMPLE_ACCOUNTS } from './accounts'
 
 export const FENNICK_ID = 'org_fennick'
@@ -173,7 +173,7 @@ export function withOwnerSurveyorHistory(state: AppData, h: HistoryClock): AppDa
   s = log(s, { at: h.at(4, 9), orgIds: [ORG_IDS.tarnbrook], projectId: null, buildingId: AMBREY_ID, actorUserId: DANA, actor: 'Dana Kowalski', text: 'added Ambrey House to survey', href: `/app/buildings/${AMBREY_ID}` })
   s = log(s, { at: h.at(4, 15), orgIds: [ORG_IDS.tarnbrook], projectId: null, buildingId: AMBREY_ID, actorUserId: DANA, actor: 'Dana Kowalski', text: 'captured AH-01 and AH-02', href: `/app/buildings/${AMBREY_ID}/inventory` })
   s = log(s, { at: h.at(3, 10), orgIds: [ORG_IDS.tarnbrook], projectId: null, buildingId: AMBREY_ID, actorUserId: DANA, actor: 'Dana Kowalski', text: `asked ${claim.ownerEmail} to confirm Ambrey House`, href: `/app/buildings/${AMBREY_ID}` })
-  s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'building_claim', title: 'Tarnbrook Deconstruction surveyed a building for you', body: `${ambrey.name}, ${ambrey.address}. Confirm it is yours to see what it holds.`, href: '/app/requests?tab=buildings', at: h.at(3, 10), actorUserId: null })
+  s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'building_claim', title: 'Tarnbrook Deconstruction surveyed a building for you', body: `${ambrey.name}, ${ambrey.address}. Confirm it is yours to see what it holds.`, href: '/app/requests?tab=buildings', at: h.at(3, 10), actorUserId: null, key: claimNoticeKey(claim.id) })
 
   // Fennick Dismantling: invited by Ostlea Estates, then set dates for five items.
   const contractorOrgs = [ORG_IDS.ostlea, ORG_IDS.tarnbrook, FENNICK_ID]

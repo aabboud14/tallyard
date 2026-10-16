@@ -18,6 +18,11 @@ export type OwnerDashboard = OwnerHome & {
   metrics: {
     byTypology: Record<Typology, number>
     listed: number
+    /**
+     * The Items surveyed tile's line: 'Across 2 donor buildings. 6 offered: 1 published, 5 shared, 0 reserved'.
+     * Offered counts published and shared lots, so shared lots are not read as on the marketplace.
+     */
+    itemsSub: string
     /** Items kept private across the donor buildings, for the visibility chart beside published and shared. */
     privateCount: number
     /** Reservation requests and building confirmations waiting on the owner, together. */
@@ -83,6 +88,7 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     metrics: {
       byTypology,
       listed: home.stats.listed + home.stats.shared,
+      itemsSub: `Across ${home.stats.donorBuildings} ${home.stats.donorBuildings === 1 ? 'donor building' : 'donor buildings'}. ${home.stats.listed + home.stats.shared} offered: ${home.stats.listed} published, ${home.stats.shared} shared, ${home.stats.reserved} reserved`,
       privateCount: home.buildings.reduce((n, c) => n + c.counts.private, 0),
       awaiting,
       requestTone: awaiting > 0 ? 'warning' : 'neutral',

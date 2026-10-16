@@ -2,8 +2,9 @@
 // and the surveyor) the invitation itself. The contractor's dates stay private; the owner decides what buyers see.
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, HardHat, Mail, Send, Undo2 } from 'lucide-react'
+import { ArrowRight, HardHat, Mail, Send, TriangleAlert, Undo2 } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
+import { datesClearedText } from '../../store/actions/contractor'
 import { Button, Card, CardBody, CardHeader, Field, Input, Pill, ProgressBar, Select, toast } from '../../ui'
 
 export function ContractorCard({ buildingId }: { buildingId: string }) {
@@ -31,7 +32,7 @@ export function ContractorCard({ buildingId }: { buildingId: string }) {
         ) : o.contractorInvite ? null : (
           <p className="m-0 text-base text-muted">None invited yet. A contractor says when each item is expected to come out.</p>
         )}
-        {canAppoint && o.contractorInvite ? <PendingInvite buildingId={buildingId} email={o.contractorInvite.email} invitedText={o.contractorInvite.invitedText} /> : null}
+        {canAppoint && o.contractorInvite ? <PendingInvite buildingId={buildingId} email={o.contractorInvite.email} invitedText={o.contractorInvite.invitedText} clearsText={o.contractorInvite.clearsText} /> : null}
         {canAppoint ? <AppointContractor key={c?.orgId ?? 'none'} buildingId={buildingId} current={c?.orgId ?? null} currentName={c?.name ?? null} options={o.contractorOptions} /> : null}
         {canAppoint ? <InviteByEmail buildingId={buildingId} /> : null}
       </CardBody>
@@ -39,10 +40,6 @@ export function ContractorCard({ buildingId }: { buildingId: string }) {
   )
 }
 
-function clearedText(cleared: number, previousName: string | null): string | null {
-  if (cleared === 0 || !previousName) return null
-  return `${previousName}'s ${cleared === 1 ? 'date was' : `${cleared} dates were`} cleared.`
-}
 
 function AppointContractor({ buildingId, current, currentName, options }: { buildingId: string; current: string | null; currentName: string | null; options: { orgId: string; name: string }[] }) {
   const [value, setValue] = useState(current ?? '')
@@ -50,7 +47,7 @@ function AppointContractor({ buildingId, current, currentName, options }: { buil
   const save = () => {
     const r = act.appointContractor(buildingId, value || null)
     if (!r.ok) return toast.error(r.error ?? 'Could not change the contractor.')
-    const cleared = r.value ? clearedText(r.value.cleared, r.value.previousName ?? currentName) : null
+    const cleared = r.value ? datesClearedText(r.value.previousName ?? currentName, r.value.cleared, 'done') : null
     const description = [value ? 'They have been told and can set dates now.' : null, cleared].filter(Boolean).join(' ')
     toast.success(value ? 'Contractor invited' : 'Contractor removed', { description: description || undefined, action: { label: 'Undo', onClick: r.undo } })
   }
@@ -71,7 +68,7 @@ function AppointContractor({ buildingId, current, currentName, options }: { buil
 }
 
 /** A contractor invited by email that has not joined Tallyard yet, with Withdraw. */
-function PendingInvite({ buildingId, email, invitedText }: { buildingId: string; email: string; invitedText: string }) {
+function PendingInvite({ buildingId, email, invitedText, clearsText }: { buildingId: string; email: string; invitedText: string; clearsText: string | null }) {
   const withdraw = () => {
     const r = act.withdrawContractorInvite(buildingId)
     if (!r.ok) return toast.error(r.error ?? 'Could not withdraw the invite.')
@@ -86,7 +83,13 @@ function PendingInvite({ buildingId, email, invitedText }: { buildingId: string;
         <span className="min-w-0 break-all text-sm font-medium text-ink">Waiting for {email}</span>
       </div>
       <p className="m-0 text-sm text-muted">Invited on {invitedText}. They become the contractor when they join Tallyard as a surveying or deconstruction firm with this email.</p>
-      <Button size="sm" variant="ghost" icon={Undo2} className="self-start" onClick={withdraw} data-testid="contractor-invite-withdraw">
+      {clearsText ? (
+        <p className="m-0 flex items-start gap-1.5 text-sm font-medium text-warning" data-testid="contractor-invite-clears">
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+          {clearsText}
+        </p>
+      ) : null}
+      <Button size="sm" variant="ghost" icon={Undo2} className="self-start max-sm:min-h-11" onClick={withdraw} data-testid="contractor-invite-withdraw">
         Withdraw
       </Button>
     </div>
@@ -100,7 +103,7 @@ function InviteByEmail({ buildingId }: { buildingId: string }) {
   const [error, setError] = useState<string | null>(null)
   if (!open)
     return (
-      <Button size="sm" variant="ghost" icon={Mail} className="self-start" onClick={() => setOpen(true)} data-testid="contractor-invite-open">
+      <Button size="sm" variant="ghost" icon={Mail} className="self-start max-sm:min-h-11" onClick={() => setOpen(true)} data-testid="contractor-invite-open">
         Invite by email
       </Button>
     )
@@ -108,8 +111,12 @@ function InviteByEmail({ buildingId }: { buildingId: string }) {
     const r = act.inviteContractorByEmail(buildingId, email)
     if (!r.ok || !r.value) return setError(r.error ?? 'Could not send the invite.')
     const v = r.value
+    const description =
+      v.status === 'appointed'
+        ? ['They are already on Tallyard and can set dates now.', datesClearedText(v.previousName, v.cleared, 'done')]
+        : ['Nothing is emailed from the sandbox. They become the contractor when they sign up with this email.', datesClearedText(v.previousName, v.clearsOnJoin, 'on_join')]
     toast.success(v.status === 'appointed' ? `${v.orgName ?? 'The firm'} invited` : 'Invite recorded', {
-      description: v.status === 'appointed' ? 'They are already on Tallyard and can set dates now.' : 'Nothing is emailed from the sandbox. They become the contractor when they sign up with this email.',
+      description: description.filter(Boolean).join(' '),
       action: { label: 'Undo', onClick: r.undo },
     })
     setEmail('')
@@ -122,10 +129,10 @@ function InviteByEmail({ buildingId }: { buildingId: string }) {
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" placeholder="name@firm.example" data-testid="contractor-invite-email" />
       </Field>
       <div className="flex gap-2">
-        <Button size="sm" onClick={() => setOpen(false)}>
+        <Button size="sm" className="max-sm:min-h-11" onClick={() => setOpen(false)}>
           Cancel
         </Button>
-        <Button size="sm" variant="primary" icon={Send} onClick={send} data-testid="contractor-invite-send">
+        <Button size="sm" variant="primary" icon={Send} className="max-sm:min-h-11" onClick={send} data-testid="contractor-invite-send">
           Send invite
         </Button>
       </div>

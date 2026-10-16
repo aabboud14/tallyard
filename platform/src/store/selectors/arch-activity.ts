@@ -1,7 +1,7 @@
 // Activity rows grouped by day for the activity feeds: "Today", "Yesterday", then the date. Rows arrive newest
 // first and keep that order inside each day.
 import type { AppData, Viewer } from '../types'
-import { projectSide } from '../access'
+import { buildingSide, projectSide } from '../access'
 import { activityFor, dayLabel, type ActivityRow } from './common'
 
 export type ActivityDay = { label: string; rows: ActivityRow[] }
@@ -21,5 +21,12 @@ export function activityByDay(rows: ActivityRow[], now: string): ActivityDay[] {
 export function projectActivityDays(state: AppData, viewer: Viewer, projectId: string): { days: ActivityDay[]; total: number } | null {
   if (!projectSide(state, viewer.userId, projectId)) return null
   const rows = activityFor(state, viewer, { projectId }, 500)
+  return { days: activityByDay(rows, viewer.now), total: rows.length }
+}
+
+/** A building's activity by day for the viewer, or null when their organisation has no side on it. */
+export function buildingActivityDays(state: AppData, viewer: Viewer, buildingId: string): { days: ActivityDay[]; total: number } | null {
+  if (!state.world.buildings[buildingId] || !buildingSide(state, viewer.userId, buildingId)) return null
+  const rows = activityFor(state, viewer, { buildingId }, 500)
   return { days: activityByDay(rows, viewer.now), total: rows.length }
 }
