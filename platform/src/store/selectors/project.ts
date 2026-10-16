@@ -498,8 +498,9 @@ export type SetupStep = {
   secondary: { label: string; intent: SetupIntent } | null
 }
 /**
- * focusId is the step the compact checklist leads with: the first that needs the architect (current or attention),
- * otherwise the first not yet done. Null once every step is done.
+ * focusId is the step the compact checklist leads with: the first required step the architect can act on, then the
+ * first optional one, otherwise the first not yet done (the waiting client). The programme step is never the focus, as its buttons sit on the programme card
+ * just above, nor a declined client, which has its own banner. Null once there is nothing left to lead with.
  */
 export type ProjectSetup = { visible: boolean; done: number; total: number; steps: SetupStep[]; nextText: string | null; focusId: SetupStep['id'] | null }
 
@@ -534,10 +535,15 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
     id: 'programme',
     title: 'Check the programme',
     short: 'Programme',
-    text: programmeSet ? 'Stage dates, site start and practical completion are set.' : 'Suggested from your site start and typical stage lengths. Confirm the dates or edit them.',
+    text: programmeSet
+      ? 'Stage dates, site start and practical completion are set.'
+      : p.programme.source === 'client'
+        ? `${clientName} set these dates before you were appointed. Keep them or edit them on the programme.`
+        : 'Suggested from your site start and typical stage lengths. Keep these dates or edit them on the programme.',
     optional: false,
-    action: programmeSet ? null : { label: 'Edit programme', href: null, intent: 'edit_programme' },
-    secondary: programmeSet ? null : { label: 'Keep these dates', intent: 'keep_programme' },
+    // 'Keep these dates' and 'Edit programme' sit on the programme card, beside the dates, and only there.
+    action: null,
+    secondary: null,
     done: programmeSet,
     waiting: false,
     attention: false,
@@ -629,7 +635,11 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
   const first = drafts.findIndex((d) => !d.done && !d.waiting)
   const doneCount = drafts.filter((d) => d.done).length
   const doneById = (id: SetupStep['id']) => drafts.find((d) => d.id === id)!.done
-  const focus = steps.find((x) => x.state === 'current' || x.state === 'attention') ?? steps.find((x) => x.state !== 'done') ?? null
+  // The programme card carries the programme step's buttons, and a declined client gets its own banner.
+  const here = steps.filter((x) => x.id !== 'programme' && !(x.id === 'client' && x.state === 'attention'))
+  // A required step leads before an optional one, so the next step shown is one the project needs.
+  const open = (x: SetupStep) => x.state === 'current' || x.state === 'todo'
+  const focus = here.find((x) => open(x) && !x.optional) ?? here.find(open) ?? here.find((x) => x.state !== 'done') ?? null
   return {
     visible: !(doneById('programme') && doneById('client') && doneById('shortlist')),
     done: doneCount,

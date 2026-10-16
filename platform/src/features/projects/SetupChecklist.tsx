@@ -1,8 +1,9 @@
 // The setup checklist on a new project, for its architect: check the programme, wait for the client, choose the
 // requirements, add a consultant, shortlist and send. It hides once the programme, the client and the shortlist
-// are done. It stays compact so the programme below it starts on the first screen: one row with the progress, a
-// strip of the six steps from md, the step that needs the architect now with its buttons, and the waiting client
-// line. 'Show all steps' opens every step as a tile, remembered in this browser.
+// are done. It sits straight under the programme card, which carries the programme step's own buttons, and stays
+// one strip: the progress, the next step the project needs with its buttons, and the waiting client in one sentence.
+// The six steps are listed for screen readers only until 'Show all steps' opens each as a tile, remembered in this
+// browser.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
@@ -56,7 +57,7 @@ export function SetupChecklist({ name, setup, onIntent, footer }: Props) {
       </div>
       {open ? <p className="m-0 mt-1 text-sm text-ink-soft">A few steps to get this project working. You can come back to any of them.</p> : null}
 
-      <ol id="setup-steps" aria-label="Setup steps" className={cx('m-0 mt-3 list-none p-0', open ? 'grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3' : 'flex flex-wrap gap-2 max-md:hidden')}>
+      <ol id="setup-steps" aria-label="Setup steps" className={cx('m-0 list-none p-0', open ? 'mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3' : 'sr-only')}>
         {setup.steps.map((s) => (open ? <StepTile key={s.id} step={s} onIntent={onIntent} /> : <StepChip key={s.id} step={s} focused={s.id === setup.focusId} />))}
       </ol>
 
@@ -66,7 +67,7 @@ export function SetupChecklist({ name, setup, onIntent, footer }: Props) {
   )
 }
 
-/** One step in the compact strip: its state icon and a short name. The full title is its tooltip. */
+/** One step while the list is folded: its state and short name, for screen readers. */
 function StepChip({ step, focused }: { step: SetupStep; focused: boolean }) {
   const meta = STATE_ICON[step.state]
   const Icon = meta.icon
@@ -94,25 +95,27 @@ function FocusRow({ step, onIntent }: { step: SetupStep; onIntent: Props['onInte
   const meta = STATE_ICON[step.state]
   const Icon = meta.icon
   const attention = step.state === 'attention'
+  const next = step.state === 'current' || step.state === 'todo'
   return (
-    <div data-testid="setup-current" data-step={step.id} className={cx('mt-3 flex flex-col gap-3 rounded-lg border bg-surface p-3.5 md:flex-row md:items-center md:justify-between', attention ? 'border-warning' : step.state === 'waiting' ? 'border-line' : 'border-brand-600')}>
+    <div data-testid="setup-current" data-step={step.id} className={cx('mt-3 flex flex-col gap-2 rounded-lg border bg-surface px-3.5 py-2.5 md:flex-row md:items-center md:justify-between md:gap-3', attention ? 'border-warning' : step.state === 'waiting' ? 'border-line' : 'border-brand-600')}>
       <div className="flex min-w-0 items-start gap-2.5">
         <Icon aria-hidden="true" className={cx('mt-0.5 size-4 shrink-0', meta.cls)} />
         <div className="min-w-0">
           <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
             <span>
-              <span className="sr-only">{meta.word}: </span>
+              {/* The step the checklist leads with is the next one, whether or not it comes first in the list. */}
+              {next ? <span className="font-medium text-brand-700">Next: </span> : <span className="sr-only">{meta.word}: </span>}
               {step.title}
             </span>
             {step.optional ? <Pill size="sm">Optional</Pill> : null}
           </p>
-          <p className="m-0 mt-0.5 text-sm text-muted">
+          <p className="m-0 mt-0.5 text-sm text-muted max-md:hidden">
             {step.text}
             {step.id === 'programme' ? <IndicativeMarker className="ml-1.5 align-middle" /> : null}
           </p>
         </div>
       </div>
-      <StepButtons step={step} primary={step.state === 'current' || attention} onIntent={onIntent} className="pl-6.5 md:shrink-0 md:pl-0" />
+      <StepButtons step={step} primary={step.state !== 'waiting'} onIntent={onIntent} className="pl-6.5 md:shrink-0 md:pl-0" />
     </div>
   )
 }

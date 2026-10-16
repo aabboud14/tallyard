@@ -529,6 +529,8 @@ export function appointProjectArchitect(state: AppData, actor: Actor, projectId:
   const next = w.projects[projectId]
   next.architectOrgId = architectOrgId
   next.teamOrgIds = [...next.teamOrgIds.filter((x) => x !== architectOrgId), architectOrgId]
+  // Dates the client set while there was no architect stay, as the client's, until the architect keeps or edits them.
+  if (next.programme.source === 'set') next.programme = { ...next.programme, source: 'client' }
   let s = withWorld(state, w)
   s = welcomeArchitect(s, a, projectId, p.name, architectOrgId)
   s = log(s, { at: a.now, orgIds: projectOrgIds(next), projectId, buildingId: null, actorUserId: a.user.id, actor: a.user.name, text: `appointed ${w.orgs[architectOrgId].name} as architect`, href: `/app/projects/${projectId}` })

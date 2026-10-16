@@ -1,8 +1,10 @@
-// The project overview, for everyone on the project. The architect of a new project sees a compact setup checklist
-// with the waiting client folded into it (a decline gets the full client link banner), so the programme still
-// starts on the first screen. The programme leads, full width: RIBA stages, milestones,
-// today and each shortlisted material against them. Below it the shortlist, avoided carbon and the planning and
-// sustainability requirements, the next steps and details, and the recent activity, collapsed by default.
+// The project overview, for everyone on the project. The programme leads, full width, on seeded and new projects
+// alike, so its chart starts on the first screen at 390, 1024 and 1440 px: RIBA stages, milestones, today and each
+// shortlisted material against them. While the dates are only suggested, the programme card carries 'Keep these
+// dates'. The architect of a new project then sees a compact setup checklist with the next step and its buttons,
+// and the waiting client folded into it as one line (a decline gets the full client link banner, above the
+// programme, as it needs an answer). Below come the shortlist, avoided carbon and the planning and sustainability
+// requirements, the next steps and details, and the recent activity, collapsed by default.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Activity as ActivityIcon, ArrowRight, Leaf, ListChecks, ListTodo, ScrollText } from 'lucide-react'
@@ -69,6 +71,12 @@ export function Overview() {
   return (
     <ProjectPage testId="project-overview">
       <div className="flex flex-col gap-6">
+        {h.canAppointArchitect ? <AppointArchitectCard projectId={projectId} /> : null}
+
+        {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
+
+        <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} onKeep={keepDates} />
+
         {view.setup?.visible ? (
           <SetupChecklist
             name={h.name}
@@ -83,13 +91,7 @@ export function Overview() {
           />
         ) : null}
 
-        {h.canAppointArchitect ? <AppointArchitectCard projectId={projectId} /> : null}
-
-        {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
-
         {h.side === 'consultant' ? <ConsultantOverview projectId={projectId} /> : null}
-
-        <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} />
 
         <div className={h.side === 'consultant' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'}>
           {h.side === 'consultant' ? null : (
@@ -205,9 +207,9 @@ export function Overview() {
         </CollapsiblePanel>
       </div>
 
+      {form ? <ProgrammeDialog projectId={projectId} open={dialog?.kind === 'programme'} onOpenChange={(o) => setDialog(o ? { kind: 'programme' } : null)} /> : null}
       {h.side === 'architect' ? (
         <>
-          <ProgrammeDialog projectId={projectId} open={dialog?.kind === 'programme'} onOpenChange={(o) => setDialog(o ? { kind: 'programme' } : null)} />
           <RequirementsDialog projectId={projectId} open={dialog?.kind === 'requirements'} onOpenChange={(o) => setDialog(o ? { kind: 'requirements' } : null)} />
           <ChangeClientDialog projectId={projectId} mode={dialog?.kind === 'client' ? dialog.mode : null} onClose={() => setDialog(null)} />
         </>

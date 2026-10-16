@@ -33,6 +33,8 @@ import {
   TrackStatusSelect,
 } from './index'
 import { BANDS, SAMPLE_MATERIALS, SAMPLE_PROGRAMME, sampleModel } from './samples'
+import { TICK_TIER_CLASS } from './programmeTiers'
+import { AXIS_LABEL_TIERS } from '../domain/engines/programme'
 
 beforeAll(() => installDomShims())
 afterEach(() => cleanup())
@@ -315,6 +317,116 @@ describe('ProgrammeChart', () => {
     const today = chart.querySelector('[data-part="today"]')!
     expect(today.className).toContain('z-[1]')
     expect(chart.querySelector('[data-part="stage-band"] > span')!.className).toContain('z-[2]')
+  })
+
+  it('names each band on hover, hides bands outside the axis and draws today\'s stage solid', () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, hoverText: `${b.label}, ${b.name}, dates`, visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const bands = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-band"]'))
+    // The tooltip wraps each band without taking over its state.
+    expect(bands.map((b) => b.getAttribute('data-state'))).toEqual(['past', 'past', 'current', 'future', 'future', 'future', 'future', 'future'])
+    expect(bands[7].className).toContain('hidden')
+    expect(bands[7].getAttribute('data-visible')).toBe('false')
+    expect(bands[2].className).toContain('bg-brand-600')
+    expect(bands[2].className).toContain('text-white')
+    // Every band is its own container; the name shows whenever the band is wide enough, on any screen. Today's
+    // stage always shows its name in full, however narrow the band (recording audit follow-up, note 17).
+    for (const b of bands) {
+      expect(b.className).toContain('@container')
+      const name = b.querySelector('[data-part="stage-name"]')!
+      expect(name.textContent).toBe(stages[bands.indexOf(b)].name)
+      expect(name.className).not.toContain('max-lg:hidden')
+      if (b.getAttribute('data-state') === 'current') {
+        expect(name.className).not.toContain('hidden')
+        expect(name.className).not.toContain('truncate')
+        continue
+      }
+      expect(name.className).toMatch(/@min-\[\d+px\]:block/)
+      expect(name.className).toContain('truncate')
+    }
+  })
+
+  it("always names today's stage, running past a narrow band into the chart", () => {
+    const narrow = SAMPLE_PROGRAMME.stages.map((b) => (b.stage === 2 ? { ...b, from: 0.6, to: 0.605, nameAlign: 'end' as const } : b))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={narrow} />)
+    const band = byTestId('programme-chart').querySelector<HTMLElement>('[data-part="stage-band"][data-state="current"]')!
+    // Not clipped by the band, a minimum width, and the name above the neighbouring bands' numbers.
+    expect(band.className).not.toContain('overflow-hidden')
+    expect(band.className).toContain('min-w-2.5')
+    expect(band.className).toContain('justify-end')
+    const text = band.querySelector('[data-part="stage-text"]')!
+    expect(text.className).toContain('z-[3]')
+    expect(text.className).toContain('shrink-0')
+    expect(text.className).toContain('whitespace-nowrap')
+    expect(text.textContent).toBe('2Concept Design')
+    for (const other of byTestId('programme-chart').querySelectorAll('[data-part="stage-band"]:not([data-state="current"])')) expect(other.className).toContain('overflow-hidden')
+  })
+
+  it('makes each band a button that names it on focus and opens its name and dates on a tap', async () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, hoverText: `${b.label}, ${b.name}, 1 Jan 2026 to 2 Feb 2026`, datesText: '1 Jan 2026 to 2 Feb 2026', visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const bands = Array.from(byTestId('programme-chart').querySelectorAll<HTMLElement>('[data-part="stage-band"]'))
+    for (const b of bands.slice(0, 7)) {
+      expect(b.tagName).toBe('BUTTON')
+      expect(b.getAttribute('type')).toBe('button')
+      expect(b.tabIndex).toBe(0)
+      expect(b.getAttribute('aria-label')).toBe(stages[bands.indexOf(b)].hoverText)
+      expect(b.className).toContain('focus-visible:outline-2')
+      expect(b.className).toContain('focus-visible:outline-brand-600')
+    }
+    // A band that is not drawn is not focusable either.
+    expect(bands[7].tagName).toBe('DIV')
+    click(bands[2])
+    const panel = await vi.waitFor(() => byTestId('stage-panel'))
+    expect(panel.textContent).toBe('Stage 2, Concept Design1 Jan 2026 to 2 Feb 2026')
+  })
+
+  it('keys every stage drawn by number and name, under the lane on phones and under the chart from 640 px', () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const keys = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-key"]'))
+    expect(keys).toHaveLength(2)
+    expect(keys[0].className).toContain('sm:hidden')
+    expect(keys[0].closest('[role="img"]')).not.toBeNull()
+    expect(keys[1].className).toContain('max-sm:hidden')
+    for (const key of keys) {
+      expect(key.getAttribute('aria-hidden')).toBe('true')
+      expect(Array.from(key.querySelectorAll('li')).map((li) => li.textContent)).toEqual(['0Strategic Definition', '1Preparation and Briefing', '2Concept Design', '3Spatial Coordination', '4Technical Design', '5Manufacturing and Construction', '6Handover'])
+      expect(key.querySelector('li:nth-child(3) span')!.className).toContain('bg-brand-600')
+    }
+  })
+
+  it('keeps the axis labels above the today line, so the line never strikes through one', () => {
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} />)
+    const label = byTestId('programme-chart').querySelector('[data-part="tick-label"] > span')!
+    expect(label.className).toContain('z-[2]')
+    expect(label.className).toContain('bg-surface')
+    expect(byTestId('programme-chart').querySelector('[data-part="today"]')!.className).toContain('z-[1]')
+  })
+
+  it('shows each tier of axis labels from the plot width it was fitted to', () => {
+    TICK_TIER_CLASS.forEach((cls, tier) => {
+      if (tier === 0) expect(cls).toBe('')
+      else expect(cls).toBe(`hidden @min-[${AXIS_LABEL_TIERS[tier]}px]:block`)
+    })
+    expect(TICK_TIER_CLASS).toHaveLength(AXIS_LABEL_TIERS.length)
+    const ticks = [
+      { iso: 'a', at: 0, label: 'Oct 2026', major: true, tier: 0 },
+      { iso: 'b', at: 0.25, label: 'Jan 2027', major: true, tier: 2 },
+      { iso: 'c', at: 0.5, label: 'Apr', major: true, tier: 3 },
+    ]
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} axis={{ ticks, startLabel: null }} />)
+    const plot = byRole('img', /Programme for Merrowgate Wharf/)
+    expect(plot.className).toContain('@container')
+    const labels = Array.from(plot.querySelectorAll('[data-part="tick-label"]'))
+    expect(labels.map((l) => [l.textContent, l.getAttribute('data-tier')])).toEqual([
+      ['Oct 2026', '0'],
+      ['Jan 2027', '2'],
+      ['Apr', '3'],
+    ])
+    expect(labels[0].className).not.toContain('hidden')
+    expect(labels[1].className).toContain('@min-[640px]:block')
+    expect(labels[2].className).toContain('@min-[840px]:block')
   })
 
   it('shows the empty text and action outside the image when there are no materials', () => {

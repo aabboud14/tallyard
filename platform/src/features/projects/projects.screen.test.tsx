@@ -140,7 +140,8 @@ describe('a new project', () => {
     expect(byTestId('link-status').textContent).toContain('Client to accept')
     // No client people before the client accepts.
     expect(document.body.textContent).not.toContain('Isla Brennan')
-    click(byTestId('setup-secondary-programme'))
+    // Keep these dates sits on the programme card, beside the dates it keeps.
+    click(byTestId('keep-programme'))
     await waitFor(() => getData().world.projects[id].programme.source === 'set')
     await waitFor(() => byTestId('setup-step-programme').getAttribute('data-state') === 'done')
     expect(q('programme-suggested')).toBeNull()
@@ -164,22 +165,35 @@ describe('a new project', () => {
     open(`/app/projects/${id}`)
     await waitFor(() => q('setup-current'))
     const setup = byTestId('project-setup')
-    expect(byTestId('setup-current').getAttribute('data-step')).toBe('programme')
-    expect(byTestId('setup-current').textContent).toContain('Confirm the dates or edit them.')
+    // The programme card carries the programme step's buttons, so the checklist leads with the next step the project
+    // needs: the shortlist before the optional requirements, as one strip with the step list folded away.
+    expect(byTestId('setup-current').getAttribute('data-step')).toBe('shortlist')
+    expect(byTestId('setup-current').textContent).toContain('Next: Shortlist materials')
+    expect(byTestId('setup-current').textContent).toContain('Find materials')
+    expect(byTestId('setup-current').textContent).not.toContain('Optional')
+    expect(document.getElementById('setup-steps')!.className).toContain('sr-only')
+    // The waiting client is one sentence.
+    expect(byTestId('client-link-banner').querySelector('p')!.textContent).toBe('Waiting for Lantern Quay Developments to accept.')
     expect(setup.textContent).not.toContain('Indicative:')
     // The waiting client is one line inside the checklist, with one way to change the client.
     expect(setup.contains(byTestId('client-link-banner'))).toBe(true)
     expect(byTestId('client-link-banner').getAttribute('data-variant')).toBe('inline')
     expect(document.querySelectorAll('[data-testid="link-change-client"], [data-testid="setup-secondary-client"]')).toHaveLength(1)
-    // The programme follows the checklist directly.
-    expect(setup.nextElementSibling).toBe(byTestId('programme-card'))
+    // The programme leads the overview and the checklist follows it directly.
+    expect(byTestId('programme-card').nextElementSibling).toBe(setup)
+    // One Edit programme and one Keep these dates on the page, both on the programme card.
+    expect(document.querySelectorAll('[data-testid="edit-programme"]')).toHaveLength(1)
+    expect(document.querySelectorAll('[data-testid="keep-programme"]')).toHaveLength(1)
+    expect(byTestId('programme-card').contains(byTestId('keep-programme'))).toBe(true)
+    expect(Array.from(document.querySelectorAll('button')).filter((b) => b.textContent === 'Edit programme')).toHaveLength(1)
     const toggle = byTestId('setup-toggle')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     click(toggle)
     await waitFor(() => q('setup-current') === null)
     expect(byTestId('setup-toggle').getAttribute('aria-expanded')).toBe('true')
     expect(byTestId('setup-step-programme').textContent).toContain('Check the programme')
-    expect(q('setup-action-programme')).not.toBeNull()
+    expect(q('setup-action-programme')).toBeNull()
+    expect(byTestId('setup-step-programme').textContent).toContain('Keep these dates or edit them on the programme.')
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 

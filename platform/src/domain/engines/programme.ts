@@ -4,16 +4,19 @@
 import type { ProgrammeDates, StageStarts } from '../types'
 import type { Parameter } from '../reference/assumptions'
 import { RIBA_STAGES } from '../reference/policy'
-import { addDays, daysBetween, formatQuarter, fromUtcMs, maxDate, monthWindow, toUtcMs } from '../dates'
+import { addDays, daysBetween, fromUtcMs, maxDate, monthWindow, toUtcMs } from '../dates'
 
 /** Typical lengths of stages 0 to 4 in days (4, 8, 12, 16 and 20 weeks). Placeholders. */
 export const DESIGN_STAGE_DAYS = [28, 56, 84, 112, 140] as const
 /** Default length from site start to practical completion, when no date is given. */
 export const CONSTRUCTION_DAYS = 540
-/** Stage 6 is drawn for this long after practical completion. */
+/** Stage 6, Handover, lasts this long after practical completion. */
 export const HANDOVER_DAYS = 365
-/** Stage 7 is visible this far on the chart. */
-export const USE_STUB_DAYS = 90
+/**
+ * The whole programme runs this far past practical completion, so the start of Handover shows and the design
+ * stages keep most of the width. Stage 6 runs on past the right edge, drawn open like stage 7.
+ */
+export const SHOWN_AFTER_COMPLETION_DAYS = 120
 
 /** A stage's dates, inclusive; end is null for stage 7, which is open-ended. */
 export type StageSpan = { stage: number; start: string; end: string | null }
@@ -32,7 +35,11 @@ export type ProgrammeField = 'stage0' | 'stage1' | 'stage2' | 'stage3' | 'stage4
 export type ProgrammeStatus = 'on' | 'behind' | 'ahead' | 'not_started'
 export type ProgrammeCheck = { status: ProgrammeStatus; planned: number | null; declared: number }
 
-export type AxisTick = { iso: string; at: number; label: string | null; major: boolean }
+/**
+ * A month line on the axis. tier says from which plot width a label shows, as an index into AXIS_LABEL_TIERS: tier 0
+ * shows at every width, a higher tier only on a wider plot, so labels never run into each other. 0 when unlabelled.
+ */
+export type AxisTick = { iso: string; at: number; label: string | null; major: boolean; tier: number }
 /**
  * startLabel names the month at the left edge, for example 'Sep 2025', when the first tick there carries no label of
  * its own (a long axis labels only Januaries), so the first band never floats without a date. Null otherwise.
@@ -141,17 +148,58 @@ export function programmeCheck(p: ProgrammeDates, declaredStage: number, today: 
   return { status, planned, declared: declaredStage }
 }
 
-/** The chart's date range: the whole programme, or from this month; to the end of the month of the last thing drawn. */
+/**
+ * The chart's date range: the whole programme, or from this month. It ends with the month of the last of practical
+ * completion plus SHOWN_AFTER_COMPLETION_DAYS, the date materials are needed and every availability window.
+ */
 export function programmeRange(p: ProgrammeDates, today: string, materialsFrom: string, windowEnds: string[], range: 'whole' | 'ahead'): { start: string; end: string } {
   const first = daysBetween(p.stageStarts[0], today) < 0 ? today : p.stageStarts[0]
   const start = monthWindow(range === 'whole' ? first : today).start
-  const last = [materialsFrom, ...windowEnds].reduce((m, d) => maxDate(m, d), addDays(p.practicalCompletion, HANDOVER_DAYS + USE_STUB_DAYS))
+  const last = [materialsFrom, ...windowEnds].reduce((m, d) => maxDate(m, d), addDays(p.practicalCompletion, SHOWN_AFTER_COMPLETION_DAYS))
   return { start, end: monthWindow(last).end }
 }
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** Month ticks from start to end, labelled by the span: every month up to a year, quarters up to three years, then years. */
+/**
+ * Plot widths in px from which each tier of axis labels shows. Tier 0 fits the narrowest plot, on a 360 px phone;
+ * the chart shows a higher tier with a container query at the same width, so the two must match.
+ */
+export const AXIS_LABEL_TIERS = [280, 440, 640, 840] as const
+/** A generous width per character of an axis label (11 px Inter measures 6.7 px or less), its padding and the least gap between two labels. */
+export const AXIS_LABEL_CHAR_PX = 7.2
+export const AXIS_LABEL_PAD_PX = 4
+export const AXIS_LABEL_GAP_PX = 6
+/** Up to three years the axis names months; beyond, only years. */
+const MONTH_LABELS_UP_TO = 36
+/** Labels on every month, each quarter, each half year or each year. Each step refines the next, so tiers stay regular. */
+const LABEL_STEPS = [1, 3, 6, 12] as const
+
+/** Where a label sits in px on a plot of the given width: it starts at its month line, after its padding. */
+export function axisLabelExtent(at: number, label: string, widthPx: number): { from: number; to: number } {
+  const from = at * widthPx
+  return { from, to: from + AXIS_LABEL_PAD_PX + label.length * AXIS_LABEL_CHAR_PX }
+}
+
+/** Whether labels, in order along the axis, all fit inside the plot with the least gap between neighbours. */
+function labelsFit(ticks: { at: number; label: string }[], widthPx: number): boolean {
+  let lastEnd = -Infinity
+  for (const t of ticks) {
+    const e = axisLabelExtent(t.at, t.label, widthPx)
+    if (e.to > widthPx || e.from < lastEnd + AXIS_LABEL_GAP_PX) return false
+    lastEnd = e.to
+  }
+  return true
+}
+
+/**
+ * Month ticks from start to end. Up to three years the labels are months, with the year on the first label and on
+ * each January ('Oct 2026', 'Jan 2027', 'Apr'); beyond three years, years only ('2027'). Labels are thinned for each
+ * width tier so none ever runs into another or past the right edge: tier 0 keeps the Januaries that fit on a phone,
+ * then the first month if it fits beside them (otherwise startLabel names it), and each tier adds the densest step of
+ * aligned months that fits at its width. A month shown without its year always follows a label of the same year (or
+ * the start of the axis, which startLabel names), so the year of every label can be read at every width.
+ */
 export function programmeAxis(start: string, end: string): ProgrammeAxis {
   const spanDays = Math.max(1, daysBetween(start, end))
   const firsts: string[] = []
@@ -161,19 +209,74 @@ export function programmeAxis(start: string, end: string): ProgrammeAxis {
     firsts.push(d)
     d = addDays(monthWindow(d).end, 1)
   }
-  const months = firsts.length
+  const monthsOnly = firsts.length <= MONTH_LABELS_UP_TO
   const at = (iso: string) => Math.min(1, Math.max(0, daysBetween(start, iso) / spanDays))
-  const ticks: AxisTick[] = firsts.map((iso, i) => {
-    const m = Number(iso.slice(5, 7))
+  const month = (iso: string) => Number(iso.slice(5, 7))
+  // Every month that may carry a label, with its text: the first month and Januaries carry the year.
+  const text = (iso: string, i: number): string | null => {
+    const m = month(iso)
     const year = iso.slice(0, 4)
-    let label: string | null
-    if (months <= 12) label = i === 0 || m === 1 ? `${MONTHS_SHORT[m - 1]} ${year}` : MONTHS_SHORT[m - 1]
-    else if (months <= 36) label = (m - 1) % 3 === 0 ? formatQuarter(iso) : null
-    else label = m === 1 ? year : null
-    return { iso, at: at(iso), label, major: (m - 1) % 3 === 0 }
+    if (!monthsOnly) return m === 1 ? year : null
+    return (i === 0 && at(iso) === 0) || m === 1 ? `${MONTHS_SHORT[m - 1]} ${year}` : MONTHS_SHORT[m - 1]
+  }
+  const firstIsLabel = firsts.length > 0 && at(firsts[0]) === 0
+  const all = firsts.map((iso, i) => ({ i, at: at(iso), label: text(iso, i), year: iso.slice(0, 4), withYear: !monthsOnly || (i === 0 && firstIsLabel) || month(iso) === 1 }))
+  type Candidate = { i: number; at: number; label: string; year: string; withYear: boolean }
+  const labelled = all.filter((c): c is Candidate => c.label !== null)
+  const januaries = labelled.filter((c) => month(firsts[c.i]) === 1)
+  const tierOf = new Map<number, number>()
+  const shownAt = () => labelled.filter((c) => tierOf.has(c.i))
+  /**
+   * Keeps, left to right, each label whose year can be read: one that carries its year, or a month that follows a
+   * label of the same year. Before any label the start of the axis counts, as startLabel or the first label names it.
+   */
+  const yearsReadable = (candidates: Candidate[]): Candidate[] => {
+    const kept: Candidate[] = []
+    for (const c of candidates) {
+      const previousYear = kept.length > 0 ? kept[kept.length - 1].year : start.slice(0, 4)
+      if (tierOf.has(c.i) || c.withYear || c.year === previousYear) kept.push(c)
+    }
+    return kept
+  }
+  /** Adds each candidate, left to right, that fits between the labels already shown at this width. */
+  const addGreedily = (candidates: Candidate[], tier: number) => {
+    for (const c of candidates) {
+      if (tierOf.has(c.i)) continue
+      const shown = shownAt()
+      const before = shown.filter((x) => x.i < c.i).slice(-1)
+      const after = shown.filter((x) => x.i > c.i).slice(0, 1)
+      if (labelsFit([...before, c, ...after], AXIS_LABEL_TIERS[tier])) tierOf.set(c.i, tier)
+    }
+  }
+  // Each January comes first, kept left to right when it fits on a phone, so a year is never left unnamed. The first
+  // month follows only if it fits beside them; otherwise it stays off the axis and startLabel names it. Then, at each
+  // tier from the phone up, the densest step of aligned months that fits with every label already shown and keeps
+  // every year readable, and any January that still fits.
+  addGreedily(januaries, 0)
+  if (firstIsLabel && labelled[0]?.i === 0) addGreedily([labelled[0]], 0)
+  for (let tier = 0; tier < AXIS_LABEL_TIERS.length; tier++) {
+    const width = AXIS_LABEL_TIERS[tier]
+    // The label on the first month stays; a month it would run into, or one that would run past the right edge, is
+    // left out rather than ruling out the step.
+    const lead = labelled.find((c) => c.i === 0 && tierOf.has(0))
+    const clearOfLead = (c: Candidate) => labelsFit([c], width) && (!lead || c === lead || labelsFit([lead, c], width))
+    for (const step of monthsOnly ? LABEL_STEPS : []) {
+      // The first month is shown at tier 0 or never: once startLabel names it, the axis does not repeat it.
+      const aligned = (c: Candidate) => c.i !== 0 && (month(firsts[c.i]) - 1) % step === 0 && clearOfLead(c)
+      const shown = yearsReadable(labelled.filter((c) => tierOf.has(c.i) || aligned(c)))
+      if (labelsFit(shown, width)) {
+        for (const c of shown) if (!tierOf.has(c.i)) tierOf.set(c.i, tier)
+        break
+      }
+    }
+    addGreedily(januaries, tier)
+  }
+  const ticks: AxisTick[] = firsts.map((iso, i) => {
+    const t = tierOf.get(i)
+    return { iso, at: at(iso), label: t === undefined ? null : all[i].label, major: (month(iso) - 1) % 3 === 0, tier: t ?? 0 }
   })
   const first = ticks[0]
-  const startLabel = first && first.at === 0 && first.label !== null ? null : `${MONTHS_SHORT[Number(start.slice(5, 7)) - 1]} ${start.slice(0, 4)}`
+  const startLabel = first && first.at === 0 && first.label !== null && first.tier === 0 ? null : `${MONTHS_SHORT[month(start) - 1]} ${start.slice(0, 4)}`
   return { start, end, spanDays, ticks, startLabel }
 }
 
@@ -188,5 +291,5 @@ const SOURCE = 'Sample durations, to be validated with practices'
 export const PROGRAMME_PARAMETER_ROWS: Parameter[] = [
   ...DESIGN_STAGE_DAYS.map((days, i) => ({ id: `programme.stage${i}`, group: GROUP, label: `Stage ${i}, ${RIBA_STAGES[i]}, typical length`, value: String(days), unit: 'days, for suggested dates', source: SOURCE, status: 'placeholder' as const })),
   { id: 'programme.construction', group: GROUP, label: 'Construction, site start to practical completion', value: String(CONSTRUCTION_DAYS), unit: 'days from site start to practical completion, when no date is given', source: SOURCE, status: 'placeholder' },
-  { id: 'programme.handover', group: GROUP, label: 'Stage 6, Handover, shown on the programme', value: String(HANDOVER_DAYS), unit: 'days of stage 6 shown after practical completion', source: SOURCE, status: 'placeholder' },
+  { id: 'programme.handover', group: GROUP, label: 'Stage 6, Handover, length', value: String(HANDOVER_DAYS), unit: `days of stage 6 after practical completion; the whole programme chart shows its first ${SHOWN_AFTER_COMPLETION_DAYS}`, source: SOURCE, status: 'placeholder' },
 ]
