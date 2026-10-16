@@ -7,10 +7,10 @@ import { Building2, HardHat, Plus } from 'lucide-react'
 import type { StructuralElement } from '../../domain/types'
 import type { ProjectType } from '../../domain/v1types'
 import { act, selectors, useView } from '../../store'
-import { localAuthorityChoices } from '../../store/selectors/project'
 import { blankElement } from '../../store/selectors/buildings-ui'
 import { Button, Dialog, Field, Input, RadioCards, Select, Textarea, toast } from '../../ui'
 import { StructureEditor } from './StructureCard'
+import { LocalAuthorityField, RegionField, type Place } from '../projects/LocalAuthorityField'
 
 type Kind = 'donor' | 'project'
 
@@ -64,9 +64,6 @@ const EMPTY: Draft = {
 
 const START_ROWS: StructuralElement[] = [blankElement('frame'), blankElement('floors')]
 
-/** Another local authority, typed: the choice that reveals the text field outside London. */
-const OTHER_LA = '__other'
-
 function intOrNull(s: string): number | null {
   const t = s.replace(/,/g, '').trim()
   return t === '' ? null : Number(t)
@@ -80,17 +77,17 @@ export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = f
   const [kind, setKind] = useState<Kind>('donor')
   const [d, setD] = useState<Draft>(EMPTY)
   const [rows, setRows] = useState<StructuralElement[]>(START_ROWS)
-  const [otherLa, setOtherLa] = useState(false)
   const [error, setError] = useState<string | null>(null)
   if (!options) return null
   const surveyor = options.mode === 'surveyor'
   const project = !surveyor && !donorOnly && kind === 'project'
   const set = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }))
+  // One grouped list of every authority: choosing one sets its region, so a borough is found without knowing its region.
+  const setPlace = (p: Place) => setD((x) => ({ ...x, region: p.region, localAuthority: p.localAuthority }))
   const close = () => {
     setD(EMPTY)
     setRows(START_ROWS)
     setKind('donor')
-    setOtherLa(false)
     setError(null)
     onOpenChange(false)
   }
@@ -142,7 +139,6 @@ export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = f
     if (!r.ok || !r.value) return setError(r.error)
     return done({ kind: 'building', id: r.value, name }, `${name} added`, d.surveyorOrgId ? 'The surveyor has been told.' : 'Appoint a surveyor when you are ready.')
   }
-  const la = localAuthorityChoices(d.region)
   const title = surveyor ? 'Add a building to survey' : project ? 'Add a new project' : 'Add a building'
   const description = surveyor ? 'Private to your firm until its owner confirms it.' : project ? 'You are its client. Your architect shortlists; you approve and reserve.' : 'Its record is private to your organisation. Nothing is listed until you decide.'
   const saveLabel = surveyor ? 'Add building' : project ? 'Add new project' : donorOnly ? 'Add building' : 'Add donor building'
@@ -191,47 +187,17 @@ export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = f
             <Input value={d.name} onChange={set('name')} placeholder={project ? 'For example, Wexcombe House' : 'For example, Calder House'} autoFocus data-testid="nb-name" />
           </Field>
           {project ? null : (
-            <>
-              <Field label="Address" required className="sm:col-span-2">
-                <Input value={d.address} onChange={set('address')} placeholder="Street, town" data-testid="nb-address" />
-              </Field>
-              <Field label="Postcode district" optional>
-                <Input value={d.postcodeDistrict} onChange={set('postcodeDistrict')} placeholder="EC2" />
-              </Field>
-            </>
+            <Field label="Address" required className="sm:col-span-2">
+              <Input value={d.address} onChange={set('address')} placeholder="Street, town" data-testid="nb-address" />
+            </Field>
           )}
-          <Field label="Region" required className={project ? undefined : 'sm:order-last sm:col-span-2'}>
-            <Select
-              value={d.region}
-              onChange={(e) => {
-                setD((x) => ({ ...x, region: e.target.value, localAuthority: '' }))
-                setOtherLa(false)
-              }}
-              placeholder="Choose a region"
-              options={options.regions.map((r) => ({ value: r, label: r }))}
-              data-testid="nb-region"
-            />
-          </Field>
-          <Field label="Local authority" optional>
-            {project && d.region ? (
-              <div className="flex flex-col gap-2">
-                <Select
-                  value={otherLa ? OTHER_LA : d.localAuthority}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setOtherLa(v === OTHER_LA)
-                    setD((x) => ({ ...x, localAuthority: v === OTHER_LA ? '' : v }))
-                  }}
-                  placeholder="Choose a local authority"
-                  options={[...la.options.map((o) => ({ value: o, label: o })), ...(la.allowsOther ? [{ value: OTHER_LA, label: 'Another local authority' }] : [])]}
-                  data-testid="nb-local-authority"
-                />
-                {otherLa ? <Input aria-label="Local authority name" value={d.localAuthority} onChange={set('localAuthority')} placeholder="Name of the local authority" /> : null}
-              </div>
-            ) : (
-              <Input value={d.localAuthority} onChange={set('localAuthority')} placeholder={project ? 'Choose a region first' : 'City of London'} disabled={project} data-testid="nb-local-authority" />
-            )}
-          </Field>
+          <RegionField region={d.region} onChange={setPlace} required placeholder="Choose a region" testId="nb-region" />
+          <LocalAuthorityField key={d.region} region={d.region} value={d.localAuthority} onChange={setPlace} testId="nb-local-authority" />
+          {project ? null : (
+            <Field label="Postcode district" optional>
+              <Input value={d.postcodeDistrict} onChange={set('postcodeDistrict')} placeholder="EC2" />
+            </Field>
+          )}
         </div>
 
         {project ? (

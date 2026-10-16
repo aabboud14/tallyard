@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { World } from '../domain/types'
 import { DEFAULT_NAV_PROJECT_VIEW, DEFAULT_UI, type ActionResult, type Actor, type AppData, type NavProjectView, type UiState } from './types'
-import { firstRun } from '../sandbox/seed'
+import { firstRun, withSeededBuildingTracks } from '../sandbox/seed'
 import { nowIso, today } from '../sandbox/clock'
 import { safeStorage, STATE_KEY } from './storage'
 import { clearPhotos } from './photos'
@@ -113,7 +113,8 @@ export const useApp = create<AppStore>()(
       // Any other version, or a damaged record, starts a fresh sandbox.
       migrate: () => fresh(),
       // Older stored states get any interface fields added since, with their defaults.
-      merge: (persisted, current) => (looksValid(persisted) ? { ...current, ...dataOf(persisted), ui: { ...DEFAULT_UI, ...persisted.ui } } : current),
+      // A state stored before building requirements were tracked gets the seeded tracks.
+      merge: (persisted, current) => (looksValid(persisted) ? { ...current, ...dataOf(withSeededBuildingTracks(persisted)), ui: { ...DEFAULT_UI, ...persisted.ui } } : current),
     },
   ),
 )

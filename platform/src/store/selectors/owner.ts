@@ -31,6 +31,7 @@ import { acceptedReservation, lotOfItem, projectWishlist } from '../lots'
 import { checkPrices, disclosureWith, type LotVisibilityChoice, type PriceCheck } from '../actions/owner'
 import { PROJECT_TYPES } from '../actions/projects'
 import { claimRowsForOwner, claimStateFor, type ClaimRow, type ClaimState } from './claims'
+import { buildingRequirementsRollup } from './buildingRequirements'
 import { activityFor, firstName, greeting, listingCard, longDate, RESERVATION_STATUS_LABELS, stageLabel, timeAgo, todayOf, type ActivityRow, type ListingCard } from './common'
 
 export const SURVEY_STATUS_LABELS: Record<SurveyStatus, string> = { not_started: 'Not started', in_progress: 'In progress', submitted: 'Submitted' }
@@ -75,6 +76,15 @@ export function buildingTabs(side: BuildingSide, buildingId: string, opts: { con
   return [tab('overview', 'Overview', ''), tab('capture', 'Capture', '/capture'), tab('inventory', 'Inventory', '/inventory'), tab('testing', 'Testing', '/testing'), tab('requirements', 'Requirements', '/requirements'), ...(opts.contractor ? [tab('availability', 'Availability', '/availability')] : [])]
 }
 
+export type BadgedBuildingTab = BuildingTab & { badge: number | null }
+
+/** The tabs with their badges: the Requirements tab counts the requirements at risk, as a project's tab does. */
+export function badgedBuildingTabs(state: AppData, b: SourceBuilding, side: BuildingSide, opts: { contractor: boolean }): BadgedBuildingTab[] {
+  const tabs = buildingTabs(side, b.id, opts)
+  const atRisk = tabs.some((t) => t.id === 'requirements') ? buildingRequirementsRollup(state, b).atRisk : 0
+  return tabs.map((t) => ({ ...t, badge: t.id === 'requirements' && atRisk > 0 ? atRisk : null }))
+}
+
 /** The tabs the viewer gets on a building, from their side and whether their firm is its contractor. */
 export function tabsFor(state: AppData, viewer: Viewer, b: SourceBuilding, side: BuildingSide): BuildingTab[] {
   return buildingTabs(side, b.id, { contractor: isBuildingContractor(state, viewer.userId, b.id) })
@@ -89,7 +99,7 @@ export type BuildingRef = {
   clientName: string
   surveyorName: string
   side: BuildingSide
-  tabs: BuildingTab[]
+  tabs: BadgedBuildingTab[]
   surveyStatus: SurveyStatus
   surveyStatusLabel: string
   /** Where the building stands with its owner, for the surveying firm's side only. */
@@ -112,7 +122,7 @@ function buildingRef(state: AppData, b: SourceBuilding, side: BuildingSide, view
     clientName: b.ownerOrgId ? (state.world.orgs[b.ownerOrgId]?.name ?? '') : '',
     surveyorName: b.surveyorOrgId ? (state.world.orgs[b.surveyorOrgId]?.name ?? '') : '',
     side,
-    tabs: buildingTabs(side, b.id, { contractor: isContractor }),
+    tabs: badgedBuildingTabs(state, b, side, { contractor: isContractor }),
     surveyStatus: status,
     surveyStatusLabel: SURVEY_STATUS_LABELS[status],
     claim: side === 'surveyor' ? claimStateFor(state, b.id) : null,

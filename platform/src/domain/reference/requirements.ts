@@ -4,7 +4,7 @@
 // "local plan" placeholder for any authority). Projects being built read one set; donor buildings coming down read
 // the items that bite before demolition (the review of 16 October 2026). Every entry is an indicative summary as at
 // October 2026, never legal advice; a placeholder says it is not yet summarised.
-import { isLondonRegion, nationOfRegion } from './places'
+import { isLondonRegion, nationOfRegion, normaliseLocalAuthority } from './places'
 
 export type RequirementLevel = 'national' | 'london' | 'local'
 export type RequirementKind = 'planning_policy' | 'regulation' | 'guidance' | 'voluntary_standard' | 'certification' | 'method'
@@ -338,7 +338,7 @@ const LOCAL_SUMMARY_ELSEWHERE = 'Local policies apply alongside national policy.
 
 /** The local level for an authority: its hand-written entries, or one generated "local plan" entry; [] when la is ''. */
 export function localRequirements(region: string, la: string): PlanningRequirement[] {
-  const name = la.trim()
+  const name = normaliseLocalAuthority(la)
   if (!name) return []
   if (Object.prototype.hasOwnProperty.call(LOCAL_REQUIREMENTS, name)) return LOCAL_REQUIREMENTS[name]
   return [
@@ -366,7 +366,7 @@ const UK_WIDE_IDS = ['nzcbs', 'riba2030', 'rics-wlca', 'breeam-nc', 'leed-v5', '
 export const DEVOLVED_NATIONAL: Record<'Wales' | 'Scotland', PlanningRequirement> = {
   Wales: national({
     id: 'wales-national',
-    code: 'Wales',
+    code: 'National policy',
     title: 'Planning policy and building regulations in Wales',
     source: 'Planning Policy Wales and the Building Regulations in Wales',
     kind: 'planning_policy',
@@ -380,7 +380,7 @@ export const DEVOLVED_NATIONAL: Record<'Wales' | 'Scotland', PlanningRequirement
   }),
   Scotland: national({
     id: 'scotland-national',
-    code: 'Scotland',
+    code: 'National policy',
     title: 'Planning policy and building standards in Scotland',
     source: 'National Planning Framework 4 and the Scottish building standards',
     kind: 'planning_policy',
@@ -414,7 +414,7 @@ export type RequirementGroup = { level: RequirementLevel; title: string; subtitl
 export function requirementsFor(region: string, localAuthority: string): RequirementGroup[] {
   const groups: RequirementGroup[] = [nationalGroup(region)]
   if (isLondonRegion(region)) groups.push({ level: 'london', title: 'London Plan 2021 and GLA guidance', subtitle: 'Applies across Greater London', items: LONDON_REQUIREMENTS })
-  const la = localAuthority.trim()
+  const la = normaliseLocalAuthority(localAuthority)
   if (la) groups.push({ level: 'local', title: la, subtitle: 'Local plan and guidance', items: localRequirements(region, la) })
   return groups
 }
@@ -433,6 +433,26 @@ export function suggestedRequirementIds(region: string, localAuthority: string):
 export function keepApplicable(ids: string[], region: string, localAuthority: string): string[] {
   const wanted = new Set(ids)
   return applicableIds(region, localAuthority).filter((id) => wanted.has(id))
+}
+
+export type Location = { region: string; localAuthority: string }
+
+/**
+ * The chosen requirements after a move: the ones that still apply, plus the suggestions new to the place (ones the
+ * architect could already pick and left out stay left out), in dataset order. Each part is returned for the copy.
+ */
+export function idsAfterMoveParts(chosen: string[], from: Location, to: Location): { kept: string[]; added: string[]; ids: string[] } {
+  const kept = keepApplicable(chosen, to.region, to.localAuthority)
+  const keptSet = new Set(kept)
+  const before = new Set(applicableIds(from.region, from.localAuthority))
+  const added = suggestedRequirementIds(to.region, to.localAuthority).filter((id) => !keptSet.has(id) && !before.has(id))
+  const wanted = new Set([...kept, ...added])
+  return { kept, added, ids: applicableIds(to.region, to.localAuthority).filter((id) => wanted.has(id)) }
+}
+
+/** What a project's chosen requirements become when it moves: kept and new suggestions once chosen; otherwise only what still applies. */
+export function idsAfterMove(chosen: string[], from: Location, to: Location, reviewed: boolean): string[] {
+  return reviewed ? idsAfterMoveParts(chosen, from, to).ids : keepApplicable(chosen, to.region, to.localAuthority)
 }
 
 /** The requirement with this ID at this location, or null. */
@@ -529,7 +549,7 @@ export const DONOR_LONDON: PlanningRequirement[] = [
 
 /** The local level before demolition: the authority's hand-written demolition entries, or one generated placeholder. */
 export function donorLocalRequirements(region: string, la: string): PlanningRequirement[] {
-  const name = la.trim()
+  const name = normaliseLocalAuthority(la)
   if (!name) return []
   const written = (Object.prototype.hasOwnProperty.call(LOCAL_REQUIREMENTS, name) ? LOCAL_REQUIREMENTS[name] : []).filter((r) => r.appliesTo.includes('donor'))
   if (written.length > 0) return written
@@ -558,7 +578,7 @@ export function donorRequirementsFor(region: string, localAuthority: string): Re
   const nation = nationOfRegion(region) ?? 'England'
   const groups: RequirementGroup[] = [{ level: 'national', title: 'National', subtitle: `${nation}, before demolition`, items: [DONOR_NATIONAL[nation]] }]
   if (isLondonRegion(region)) groups.push({ level: 'london', title: 'London Plan 2021 and GLA guidance', subtitle: 'Applies across Greater London', items: DONOR_LONDON })
-  const la = localAuthority.trim()
+  const la = normaliseLocalAuthority(localAuthority)
   if (la) groups.push({ level: 'local', title: la, subtitle: 'Local plan and guidance', items: donorLocalRequirements(region, la) })
   return groups
 }

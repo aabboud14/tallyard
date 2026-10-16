@@ -1,7 +1,8 @@
 // The architect edits a project's details: name, type (with a description for 'Other'), region, local authority
 // and description. The RIBA stage and every date live in the programme dialog. A new location keeps only the
-// requirements that still apply there: the dialog says how many go and how many are new, and saving opens the
-// requirements to review, starting from what still applies plus the new suggestions.
+// requirements that still apply there and adds the suggestions new to it: the dialog says how many go and how many
+// are added, saving applies both, then opens the requirements to review. Cancelling the review keeps the saved set,
+// which is what the dialog said.
 // While the architect has not chosen, the suggestions for the new place are tracked with nothing to review.
 import { useState, type FormEvent, type ReactElement } from 'react'
 import type { ProjectType } from '../../domain/v1types'
@@ -9,7 +10,7 @@ import { PROJECT_TYPE_OTHER_MAX } from '../../domain/reference/projectTypes'
 import { act, useView } from '../../store'
 import { newProjectOptions } from '../../store/selectors/project'
 import { projectFields, type ProjectFields } from '../../store/selectors/arch-project'
-import { projectRequirementsView, requirementsAfterMove } from '../../store/selectors/requirements'
+import { moveSaveNote, projectRequirementsView, requirementsAfterMove } from '../../store/selectors/requirements'
 import { Button, Callout, Dialog, Field, Input, Select, Textarea, toast } from '../../ui'
 import { LocalAuthorityField, RegionField, type Place } from './LocalAuthorityField'
 import { RequirementsDialog } from './RequirementsDialog'
@@ -108,7 +109,7 @@ export function EditProjectDialog({ projectId, trigger }: { projectId: string; t
           {open && move?.text ? (
             <div className="sm:col-span-2" data-testid="edit-project-requirements-note">
               <Callout tone="info" role="status">
-                {move.text} Saving opens the requirements so you can review them.
+                {move.text} {moveSaveNote(move)}
               </Callout>
             </div>
           ) : null}

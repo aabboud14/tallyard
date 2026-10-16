@@ -1,6 +1,6 @@
 // Planning and sustainability requirements: the choices for the forms, and what a project tracks. One dataset,
 // src/domain/reference/requirements.ts, every entry an indicative summary.
-import { applicableIds, keepApplicable, KIND_LABELS, REQUIREMENTS_NOTE, REQUIREMENTS_NOTE_AFTER_MARKER, requirementsFor, suggestedRequirementIds, type PlanningRequirement, type RequirementLevel, type RequirementTopic } from '../../domain/reference/requirements'
+import { idsAfterMoveParts, KIND_LABELS, REQUIREMENTS_NOTE, REQUIREMENTS_NOTE_AFTER_MARKER, requirementsFor, suggestedRequirementIds, type PlanningRequirement, type RequirementLevel, type RequirementTopic } from '../../domain/reference/requirements'
 import type { AppData, Viewer } from '../types'
 import { projectSide } from '../access'
 import { plural } from '../notifications'
@@ -164,17 +164,17 @@ export type RequirementsMove = {
 export function requirementsAfterMove(chosen: string[], from: { region: string; localAuthority: string }, to: { region: string; localAuthority: string }, opts: { ticked?: boolean } = {}): RequirementsMove {
   const moved = from.region !== to.region || from.localAuthority.trim() !== to.localAuthority.trim()
   if (!moved) return { moved, dropped: 0, newSuggested: 0, preselect: [...chosen], text: null }
-  const kept = keepApplicable(chosen, to.region, to.localAuthority)
-  const keptSet = new Set(kept)
-  // Only suggestions new to this place: ones the architect could already pick and left out stay left out.
-  const before = new Set(applicableIds(from.region, from.localAuthority))
-  const suggested = suggestedRequirementIds(to.region, to.localAuthority).filter((id) => !keptSet.has(id) && !before.has(id))
-  const wanted = new Set([...kept, ...suggested])
-  const preselect = applicableIds(to.region, to.localAuthority).filter((id) => wanted.has(id))
+  const { kept, added: suggested, ids: preselect } = idsAfterMoveParts(chosen, from, to)
   const dropped = new Set(chosen).size - kept.length
   const place = [to.localAuthority.trim(), to.region].filter((x) => x).join(', ') || 'the new location'
   const parts: string[] = []
   if (dropped > 0) parts.push(`${plural(dropped, opts.ticked ? 'ticked requirement' : 'chosen requirement')} no longer ${dropped === 1 ? 'applies' : 'apply'} to ${place}.`)
   if (suggested.length > 0) parts.push(`${suggested.length} more ${suggested.length === 1 ? 'is' : 'are'} suggested there${opts.ticked ? ' and now ticked' : ''}.`)
   return { moved, dropped, newSuggested: suggested.length, preselect, text: parts.length > 0 ? parts.join(' ') : null }
+}
+
+/** The line after a move's text in the Edit project dialog: saving applies the move, then opens the review. */
+export function moveSaveNote(move: RequirementsMove): string {
+  const adds = move.newSuggested === 0 ? '' : move.newSuggested === 1 ? 'It is added when you save. ' : 'They are added when you save. '
+  return `${adds}Saving opens the requirements so you can review them.`
 }

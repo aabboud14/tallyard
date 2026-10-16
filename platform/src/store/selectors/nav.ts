@@ -7,7 +7,7 @@ import { orgTypeLabel, ROLE_LABELS } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
 import { pendingLinkRequestCount, projectTabs } from './project'
-import { buildingTabs } from './owner'
+import { badgedBuildingTabs } from './owner'
 import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
 import { pendingClaimCount } from './claims'
 import { engagementsOf } from './consultant'
@@ -156,7 +156,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
       title: 'Donor buildings',
       tools: null,
       items: [
-        ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: buildingTabs('owner', b.id).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href)) })),
+        ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: badgedBuildingTabs(state, b, 'owner', { contractor: false }).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })),
         item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
       ],
     })
@@ -167,8 +167,8 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     const buildingItem = (id: string, name: string, href: string) => {
       const side = buildingSide(state, viewer.userId, id)!
       // Overview first, as on the owner's building folders: the Owner, Structure and contractor cards live there.
-      const tabs = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) })
-      return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href)) })
+      const tabs = badgedBuildingTabs(state, state.world.buildings[id], side, { contractor: isBuildingContractor(state, viewer.userId, id) })
+      return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })
     }
     const unlinked = unlinkedBuildings(state, viewer)
     sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), item('capture', 'Capture', '/app/capture', 'Camera')]))

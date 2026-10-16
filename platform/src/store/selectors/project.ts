@@ -5,7 +5,7 @@ import type { Typology, WishStatus } from '../../domain/v1types'
 import { REGIONS } from '../../domain/reference/assumptions'
 import { PROJECT_TYPE_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/labels'
 import { RIBA_STAGES } from '../../domain/reference/policy'
-import { isLondonRegion, localAuthoritiesFor, localAuthorityGroups, regionGroups, regionHint } from '../../domain/reference/places'
+import { isLondonRegion, listedLocalAuthority, localAuthoritiesFor, localAuthorityGroups, nationOfRegion, regionGroups, regionHint, regionOfLocalAuthority } from '../../domain/reference/places'
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import { clientLinked } from '../../domain/access'
 import { CONSTRUCTION_DAYS } from '../../domain/engines/programme'
@@ -231,7 +231,19 @@ export function regionChoices(region: string): { groups: { label: string; items:
  */
 export function localAuthorityChoices(region: string): LocalAuthorityChoices {
   const london = isLondonRegion(region)
-  return { options: [...localAuthoritiesFor(region)], allowsOther: !london, london, groups: localAuthorityGroups(region, REGIONS) }
+  // A typed name belongs to a region, so it is offered only once a region outside London is chosen.
+  return { options: [...localAuthoritiesFor(region)], allowsOther: !london && nationOfRegion(region) !== null, london, groups: localAuthorityGroups(region, REGIONS) }
+}
+
+/**
+ * A line under a typed local authority that is in fact listed: where it is listed, so choosing it there sets the
+ * right region. Null when the name is not listed, or is listed in this region.
+ */
+export function typedLocalAuthorityNote(region: string, typed: string): string | null {
+  const listed = listedLocalAuthority(typed)
+  if (!listed) return null
+  const home = regionOfLocalAuthority(listed)
+  return home && home !== region ? `${listed} is listed under ${home}. Choose it from the list to set the region.` : null
 }
 
 // ---------- Overview ----------

@@ -5,22 +5,23 @@
 // an empty value is always valid.
 import { useState } from 'react'
 import { regionOfLocalAuthority } from '../../domain/reference/places'
-import { localAuthorityChoices, regionChoices } from '../../store/selectors/project'
+import { localAuthorityChoices, regionChoices, typedLocalAuthorityNote } from '../../store/selectors/project'
 import { Field, Input, Select } from '../../ui'
 
 const OTHER = '__other__'
 
 export type Place = { region: string; localAuthority: string }
 
-type RegionProps = { region: string; onChange: (place: Place) => void; error?: string; className?: string; testId?: string }
+type RegionProps = { region: string; onChange: (place: Place) => void; error?: string; className?: string; testId?: string; required?: boolean; placeholder?: string }
 
 /** The region dropdown. A new region clears the local authority, which belongs to one region. */
-export function RegionField({ region, onChange, error, className, testId = 'project-region' }: RegionProps) {
+export function RegionField({ region, onChange, error, className, testId = 'project-region', required, placeholder }: RegionProps) {
   const choices = regionChoices(region)
   return (
-    <Field label="Region" error={error} hint={choices.hint ?? undefined} className={className}>
+    <Field label="Region" required={required} error={error} hint={choices.hint ?? undefined} className={className}>
       <Select
         value={region}
+        placeholder={placeholder}
         onChange={(e) => onChange({ region: e.target.value, localAuthority: '' })}
         options={choices.groups.flatMap((g) => g.items.map((r) => ({ value: r, label: r, group: g.label })))}
         data-testid={testId}
@@ -62,7 +63,7 @@ export function LocalAuthorityField({ region, value, onChange, error, className,
         />
       </Field>
       {other ? (
-        <Field label="Local authority name" error={error} className="mt-3" hint={`In ${region}.`}>
+        <Field label="Local authority name" error={error} className="mt-3" hint={typedLocalAuthorityNote(region, value) ?? `In ${region}.`}>
           <Input value={value} onChange={(e) => onChange({ region, localAuthority: e.target.value })} placeholder="For example, St Albans" maxLength={80} autoFocus data-testid={`${testId}-other`} />
         </Field>
       ) : null}

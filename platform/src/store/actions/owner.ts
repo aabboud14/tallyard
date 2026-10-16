@@ -4,6 +4,7 @@ import type { LocationLevel, SourceBuilding, StructuralElement, TimingLevel, Era
 import { DEFAULT_ASSUMPTIONS as A, REGIONS } from '../../domain/reference/assumptions'
 import { FAMILIES } from '../../domain/reference/families'
 import { V1_ASSUMPTIONS } from '../../domain/reference/v1assumptions'
+import { isValidLocalAuthority, normaliseLocalAuthority } from '../../domain/reference/places'
 import { ticksOf } from '../../domain/money'
 import { disclosureScore, type Disclosure } from '../../domain/engines/disclosure'
 import { timelineFit } from '../../domain/engines/timeline'
@@ -24,6 +25,7 @@ export const OWNER_ERRORS = {
   name: 'Enter the building name.',
   address: 'Enter the address.',
   region: 'Choose a region.',
+  localAuthority: 'Choose a local authority in this region.',
   badDate: 'Enter a valid date.',
   order: 'The programme dates must run in order: strip-out, dismantling, clear by.',
   year: 'Enter a year between 1800 and this year.',
@@ -88,6 +90,8 @@ export function checkBuildingDetails(input: BuildingDetailsInput, today: string)
   if (!clean(input.name, 120)) return OWNER_ERRORS.name
   if (!clean(input.address, 200)) return OWNER_ERRORS.address
   if (!(REGIONS as readonly string[]).includes(input.region)) return OWNER_ERRORS.region
+  // The requirements before demolition follow the local authority, so a listed one must be in its own region.
+  if (!isValidLocalAuthority(input.region, input.localAuthority)) return OWNER_ERRORS.localAuthority
   const thisYear = Number(today.slice(0, 4))
   if (input.yearBuilt !== null && (!Number.isInteger(input.yearBuilt) || input.yearBuilt < 1800 || input.yearBuilt > thisYear)) return OWNER_ERRORS.year
   const bad = checkProgramme(input)
@@ -106,7 +110,7 @@ export function buildingRecord(id: string, input: BuildingDetailsInput, orgs: { 
     name: clean(input.name, 120),
     address: clean(input.address, 200),
     postcodeDistrict: clean(input.postcodeDistrict, 8).toUpperCase(),
-    localAuthority: clean(input.localAuthority, 80),
+    localAuthority: normaliseLocalAuthority(clean(input.localAuthority, 80)),
     region: input.region,
     yearBuilt: input.yearBuilt,
     eraBand: eraFor(input.yearBuilt),
@@ -152,7 +156,7 @@ export function createBuilding(state: AppData, actor: Actor, input: NewBuildingI
 
 export type BuildingPatch = Partial<Pick<NewBuildingInput, 'name' | 'address' | 'postcodeDistrict' | 'localAuthority' | 'region' | 'stripOutStart' | 'dismantlingStart' | 'clearBy'>>
 
-/** The owner edits a building's name, address, location or programme. */
+/** The owner edits a building's name, address, location or programme. A listed local authority must sit in the region. */
 export function updateBuilding(state: AppData, actor: Actor, buildingId: string, patch: BuildingPatch): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
@@ -173,7 +177,8 @@ export function updateBuilding(state: AppData, actor: Actor, buildingId: string,
   const region = patch.region !== undefined ? patch.region : b.region
   if (!(REGIONS as readonly string[]).includes(region)) return fail(state, OWNER_ERRORS.region)
   const postcodeDistrict = patch.postcodeDistrict !== undefined ? clean(patch.postcodeDistrict, 8).toUpperCase() : b.postcodeDistrict
-  const localAuthority = patch.localAuthority !== undefined ? clean(patch.localAuthority, 80) : b.localAuthority
+  const localAuthority = patch.localAuthority !== undefined ? normaliseLocalAuthority(clean(patch.localAuthority, 80)) : b.localAuthority
+  if (!isValidLocalAuthority(region, localAuthority)) return fail(state, OWNER_ERRORS.localAuthority)
   const w = structuredClone(state.world)
   const moved = region !== b.region
   const hubKm = V1_ASSUMPTIONS.regionHubKm[region]

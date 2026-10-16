@@ -6,8 +6,10 @@ import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { Building, Building2, CalendarClock, Camera, MapPin, Pencil, UserRound } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { BuildingRef } from '../../store/selectors/owner'
-import { BuildingThumb, Button, Dialog, Field, Input, Pill, Tabs, toast } from '../../ui'
+import { BuildingThumb, Button, Callout, Dialog, Field, Input, Pill, Tabs, toast } from '../../ui'
 import { buildingVisual } from '../../store/selectors/buildings-ui'
+import { buildingMoveNote } from '../../store/selectors/buildingRequirements'
+import { LocalAuthorityField, RegionField, type Place } from '../projects/LocalAuthorityField'
 import { ClaimActions } from './ClaimDialog'
 import { Page } from '../../app/Page'
 import { SURVEY_TONE } from './labels'
@@ -90,7 +92,7 @@ export function BuildingLayout() {
             <span className="text-muted">{roleText}</span>
           </div>
           <div className="mt-5">
-            <Tabs label="Building" items={h.tabs.map((t) => ({ label: t.label, href: t.href, active: t.id === tab, testId: `tab-${t.id}` }))} />
+            <Tabs label="Building" items={h.tabs.map((t) => ({ label: t.label, href: t.href, active: t.id === tab, testId: `tab-${t.id}`, count: t.badge ?? undefined }))} />
           </div>
         </div>
       </div>
@@ -110,10 +112,12 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
   const [strip, setStrip] = useState(date('Strip-out starts'))
   const [dismantle, setDismantle] = useState(date('Dismantling starts'))
   const [clear, setClear] = useState(date('Site clear by'))
+  const [place, setPlace] = useState<Place>({ region: header.region, localAuthority: header.localAuthority })
   const [error, setError] = useState<string | null>(null)
+  const moveNote = buildingMoveNote(header, place)
   const save = (e: FormEvent) => {
     e.preventDefault()
-    const r = act.updateBuilding(header.id, { name, address, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
+    const r = act.updateBuilding(header.id, { name, address, region: place.region, localAuthority: place.localAuthority, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
     if (!r.ok) return setError(r.error)
     toast.success('Building details saved', { action: { label: 'Undo', onClick: r.undo } })
     onOpenChange(false)
@@ -146,6 +150,17 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
         <Field label="Address" required>
           <Input value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <RegionField region={place.region} onChange={setPlace} required testId="edit-building-region" />
+          <LocalAuthorityField key={place.region} region={place.region} value={place.localAuthority} onChange={setPlace} testId="edit-building-local-authority" />
+        </div>
+        {moveNote ? (
+          <div data-testid="edit-building-requirements-note">
+            <Callout tone="info" role="status">
+              {moveNote}
+            </Callout>
+          </div>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Strip-out starts" optional>
             <Input type="date" value={strip} onChange={(e) => setStrip(e.target.value)} />

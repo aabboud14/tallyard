@@ -10,6 +10,7 @@ import { formatDateShort } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { buildingSide } from '../access'
 import { buildingRequirements, buildingTracksOf } from '../buildingTracks'
+import { plural } from '../notifications'
 
 export type BuildingRequirementRow = {
   id: string
@@ -107,4 +108,23 @@ export function buildingRequirementsRollup(state: AppData, b: SourceBuilding): B
   const statuses = reqs.map((r) => tracks[r.id]?.status ?? 'not_started')
   const summary = trackerSummary(statuses)
   return { ...summary, readyText: readyText(summary), atRiskItems: reqs.filter((_, i) => statuses[i] === 'at_risk').map((r) => ({ id: r.id, title: r.title })), href: `/app/buildings/${b.id}/requirements` }
+}
+
+/**
+ * What a move does to a donor building's requirements, for the Edit details dialog: how many no longer apply and how
+ * many more are tracked at the new place. Null when the set is the same.
+ */
+export function buildingMoveNote(from: Pick<SourceBuilding, 'region' | 'localAuthority'>, to: Pick<SourceBuilding, 'region' | 'localAuthority'>): string | null {
+  const before = new Set(buildingRequirements(from).map((r) => r.id))
+  const after = buildingRequirements(to)
+  const afterIds = new Set(after.map((r) => r.id))
+  const gone = [...before].filter((id) => !afterIds.has(id)).length
+  const added = after.filter((r) => !before.has(r.id)).length
+  if (gone === 0 && added === 0) return null
+  const place = [to.localAuthority.trim(), to.region].filter((x) => x).join(', ')
+  const parts: string[] = []
+  if (gone > 0) parts.push(`${plural(gone, 'requirement')} before demolition no longer ${gone === 1 ? 'applies' : 'apply'} to ${place}.`)
+  if (added > 0) parts.push(`${added} more ${added === 1 ? 'is' : 'are'} tracked there.`)
+  parts.push('Statuses and evidence stay with the ones that still apply.')
+  return parts.join(' ')
 }

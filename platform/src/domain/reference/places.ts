@@ -51,11 +51,50 @@ export function localAuthoritiesFor(region: string): readonly string[] {
   return Object.prototype.hasOwnProperty.call(LOCAL_AUTHORITIES, region) ? LOCAL_AUTHORITIES[region] : []
 }
 
-/** '' is always valid. A London region needs one of its own authorities. Other regions also accept any typed name of 80 characters or fewer. */
+/** Words a typed council name often carries around the place name, tried in order once an exact match fails. */
+const COUNCIL_PREFIXES = ['london borough of ', 'royal borough of ', 'city and county of ', 'city of ', 'borough of ']
+const COUNCIL_SUFFIXES = [' metropolitan borough council', ' borough council', ' district council', ' county council', ' city council', ' council']
+
+function squeeze(s: string): string {
+  return s.trim().replace(/\s+/g, ' ')
+}
+
+function listedByKey(key: string): string | null {
+  for (const las of Object.values(LOCAL_AUTHORITIES)) for (const la of las) if (la.toLowerCase() === key) return la
+  return null
+}
+
+/**
+ * The listed spelling of a typed authority, or null when it is not listed. Case and runs of spaces do not matter,
+ * and the council words around a name are tried off: 'westminster' and 'Westminster City Council' are Westminster.
+ */
+export function listedLocalAuthority(typed: string): string | null {
+  const key = squeeze(typed).toLowerCase()
+  if (!key) return null
+  const exact = listedByKey(key)
+  if (exact) return exact
+  let bare = key
+  for (const s of COUNCIL_SUFFIXES) if (bare.endsWith(s)) bare = bare.slice(0, -s.length)
+  for (const p of COUNCIL_PREFIXES) if (bare.startsWith(p)) bare = bare.slice(p.length)
+  return bare && bare !== key ? listedByKey(bare) : null
+}
+
+/** The authority as stored: the listed spelling when it is listed, otherwise the typed name with its spaces tidied. */
+export function normaliseLocalAuthority(localAuthority: string): string {
+  return listedLocalAuthority(localAuthority) ?? squeeze(localAuthority)
+}
+
+/**
+ * '' is always valid. A listed authority, however it is typed, is valid only in its own region, so a London borough
+ * typed under another region is refused. A London region needs one of its own authorities. Other regions also accept
+ * a typed name that is not listed, of 80 characters or fewer.
+ */
 export function isValidLocalAuthority(region: string, localAuthority: string): boolean {
-  const la = localAuthority.trim()
+  const la = squeeze(localAuthority)
   if (la === '') return true
-  if (isLondonRegion(region)) return localAuthoritiesFor(region).includes(la)
+  const listed = listedLocalAuthority(la)
+  if (listed) return localAuthoritiesFor(region).includes(listed)
+  if (isLondonRegion(region)) return false
   return la.length <= LOCAL_AUTHORITY_MAX
 }
 

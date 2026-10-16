@@ -85,3 +85,35 @@ test('the owner tracks Carbon Options on Tiverne House before it comes down', as
   expect(await horizontalOverflow(page)).toBe(0)
   expect(errors).toEqual([])
 })
+
+// Follow-up review: the owner's Add a building dialog uses the grouped borough list, so Westminster sets Central
+// London and the building tracks Westminster's written policy; Edit details moves Tiverne House to Camden and says
+// what the move does to its requirements; the Requirements tab counts what is at risk.
+test('the owner adds a building by its borough and moves Tiverne House, and the requirements follow', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'tom')
+  await page.goto('/app/buildings?new=1')
+  await page.getByTestId('nb-name').fill('Wexcombe House')
+  await page.getByTestId('nb-address').fill('9 Lantry Street, London W1')
+  await page.getByTestId('nb-local-authority').selectOption('Westminster')
+  await expect(page.getByTestId('nb-region')).toHaveValue('Central London')
+  await page.getByTestId('new-building-save').click()
+  await page.waitForURL(/\/app\/buildings\/bld_/)
+  await page.getByTestId('tab-requirements').click()
+  await expect(page.getByTestId('building-requirement-la-westminster-retrofit-first')).toBeVisible()
+
+  await page.goto(`/app/buildings/${TIVERNE}`)
+  await expect(page.getByTestId('tab-requirements')).toContainText('1')
+  await page.getByTestId('edit-building').click()
+  await page.getByTestId('edit-building-local-authority').selectOption('Camden')
+  await expect(page.getByTestId('edit-building-requirements-note')).toContainText('1 requirement before demolition no longer applies to Camden, Central London.')
+  await page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page.getByTestId('building')).toContainText('Camden, Central London')
+  await page.getByTestId('tab-requirements').click()
+  await expect(page.getByTestId('building-requirement-la-camden-cc1')).toBeVisible()
+  await expect(page.getByTestId('building-requirement-lp-si7-diversion')).toHaveAttribute('data-status', 'at_risk')
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await horizontalOverflow(page)).toBe(0)
+  expect(errors).toEqual([])
+})

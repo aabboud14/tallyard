@@ -233,3 +233,14 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   const byTime = <T extends { at: string }>(xs: T[]) => [...xs].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0))
   return { ...s, notifications: byTime(s.notifications), activity: byTime(s.activity) }
 }
+
+/**
+ * A sandbox stored before donor building requirements were tracked has no buildingTracks. It gets the seeded
+ * tracks for the buildings it still holds, so Tiverne House reads as the seeded sandbox does without a reset.
+ * Any other stored state is returned as it is.
+ */
+export function withSeededBuildingTracks(d: AppData): AppData {
+  if (d.buildingTracks) return d
+  const seeded = firstRun(d.seededOn).buildingTracks
+  return { ...d, buildingTracks: Object.fromEntries(Object.entries(seeded).filter(([id]) => !!d.world.buildings[id])) }
+}

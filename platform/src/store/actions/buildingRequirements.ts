@@ -7,7 +7,7 @@ import { TRACK_STATUSES } from '../../domain/sustainabilityTypes'
 import { TRACK_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
 import type { PlanningRequirement } from '../../domain/reference/requirements'
 import type { ActionResult, Actor, AppData } from '../types'
-import { buildingOrgIds, buildingSide, ERRORS } from '../access'
+import { buildingSide, ERRORS } from '../access'
 import { log, notify } from '../notifications'
 import { mint } from '../ids'
 import { buildingRequirements, buildingTrackOf, withBuildingTrack } from '../buildingTracks'
@@ -38,8 +38,16 @@ function href(b: SourceBuilding): string {
   return `/app/buildings/${b.id}/requirements`
 }
 
+/**
+ * Who hears of requirement activity: the owner and the surveyor, the two sides that can open the tracking. A
+ * deconstruction contractor alone cannot, so it is left out (a firm that both surveys and dismantles is the surveyor).
+ */
+export function buildingRequirementOrgIds(b: Pick<SourceBuilding, 'ownerOrgId' | 'surveyorOrgId'>): string[] {
+  return [...new Set([b.ownerOrgId, b.surveyorOrgId].filter((x): x is string => !!x))]
+}
+
 function record(s: AppData, o: OnBuilding, text: string): AppData {
-  return log(s, { at: o.a.now, orgIds: buildingOrgIds(o.b), projectId: null, buildingId: o.b.id, actorUserId: o.a.user.id, actor: o.a.user.name, text, href: href(o.b) })
+  return log(s, { at: o.a.now, orgIds: buildingRequirementOrgIds(o.b), projectId: null, buildingId: o.b.id, actorUserId: o.a.user.id, actor: o.a.user.name, text, href: href(o.b) })
 }
 
 /** The owner or the surveyor sets a requirement's status. The owner hears when the surveyor marks one at risk or evidence ready. */
