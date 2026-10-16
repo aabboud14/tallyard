@@ -71,12 +71,22 @@ export function clearDiscoverFilters(q: DiscoverQuery): DiscoverQuery {
 }
 
 /**
+ * The project a link put in the address (?project=), when the viewer works on it. It lasts for this visit to the
+ * Marketplace, so links back into the Marketplace from a material page carry it; it is never stored.
+ */
+export function addressProjectFor(state: AppData, viewer: Viewer, fromAddress: string | null): string | null {
+  if (!fromAddress) return null
+  return projectsOfUser(state, viewer.userId).some((p) => p.id === fromAddress) ? fromAddress : null
+}
+
+/**
  * The project the viewer checks fit against. A project in the address wins when the viewer works on it; then
  * their stored choice when they still work on it; otherwise no project.
  */
 export function checkingProjectFor(state: AppData, viewer: Viewer, fromAddress: string | null): string | null {
+  const address = addressProjectFor(state, viewer, fromAddress)
+  if (address) return address
   const mine = projectsOfUser(state, viewer.userId).map((p) => p.id)
-  if (fromAddress && mine.includes(fromAddress)) return fromAddress
   const stored = state.ui.checkingProjectId[viewer.userId]
   if (stored && mine.includes(stored)) return stored
   return null

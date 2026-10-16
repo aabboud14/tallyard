@@ -1,17 +1,19 @@
 // The signed-in frame: the sidebar (a drawer below 1024 px), the top bar, the page in an inset panel, the command
 // palette and a thin progress line while a page loads. Sets the tab title from where the person is.
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { Outlet, useLocation, useNavigation, useNavigationType } from 'react-router'
 import { PRODUCT_NAME } from '../domain/constants'
 import { useApp, useView } from '../store'
 import { navModel } from '../store/selectors/nav'
 import { pageLocation } from '../store/selectors/arch-breadcrumbs'
+import { DISCOVER_PARAM } from '../store/selectors/arch-discover'
 import { cx, Logo, SandboxBadge, Sheet } from '../ui'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { SearchPalette } from './SearchPalette'
 import { AccessGate } from './guards'
 import { useHotkey } from './hotkeys'
+import { scrollMemory, scrollPlan } from './scrollMemory'
 import './shell.css'
 
 function NavProgress() {
@@ -24,43 +26,78 @@ function NavProgress() {
   )
 }
 
-/** Scroll position per history entry: a new page starts at the top, or at its #hash target; Back returns to where you were. */
+/** The page scroller: the inset panel on a wide screen, the window on a narrow one. */
+function scrollerTop(node: HTMLElement | null): number {
+  return node && node.scrollHeight > node.clientHeight + 1 ? node.scrollTop : window.scrollY
+}
+
+function scrollPageTo(node: HTMLElement | null, top: number) {
+  if (node && typeof node.scrollTo === 'function') node.scrollTo({ top })
+  else if (node) node.scrollTop = top
+  try {
+    window.scrollTo({ top })
+  } catch {
+    // no window scrolling here (tests)
+  }
+}
+
+/** Applies scrollPlan on each navigation (see scrollMemory.ts) and remembers each entry's position as it scrolls. */
 function useScrollMemory(el: RefObject<HTMLElement | null>) {
   const location = useLocation()
   const type = useNavigationType()
-  const positions = useRef(new Map<string, number>())
-  const last = useRef<{ key: string; pathname: string } | null>(null)
+  const active = useRef<{ key: string; pathname: string; search: string } | null>(null)
+
+  // Positions are recorded as the person scrolls, so leaving a page keeps where they were on it, not where the
+  // next page's shorter content clamped the scroller.
   useEffect(() => {
-    const prev = last.current
     const node = el.current
-    const current = () => (node && node.scrollHeight > node.clientHeight + 1 ? node.scrollTop : window.scrollY)
-    if (prev) positions.current.set(prev.key, current())
-    last.current = { key: location.key, pathname: location.pathname }
-    if (prev && prev.pathname === location.pathname && type !== 'POP') return
-    const to = type === 'POP' ? (positions.current.get(location.key) ?? 0) : 0
-    const hash = type === 'POP' ? '' : location.hash
-    requestAnimationFrame(() => {
-      // A link to a section (for example #statement) lands on it. A page still loading scrolls there itself once ready.
-      const target = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null
-      if (target) {
-        target.scrollIntoView({ block: 'start' })
+    const onScroll = () => {
+      if (active.current) scrollMemory.record(active.current.key, scrollerTop(node))
+    }
+    node?.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      node?.removeEventListener('scroll', onScroll)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [el])
+
+  useLayoutEffect(() => {
+    const prev = active.current
+    const node = el.current
+    const plan = scrollPlan({ type, prev, next: { pathname: location.pathname, search: location.search, hash: location.hash }, saved: scrollMemory.saved(location.key) })
+    // A replaced entry carries the position of the one it replaces.
+    if (prev && type === 'REPLACE' && scrollMemory.saved(location.key) === undefined) scrollMemory.record(location.key, scrollMemory.saved(prev.key) ?? scrollerTop(node))
+    active.current = { key: location.key, pathname: location.pathname, search: location.search }
+    scrollMemory.planned(location.key, plan)
+    if (plan.kind === 'keep') return
+    let frame = 0
+    let tries = 0
+    const apply = () => {
+      if (plan.kind === 'hash') {
+        // A link to a section (for example #statement) lands on it. A page still loading scrolls there itself once ready.
+        const target = document.getElementById(plan.id)
+        if (target) {
+          target.scrollIntoView({ block: 'start' })
+          return
+        }
+        scrollPageTo(node, 0)
         return
       }
-      if (node && typeof node.scrollTo === 'function') node.scrollTo({ top: to })
-      else if (node) node.scrollTop = to
-      try {
-        window.scrollTo({ top: to })
-      } catch {
-        // no window scrolling here (tests)
-      }
-    })
-  }, [location.key, location.pathname, location.hash, type, el])
+      const top = plan.kind === 'restore' ? plan.top : 0
+      scrollPageTo(node, top)
+      // Back to a long page: its content may still be filling in, so try again for a few frames until it fits.
+      if (plan.kind === 'restore' && Math.abs(scrollerTop(node) - top) > 1 && tries++ < 20) frame = requestAnimationFrame(apply)
+    }
+    frame = requestAnimationFrame(apply)
+    return () => cancelAnimationFrame(frame)
+  }, [location.key, location.pathname, location.search, location.hash, type, el])
 }
 
 export function AppShell() {
   const nav = useView(navModel)
   const location = useLocation()
-  const where = useView(pageLocation, location.pathname)
+  const where = useView(pageLocation, location.pathname, new URLSearchParams(location.search).get(DISCOVER_PARAM.projectId))
   const collapsed = useApp((s) => s.ui.sidebarCollapsed)
   const setUi = useApp((s) => s.setUi)
   const [drawer, setDrawer] = useState(false)

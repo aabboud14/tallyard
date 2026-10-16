@@ -177,6 +177,8 @@ export type ModelGeometry = {
   closeUpMm: number | null
   /** Placeholder depth note for curtain wall and raised floor, else null. */
   placeholderNote: string | null
+  /** True for a member that stands up (a UC column): its length runs up the screen. */
+  upright: boolean
 }
 
 export const PLACEHOLDER_NOTE = 'Panel depth is a placeholder, not a recorded dimension.'
@@ -242,5 +244,6 @@ export function meshFor(l: PublicListing): ModelGeometry | { unavailable: string
     lengthMm: p.depthMm,
     closeUpMm,
     placeholderNote: l.family === 'curtain_wall' || l.family === 'raised_floor' ? PLACEHOLDER_NOTE : null,
+    upright: column,
   }
 }

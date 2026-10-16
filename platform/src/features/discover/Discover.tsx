@@ -3,7 +3,7 @@
 // with its fit counts; the sticky toolbar holds search, typology tabs, Filters (with the availability month slider)
 // and the sort each role is offered. "Shared with you" holds lots owners shared privately with a project.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigationType } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { ArrowDownWideNarrow, FolderOpen, LockKeyhole, PackageOpen, Search, ShieldCheck, Store, X } from 'lucide-react'
 import { useView } from '../../store'
 import { NEW_FOR_PROJECTS_ANCHOR } from '../../store/paths'
@@ -13,6 +13,7 @@ import { Button, Card, cx, DropdownMenu, DropdownMenuContent, DropdownMenuLabel,
 import { Page } from '../../app/Page'
 import { useHotkey } from '../../app/hotkeys'
 import { useMediaQuery } from '../../app/media'
+import { scrollMemory } from '../../app/scrollMemory'
 import { ListingTile } from './ListingTile'
 import { ActiveFilters, FiltersButton } from './DiscoverFilters'
 import { CheckingBar } from './CheckingBar'
@@ -215,16 +216,16 @@ export function Discover() {
   const wide = useMediaQuery('(min-width: 1280px)')
   const phone = useMediaQuery('(max-width: 639px)')
   const placeholder = phone ? 'Search' : 'Search beams, brick, stone'
-  // A link to #new-for-projects (the home's "{n} new materials fit") lands on the row, clear of the sticky toolbar.
-  // Back keeps the position it returns to, so only a new visit scrolls.
+  // A link to #new-for-projects (the home's "{n} new materials fit") lands on the row, clear of the sticky toolbar,
+  // whether it is followed, opened in a new tab, pasted or reloaded. Back and Forward return to the position the
+  // person left instead (the shell restores it).
   const location = useLocation()
-  const navigationType = useNavigationType()
   const rowShown = !!view && view.landing && view.newForProjects.length > 0
   useEffect(() => {
-    if (navigationType === 'POP' || location.hash !== `#${NEW_FOR_PROJECTS_ANCHOR}` || !rowShown) return
+    if (location.hash !== `#${NEW_FOR_PROJECTS_ANCHOR}` || !rowShown || scrollMemory.restoring(location.key)) return
     const frame = requestAnimationFrame(() => scrollToNewForProjects())
     return () => cancelAnimationFrame(frame)
-  }, [location.key, location.hash, navigationType, rowShown])
+  }, [location.key, location.hash, rowShown])
   if (!view) return null
   const shared = view.tab === 'shared'
   const clearFilters = () => replace(clearDiscoverFilters(query))

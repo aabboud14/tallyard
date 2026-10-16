@@ -4,7 +4,7 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
 import { useApp, useView } from '../../store'
-import { checkingProjectFor, discoverParamsFor, discoverQueryFromParams, DISCOVER_PARAM } from '../../store/selectors/arch-discover'
+import { addressProjectFor, checkingProjectFor, discoverParamsFor, discoverQueryFromParams, DISCOVER_PARAM } from '../../store/selectors/arch-discover'
 import type { DiscoverQuery } from '../../store/selectors/discover'
 
 /**
@@ -34,6 +34,12 @@ export function useCheckingProject(): [string | null, (projectId: string | null)
     [setChecking, setParams],
   )
   return [projectId, set]
+}
+
+/** The project the address names for this visit (validated), for links back into the Marketplace to carry. */
+export function useAddressProject(): string | null {
+  const [params] = useSearchParams()
+  return useView(addressProjectFor, params.get(DISCOVER_PARAM.projectId)) ?? null
 }
 
 /** `push` adds a history entry (opening a category folder), so Back returns to where the person was. */

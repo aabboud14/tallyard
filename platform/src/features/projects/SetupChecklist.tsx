@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronDown, Circle, CircleAlert, CircleCheck, Hourglass } from 'lucide-react'
+import { ChevronDown, Circle, CircleAlert, CircleCheck, MailQuestion } from 'lucide-react'
 import type { ProjectSetup, SetupIntent, SetupStep, SetupStepState } from '../../store/selectors/project'
 import { Button, cx, IndicativeMarker, Pill, ProgressBar, usePersistentToggle } from '../../ui'
 
@@ -14,7 +14,8 @@ const STATE_ICON: Record<SetupStepState, { icon: LucideIcon; cls: string; word: 
   done: { icon: CircleCheck, cls: 'text-brand-600', word: 'Done' },
   current: { icon: Circle, cls: 'text-brand-600', word: 'Next' },
   todo: { icon: Circle, cls: 'text-faint', word: 'To do' },
-  waiting: { icon: Hourglass, cls: 'text-info', word: 'Waiting' },
+  // Every waiting step waits for the client to accept the project: the same envelope as the header's pill.
+  waiting: { icon: MailQuestion, cls: 'text-muted', word: 'Waiting' },
   attention: { icon: CircleAlert, cls: 'text-warning', word: 'Needs you' },
 }
 

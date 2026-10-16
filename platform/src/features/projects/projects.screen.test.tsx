@@ -147,6 +147,18 @@ describe('a new project', () => {
     expect(allText()).not.toMatch(FORBIDDEN)
   })
 
+  it('shows the waiting client with the same neutral envelope as the header pill, never an hourglass', async () => {
+    const id = corbel()
+    open(`/app/projects/${id}`)
+    await waitFor(() => q('project-setup'))
+    for (const el of [byTestId('link-status'), byTestId('setup-step-client'), byTestId('client-link-banner')]) {
+      expect(el.querySelector('svg.lucide-mail-question'), el.getAttribute('data-testid') ?? '').not.toBeNull()
+      expect(el.querySelector('svg.lucide-hourglass'), el.getAttribute('data-testid') ?? '').toBeNull()
+      expect(el.querySelector('svg.lucide-mail-question')!.getAttribute('class')).not.toContain('text-info')
+    }
+    expect(byTestId('project-setup').querySelector('svg.lucide-hourglass')).toBeNull()
+  })
+
   it('keeps the checklist compact, with the waiting client folded in, and opens every step on request', async () => {
     const id = corbel()
     open(`/app/projects/${id}`)

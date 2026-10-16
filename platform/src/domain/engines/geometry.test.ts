@@ -264,6 +264,8 @@ describe('meshFor', () => {
     expect(bounds(m.mesh).lo[1]).toBe(0)
     expect(m.lengthMm).toBe(4200)
     expect(bounds(m.closeUp!).size).toEqual([b, m.closeUpMm!, h])
+    expect(m.upright).toBe(true)
+    expect(model('L-9F4CQQ').upright).toBe(false)
     // Every other steel member is a beam and still lies along X.
     for (const l of all.filter((x) => x.spec.family === 'steel_section' && x.publicId !== 'L-2MAC36')) {
       const mm = meshFor(l)

@@ -4,7 +4,7 @@
 // instead of it (09 section 13.10). Long members open in close-up so the section reads; a toggle shows the full
 // length, and Reset view turns the model back.
 import { useId, useState } from 'react'
-import { Box, Camera, MoveHorizontal, PenTool, Ruler } from 'lucide-react'
+import { Box, Camera, MoveHorizontal, MoveVertical, PenTool, Ruler } from 'lucide-react'
 import type { FamilyId, Spec } from '../../domain/types'
 import type { ModelGeometry } from '../../domain/engines/geometry'
 import { LABELS } from '../../domain/reference/labels'
@@ -80,7 +80,7 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
             actions={
               model.closeUp ? (
                 <button type="button" onClick={() => setFullLength((v) => !v)} aria-pressed={fullLength} className={CONTROL} data-testid="model-length">
-                  <MoveHorizontal aria-hidden="true" />
+                  {model.upright ? <MoveVertical aria-hidden="true" /> : <MoveHorizontal aria-hidden="true" />}
                   {fullLength ? 'Show close up' : 'Show full length'}
                 </button>
               ) : null

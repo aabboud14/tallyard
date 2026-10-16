@@ -232,3 +232,52 @@ describe('material page for other roles', () => {
     expect(document.querySelector('[data-testid="download-ifc"]')).not.toBeNull()
   })
 })
+
+describe('a material page within a visit checked against a project (feedback/r2f-market.md, round 2)', () => {
+  it('keeps the project on the way back to the Marketplace while the address names it, and not otherwise', async () => {
+    open(`/app/marketplace/L-9F4CQQ?project=${MERROWGATE_ID}`)
+    const browse = await waitFor(() => document.querySelector<HTMLAnchorElement>('[data-testid="browse-marketplace"]'))
+    expect(browse.getAttribute('href')).toBe(`/app/marketplace?project=${MERROWGATE_ID}`)
+    const crumb = await waitFor(() => document.querySelector<HTMLAnchorElement>('nav[aria-label="Breadcrumb"] a'))
+    expect(crumb.textContent).toBe('Marketplace')
+    expect(crumb.getAttribute('href')).toBe(`/app/marketplace?project=${MERROWGATE_ID}`)
+    cleanup()
+
+    open('/app/marketplace/L-9F4CQQ')
+    const plain = await waitFor(() => document.querySelector<HTMLAnchorElement>('[data-testid="browse-marketplace"]'))
+    expect(plain.getAttribute('href')).toBe('/app/marketplace')
+    expect(document.querySelector('nav[aria-label="Breadcrumb"] a')!.getAttribute('href')).toBe('/app/marketplace')
+    // Nothing was stored by following the link.
+    expect(getData().ui.checkingProjectId[U.priya] ?? null).toBeNull()
+  })
+
+  it('never carries a project the viewer does not work on', async () => {
+    open('/app/marketplace/L-9F4CQQ?project=prj_nobody')
+    const browse = await waitFor(() => document.querySelector<HTMLAnchorElement>('[data-testid="browse-marketplace"]'))
+    expect(browse.getAttribute('href')).toBe('/app/marketplace')
+  })
+})
+
+describe('a steel column (feedback/r2f-market.md, round 2)', () => {
+  it('stands up in the card, thumbnail and stage drawings, as in 3D, and its length toggle points up', async () => {
+    open('/app/marketplace/L-2MAC36')
+    await waitFor(() => document.querySelector('[data-testid="model-viewer"]'))
+    expect(byTestId('model-length').querySelector('svg.lucide-move-vertical')).not.toBeNull()
+    expect(byTestId('model-length').querySelector('svg.lucide-move-horizontal')).toBeNull()
+    expect(byTestId('gallery-thumb-illustration').querySelector('[data-part="section-axo"]')!.getAttribute('data-orientation')).toBe('upright')
+    click(byTestId('gallery-thumb-illustration'))
+    await waitFor(() => byTestId('gallery-stage').getAttribute('data-kind') === 'illustration')
+    const axo = byTestId('gallery-stage').querySelector('[data-part="section-axo"]')!
+    expect(axo.getAttribute('data-orientation')).toBe('upright')
+    expect(axo.textContent).toContain('4.2 m')
+    expect(axo.querySelector('[data-part="grid"]')).toBeNull()
+    expectClean()
+  })
+
+  it('keeps a beam lying down with a sideways toggle', async () => {
+    open('/app/marketplace/L-9F4CQQ')
+    await waitFor(() => document.querySelector('[data-testid="model-viewer"]'))
+    expect(byTestId('model-length').querySelector('svg.lucide-move-horizontal')).not.toBeNull()
+    expect(byTestId('gallery-thumb-illustration').querySelector('[data-part="section-axo"]')!.getAttribute('data-orientation')).toBeNull()
+  })
+})

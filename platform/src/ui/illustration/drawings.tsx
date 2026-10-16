@@ -243,6 +243,8 @@ const AREA = { left: SAFE.left, right: SAFE.right, top: SAFE.top + 8, bottom: SA
  */
 export function SectionAxo({ designation, lengthM, uid, view = 'card', plain = false }: { designation: string; lengthM: number; uid: string; view?: DrawingView; /** A white board with no detail grid: the material page stage. */ plain?: boolean }) {
   const s = sectionOrThrow(designation)
+  // A UC is a column: it stands upright, as the 3D view and the IFC file place it.
+  if (s.type === 'UC') return <ColumnAxo designation={designation} lengthM={lengthM} uid={uid} view={view} plain={plain} />
   const size = TEXT_SIZE[view]
   const k = Math.min(140 / s.h, 104 / s.b)
   const h = s.h * k
@@ -299,6 +301,76 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card', plain = f
       <polygon points={pts(outline.map(at))} fill={`url(#${hatch})`} stroke={INK} strokeWidth="1.25" strokeLinejoin="round" />
       <DimLine a={at([b, h])} b={far([b, h])} label={formatLength(lengthM)} offset={[9, 15.6]} anchor="start" size={size} />
       {view === 'detail' ? <DimLine a={at([0, 0])} b={at([b, 0])} label={`${s.b}`} offset={[0, -12]} anchor="end" size={size} /> : null}
+      <TitleStrip text={designation} view={view} />
+    </g>
+  )
+}
+
+/**
+ * A steel column standing upright, in isometric: the section seen from above at its top end (hatched), the plan
+ * axes at 30 degrees, and the column running straight down, clamped so the drawing fits the board. The length is
+ * dimensioned up its right edge.
+ */
+function ColumnAxo({ designation, lengthM, uid, view, plain }: { designation: string; lengthM: number; uid: string; view: DrawingView; plain: boolean }) {
+  const s = sectionOrThrow(designation)
+  const size = TEXT_SIZE[view]
+  const k = 130 / ((s.b + s.h) * C30)
+  const h = s.h * k
+  const b = s.b * k
+  const tw = Math.max(1.5, s.tw * k)
+  const tf = Math.max(1.5, s.tf * k)
+  const capH = (b + h) * S30
+  // Keep clear of the top corners, where a card puts its project chip and Save button.
+  const roomH = AREA.bottom - AREA.top - 50
+  const len = Math.min(lengthM * 1000 * k * 0.5, roomH - capH)
+  // Plan outline: u along the flanges, v along the web toward the viewer; anticlockwise with v up.
+  const wl = (b - tw) / 2
+  const wr = wl + tw
+  const plan: P[] = [
+    [0, 0],
+    [b, 0],
+    [b, tf],
+    [wr, tf],
+    [wr, h - tf],
+    [b, h - tf],
+    [b, h],
+    [0, h],
+    [0, h - tf],
+    [wl, h - tf],
+    [wl, tf],
+    [0, tf],
+  ]
+  // Centre the column on the board, leaving room for the length dimension on its right.
+  const ox = (AREA.left + AREA.right) / 2 + ((h - b) * C30) / 2 - 20
+  const oy = AREA.bottom - 6 - (capH + len)
+  const top = ([u, v]: P): P => [ox + (u - v) * C30, oy + (u + v) * S30]
+  const bottom = (p: P): P => {
+    const [x, y] = top(p)
+    return [x, y + len]
+  }
+  // A side face shows when its outward normal points toward the viewer (+u or +v); farther faces are painted first.
+  const faces = plan
+    .map((p, i) => {
+      const q = plan[(i + 1) % plan.length]
+      const n: P = [q[1] - p[1], -(q[0] - p[0])]
+      return { p, q, n, near: p[0] + p[1] + q[0] + q[1], i }
+    })
+    .filter((f) => f.n[0] + f.n[1] > 1e-6)
+    .sort((x, y) => x.near - y.near || x.i - y.i)
+  const hatch = `${uid}-hatch`
+  const edge: P = [b, 0]
+  return (
+    <g data-part="section-axo" data-orientation="upright">
+      <Hatch id={hatch} />
+      <rect width={W} height={H} fill={plain ? PLAIN : PAPER} />
+      {view === 'detail' && !plain ? <DetailGrid /> : null}
+      {faces.map((f) => (
+        <polygon key={f.i} points={pts([top(f.p), top(f.q), bottom(f.q), bottom(f.p)])} fill={f.n[1] > 0 ? FILL : '#e9e6df'} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
+      ))}
+      <polygon points={pts(plan.map(top))} fill={FILL} />
+      <polygon points={pts(plan.map(top))} fill={`url(#${hatch})`} stroke={INK} strokeWidth="1.25" strokeLinejoin="round" />
+      <DimLine a={bottom(edge)} b={top(edge)} label={formatLength(lengthM)} offset={[16, 0]} anchor="start" size={size} />
+      {view === 'detail' ? <DimLine a={top([0, 0])} b={top(edge)} label={`${s.b}`} offset={[8, -13]} anchor="start" size={size} /> : null}
       <TitleStrip text={designation} view={view} />
     </g>
   )

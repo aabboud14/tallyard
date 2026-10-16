@@ -114,3 +114,70 @@ test('the sidebar says how projects are ordered, and the architect specification
   await other.close()
   expect(errors).toEqual([])
 })
+
+// Round 2 of the review: the row is reached however the address is opened, Back returns to it, the sidebar's
+// Marketplace starts at the top, and a material page keeps the visit's project on the way back.
+async function scrollerTop(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const main = document.querySelector('main')!
+    return Math.round(main.scrollHeight > main.clientHeight + 1 ? main.scrollTop : window.scrollY)
+  })
+}
+
+for (const size of [
+  { width: 1440, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`the row is reached from a pasted or reloaded address and Back returns to it at ${size.width} px`, async ({ page }) => {
+    const errors = watchErrors(page)
+    await page.setViewportSize(size)
+    await signIn(page, 'priya')
+
+    await page.goto(`/app/marketplace?project=${M}#new-for-projects`)
+    await expect(page.getByTestId('new-for-projects')).toContainText('New for Merrowgate Wharf')
+    await expectRowInView(page, `${size.width} opened directly`)
+    await page.reload()
+    await expect(page.getByTestId('new-for-projects')).toContainText('New for Merrowgate Wharf')
+    await expectRowInView(page, `${size.width} reloaded`)
+
+    // Open a category folder from where the person is (a click in the page, without scrolling first), then Back.
+    await page.goto('/app/home')
+    await page.getByTestId(`home-new-fits-${M}`).click()
+    await page.waitForURL(`**/app/marketplace?project=${M}#new-for-projects`)
+    await expectRowInView(page, `${size.width} from the home`)
+    const at = await scrollerTop(page)
+    expect(at).toBeGreaterThan(200)
+    await page.evaluate(() => document.querySelector<HTMLElement>('[data-testid="category-structure"]')!.click())
+    await page.waitForURL('**/app/marketplace?type=structure*')
+    await expect(page.getByRole('heading', { level: 1, name: 'Marketplace' })).toBeInViewport()
+    await page.goBack()
+    await page.waitForURL(`**/app/marketplace?project=${M}#new-for-projects`)
+    await expectRowInView(page, `${size.width} back from a folder`)
+    await expect.poll(() => scrollerTop(page)).toBe(at)
+
+    // The sidebar's Marketplace opens at the top, its title and category folders in view.
+    if (size.width < 1024) {
+      await page.getByTestId('open-menu').click()
+      await page.getByTestId('nav-drawer').getByTestId('nav-marketplace').click()
+    } else await page.getByTestId('nav-marketplace').click()
+    await page.waitForURL('**/app/marketplace')
+    await expect(page.getByRole('heading', { level: 1, name: 'Marketplace' })).toBeInViewport()
+    await expect.poll(() => scrollerTop(page)).toBe(0)
+    expect(await horizontalOverflow(page)).toBe(0)
+    expect(errors).toEqual([])
+  })
+}
+
+test('a material page reached from a Marketplace checked against a project keeps it on the way back', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'priya')
+  await page.goto(`/app/marketplace/L-9F4CQQ?project=${M}`)
+  await expect(page.getByTestId('browse-marketplace')).toHaveAttribute('href', `/app/marketplace?project=${M}`)
+  await page.getByTestId('top-bar').getByRole('link', { name: 'Marketplace' }).click()
+  await page.waitForURL(`**/app/marketplace?project=${M}`)
+  await expect(page.getByTestId('checking-bar')).toContainText('Checking against Merrowgate Wharf')
+  // Nothing was remembered: the plain address still opens on No project.
+  await page.goto('/app/marketplace')
+  await expect(page.getByTestId('checking-bar')).toHaveAttribute('data-state', 'prompt')
+  expect(errors).toEqual([])
+})

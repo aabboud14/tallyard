@@ -4,7 +4,7 @@
 // setup checklist as one line (variant 'inline'), so the programme stays on the first screen; a decline keeps the
 // full banner.
 import { useState } from 'react'
-import { Hourglass, Send, UserRoundX, Users } from 'lucide-react'
+import { MailQuestion, Send, UserRoundX, Users } from 'lucide-react'
 import { act, useView } from '../../store'
 import { PRODUCT_NAME } from '../../domain/constants'
 import { changeClientOptions, clientLinkView } from '../../store/selectors/project'
@@ -23,11 +23,11 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
   const declined = link.status === 'declined'
   const dialog = onChangeClient ? null : <ChangeClientDialog projectId={projectId} mode={mode} onClose={() => setMode(null)} />
   if (variant === 'inline' && !declined) {
-    const Icon = link.clientHasMembers ? Hourglass : Users
+    const Icon = link.clientHasMembers ? MailQuestion : Users
     return (
       <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-3 md:flex-row md:items-center md:justify-between md:gap-4">
         <p className="m-0 flex min-w-0 items-start gap-2.5 text-sm text-ink-soft">
-          <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
+          <Icon aria-hidden="true" className={link.clientHasMembers ? 'mt-0.5 size-4 shrink-0 text-muted' : 'mt-0.5 size-4 shrink-0 text-info'} />
           <span>
             {link.clientHasMembers ? (
               <>
@@ -72,7 +72,7 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
     <div data-testid="client-link-banner" data-status={link.status}>
       <Callout
         tone={declined ? 'warning' : 'info'}
-        icon={declined ? UserRoundX : link.clientHasMembers ? Hourglass : Users}
+        icon={declined ? UserRoundX : link.clientHasMembers ? MailQuestion : Users}
         title={declined ? `${link.clientName} declined this project` : link.clientHasMembers ? `Waiting for ${link.clientName} to accept this project` : `Nobody from ${link.clientName} uses ${PRODUCT_NAME} yet`}
       >
         {declined ? (
