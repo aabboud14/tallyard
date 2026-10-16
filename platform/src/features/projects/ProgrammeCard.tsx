@@ -1,9 +1,12 @@
 // The programme card that leads the overview: RIBA stage bands, milestones, a today line labelled with the planned
 // stage and each shortlisted material's availability coloured by its fit, over the whole programme or from today.
-// The pills compare the planned stage with the declared one and say when the dates are only suggested.
+// The pills compare the planned stage with the declared one and say when the dates are only suggested. The header
+// is one compact row (title and pills, then the range and the actions), so the chart starts on the first screen even
+// on a new project; while the dates are suggested, 'Keep these dates' sits beside 'Edit programme' here and nowhere
+// else. Whoever may set the programme (the architect, or the client while no architect is appointed) gets both.
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { CalendarRange, ChevronDown, Compass, PencilLine } from 'lucide-react'
+import { CalendarCheck, CalendarRange, ChevronDown, Compass, PencilLine } from 'lucide-react'
 import type { ProgrammeStatus } from '../../domain/engines/programme'
 import { formatDateShort } from '../../domain/dates'
 import { useView } from '../../store'
@@ -13,26 +16,46 @@ import { marketplaceHref } from '../discover/links'
 
 const CHECK_TONE: Record<ProgrammeStatus, Tone> = { on: 'brand', behind: 'warning', ahead: 'info', not_started: 'neutral' }
 
-type Props = { projectId: string; side: 'architect' | 'client' | 'consultant'; onEdit: () => void }
+type Props = { projectId: string; side: 'architect' | 'client' | 'consultant'; onEdit: () => void; /** Confirms the suggested dates as they are. */ onKeep?: () => void }
 
-export function ProgrammeCard({ projectId, side, onEdit }: Props) {
+export function ProgrammeCard({ projectId, side, onEdit, onKeep }: Props) {
   const [range, setRange] = useState<ProgrammeRange>('whole')
   const view = useView(programmeView, projectId, range)
   if (!view) return null
   const architect = side === 'architect'
+  const pillWrap = 'inline-flex items-center rounded-[5px] outline-none max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
   return (
-    <Card as="section" aria-labelledby="programme-title" data-testid="programme-card" data-range={range}>
-      <div className="flex flex-col gap-3 border-b border-line-soft px-4 py-4 sm:px-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <CalendarRange aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted" />
-          <div className="min-w-0">
+    <Card as="section" aria-labelledby="programme-title" aria-describedby="programme-about" data-testid="programme-card" data-range={range}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line-soft px-4 py-2.5 sm:px-5" data-testid="programme-status">
+        <div className="mr-auto flex min-w-0 flex-[1_1_24rem] flex-col gap-0.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <CalendarRange aria-hidden="true" className="size-4 shrink-0 text-muted" />
             <h2 id="programme-title" className="m-0 text-md font-semibold text-ink">
               Programme
             </h2>
-            <p className="m-0 mt-0.5 text-sm text-muted">RIBA Plan of Work stages, site start and completion, with when each shortlisted material is available.</p>
+            <Tooltip content={view.check.text || 'The stage you declare matches the stage the programme plans for today.'}>
+              <span tabIndex={0} className={pillWrap}>
+                <Pill tone={CHECK_TONE[view.check.status]} dot data-testid="programme-check" data-status={view.check.status}>
+                  {view.check.label}
+                </Pill>
+              </span>
+            </Tooltip>
+            {view.source === 'suggested' ? (
+              <Tooltip content={view.suggestedText}>
+                <span tabIndex={0} className={pillWrap}>
+                  <Pill tone="warning" data-testid="programme-suggested">
+                    Suggested dates
+                  </Pill>
+                </span>
+              </Tooltip>
+            ) : null}
+            <IndicativeMarker />
           </div>
+          <p id="programme-about" className="m-0 pl-6.5 text-sm text-muted max-xl:sr-only">
+            RIBA Plan of Work stages, site start and completion, with when each shortlisted material is available.
+          </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <SegmentedControl
             label="Programme range"
             value={range}
@@ -43,7 +66,12 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
             ]}
             size="sm"
           />
-          {architect ? (
+          {view.canKeep && onKeep ? (
+            <Button size="sm" variant="primary" icon={CalendarCheck} onClick={onKeep} data-testid="keep-programme">
+              Keep these dates
+            </Button>
+          ) : null}
+          {view.canEdit ? (
             <Button size="sm" icon={PencilLine} onClick={onEdit} data-testid="edit-programme">
               Edit programme
             </Button>
@@ -51,37 +79,22 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-4 pt-4 sm:px-5" data-testid="programme-status">
-        <Tooltip content={view.check.text || 'The stage you declare matches the stage the programme plans for today.'}>
-          <span tabIndex={0} className="inline-flex items-center rounded-[5px] outline-none max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-            <Pill tone={CHECK_TONE[view.check.status]} dot data-testid="programme-check" data-status={view.check.status}>
-              {view.check.label}
-            </Pill>
-          </span>
-        </Tooltip>
-        {view.source === 'suggested' ? (
-          <Tooltip content="Worked out from your site start and typical stage lengths. Edit to match your plan.">
-            <span tabIndex={0} className="inline-flex items-center rounded-[5px] outline-none max-sm:min-h-11 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-              <Pill tone="warning" data-testid="programme-suggested">
-                Suggested dates
-              </Pill>
-            </span>
-          </Tooltip>
-        ) : null}
-        <IndicativeMarker />
-        {view.check.text ? <span className="w-full text-sm text-ink-soft sm:w-auto">{view.check.text}</span> : null}
-      </div>
+      {view.check.text ? (
+        <p className="m-0 px-4 pt-3 text-sm text-ink-soft sm:px-5" data-testid="programme-check-text">
+          {view.check.text}
+        </p>
+      ) : null}
 
-      <div className="px-4 pb-2 pt-5 sm:px-5">
+      <div className="px-4 pb-2 pt-2 sm:px-5">
         <ProgrammeChart
           axis={{ ticks: view.axis.ticks.map((t, i) => ({ ...t, iso: `tick-${i}` })), startLabel: view.axis.startLabel }}
           today={view.today}
           todayLabel={view.plannedStageText}
-          stages={view.stages.map((s) => ({ ...s, open: s.end === null }))}
+          stages={view.stages}
           milestones={view.milestones}
           materials={view.materials}
           description={view.description}
-          emptyText={architect ? 'No materials on the programme yet. Shortlist materials and each one appears here against your programme.' : 'Materials appear here as the architect shortlists them.'}
+          emptyText={view.emptyText}
           emptyAction={
             architect ? (
               <Button asChild size="sm" variant="primary" icon={Compass}>
@@ -146,7 +159,9 @@ export function ProgrammeCard({ projectId, side, onEdit }: Props) {
           </Table>
         </div>
       </details>
-      <p className="m-0 border-t border-line-soft px-4 py-2.5 text-xs text-muted sm:px-5">Stages from the RIBA Plan of Work 2020. Dates are the architect&apos;s plan. Indicative.</p>
+      <p className="m-0 border-t border-line-soft px-4 py-2.5 text-xs text-muted sm:px-5" data-testid="programme-footer">
+        {view.footerText}
+      </p>
     </Card>
   )
 }

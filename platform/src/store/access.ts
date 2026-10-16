@@ -80,6 +80,15 @@ export function isProjectConsultant(state: AppData, userId: string, projectId: s
   return projectSide(state, userId, projectId) === 'consultant'
 }
 
+/**
+ * Who sets the project programme: its architect, or its client while no architect is appointed (a donor building
+ * owner's own New project), so the dates never stay suggested with nobody able to change them.
+ */
+export function canEditProgramme(state: AppData, userId: string, projectId: string): boolean {
+  const side = projectSide(state, userId, projectId)
+  return side === 'architect' || (side === 'client' && !state.world.projects[projectId]?.architectOrgId)
+}
+
 /** The projects the person works on, in their own role, in seed order. */
 export function projectsOfUser(state: AppData, userId: string): Project[] {
   return Object.values(state.world.projects).filter((p) => projectSide(state, userId, p.id) !== null)

@@ -33,6 +33,8 @@ import {
   TrackStatusSelect,
 } from './index'
 import { BANDS, SAMPLE_MATERIALS, SAMPLE_PROGRAMME, sampleModel } from './samples'
+import { TICK_TIER_CLASS } from './programmeTiers'
+import { AXIS_LABEL_TIERS } from '../domain/engines/programme'
 
 beforeAll(() => installDomShims())
 afterEach(() => cleanup())
@@ -315,6 +317,52 @@ describe('ProgrammeChart', () => {
     const today = chart.querySelector('[data-part="today"]')!
     expect(today.className).toContain('z-[1]')
     expect(chart.querySelector('[data-part="stage-band"] > span')!.className).toContain('z-[2]')
+  })
+
+  it('names each band on hover, hides bands outside the axis and draws today\'s stage solid', () => {
+    const stages = SAMPLE_PROGRAMME.stages.map((b) => ({ ...b, hoverText: `${b.label}, ${b.name}, dates`, visible: b.stage !== 7 }))
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={stages} />)
+    const bands = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-band"]'))
+    // The tooltip wraps each band without taking over its state.
+    expect(bands.map((b) => b.getAttribute('data-state'))).toEqual(['past', 'past', 'current', 'future', 'future', 'future', 'future', 'future'])
+    expect(bands[7].className).toContain('hidden')
+    expect(bands[7].getAttribute('data-visible')).toBe('false')
+    expect(bands[2].className).toContain('bg-brand-600')
+    expect(bands[2].className).toContain('text-white')
+    // Every band is its own container; the name shows whenever the band is wide enough, on any screen.
+    for (const b of bands) {
+      expect(b.className).toContain('@container')
+      const name = b.querySelector('[data-part="stage-name"]')!
+      expect(name.textContent).toBe(stages[bands.indexOf(b)].name)
+      expect(name.className).toMatch(/@min-\[\d+px\]:block/)
+      expect(name.className).toContain('truncate')
+      expect(name.className).not.toContain('max-lg:hidden')
+    }
+  })
+
+  it('shows each tier of axis labels from the plot width it was fitted to', () => {
+    TICK_TIER_CLASS.forEach((cls, tier) => {
+      if (tier === 0) expect(cls).toBe('')
+      else expect(cls).toBe(`hidden @min-[${AXIS_LABEL_TIERS[tier]}px]:block`)
+    })
+    expect(TICK_TIER_CLASS).toHaveLength(AXIS_LABEL_TIERS.length)
+    const ticks = [
+      { iso: 'a', at: 0, label: 'Oct 2026', major: true, tier: 0 },
+      { iso: 'b', at: 0.25, label: 'Jan 2027', major: true, tier: 2 },
+      { iso: 'c', at: 0.5, label: 'Apr', major: true, tier: 3 },
+    ]
+    render(<ProgrammeChart {...SAMPLE_PROGRAMME} axis={{ ticks, startLabel: null }} />)
+    const plot = byRole('img', /Programme for Merrowgate Wharf/)
+    expect(plot.className).toContain('@container')
+    const labels = Array.from(plot.querySelectorAll('[data-part="tick-label"]'))
+    expect(labels.map((l) => [l.textContent, l.getAttribute('data-tier')])).toEqual([
+      ['Oct 2026', '0'],
+      ['Jan 2027', '2'],
+      ['Apr', '3'],
+    ])
+    expect(labels[0].className).not.toContain('hidden')
+    expect(labels[1].className).toContain('@min-[640px]:block')
+    expect(labels[2].className).toContain('@min-[840px]:block')
   })
 
   it('shows the empty text and action outside the image when there are no materials', () => {

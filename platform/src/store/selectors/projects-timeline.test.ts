@@ -29,6 +29,16 @@ describe('programmeView', () => {
     expect(v.stages.filter((b) => b.state === 'past').map((b) => b.stage)).toEqual([0, 1])
     for (let i = 0; i < 7; i++) expect(Math.abs(v.stages[i].to - v.stages[i + 1].from)).toBeLessThan(1e-9)
     expect(v.stages[7]).toMatchObject({ end: null, weeksText: 'Ongoing', to: 1 })
+    // The axis stops SHOWN_AFTER_COMPLETION_DAYS after practical completion: Handover runs on past the right edge,
+    // open like stage 7, which lies wholly beyond it.
+    expect(v.stages[6]).toMatchObject({ open: true, visible: true, to: 1 })
+    expect(v.stages[7]).toMatchObject({ open: true, visible: false, from: 1 })
+    expect(v.stages.slice(0, 6).every((b) => b.visible && !b.open)).toBe(true)
+    expect(v.stages[2].hoverText).toBe(`Stage 2, Concept Design, ${v.stages[2].datesText}`)
+    expect(v.stages[2].datesText).toMatch(/^\d{1,2} Jun 2026 to \d{1,2} Nov 2026$/)
+    expect(v.stages[7].hoverText).toMatch(/^Stage 7, Use, from \d{1,2} [A-Z][a-z]{2} \d{4}$/)
+    expect(v.description).toContain('Stages: Stage 0, Strategic Definition,')
+    expect(v.footerText).toBe("Stages from the RIBA Plan of Work 2020. Dates are the architect's plan. Indicative.")
     expect(v.stages[0]).toMatchObject({ label: 'Stage 0', name: 'Strategic Definition', weeksText: '13 weeks' })
     expect(v.check).toEqual({ status: 'on', label: 'On programme', text: '' })
     expect(v.plannedStageText).toBe('Today: stage 2, Concept Design')
@@ -41,9 +51,9 @@ describe('programmeView', () => {
       expect(m.href).toBe(`/app/marketplace/${m.publicId}?project=${MERROWGATE_ID}`)
       expect(m.windowShort).toMatch(/^(Available now|Expected [A-Z][a-z]{2}( \d{4})?( to [A-Z][a-z]{2})? \d{4})$/)
     }
-    expect(v.today.at).toBeCloseTo(402 / 1855, 9)
-    expect(v.axis).toMatchObject({ startText: 'September 2025', endText: 'September 2030', spanDays: 1855 })
-    expect(v.axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['2026', '2027', '2028', '2029', '2030'])
+    expect(v.today.at).toBeCloseTo(402 / 1521, 9)
+    expect(v.axis).toMatchObject({ startText: 'September 2025', endText: 'October 2029', spanDays: 1521 })
+    expect(v.axis.ticks.filter((t) => t.label).map((t) => t.label)).toEqual(['2026', '2027', '2028', '2029'])
     expect(v.axis.startLabel).toBe('Sep 2025')
     expect(v.source).toBe('set')
     expect(v.canEdit).toBe(true)
@@ -144,12 +154,13 @@ describe('projectSetup', () => {
     ])
     expect([setup.done, setup.total, setup.visible]).toEqual([1, 6, true])
     expect(setup.nextText).toBe('Next: check the programme')
-    expect(setup.focusId).toBe('programme')
+    // The programme card carries 'Keep these dates' and 'Edit programme', so the checklist leads with the next step.
+    expect(setup.focusId).toBe('requirements')
     expect(setup.steps.map((x) => x.short)).toEqual(['Programme', 'Client', 'Requirements', 'Consultant', 'Shortlist', 'Send'])
     // The Indicative marker beside the step says it once; the text does not repeat it.
-    expect(setup.steps[0].text).toBe('Suggested from your site start and typical stage lengths. Confirm the dates or edit them.')
-    expect(setup.steps[0].action).toEqual({ label: 'Edit programme', href: null, intent: 'edit_programme' })
-    expect(setup.steps[0].secondary).toEqual({ label: 'Keep these dates', intent: 'keep_programme' })
+    expect(setup.steps[0].text).toBe('Suggested from your site start and typical stage lengths. Keep these dates or edit them on the programme.')
+    expect(setup.steps[0].action).toBeNull()
+    expect(setup.steps[0].secondary).toBeNull()
     expect(setup.steps.filter((x) => x.optional).map((x) => x.id)).toEqual(['requirements', 'consultant'])
     const p = state.world.projects[id]
     const kept = must(setProjectProgramme(state, actor(U.priya), id, { ribaStage: p.ribaStage, programme: p.programme, startDate: p.startDate })).state
@@ -163,8 +174,8 @@ describe('projectSetup', () => {
     const { state, id } = corbel()
     const declined = must(decideClientLink(state, actor(U.isla), id, 'declined', '')).state
     expect(sel.projectSetup(declined, viewer(U.priya), id)!.steps[1]).toMatchObject({ state: 'attention', action: { label: 'Ask again', intent: 'change_client' } })
-    // The programme step still comes first, so it leads; the declined client is flagged in its own tile.
-    expect(sel.projectSetup(declined, viewer(U.priya), id)!.focusId).toBe('programme')
+    // The declined client has its own banner and the programme its own buttons, so the checklist leads with the next step.
+    expect(sel.projectSetup(declined, viewer(U.priya), id)!.focusId).toBe('requirements')
     let s = must(decideClientLink(state, actor(U.isla), id, 'accepted', '')).state
     const p = s.world.projects[id]
     s = must(setProjectProgramme(s, actor(U.priya), id, { ribaStage: p.ribaStage, programme: p.programme, startDate: p.startDate })).state

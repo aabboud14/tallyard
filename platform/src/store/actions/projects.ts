@@ -10,7 +10,7 @@ import { applicableIds, keepApplicable } from '../../domain/reference/requiremen
 import { defaultCompletion, PROGRAMME_ERRORS, suggestProgramme, validateProgramme } from '../../domain/engines/programme'
 import { daysBetween, isOnOrBefore } from '../../domain/dates'
 import type { ActionResult, Actor, AppData } from '../types'
-import { ERRORS, isProjectArchitect, isProjectClient, projectOrgIds, roleOfOrg } from '../access'
+import { canEditProgramme, ERRORS, isProjectArchitect, isProjectClient, projectOrgIds, roleOfOrg } from '../access'
 import { mint } from '../ids'
 import { listIdFor } from '../lots'
 import { log, notify, plural } from '../notifications'
@@ -348,13 +348,13 @@ export function requestClientLink(state: AppData, actor: Actor, projectId: strin
 
 export type ProgrammeInput = { ribaStage: number; programme: ProgrammeDates; startDate: string }
 
-/** The architect sets the declared stage, the programme dates and when materials are needed on site. */
+/** The architect (or the client, while no architect is appointed) sets the declared stage, the programme dates and when materials are needed on site. */
 export function setProjectProgramme(state: AppData, actor: Actor, projectId: string, input: ProgrammeInput): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
   const p = state.world.projects[projectId]
   if (!p) return fail(state, ERRORS.noProject)
-  if (!isProjectArchitect(state, actor.userId, projectId)) return fail(state, ERRORS.role)
+  if (!canEditProgramme(state, actor.userId, projectId)) return fail(state, ERRORS.role)
   if (!validStage(input.ribaStage)) return fail(state, PROJECT_ERRORS.stage)
   const problems = validateProgramme(input.programme, input.startDate)
   if (problems.length > 0) return fail(state, problems[0][1])

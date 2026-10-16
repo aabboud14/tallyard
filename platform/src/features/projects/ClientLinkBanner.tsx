@@ -31,7 +31,7 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
           <span>
             {link.clientHasMembers ? (
               <>
-                <span className="font-medium text-ink">Waiting for {link.clientName} to accept this project.</span> Until they do, they cannot see it and you cannot send materials for approval. {link.requestedText}.
+                <span className="font-medium text-ink">Waiting for {link.clientName} to accept this project.</span> {link.requestedText}.
               </>
             ) : (
               <>

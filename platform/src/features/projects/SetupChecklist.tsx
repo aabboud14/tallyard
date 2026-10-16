@@ -1,8 +1,8 @@
 // The setup checklist on a new project, for its architect: check the programme, wait for the client, choose the
 // requirements, add a consultant, shortlist and send. It hides once the programme, the client and the shortlist
-// are done. It stays compact so the programme below it starts on the first screen: one row with the progress, a
-// strip of the six steps from md, the step that needs the architect now with its buttons, and the waiting client
-// line. 'Show all steps' opens every step as a tile, remembered in this browser.
+// are done. It sits straight under the programme card, which carries the programme step's own buttons, and stays
+// compact: one row with the progress, a strip of the six steps from md, the next step that needs the architect with
+// its buttons, and the waiting client line. 'Show all steps' opens every step as a tile, remembered in this browser.
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { LucideIcon } from 'lucide-react'
@@ -111,7 +111,7 @@ function FocusRow({ step, onIntent }: { step: SetupStep; onIntent: Props['onInte
           </p>
         </div>
       </div>
-      <StepButtons step={step} primary={step.state === 'current' || attention} onIntent={onIntent} className="pl-6.5 md:shrink-0 md:pl-0" />
+      <StepButtons step={step} primary={step.state !== 'waiting'} onIntent={onIntent} className="pl-6.5 md:shrink-0 md:pl-0" />
     </div>
   )
 }

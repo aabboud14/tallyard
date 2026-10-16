@@ -54,8 +54,35 @@ test('a new project waits for the client to accept', async ({ page }) => {
   await expect(page.getByTestId('programme-chart')).toBeVisible()
   await expect(page.getByTestId('programme-suggested')).toBeVisible()
 
+  // The programme leads the new project's overview: its chart starts in the top 60 percent of a laptop screen, and
+  // on a phone the today line and the stage row are on the first screen (recording audit, note 19).
+  for (const [width, height, limit] of [
+    [1280, 800, 0.6 * 800],
+    [1024, 768, 0.6 * 768],
+    [1440, 900, 0.6 * 900],
+    [390, 844, 700],
+  ] as const) {
+    await page.setViewportSize({ width, height })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const chart = await page.getByTestId('programme-chart').boundingBox()
+    expect(chart!.y, `programme chart top at ${width} by ${height}`).toBeLessThanOrEqual(limit)
+    const band = await page.locator('[data-part="stage-band"][data-state="current"]').boundingBox()
+    expect(band!.y + band!.height, `current stage band at ${width} by ${height}`).toBeLessThanOrEqual(height)
+    const today = await page.locator('[data-part="today"]').boundingBox()
+    expect(today!.y, `today line at ${width} by ${height}`).toBeLessThan(height)
+    expect(await horizontalOverflow(page), `${width} px`).toBe(0)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  // One Edit programme on the page, and Keep these dates beside it on the programme card.
+  await expect(page.getByRole('button', { name: 'Edit programme' })).toHaveCount(1)
+  await expect(page.getByTestId('programme-card').getByTestId('keep-programme')).toBeVisible()
+  // Each stage band names its stage and dates on hover (note 17).
+  await page.locator('[data-part="stage-band"][data-state="current"]').hover()
+  await expect(page.getByRole('tooltip')).toContainText('Stage 2, Concept Design, ')
+  await page.mouse.move(0, 0)
+
   // Confirming the suggested dates moves the checklist on.
-  await page.getByTestId('setup-secondary-programme').click()
+  await page.getByTestId('keep-programme').click()
   await expect(page.getByTestId('setup-step-programme')).toHaveAttribute('data-state', 'done')
 
   // Isla has a request waiting, accepts it, and then has the project.
@@ -98,5 +125,38 @@ test('a new project waits for the client to accept', async ({ page }) => {
     expect(await horizontalOverflow(page), path).toBe(0)
   }
 
+  expect(errors).toEqual([])
+})
+
+test('a short project labels its programme in months, never quarters', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'priya')
+  await page.goto('/app/projects/new')
+  await page.getByTestId('project-name').fill('Small refurb')
+  await page.getByTestId('project-start').fill('2027-03-01')
+  await page.getByTestId('project-completion').fill('2027-09-01')
+  await page.getByTestId('create-project').click()
+  await page.waitForURL('**/app/projects/prj_*')
+  const card = page.getByTestId('programme-card')
+  await expect(page.getByTestId('programme-chart')).toBeVisible()
+  for (const range of ['Whole programme', 'From today']) {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await card.getByText(range, { exact: true }).click()
+    await expect(card).toHaveAttribute('data-range', range === 'From today' ? 'ahead' : 'whole')
+    for (const width of [1440, 1024, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(card).not.toContainText(/Q[1-4] 20/)
+      // The labels on show never overlap one another.
+      const boxes = await page.locator('[data-part="tick-label"]').evaluateAll((els) =>
+        els.filter((e) => getComputedStyle(e).display !== 'none').map((e) => {
+          const r = e.getBoundingClientRect()
+          return { text: e.textContent, left: r.left, right: r.right }
+        }),
+      )
+      expect(boxes.length, `${range} at ${width}`).toBeGreaterThan(1)
+      for (let i = 1; i < boxes.length; i++) expect(boxes[i].left, `${boxes[i - 1].text} then ${boxes[i].text}, ${range} at ${width}`).toBeGreaterThanOrEqual(boxes[i - 1].right)
+      expect(await horizontalOverflow(page), `${range} at ${width}`).toBe(0)
+    }
+  }
   expect(errors).toEqual([])
 })
