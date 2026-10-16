@@ -21,6 +21,25 @@ import { RequirementsDialog } from './RequirementsDialog'
 import { AppointArchitectCard } from './AppointArchitect'
 import { ConsultantOverview } from './ConsultantOverview'
 
+/** For the client of a project with nothing shortlisted yet: who acts next, and the consultant still to come. */
+function ClientWaitingSteps({ teamHref, architectName, hasConsultant }: { teamHref: string; architectName: string; hasConsultant: boolean }) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-5" data-testid="next-steps-client-waiting">
+      <p className="m-0 text-sm text-ink-soft">
+        Nothing is shortlisted yet. <span className="font-medium text-ink">{architectName}</span> sends materials to you for approval as they shortlist them.
+      </p>
+      {hasConsultant ? null : (
+        <div className="flex flex-col items-start gap-1">
+          <p className="m-0 text-sm text-muted">No sustainability consultant yet. Your architect adds one to the project team.</p>
+          <Link to={teamHref} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-brand-700 hover:underline hover:underline-offset-4 max-sm:min-h-11" data-testid="next-steps-team">
+            See the team <ArrowRight aria-hidden="true" className="size-3.5" />
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
+
 type DialogState = { kind: 'programme' } | { kind: 'requirements' } | { kind: 'client'; mode: ChangeClientMode } | null
 
 export function Overview() {
@@ -115,7 +134,11 @@ export function Overview() {
           <Card className={h.side === 'consultant' ? undefined : 'md:col-span-2 xl:col-span-1'} data-testid="next-steps">
             <CardHeader title="Next steps" icon={ListTodo} />
             {view.nextSteps.length === 0 ? (
-              <p className="m-0 px-5 py-5 text-sm text-muted">{link ? 'More steps appear here once the client accepts the project.' : 'You are up to date on this project.'}</p>
+              view.nextStepsEmpty.kind === 'client_waiting' ? (
+                <ClientWaitingSteps teamHref={view.nextStepsEmpty.teamHref} architectName={view.nextStepsEmpty.architectName} hasConsultant={view.nextStepsEmpty.hasConsultant} />
+              ) : (
+                <p className="m-0 px-5 py-5 text-sm text-muted">{view.nextStepsEmpty.kind === 'link_pending' ? 'More steps appear here once the client accepts the project.' : 'You are up to date on this project.'}</p>
+              )
             ) : (
               <ul className="m-0 list-none divide-y divide-line-soft p-0">
                 {view.nextSteps.map((s) => (

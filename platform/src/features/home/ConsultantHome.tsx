@@ -14,6 +14,13 @@ import { Page, SectionTitle } from '../../app/Page'
 import { ActivityPanel } from './ActivityPanel'
 import { PendingLinkRequests } from '../projects/LinkRequests'
 import { TileChart } from './TileChart'
+import { FirstRunCard } from './FirstRunCard'
+
+const CONSULTANT_FIRST_STEPS = [
+  { title: 'An architect adds your consultancy', text: 'Ask the architect to choose your consultancy on the project\'s Team page. Accept the request and the project appears here.' },
+  { title: 'Set the goals and targets', text: 'Reused content, avoided carbon and the schemes the project reports against, each overridable per project.' },
+  { title: 'Write the circular economy statement', text: 'Drafted from the project\'s records. You edit it and send it to the client for review.' },
+] as const
 
 function Metrics({ v }: { v: ConsultantDashboard }) {
   const m = v.metrics
@@ -159,14 +166,13 @@ export function ConsultantHome() {
     <Page testId="consultant-home">
       <PageHeader title={v.greeting} subtitle={v.dateText} />
       <PendingLinkRequests className="mt-6" />
-      <Metrics v={v} />
+      {/* A new consultancy has no figures yet; the first steps below lead instead of four zero tiles. */}
+      {v.firstRun ? null : <Metrics v={v} />}
 
       <section aria-labelledby="projects-title" className="mt-10">
         <SectionTitle id="projects-title" title="Projects against targets" description="Reused and recycled content by value and upfront carbon avoided by reuse, secured, against the targets set for each project." actions={<IndicativeMarker />} />
         {v.rows.length === 0 ? (
-          <Card>
-            <EmptyState illustration="targets" title="No projects yet" text="When an architect adds your consultancy to a project, it appears here with its targets and figures." />
-          </Card>
+          <FirstRunCard spot="targets" titleAs="h3" testId="consultant-first-run" title="No projects yet" text="When an architect adds your consultancy to a project and you accept, it appears here with its targets and figures." steps={CONSULTANT_FIRST_STEPS} />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3" data-testid="consultant-projects">
             {v.rows.map((r) => (

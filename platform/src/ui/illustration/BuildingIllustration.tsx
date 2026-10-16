@@ -9,6 +9,8 @@ import { axo, cranePoints, massingFor, massingPoints, SKETCH_BOARD, type Massing
 const INK = '#1c1917'
 const GROUND = '#f7f6f3'
 const ROOF = '#f7f5f1'
+/** Window openings in a punched facade: dark glass, flat. */
+const WINDOW = '#3d4349'
 
 const FILL: Record<FacadeKind | 'plain', string> = {
   brick: '#b5654a',
@@ -41,7 +43,20 @@ function texture(kind: FacadeKind | 'plain', b: MassingBlock, bays: number, alon
   if (kind === 'brick') {
     for (let z = z0 + 3; z < z1; z += 3) out.push(line(along(0, z), along(1, z), `${key}c${z}`, 0.5, 0.15))
   }
-  if (kind === 'stone' || kind === 'precast' || kind === 'glass' || kind === 'plain') {
+  // Punched windows, one per bay on every storey, so a masonry or stone face reads its storeys.
+  if (kind === 'brick' || kind === 'stone') {
+    const floors = Math.round((z1 - z0) / b.storeyH)
+    for (let i = 0; i < floors; i++) {
+      const lo = z0 + i * b.storeyH + b.storeyH * 0.3
+      const hi = z0 + i * b.storeyH + b.storeyH * 0.78
+      for (let j = 0; j < bays; j++) {
+        const t0 = (j + 0.3) / bays
+        const t1 = (j + 0.7) / bays
+        out.push(<polygon key={`${key}w${i}-${j}`} points={pts([along(t0, lo), along(t1, lo), along(t1, hi), along(t0, hi)])} fill={WINDOW} opacity="0.6" />)
+      }
+    }
+  }
+  if (kind === 'stone' || kind === 'precast' || kind === 'glass' || kind === 'plain' || kind === 'brick') {
     for (let i = 1; i < b.storeys; i++) out.push(line(along(0, z0 + i * b.storeyH), along(1, z0 + i * b.storeyH), `${key}s${i}`, 0.5, 0.7))
   }
   if (kind === 'stone' || kind === 'precast' || kind === 'glass') {

@@ -8,13 +8,14 @@ import { goalDef } from '../../domain/reference/goals'
 import { goalState, goalValueText } from '../../domain/engines/goals'
 import { metricState, METRIC_STATE_WORDS, type MetricState } from '../../domain/engines/metricState'
 import { niceMax, ticks } from '../../domain/engines/chartScale'
-import { projectSketch, type BuildingSketch } from '../../domain/sketch'
+import type { BuildingSketch } from '../../domain/sketch'
 import { formatDateShort } from '../../domain/dates'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
 import type { ProjectSide } from '../access'
 import { inSentence, statementStatusText } from '../../domain/reference/sustainabilityCopy'
-import { activitySummary, type ActivitySummary } from './dashboard'
+import { activitySummary, type ActivitySummary, type ThumbMaterial } from './dashboard'
+import { clientProjectVisual } from './project-visuals'
 import { clientDashboard, type ClientDashboard } from './client-dashboard'
 import { programmeInput } from './portfolio'
 import type { ReservationGroup, ReservationsView, ApprovalsView } from './client'
@@ -117,6 +118,23 @@ export type TileBar = { value: number; max: number; target: number; valueText: s
 
 export type ClientTimelineRow = ClientDashboard['programme']['rows'][number] & { siteStartDate: string | null; completionDate: string | null; materialsFromDate: string }
 
+export type ClientCardExtra = {
+  materials: ThumbMaterial[]
+  /** 'Office, Newham', or 'Office' when no local authority is recorded. */
+  placeText: string
+  /**
+   * Null once the client has materials to see (sent or approved). Before that: 'Shortlisting under way' while the
+   * architect holds shortlisted materials not yet sent, 'Being set up' while the programme is still suggested, and
+   * 'Nothing shortlisted yet' after that. Read from the rows the client can see, never the architect's pending ones.
+   */
+  status: { kind: 'shortlisting' | 'setting_up' | 'no_shortlist'; label: string } | null
+}
+
+/** The line above a client project card's name: its type, then its local authority when one is recorded. */
+export function clientPlaceText(typeLabel: string, localAuthority: string): string {
+  return [typeLabel, localAuthority.trim()].filter((x) => x.length > 0).join(', ')
+}
+
 export type ClientHomeView = ClientDashboard & {
   tiles: {
     saving: TileReading & { valueText: string; ring: { value: number; max: number; centre: string } | null }
@@ -127,6 +145,8 @@ export type ClientHomeView = ClientDashboard & {
   reservationCounts: { pending: number; reserved: number; toRequest: number }
   timeline: { ticks: { iso: string; at: number; label: string | null }[]; today: number; todayText: string; rows: ClientTimelineRow[] }
   sketches: Record<string, BuildingSketch>
+  /** Per project card: the swatches, the type and place line, and a pill while nothing is shortlisted yet. */
+  cardExtras: Record<string, ClientCardExtra>
   activitySummary: ActivitySummary
   todoCounts: { total: number; overdue: number }
 }
@@ -159,10 +179,24 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
   const reuseAim = m.reuse.aim > 0 ? m.reuse.aim : null
   const reuseState: MetricState = m.reuse.content === null ? 'neutral' : metricState(m.reuse.content, reuseAim, 'at_least')
   const projects = d.projects.map((card) => state.world.projects[card.id]).filter((p) => !!p)
+  // Drawn the same way for every role (projectVisual), so a project looks the same to its client and its architect.
   const sketches: Record<string, BuildingSketch> = {}
+  const cardExtras: Record<string, ClientCardExtra> = {}
   for (const card of d.projects) {
     const p = state.world.projects[card.id]
-    if (p) sketches[card.id] = projectSketch(p, card.thumbs.map((t) => t.family))
+    // The same drawing as every role; swatches and status only from what the client can see.
+    const visual = p ? clientProjectVisual(state, viewer, card.id) : null
+    if (!p || !visual) continue
+    sketches[card.id] = visual.sketch
+    const status: ClientCardExtra['status'] =
+      visual.sentOrApproved > 0
+        ? null
+        : visual.pendingWithArchitect > 0
+          ? { kind: 'shortlisting', label: 'Shortlisting under way' }
+          : p.programme.source === 'set'
+            ? { kind: 'no_shortlist', label: 'Nothing shortlisted yet' }
+            : { kind: 'setting_up', label: 'Being set up' }
+    cardExtras[card.id] = { materials: visual.materials, placeText: clientPlaceText(card.typeLabel, card.localAuthority), status }
   }
   const rows: ClientTimelineRow[] = d.programme.rows.map((r) => {
     const p = projects.find((x) => x.id === r.id)
@@ -206,6 +240,7 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
     // Ticks carry a key only: their dates stay out of the view model (P3).
     timeline: { ticks: d.programme.ticks.map((t, i) => ({ iso: `tick-${i}`, at: t.at, label: t.label })), today: d.programme.today, todayText: d.programme.todayText, rows },
     sketches,
+    cardExtras,
     activitySummary: activitySummary(d.activity),
     todoCounts: { total: d.todos.length, overdue: d.todos.filter((t) => t.overdue).length },
   }

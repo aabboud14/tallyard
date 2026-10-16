@@ -154,62 +154,18 @@ export const SAMPLE_PORTFOLIO = {
 } as const satisfies Omit<PortfolioTimelineProps, 'className' | 'testId' | 'emptyText'>
 
 /**
- * The architect home as the landing page's product shot draws it: Priya Nair at Studio Oriel on 7 October 2026.
- * Fixed sample figures in the fictional world, handed over the way a selector would; nothing here is computed.
+ * The frame of the landing page's product shot: the practice, the person and the main navigation. The greeting,
+ * date, figures and project cards inside it come from the real seed through landingDashboard, so the shot always
+ * shows what Priya Nair sees after signing in to a fresh sandbox.
  */
 export const SAMPLE_DASHBOARD = {
-  org: { name: 'Studio Oriel', type: 'Architecture practice' },
+  org: { name: 'Studio Oriel', type: 'Architect' },
   person: 'Priya Nair',
-  greeting: 'Good morning, Priya',
-  dateText: 'Wednesday 7 October 2026',
   nav: {
     main: [
       { key: 'home', label: 'Home', active: true },
       { key: 'marketplace', label: 'Marketplace', active: false },
-      { key: 'saved', label: 'Saved', active: false, count: 3 },
+      { key: 'saved', label: 'Saved', active: false },
     ],
-    projects: ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court'],
   },
-  // Figures only: the landing shot takes the tile names and the shortlist segments from the real architect home.
-  metrics: {
-    active: { value: '3', sub: 'Next start on site 3 April 2028, Merrowgate Wharf' },
-    shortlisted: { value: '13', sub: 'Shortlisted, waiting or approved', values: { pending: 6, sent: 3, approved: 4 } },
-    carbon: { value: '41.0', unit: 'tCO2e', sub: 'On approved materials, against buying new', ring: { value: 41, max: 96.4, valueText: '41.0 of 96.4 tCO2e', centre: '43%' } },
-    waiting: { value: '3', state: 'warning', stateLabel: 'Over a week', sub: 'Oldest sent 9 days ago' },
-  },
-  projects: [
-    {
-      id: 'sample-merrowgate',
-      name: 'Merrowgate Wharf',
-      client: 'Lantern Quay Developments',
-      projectType: 'office',
-      typeText: 'Office',
-      stage: 2,
-      newFits: '3 new materials fit',
-      families: ['steel_section', 'steel_section', 'stone_cladding', 'curtain_wall'],
-      materials: [0, 2, 3],
-    },
-    {
-      id: 'sample-sallow',
-      name: 'Sallow Court',
-      client: 'Pellory Estates',
-      projectType: 'hotel',
-      typeText: 'Hotel',
-      stage: 1,
-      newFits: '1 new material fits',
-      families: ['clay_brick', 'clay_brick', 'timber_joist', 'raised_floor'],
-      materials: [1, 6, 5],
-    },
-    {
-      id: 'sample-ferrymoor',
-      name: 'Ferrymoor Yard',
-      client: 'Quillon Homes',
-      projectType: 'residential',
-      typeText: 'Residential',
-      stage: 3,
-      newFits: '2 new materials fit',
-      families: ['clay_brick', 'clay_brick', 'precast_cladding', 'steel_section'],
-      materials: [1, 4, 7],
-    },
-  ],
 } as const

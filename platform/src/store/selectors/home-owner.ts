@@ -43,6 +43,8 @@ export type OwnerDashboard = OwnerHome & {
   /** The owner's own item behind each request on the home, by request ID. */
   requestThumbs: Record<string, ThumbMaterial>
   activitySummary: ActivitySummary
+  /** An owner with no buildings, no New projects and nothing waiting: the home leads with the first steps instead of zero tiles. */
+  firstRun: boolean
 }
 
 /** The owner's dashboard; null for anyone who is not an asset owner. */
@@ -102,5 +104,6 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     newProjectCards,
     requestThumbs,
     activitySummary: activitySummary(home.activity),
+    firstRun: home.buildings.length === 0 && home.newProjects.length === 0 && home.requests.length === 0 && home.claims.length === 0,
   }
 }

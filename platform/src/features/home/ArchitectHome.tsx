@@ -4,24 +4,23 @@
 // short first-run welcome. Every figure comes from architectHome (P2); this file only lays it out.
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, CalendarDays, FolderKanban, FolderPlus, Hourglass, Layers, Leaf, PackagePlus, Send, Store } from 'lucide-react'
+import { ArrowRight, CalendarDays, ChevronRight, FolderKanban, FolderOpen, FolderPlus, Hourglass, Layers, Leaf, ListChecks, PackagePlus, Send, Store, UserRoundX } from 'lucide-react'
 import * as f from '../../domain/format'
 import type { Fit } from '../../domain/v1types'
 import { useView } from '../../store'
 import { MARKETPLACE_PATH } from '../../store/paths'
 import { architectHome, type ArchitectHome as ArchitectHomeView, type ProjectCardView, type WaitingItem } from '../../store/selectors/architect'
 import { FITS } from '../../store/selectors/dashboard'
-import { BarList, Button, Card, CardHeader, cx, Donut, FIT, IndicativeMarker, Legend, MARK, MaterialImage, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, SpotIllustration } from '../../ui'
+import { BarList, Button, Card, CardHeader, cx, Donut, FIT, IndicativeMarker, Legend, MARK, MaterialImage, MetricGrid, MetricTile, PageHeader, Pill, ProgressRing, ProjectThumbnail, RibaStageStrip, SpotIllustration, TYPOLOGY_VIZ } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { NewProjectDialog } from '../projects/NewProjectDialog'
 import { ProjectProgress } from '../projects/ProjectParts'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
-import { ARCHITECT_TILE_LABELS, STATUS_SEGMENTS } from './architectTiles'
+import { ARCHITECT_TILE_LABELS, carbonStateLabel, FIT_WORDS, projectsSub, STATUS_SEGMENTS, waitingSub } from './architectTiles'
 
 /** Shortlist status, in the mark colours of the shortlist board: shortlisted neutral, waiting info, approved good. */
 
-const FIT_WORDS: Record<Fit, string> = { in_time: 'in time', tight: 'tight', late: 'late', now: 'available now' }
 
 function sentText(days: number | null): string {
   if (days === null) return 'Sent'
@@ -30,15 +29,11 @@ function sentText(days: number | null): string {
   return `Sent ${days} days ago`
 }
 
-function waitingSub(count: number, oldestDays: number | null): string {
-  if (count === 0) return 'Nothing waiting'
-  if (oldestDays === null) return 'With your clients'
-  if (oldestDays === 0) return 'Sent today'
-  return `Oldest sent ${oldestDays} ${oldestDays === 1 ? 'day' : 'days'} ago`
-}
+
 
 function Metrics({ v }: { v: ArchitectHomeView }) {
   const m = v.metrics
+  const anyShortlisted = v.stats.shortlisted > 0
   const statusSegments = STATUS_SEGMENTS.map((s) => ({ key: s.key, label: s.label, value: m.byStatus[s.key], colour: s.colour }))
   return (
     <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
@@ -49,8 +44,15 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
         value={v.stats.activeProjects}
         state={m.programme.state?.state}
         stateLabel={m.programme.state?.label}
-        sub={m.nextStart ? `Next start on site ${m.nextStart.dateText}, ${m.nextStart.projectName}` : 'No start dates ahead'}
+        sub={projectsSub(m)}
         href="/app/projects"
+        footer={
+          m.settingUp > 0 ? (
+            <Pill tone="brand" icon={ListChecks} size="sm" data-testid="metric-projects-setup">
+              {m.settingUp} setting up
+            </Pill>
+          ) : undefined
+        }
       />
       <MetricTile
         testId="metric-shortlisted"
@@ -59,8 +61,8 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
         value={v.stats.shortlisted}
         state={m.timing.state?.state}
         stateLabel={m.timing.state?.label}
-        sub="Shortlisted, waiting or approved"
-        footer={<TileChart label="Shortlist by status" chart={<Donut segments={statusSegments} label="Shortlist by status" size={48} />} legend={statusSegments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} />}
+        sub={anyShortlisted ? 'Shortlisted, waiting or approved' : 'Nothing shortlisted yet'}
+        footer={!anyShortlisted ? undefined : <TileChart label="Shortlist by status" chart={<Donut segments={statusSegments} label="Shortlist by status" size={48} />} legend={statusSegments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} />}
       />
       <MetricTile
         testId="metric-waiting"
@@ -80,10 +82,10 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
         unit="tCO2e"
         indicative
         state={m.carbon.state?.state}
-        stateLabel={m.carbon.state ? `${m.carbon.state.label}, aim ${f.number(m.carbon.targetT, 0)} tCO2e` : undefined}
-        sub="On approved materials, against buying new"
+        stateLabel={carbonStateLabel(m)}
+        sub={m.carbon.liveT > 0 ? 'On approved materials, against buying new' : 'Shows once materials are shortlisted'}
         footer={
-          <TileChart
+          m.carbon.liveT <= 0 ? undefined : <TileChart
             label="Approved carbon of live shortlists"
             chart={<ProgressRing value={m.carbon.approvedT} max={m.carbon.liveT} label="Approved carbon of live shortlists" valueText={`${f.number(m.carbon.approvedT, 1)} of ${f.number(m.carbon.liveT, 1)} tCO2e`} size={48} />}
             note={`${m.carbon.percentText} of the ${f.number(m.carbon.liveT, 1)} tCO2e on live shortlists`}
@@ -110,9 +112,63 @@ function FitPills({ fits }: { fits: Record<Fit, number> }) {
   )
 }
 
-function ProjectCard({ p }: { p: ProjectCardView }) {
+/** A new project's setup progress and its client's answer, in the words of the projects list. */
+function SetupPills({ p }: { p: ProjectCardView }) {
+  if (!p.setup && p.linkStatus === 'accepted') return null
   return (
-    <Card interactive as="article" className="flex flex-col overflow-hidden" data-testid={`home-project-${p.id}`}>
+    <span className="relative z-[1] flex flex-wrap gap-1.5">
+      {p.setup ? (
+        <Pill tone="brand" size="sm" icon={ListChecks} data-testid={`home-setup-pill-${p.id}`}>
+          Setting up, {p.setup.done} of {p.setup.total}
+        </Pill>
+      ) : null}
+      {p.linkStatus === 'pending' ? (
+        <Pill tone="info" size="sm" icon={Hourglass} data-testid={`home-link-pill-${p.id}`}>
+          Waiting for client
+        </Pill>
+      ) : p.linkStatus === 'declined' ? (
+        <Pill tone="warning" size="sm" icon={UserRoundX} data-testid={`home-link-pill-${p.id}`}>
+          Client declined
+        </Pill>
+      ) : null}
+    </span>
+  )
+}
+
+function NewFits({ p }: { p: ProjectCardView }) {
+  // What is new for this project in particular leads: how many are of a kind already on its shortlist, then the split by fit.
+  const parts = [...(p.newLikeShortlist > 0 ? [`${p.newLikeShortlist} like your shortlist`] : []), ...FITS.filter((k) => p.newFitsBy[k] > 0).map((k) => `${p.newFitsBy[k]} ${FIT_WORDS[k]}`)]
+  return (
+    <div className="relative z-[1] flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-line-soft px-4 py-2 sm:px-5">
+      <Link
+        to={p.newFitsHref}
+        data-testid={`home-new-fits-${p.id}`}
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
+      >
+        <PackagePlus aria-hidden="true" className="size-3.5" />
+        {p.newFits} new {p.newFits === 1 ? 'material fits' : 'materials fit'}
+        <ArrowRight aria-hidden="true" className="size-3.5" />
+      </Link>
+      {parts.length > 0 ? (
+        <span className="text-xs text-muted" data-testid={`home-new-fits-by-${p.id}`}>
+          {parts.join(', ')}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+function ProjectCard({ p }: { p: ProjectCardView }) {
+  const setup = p.setup
+  const nothingYet = p.total === 0
+  return (
+    <Card
+      interactive
+      as="article"
+      className={cx('flex flex-col overflow-hidden', setup && 'border-brand-100! bg-brand-50/70! ring-1 ring-inset ring-brand-100 hover:border-brand-200!')}
+      data-testid={`home-project-${p.id}`}
+      data-setup={setup ? 'true' : undefined}
+    >
       <ProjectThumbnail sketch={p.sketch} materials={p.materials} aspect="16/10" rounded="top" className="border-b border-line-soft" />
       <div className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">
         <div className="min-w-0">
@@ -125,29 +181,28 @@ function ProjectCard({ p }: { p: ProjectCardView }) {
             {p.clientName}, {p.typeLabel}
           </p>
         </div>
+        <SetupPills p={p} />
         <RibaStageStrip stage={p.plannedStage ?? p.stage} showLabel size="sm" className="text-sm text-ink-soft" testId={`home-stage-${p.id}`} />
         <p className="m-0 flex items-center gap-1.5 text-sm text-ink-soft">
           <CalendarDays aria-hidden="true" className="size-3.5 shrink-0 text-faint" />
           Materials needed from <span className="font-medium text-ink">{p.startText}</span>
         </p>
-        <FitPills fits={p.fits} />
-        <div className="mt-auto pt-1">
-          <ProjectProgress counts={p.counts} total={p.total} size="sm" />
+        {setup && nothingYet ? null : <FitPills fits={p.fits} />}
+        <div className="mt-auto flex flex-col gap-3 pt-1">
+          {setup && nothingYet ? null : <ProjectProgress counts={p.counts} total={p.total} size="sm" />}
+          {setup?.nextText ? (
+            <Link
+              to={setup.href}
+              data-testid={`home-setup-next-${p.id}`}
+              className="relative z-[1] inline-flex min-h-8 items-center gap-1.5 self-start rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
+            >
+              {setup.nextText}
+              <ArrowRight aria-hidden="true" className="size-3.5 shrink-0" />
+            </Link>
+          ) : null}
         </div>
       </div>
-      {p.newFits > 0 ? (
-        <div className="relative z-[1] border-t border-line-soft px-4 py-2 sm:px-5">
-          <Link
-            to={p.newFitsHref}
-            data-testid={`home-new-fits-${p.id}`}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11"
-          >
-            <PackagePlus aria-hidden="true" className="size-3.5" />
-            {p.newFits} new {p.newFits === 1 ? 'material fits' : 'materials fit'}
-            <ArrowRight aria-hidden="true" className="size-3.5" />
-          </Link>
-        </div>
-      ) : null}
+      {p.newFits > 0 ? <NewFits p={p} /> : null}
     </Card>
   )
 }
@@ -196,7 +251,7 @@ function Waiting({ items }: { items: WaitingItem[] }) {
 
 function CarbonByProject({ v }: { v: ArchitectHomeView }) {
   const rows = v.carbonByProject
-  const any = rows.some((r) => r.liveT > 0)
+  const any = rows.length > 0
   return (
     <Card data-testid="carbon-by-project">
       <CardHeader title="Carbon by project" icon={Leaf} titleAs="h2" description="Approved and on live shortlists" actions={<IndicativeMarker />} />
@@ -228,8 +283,81 @@ function CarbonByProject({ v }: { v: ArchitectHomeView }) {
         ) : (
           <p className="m-0 text-sm text-muted">Shortlist materials to see their avoided carbon here.</p>
         )}
+        {any && v.carbonNotYet.length > 0 ? (
+          <p className="m-0 text-xs text-muted" data-testid="carbon-not-yet">
+            Nothing shortlisted yet on {v.carbonNotYet.map((x) => x.name).join(', ')}.
+          </p>
+        ) : null}
       </div>
     </Card>
+  )
+}
+
+/** Under the welcome: what the Marketplace holds now, by category, so a new practice sees real stock at once. */
+function MarketplaceNow({ firstRun }: { firstRun: NonNullable<ArchitectHomeView['firstRun']> }) {
+  if (firstRun.total === 0) return null
+  return (
+    <section aria-labelledby="marketplace-now" className="mt-10" data-testid="architect-first-marketplace">
+      <SectionTitle
+        id="marketplace-now"
+        title="In the Marketplace now"
+        description={`${firstRun.total} reclaimed ${firstRun.total === 1 ? 'material' : 'materials'} from buildings coming down. Create a project to check each one against your start on site.`}
+        actions={
+          <Link to={MARKETPLACE_PATH} className="inline-flex min-h-6 items-center gap-1 rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
+            Open the Marketplace <ArrowRight aria-hidden="true" className="size-3.5" />
+          </Link>
+        }
+      />
+      <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-3">
+        {firstRun.folders.map((c) => (
+          <li key={c.typology} className="min-w-0">
+            <Link
+              to={c.href}
+              data-testid={`first-category-${c.typology}`}
+              className="group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            >
+              {/*
+                Laid out by how many drawings there are, never with blank cells: three as one large tile beside two
+                stacked (each keeps the 4 by 3 board), two side by side, one centred on the paper at its own 4 by 3.
+              */}
+              {c.thumbs.length >= 3 ? (
+                <div aria-hidden="true" className="grid aspect-[2/1] grid-cols-[2fr_1fr] grid-rows-2 gap-px border-b border-line bg-line" data-layout="three">
+                  {c.thumbs.slice(0, 3).map((t, i) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="fill" className={cx('size-full', i === 0 && 'row-span-2')} />
+                  ))}
+                </div>
+              ) : c.thumbs.length === 2 ? (
+                <div aria-hidden="true" className="grid aspect-[2/1] grid-cols-2 gap-px border-b border-line bg-line" data-layout="two">
+                  {c.thumbs.map((t) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="fill" className="size-full" />
+                  ))}
+                </div>
+              ) : (
+                <div aria-hidden="true" className="flex aspect-[2/1] justify-center border-b border-line bg-paper" data-layout="one">
+                  {c.thumbs.map((t) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="4/3" className="h-full" />
+                  ))}
+                </div>
+              )}
+              <div className="relative flex flex-1 flex-col gap-1 py-4 pl-5 pr-4">
+                <span aria-hidden="true" className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-[2px]" style={{ background: TYPOLOGY_VIZ[c.typology] }} />
+                <span className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2 font-semibold text-ink">
+                    <FolderOpen aria-hidden="true" className="size-4 shrink-0 text-muted" />
+                    {c.label}
+                  </span>
+                  <span className="shrink-0 text-sm tabular-nums text-muted">{c.count === 1 ? '1 material' : `${c.count} materials`}</span>
+                </span>
+                <span className="text-sm text-muted">{c.familiesText || c.description}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-700">
+                  Browse {c.label.toLowerCase()} <ChevronRight aria-hidden="true" className="size-3.5" />
+                </span>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -305,6 +433,7 @@ export function ArchitectHome() {
       {first ? (
         <div className="mt-8">
           <Welcome onCreate={() => setCreating(true)} />
+          {view.firstRun ? <MarketplaceNow firstRun={view.firstRun} /> : null}
         </div>
       ) : (
         <>

@@ -11,13 +11,14 @@ import type { SurveyStatus } from '../../store'
 import { surveyorDashboard, type SurveyorDashboard } from '../../store/selectors/home-surveyor'
 import type { AppointmentBuilding } from '../../store/selectors/surveyor'
 import type { ClaimState } from '../../store/selectors/claims'
-import { Avatar, BuildingThumb, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
+import { Avatar, BuildingThumb, BuildingThumbnail, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
 import { MergeCallouts } from '../buildings/MergeCallout'
 import { TileChart } from './TileChart'
 import { BuildingRequirementsLine } from './BuildingRequirementsLine'
+import { FirstRunCard } from './FirstRunCard'
 
 const STEPS = [
   { key: 'appointed', label: 'Appointed' },
@@ -27,6 +28,12 @@ const STEPS = [
 
 /** A building the firm added itself starts with the owner's confirmation, not an appointment. */
 const OWNER_STEP_LABEL = 'Owner confirms'
+
+const SURVEYOR_FIRST_STEPS = [
+  { title: 'Add a building, or wait for an appointment', text: 'Add a building your firm is surveying now. When an owner appoints your firm, their buildings appear here too.' },
+  { title: 'Capture each item on site', text: 'Photos, sizes, condition and where each item sits, from your phone, room by room.' },
+  { title: 'Submit the survey to the owner', text: 'Once the owner confirms the building, you submit the survey and they decide what to recover and list.' },
+] as const
 
 const STATUS_ORDER: { key: SurveyStatus; label: string }[] = [
   { key: 'not_started', label: 'Not started' },
@@ -51,12 +58,13 @@ function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): St
 }
 
 /**
- * The steps of a survey. For a building no owner has confirmed yet, the first step is the owner's confirmation and it
- * is not done: capturing can start meanwhile, and submitting waits for it.
+ * The steps of a survey. For a building the firm added itself, the first step reads Added (not Appointed), and the
+ * owner's confirmation follows it, not yet done: capturing can start meanwhile, and submitting waits for it.
  */
 function stepsFor(status: SurveyStatus, claim: ClaimState | null): { key: string; label: string; state: StepState }[] {
   if (!claim || claim.status === 'linked') return STEPS.map((s) => ({ key: s.key, label: s.label, state: stepState(status, s.key) }))
   return [
+    { key: 'added', label: 'Added', state: 'done' },
     { key: 'owner', label: OWNER_STEP_LABEL, state: claim.status === 'pending' ? 'current' : 'todo' },
     { key: 'in_progress', label: 'Capturing', state: status === 'not_started' ? 'todo' : 'current' },
     { key: 'submitted', label: 'Submitted', state: 'todo' },
@@ -146,6 +154,8 @@ function BuildingRow({
   const contractor = b.role === 'contractor'
   return (
     <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:px-5" data-testid={`home-building-${b.id}`}>
+      {/* A phone shows the drawing full width above the name; wider screens a compact one beside it. */}
+      {extra ? <BuildingThumbnail sketch={extra.sketch} aspect="16/10" rounded="md" fit className="w-full sm:hidden" testId={`home-building-thumb-${b.id}`} /> : null}
       {extra ? <BuildingThumb sketch={extra.sketch} size="lg" decorative={false} className="shrink-0 max-sm:hidden" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="min-w-0">
@@ -247,11 +257,25 @@ export function SurveyorHome() {
           </>
         }
       />
-      {v.contractorTiles ? <ContractorMetrics v={v} t={v.contractorTiles} /> : <Metrics v={v} />}
+      {v.firstRun ? null : v.contractorTiles ? <ContractorMetrics v={v} t={v.contractorTiles} /> : <Metrics v={v} />}
 
       <section aria-labelledby="appointments-title" className="mt-10 flex min-w-0 flex-col gap-4">
         <SectionTitle id="appointments-title" title="Your appointments" description="Buildings owners appointed your firm to survey or to date, by client." className="mb-0" />
-        {none ? (
+        {v.firstRun ? (
+          <FirstRunCard
+            spot="building"
+            titleAs="h3"
+            testId="surveyor-first-run"
+            title="No appointments yet"
+            text="Buildings your firm surveys appear here, by client, each drawn from its survey with its progress."
+            steps={SURVEYOR_FIRST_STEPS}
+            actions={
+              <Button asChild variant="primary" icon={Plus}>
+                <Link to="/app/buildings?new=1">Add building</Link>
+              </Button>
+            }
+          />
+        ) : none ? (
           <Card>
             <EmptyState
               illustration="building"

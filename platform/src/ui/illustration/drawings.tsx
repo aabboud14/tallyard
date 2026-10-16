@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
 import type { Spec } from '../../domain/types'
 import { sectionOrThrow } from '../../domain/reference/sections'
 import { formatLength, titleFor } from '../../domain/reference/families'
-import { BOARD, profilePath, SAFE, scaleFor, TEXT_SIZE, type DrawingScale, type DrawingView } from './helpers'
+import { BOARD, profilePath, SAFE, scaleFor, STEEL_CARD_PX_PER_M, STEEL_CARD_PX_PER_MM, STEEL_TINT, TEXT_SIZE, type DrawingScale, type DrawingView } from './helpers'
 
 export const INK = '#1c1917'
 const DIM = '#78716c'
@@ -372,6 +372,76 @@ function ColumnAxo({ designation, lengthM, uid, view, plain }: { designation: st
       <DimLine a={bottom(edge)} b={top(edge)} label={formatLength(lengthM)} offset={[16, 0]} anchor="start" size={size} />
       {view === 'detail' ? <DimLine a={top([0, 0])} b={top(edge)} label={`${s.b}`} offset={[8, -13]} anchor="start" size={size} /> : null}
       <TitleStrip text={designation} view={view} />
+    </g>
+  )
+}
+
+const STEEL_WORD = { UB: 'Universal beam', UC: 'Universal column' } as const
+
+/**
+ * A steel member on a card: its cut end, hatched and filled in the member's colour, at one scale shared by every
+ * card and standing on one ground line, so a 610 deep beam stands three times as tall as a 203 column. Beside it,
+ * the type and serial depth in large type, the real depth by width in millimetres, and the length as a bar at one
+ * scale. The axonometric stays on the material page.
+ */
+export function SectionCard({ designation, lengthM, uid }: { designation: string; lengthM: number; uid: string }) {
+  const s = sectionOrThrow(designation)
+  const size = TEXT_SIZE.card
+  const k = STEEL_CARD_PX_PER_MM
+  const tint = STEEL_TINT[s.type]
+  const h = s.h * k
+  const b = s.b * k
+  // The end view stands on a ground line, centred in the left half, clear of the top left chip and the bottom strip.
+  const ground = 276
+  const cx = 168
+  const x0 = cx - b / 2
+  const y0 = ground - h
+  const dimX = x0 + b + 12
+  // The right column: type and depth, the words, the sizes and the length bar.
+  const col = 268
+  const colW = SAFE.right - col
+  const bar = Math.min(colW, lengthM * STEEL_CARD_PX_PER_M)
+  const hatch = `${uid}-hatch`
+  return (
+    <g data-part="section-card" data-type={s.type}>
+      <defs>
+        <pattern id={hatch} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="5" stroke={PAPER} strokeWidth="0.9" opacity="0.4" />
+        </pattern>
+      </defs>
+      <rect width={W} height={H} fill={PAPER} />
+      <line x1={cx - 92} y1={ground + 0.5} x2={cx + 92} y2={ground + 0.5} stroke={DIM} strokeWidth="0.75" data-part="ground" />
+      <g data-part="end-view" transform={`translate(${x0.toFixed(1)} ${y0.toFixed(1)})`}>
+        <path d={profilePath(s.h, s.b, s.tw, s.tf, 1.2 * s.tw)} transform={`scale(${k})`} fill={tint} />
+        <path d={profilePath(s.h, s.b, s.tw, s.tf, 1.2 * s.tw)} transform={`scale(${k})`} fill={`url(#${hatch})`} stroke={INK} strokeWidth={1.25 / k} strokeLinejoin="round" />
+      </g>
+      <g data-part="dimension" stroke={DIM} strokeWidth="0.75" fill="none">
+        <line x1={dimX} y1={y0} x2={dimX} y2={ground} />
+        <line x1={dimX - 5} y1={y0} x2={dimX + 5} y2={y0} />
+        <line x1={dimX - 5} y1={ground} x2={dimX + 5} y2={ground} />
+        <line x1={dimX - 3} y1={y0 + 3} x2={dimX + 3} y2={y0 - 3} />
+        <line x1={dimX - 3} y1={ground + 3} x2={dimX + 3} y2={ground - 3} />
+      </g>
+      <text transform={`translate(${(dimX + 15).toFixed(1)} ${((y0 + ground) / 2).toFixed(1)}) rotate(-90)`} textAnchor="middle" fontFamily={FONT} fontSize={size * 0.8} fontWeight="500" fill={DIM} data-part="depth-label" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {s.h}
+      </text>
+      <text x={col} y={112} fontFamily={FONT} fontSize="38" fontWeight="700" fill={tint} data-part="designation-type" style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+        {s.type} {s.serial.split('x')[0]}
+      </text>
+      <text x={col} y={140} fontFamily={FONT} fontSize={size} fontWeight="600" fill={INK}>
+        {STEEL_WORD[s.type]}
+      </text>
+      <text x={col} y={164} fontFamily={FONT} fontSize={size} fontWeight="500" fill={DIM} data-part="section-size" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {s.h} x {s.b} mm
+      </text>
+      <g data-part="length">
+        <text x={col} y={214} fontFamily={FONT} fontSize={size} fontWeight="500" fill={INK} style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {formatLength(lengthM)} long
+        </text>
+        <rect x={col} y={226} width={bar.toFixed(1)} height="9" fill={tint} stroke={INK} strokeWidth="0.9" />
+        <line x1={col} y1={230.5} x2={col + bar} y2={230.5} stroke={PAPER} strokeWidth="0.75" opacity="0.6" />
+      </g>
+      <TitleStrip text={designation} note="End view to a common scale" view="card" />
     </g>
   )
 }

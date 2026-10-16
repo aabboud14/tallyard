@@ -14,7 +14,7 @@ import { ClientMetrics } from './client/ClientMetrics'
 import { TodoList } from './client/TodoList'
 import { ProgrammeTimeline } from './client/ProgrammeTimeline'
 import { TrackingTable } from './client/TrackingTable'
-import { ProjectCards } from './client/ProjectCards'
+import { ClientWelcome, ProjectCards } from './client/ProjectCards'
 
 const RES_TONE = { pending: 'info', accepted: 'brand', declined: 'danger', withdrawn: 'neutral' } as const
 
@@ -88,6 +88,19 @@ function ReservationsPanel({ v }: { v: NonNullable<ReturnType<typeof clientHomeV
 export function ClientHome() {
   const v = useView(clientHomeView)
   if (!v) return null
+  // First run: no project yet, so no figures, programme or tracking to show. One welcome with the steps ahead,
+  // under any request waiting to be accepted.
+  if (v.projects.length === 0)
+    return (
+      <Page testId="client-home">
+        <div className="flex flex-col gap-8">
+          <PendingLinkRequests />
+          <PageHeader title={v.greeting} subtitle={v.dateText} />
+          <ClientWelcome />
+          <ActivityPanel panelId="home-activity-client" rows={v.activity} summary={v.activitySummary} emptyText="Decisions and reservations on your projects appear here." />
+        </div>
+      </Page>
+    )
   return (
     <Page testId="client-home">
       <div className="flex flex-col gap-8">

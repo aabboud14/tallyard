@@ -160,8 +160,8 @@ describe('material illustrations', () => {
     render(<MaterialImage spec={SAMPLE_MATERIALS[0].spec} publicId={SAMPLE_MATERIALS[0].publicId} testId="steel" />)
     const steel = byTestId('steel')
     expect(steel.textContent).toContain('7.5 m')
-    expect(steel.querySelector('[data-part="section-axo"]')).not.toBeNull()
-    expect(steel.querySelector('[data-part="title-strip"]')!.textContent).toBe('Not to scale')
+    expect(steel.querySelector('[data-part="section-card"]')).not.toBeNull()
+    expect(steel.querySelector('[data-part="title-strip"]')!.textContent).toBe('End view to a common scale')
   })
 
   it('names the drawing and its source on the larger view', () => {

@@ -121,7 +121,8 @@ export function MaterialGallery({ entries, spec, family, publicId, title, model 
                     <ModelViewer mesh={model.closeUp ?? model.mesh} family={family} title={title} size="thumb" testId="gallery-model-thumb" className="w-full" />
                   </span>
                 ) : e.kind === 'illustration' ? (
-                  <MaterialImage spec={spec} publicId={publicId} aspect="fill" />
+                  // The thumbnail previews the stage, so a steel member keeps the stage's axonometric.
+                  <MaterialImage spec={spec} publicId={publicId} aspect="fill" axo />
                 ) : (
                   <DrawingView spec={spec} big={false} />
                 )}

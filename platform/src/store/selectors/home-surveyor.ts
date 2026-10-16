@@ -27,6 +27,8 @@ export type SurveyorDashboard = SurveyorHome & {
    * home shows the buildings to date and the dates set, not capture and survey counts. Null for every other firm.
    */
   contractorTiles: { buildings: number; dated: number; items: number; undated: number; undatedState: TileState | null; buildingsSubText: string; datedSubText: string; undatedSubText: string } | null
+  /** A firm with no buildings at all, appointed or its own: the home leads with the first steps instead of zero tiles. */
+  firstRun: boolean
 }
 
 /** The surveyor's dashboard; null for anyone who is not a site surveyor. */
@@ -65,7 +67,9 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
   const unlinkedItems = home.stats.unlinkedItems
   const notLinked = (n: number) => (n === 1 ? 'a building not yet linked' : 'buildings not yet linked')
   const itemsSubText = !lastCaptureText ? 'Nothing captured yet' : unlinkedItems > 0 ? `Last on ${lastCaptureText}, including ${unlinkedItems} at ${notLinked(home.unlinked.length)}` : `Last on ${lastCaptureText}`
-  const openSubText = unlinkedOpen > 0 ? `Plus ${unlinkedOpen} at ${notLinked(unlinkedOpen)}` : open > 0 ? 'Not yet submitted to the owner' : 'Every survey submitted'
+  const appointed = byStatus.not_started + byStatus.in_progress + byStatus.submitted
+  // 'Every survey submitted' only when there are surveys to have submitted.
+  const openSubText = unlinkedOpen > 0 ? `Plus ${unlinkedOpen} at ${notLinked(unlinkedOpen)}` : open > 0 ? 'Not yet submitted to the owner' : appointed > 0 ? 'Every survey submitted' : 'No surveys yet'
   let contractorTiles: SurveyorDashboard['contractorTiles'] = null
   if (contractorOnly(state, viewer)) {
     const rows = home.appointments.flatMap((g) => g.buildings).filter((b) => b.setsDates)
@@ -90,5 +94,6 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
     extras,
     unlinkedExtras,
     activitySummary: activitySummary(home.activity),
+    firstRun: appointed === 0 && home.unlinked.length === 0,
   }
 }

@@ -8,15 +8,18 @@ import type { ReactNode } from 'react'
 import type { Spec } from '../../domain/types'
 import { between, pick, type Rng } from './rng'
 import { BOARD, SAFE, TEXT_SIZE, type DrawingView } from './helpers'
-import { INK, PAPER, PanelAxo, PanelElevation, SectionAxo } from './drawings'
+import { INK, PAPER, PanelAxo, PanelElevation, SectionAxo, SectionCard } from './drawings'
 
 const W = BOARD.width
 const H = BOARD.height
 const FONT = 'Inter Variable, Inter, ui-sans-serif, sans-serif'
 
 /** The illustration for one family, drawn on the shared board. */
-/** `plain` draws the technical drawings (steel, curtain wall, raised floor) on white with no grid; swatches are unchanged. */
-export function MaterialArt({ spec, r, uid, view = 'card', plain = false }: { spec: Spec; r: Rng; uid: string; view?: 'card' | 'detail'; plain?: boolean }) {
+/**
+ * `plain` draws the technical drawings (steel, curtain wall, raised floor) on white with no grid; swatches are
+ * unchanged. `axo` keeps a steel member in axonometric at card size, for the material page's thumbnails.
+ */
+export function MaterialArt({ spec, r, uid, view = 'card', plain = false, axo = false }: { spec: Spec; r: Rng; uid: string; view?: 'card' | 'detail'; plain?: boolean; axo?: boolean }) {
   switch (spec.family) {
     case 'clay_brick':
       return <Brick r={r} uid={uid} view={view} stock={/stock/i.test(spec.brickType)} lime={/lime/i.test(spec.mortar)} />
@@ -31,7 +34,9 @@ export function MaterialArt({ spec, r, uid, view = 'card', plain = false }: { sp
     case 'timber_joist':
       return <Timber r={r} uid={uid} view={view} />
     case 'steel_section':
-      return <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} plain={plain} />
+      // A card shows the cut end at one shared scale, so a page of steel reads member by member; the material page keeps
+      // the axonometric, on its stage and on the thumbnails that preview the stage (axo).
+      return view === 'card' && !axo ? <SectionCard designation={spec.designation} lengthM={spec.lengthM} uid={uid} /> : <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} plain={plain} />
   }
 }
 

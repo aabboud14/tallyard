@@ -352,10 +352,25 @@ export type ProjectOverview = {
   setup: ProjectSetup | null
   link: ClientLinkView | null
   nextSteps: NextStep[]
+  /** What Next steps says when nextSteps is empty (P2: decided here, not in the screen). */
+  nextStepsEmpty: NextStepsEmpty
   activity: ActivityRow[]
   /** Every activity line on the project the viewer may read. */
   activityTotal: number
   empty: boolean
+}
+
+/**
+ * Next steps with nothing to do. 'client_waiting': the client has nothing sent to them yet (rows still pending with
+ * the architect do not count, as the client cannot see them), so the line says who acts next. 'link_pending': the
+ * architect waits for the client to accept. 'up_to_date' otherwise.
+ */
+export type NextStepsEmpty = { kind: 'client_waiting'; architectName: string; hasConsultant: boolean; teamHref: string } | { kind: 'link_pending' } | { kind: 'up_to_date' }
+
+export function nextStepsEmptyFor(side: ProjectHeader['side'], rows: { status: WishStatus }[], header: Pick<ProjectHeader, 'architectText' | 'consultantName'>, linkPending: boolean, teamHref: string): NextStepsEmpty {
+  if (side === 'client' && !rows.some((r) => r.status !== 'pending')) return { kind: 'client_waiting', architectName: header.architectText, hasConsultant: !!header.consultantName, teamHref }
+  if (linkPending) return { kind: 'link_pending' }
+  return { kind: 'up_to_date' }
 }
 
 export function projectOverview(state: AppData, viewer: Viewer, projectId: string): ProjectOverview | null {
@@ -384,6 +399,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     if ((sustainabilityOf(state, projectId).statement?.status ?? 'draft') === 'draft') steps.push({ id: 'statement', text: 'Send the circular economy statement for review', href: `${base}/statement` })
     steps.push({ id: 'compliance', text: 'Export the compliance workbook', href: `${base}/compliance` })
   }
+  const link = clientLinkView(state, viewer, projectId)
   return {
     header,
     counts,
@@ -393,8 +409,9 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     programme: programmeView(state, viewer, projectId, 'whole')!,
     requirements: projectRequirementsView(state, viewer, projectId)!,
     setup: projectSetup(state, viewer, projectId),
-    link: clientLinkView(state, viewer, projectId),
+    link,
     nextSteps: steps,
+    nextStepsEmpty: nextStepsEmptyFor(header.side, rows, header, link !== null, `${base}/team`),
     activity: activityFor(state, viewer, { projectId }, 8),
     activityTotal: activityFor(state, viewer, { projectId }, Number.MAX_SAFE_INTEGER).length,
     empty: rows.length === 0,

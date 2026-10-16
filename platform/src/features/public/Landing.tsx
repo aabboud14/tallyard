@@ -1,11 +1,17 @@
 // The public landing page: what the product is, who it is for, how it works, and the way in. Technical drawing
-// and real product views, never decoration: no glows, masks, halos, blur or floating cards. Every figure on the
-// page is a fixed sample from the fictional world, labelled as such.
-import type { ReactNode } from 'react'
+// and real product views, never decoration: no glows, masks, halos, blur or floating cards. The product shot is
+// the real architect home on a fresh sandbox (landingDashboard), at today's date; the other figures are samples
+// from the fictional world, labelled as such.
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Bookmark, Building2, Camera, ChevronDown, CircleHelp, ClipboardCheck, Compass, FolderClosed, FolderKanban, Hourglass, House, Layers, Leaf, Lock, Search, Settings, Store, Users } from 'lucide-react'
 import { PRODUCT_NAME } from '../../domain/constants'
-import { buildingSketch, projectSketch } from '../../domain/sketch'
+import { buildingSketch } from '../../domain/sketch'
+import * as f from '../../domain/format'
+import { nowIso, today } from '../../sandbox/clock'
+import { landingDashboard } from '../../store/selectors/landing'
+import { FITS } from '../../store/selectors/dashboard'
+import { FRAMEWORKS_CAPTION, FRAMEWORKS_TITLE, reportingFrameworks } from '../../domain/reference/frameworks'
 import {
   Avatar,
   Badge,
@@ -28,7 +34,7 @@ import {
   TargetMeter,
 } from '../../ui'
 import { BANDS, SAMPLE_DASHBOARD, SAMPLE_MATERIALS } from '../../ui/samples'
-import { ARCHITECT_TILE_LABELS as T, STATUS_SEGMENTS } from '../home/architectTiles'
+import { ARCHITECT_TILE_LABELS as T, carbonStateLabel, FIT_WORDS, projectsSub, STATUS_SEGMENTS, waitingSub } from '../home/architectTiles'
 import { LandingScene } from './LandingScene'
 import { HERO, LANDING_CTA, LANDING_FACTS, LANDING_PRINCIPLES, LANDING_ROLES, LANDING_STEPS, type LandingRoleKey } from './landingContent'
 
@@ -111,6 +117,27 @@ function Facts() {
   )
 }
 
+/** The frameworks the product maps to, named as text from its own reference data: no logos, no badges. */
+function Frameworks() {
+  const items = reportingFrameworks()
+  return (
+    <section aria-labelledby="frameworks-h" className={cx(WRAP, 'pt-12 sm:pt-16')} data-testid="landing-frameworks">
+      <h2 id="frameworks-h" className="m-0 text-sm font-semibold text-ink-soft">
+        {FRAMEWORKS_TITLE}
+      </h2>
+      <ul className="m-0 mt-4 grid list-none grid-cols-1 gap-x-8 p-0 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((x) => (
+          <li key={x.id} className="flex min-w-0 flex-col gap-0.5 border-t border-line py-3.5" data-testid={`framework-${x.id}`}>
+            <span className="text-base font-semibold text-ink">{x.name}</span>
+            <span className="text-sm text-muted">{x.line}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="m-0 border-t border-line pt-3 text-xs text-muted">{FRAMEWORKS_CAPTION}</p>
+    </section>
+  )
+}
+
 function SectionHeading({ id, eyebrow, title, text, className }: { id?: string; eyebrow: string; title: ReactNode; text?: ReactNode; className?: string }) {
   return (
     <div className={cx('max-w-[640px]', className)}>
@@ -137,29 +164,32 @@ function NavItem({ icon: Icon, label, active = false, count }: { icon?: typeof H
 
 const NAV_ICON = { home: House, marketplace: Store, saved: Bookmark } as const
 
+
 function DashboardShot() {
-  const d = SAMPLE_DASHBOARD
+  const frame = SAMPLE_DASHBOARD
+  // The real architect home on a fresh sandbox, at today's date and time (P7: through the one clock).
+  const d = useMemo(() => landingDashboard(today(), nowIso()), [])
   const m = d.metrics
-  const segments = STATUS_SEGMENTS.map((s) => ({ key: s.key, label: s.label, value: m.shortlisted.values[s.key], colour: s.colour }))
+  const segments = STATUS_SEGMENTS.map((s) => ({ key: s.key, label: s.label, value: m.byStatus[s.key], colour: s.colour }))
   return (
     <div className="flex min-w-0">
       <aside className="hidden w-[208px] shrink-0 flex-col gap-5 border-r border-line-soft bg-canvas px-3 py-3.5 md:flex">
         <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1">
-          <Avatar name={d.org.name} shape="square" size="md" hue={200} decorative />
+          <Avatar name={frame.org.name} shape="square" size="md" hue={200} decorative />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-semibold text-ink">{d.org.name}</div>
-            <div className="truncate text-xs text-muted">{d.org.type}</div>
+            <div className="truncate text-[13px] font-semibold text-ink">{frame.org.name}</div>
+            <div className="truncate text-xs text-muted">{frame.org.type}</div>
           </div>
           <ChevronDown aria-hidden="true" className="size-3.5 text-faint" />
         </div>
         <div className="flex flex-col gap-0.5">
-          {d.nav.main.map((n) => (
-            <NavItem key={n.key} icon={NAV_ICON[n.key]} label={n.label} active={n.active} count={'count' in n ? n.count : undefined} />
+          {frame.nav.main.map((n) => (
+            <NavItem key={n.key} icon={NAV_ICON[n.key]} label={n.label} active={n.active} />
           ))}
         </div>
         <div className="flex flex-col gap-0.5">
           <div className="px-2 pb-1 text-2xs font-medium text-muted">Projects</div>
-          {d.nav.projects.map((p) => (
+          {d.navProjects.map((p) => (
             <NavItem key={p} icon={FolderClosed} label={p} />
           ))}
         </div>
@@ -176,56 +206,82 @@ function DashboardShot() {
             <span className="min-w-0 truncate">Search materials, projects and buildings</span>
             <Kbd className="ml-auto">Ctrl K</Kbd>
           </div>
-          <Avatar name={d.person} size="sm" decorative className="ml-auto sm:ml-0" />
+          <Avatar name={frame.person} size="sm" decorative className="ml-auto sm:ml-0" />
         </div>
         <div className="flex flex-col gap-6 px-3 pb-6 pt-5 sm:px-6">
           <div>
-            <div className="text-xl font-semibold tracking-[-0.015em] text-ink">{d.greeting}</div>
+            <div className="text-xl font-semibold tracking-[-0.015em] text-ink" data-testid="product-shot-greeting">
+              {d.greeting}
+            </div>
             <div className="mt-0.5 text-[13px] text-muted">{d.dateText}</div>
           </div>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            <MetricTile icon={FolderKanban} label={T.projects} value={m.active.value} sub={m.active.sub} />
+            <MetricTile
+              icon={FolderKanban}
+              label={T.projects}
+              value={d.stats.activeProjects}
+              state={m.programme.state?.state}
+              stateLabel={m.programme.state?.label}
+              sub={projectsSub(m)}
+            />
             <MetricTile
               icon={Layers}
               label={T.shortlisted}
-              value={m.shortlisted.value}
-              sub={m.shortlisted.sub}
+              value={d.stats.shortlisted}
+              testId="product-shot-shortlisted"
+              state={m.timing.state?.state}
+              stateLabel={m.timing.state?.label}
+              sub="Shortlisted, waiting or approved"
               chart={<Donut segments={segments} label="Shortlist by status" />}
               footer={<Legend items={segments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} className="text-xs" />}
             />
             <MetricTile
               icon={Leaf}
               label={T.carbon}
-              value={m.carbon.value}
-              unit={m.carbon.unit}
-              chart={<ProgressRing value={m.carbon.ring.value} max={m.carbon.ring.max} label="Approved carbon of live shortlists" valueText={m.carbon.ring.valueText} centre={m.carbon.ring.centre} />}
-              sub={m.carbon.sub}
+              value={f.number(m.carbon.approvedT, 1)}
+              unit="tCO2e"
+              testId="product-shot-carbon"
+              state={m.carbon.state?.state}
+              stateLabel={carbonStateLabel(m)}
+              chart={<ProgressRing value={m.carbon.approvedT} max={m.carbon.liveT} label="Approved carbon of live shortlists" valueText={`${f.number(m.carbon.approvedT, 1)} of ${f.number(m.carbon.liveT, 1)} tCO2e`} centre={m.carbon.percentText} />}
+              sub="On approved materials, against buying new"
               indicative
             />
-            <MetricTile icon={Hourglass} label={T.waiting} value={m.waiting.value} state={m.waiting.state} stateLabel={m.waiting.stateLabel} sub={m.waiting.sub} />
+            <MetricTile
+              icon={Hourglass}
+              label={T.waiting}
+              value={m.waiting.count}
+              state={m.waiting.state?.state}
+              stateLabel={m.waiting.state?.label}
+              sub={waitingSub(m.waiting.count, m.waiting.oldestDays)}
+            />
           </div>
           <div>
             <div className="text-base font-semibold text-ink">Your projects</div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {d.projects.map((p, i) => (
-                <div key={p.id} className={cx(i > 0 && 'max-sm:hidden', i === 2 && 'sm:max-lg:hidden', 'min-w-0 overflow-hidden rounded-lg border border-line bg-surface')}>
-                  <ProjectThumbnail
-                    rounded="top"
-                    sketch={projectSketch({ id: p.id, name: p.name, projectType: p.projectType }, [...p.families])}
-                    materials={p.materials.map((i) => ({ publicId: SAMPLE_MATERIALS[i].publicId, spec: SAMPLE_MATERIALS[i].spec }))}
-                  />
-                  <div className="flex flex-col gap-2 p-4">
-                    <div>
-                      <div className="truncate text-sm font-semibold text-ink">{p.name}</div>
-                      <div className="truncate text-xs text-muted">
-                        {p.client}, {p.typeText}
+              {d.projects.slice(0, 3).map((p, i) => {
+                const fits = FITS.filter((k) => p.fits[k] > 0)
+                return (
+                  <div key={p.id} className={cx(i > 0 && 'max-sm:hidden', i === 2 && 'sm:max-lg:hidden', 'min-w-0 overflow-hidden rounded-lg border border-line bg-surface')} data-testid="product-shot-project">
+                    <ProjectThumbnail rounded="top" sketch={p.sketch} materials={p.materials} />
+                    <div className="flex flex-col gap-2 p-4">
+                      <div>
+                        <div className="truncate text-sm font-semibold text-ink">{p.name}</div>
+                        <div className="truncate text-xs text-muted">
+                          {p.clientName}, {p.typeLabel}
+                        </div>
                       </div>
+                      <RibaStageStrip stage={p.plannedStage ?? p.stage} showLabel size="sm" />
+                      {fits.length > 0 ? <div className="truncate text-xs text-ink-soft">{fits.map((k) => `${p.fits[k]} ${FIT_WORDS[k]}`).join(', ')}</div> : null}
+                      {p.newFits > 0 ? (
+                        <div className="text-xs font-medium text-brand-700">
+                          {p.newFits} new {p.newFits === 1 ? 'material fits' : 'materials fit'}
+                        </div>
+                      ) : null}
                     </div>
-                    <RibaStageStrip stage={p.stage} showLabel size="sm" />
-                    <div className="text-xs font-medium text-brand-700">{p.newFits}</div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -532,6 +588,7 @@ export function Landing() {
       <main>
         <Hero />
         <Facts />
+        <Frameworks />
         <ProductShot />
         <Roles />
         <HowItWorks />
