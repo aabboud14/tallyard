@@ -1,6 +1,7 @@
 // A share link (/app/links/:linkId), for anyone signed in. A donor building owner shares some lots by link; whoever
 // opens it first accepts the confidentiality terms, then sees the lots as anonymous public listings. The owner's own
-// organisation sees a preview. A revoked or unknown link reads as no longer active.
+// organisation sees a preview. A revoked link reads as no longer active; a link this sandbox has never seen (made in
+// another browser) says so, as sandbox links live in the browser that made them.
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Eye, House, LockKeyhole, ShieldCheck } from 'lucide-react'
@@ -19,6 +20,23 @@ export function LinkPage() {
   const { role } = useSession()
   const [busy, setBusy] = useState(false)
   if (!v) return null
+  if (v.state === 'unknown')
+    return (
+      <Page testId="link-page" width="narrow">
+        <EmptyState
+          variant="page"
+          illustration="inbox"
+          title="This link is not in this sandbox"
+          text="Sandbox links open only in the browser where they were made, so a link sent to another browser or device does not open here. Ask the owner to share the lots with you on Tallyard instead."
+          action={
+            <Button asChild variant="primary" icon={House}>
+              <Link to="/app/home">Go home</Link>
+            </Button>
+          }
+          testId="link-unknown"
+        />
+      </Page>
+    )
   if (v.state === 'inactive')
     return (
       <Page testId="link-page" width="narrow">

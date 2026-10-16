@@ -2,7 +2,7 @@
 // against, breadcrumbs that never name what the viewer cannot open, and activity grouped by day.
 import { describe, expect, it } from 'vitest'
 import { fresh, U, viewer, NOW } from '../../test/fixtures'
-import { FERRYMOOR_ID, MERROWGATE_ID, SALLOW_ID } from '../../domain/seed/world'
+import { FERRYMOOR_ID, MERROWGATE_ID, SALLOW_ID, TIVERNE_ID } from '../../domain/seed/world'
 import { DEFAULT_DISCOVER_QUERY, type DiscoverQuery } from './discover'
 import { checkingProjectFor, clearDiscoverFilters, discoverParamsFor, discoverQueryFromParams } from './arch-discover'
 import { pageLocation, slugLabel } from './arch-breadcrumbs'
@@ -143,9 +143,14 @@ describe('searchResults', () => {
     expect(materials?.results[0].href).toBe('/app/marketplace/L-Q23X7N')
   })
 
-  it('offers pages and projects before anything is typed, and no materials to an owner', () => {
+  it('offers pages and projects before anything is typed, and an owner only other sellers\' materials', () => {
     const empty = searchResults(fresh(), viewer(U.priya), '')
     expect(empty.map((g) => g.kind)).toEqual(['page', 'project'])
-    expect(searchResults(fresh(), viewer(U.tom), 'stone').some((g) => g.kind === 'material')).toBe(false)
+    // Audit 16 October, note C5: an owner may build too, so it finds materials; never its own lots, which it manages in its buildings.
+    const s = fresh()
+    const own = new Set(Object.values(s.world.lots).filter((l) => s.world.items[l.itemId].buildingId === TIVERNE_ID).map((l) => l.publicId))
+    const materials = searchResults(s, viewer(U.tom), 'stone').filter((g) => g.kind === 'material').flatMap((g) => g.results)
+    expect(materials.length).toBeGreaterThan(0)
+    for (const e of materials) expect(own.has(e.href.split('/').pop() ?? '')).toBe(false)
   })
 })

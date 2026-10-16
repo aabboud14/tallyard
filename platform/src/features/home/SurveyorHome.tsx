@@ -15,6 +15,7 @@ import { Avatar, BuildingThumb, Button, Card, cx, Donut, EmptyState, MARK, Metri
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
+import { MergeCallouts } from '../buildings/MergeCallout'
 import { TileChart } from './TileChart'
 
 const STEPS = [
@@ -22,6 +23,9 @@ const STEPS = [
   { key: 'in_progress', label: 'Capturing' },
   { key: 'submitted', label: 'Submitted' },
 ] as const
+
+/** A building the firm added itself starts with the owner's confirmation, not an appointment. */
+const OWNER_STEP_LABEL = 'Owner confirms'
 
 const STATUS_ORDER: { key: SurveyStatus; label: string }[] = [
   { key: 'not_started', label: 'Not started' },
@@ -37,19 +41,34 @@ const TYPOLOGIES: { key: Typology; label: string; word: string }[] = [
 
 const CLAIM_TONE: Record<ClaimState['status'], Tone> = { linked: 'brand', not_linked: 'neutral', pending: 'warning', declined: 'danger' }
 
-function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): 'done' | 'current' | 'todo' {
+type StepState = 'done' | 'current' | 'todo'
+
+function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): StepState {
   const order = { not_started: 0, in_progress: 1, submitted: 2 }[status]
   const at = { appointed: 0, in_progress: 1, submitted: 2 }[key]
   return at < order || (at === order && status === 'submitted') ? 'done' : at === order ? 'current' : 'todo'
 }
 
-function Steps({ status }: { status: SurveyStatus }) {
+/**
+ * The steps of a survey. For a building no owner has confirmed yet, the first step is the owner's confirmation and it
+ * is not done: capturing can start meanwhile, and submitting waits for it.
+ */
+function stepsFor(status: SurveyStatus, claim: ClaimState | null): { key: string; label: string; state: StepState }[] {
+  if (!claim || claim.status === 'linked') return STEPS.map((s) => ({ key: s.key, label: s.label, state: stepState(status, s.key) }))
+  return [
+    { key: 'owner', label: OWNER_STEP_LABEL, state: claim.status === 'pending' ? 'current' : 'todo' },
+    { key: 'in_progress', label: 'Capturing', state: status === 'not_started' ? 'todo' : 'current' },
+    { key: 'submitted', label: 'Submitted', state: 'todo' },
+  ]
+}
+
+function Steps({ status, claim = null }: { status: SurveyStatus; claim?: ClaimState | null }) {
   return (
     <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0" aria-label="Survey progress">
-      {STEPS.map((s, i) => {
-        const st = stepState(status, s.key)
+      {stepsFor(status, claim).map((s, i) => {
+        const st = s.state
         return (
-          <li key={s.key} className="flex items-center gap-2">
+          <li key={s.key} className="flex items-center gap-2" data-step={s.key} data-state={st}>
             {i > 0 ? <span aria-hidden="true" className={cx('h-px w-4 sm:w-6', st === 'todo' ? 'bg-line' : 'bg-brand-300')} /> : null}
             <span className={cx('inline-flex items-center gap-1.5 text-xs font-medium', st === 'todo' ? 'text-faint' : st === 'current' ? 'text-ink' : 'text-brand-700')}>
               <span aria-hidden="true" className={cx('size-2 rounded-full', st === 'todo' && 'border border-line-strong')} style={st === 'todo' ? undefined : { background: st === 'current' ? MARK.warning : MARK.brand }} />
@@ -93,7 +112,36 @@ function Metrics({ v }: { v: SurveyorDashboard }) {
   )
 }
 
-function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuilding; extra: SurveyorDashboard['extras'][string] | undefined; children?: ReactNode; /** Offer to ask the owner to confirm the building. */ ask?: boolean }) {
+/** A firm that only dates buildings as their contractor: buildings to date and dates set, no capture or survey counts. */
+function ContractorMetrics({ v, t }: { v: SurveyorDashboard; t: NonNullable<SurveyorDashboard['contractorTiles']> }) {
+  return (
+    <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
+      <MetricTile testId="metric-clients" label="Clients" icon={Users} value={v.stats.clients} sub="Owners who invited your firm" />
+      <MetricTile testId="metric-to-date" label="Buildings to date" icon={Building2} value={t.buildings} sub={t.buildingsSubText} />
+      <MetricTile testId="metric-dated" label="Dates set" icon={CalendarClock} value={t.dated} sub={t.datedSubText} />
+      <MetricTile testId="metric-undated" label="Still to date" icon={ClipboardList} value={t.undated} state={t.undatedState?.state} stateLabel={t.undatedState?.label} sub={t.undatedSubText} />
+    </MetricGrid>
+  )
+}
+
+function BuildingRow({
+  b,
+  extra,
+  children,
+  ask = false,
+  merge = false,
+  claim = null,
+}: {
+  b: AppointmentBuilding
+  extra: SurveyorDashboard['extras'][string] | undefined
+  children?: ReactNode
+  /** Offer to ask the owner to confirm the building. */
+  ask?: boolean
+  /** Offer to move a building the firm added itself into this appointment, when they look like the same place. */
+  merge?: boolean
+  /** Where a building the firm added stands with its owner; null for an appointment. */
+  claim?: ClaimState | null
+}) {
   const contractor = b.role === 'contractor'
   return (
     <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:px-5" data-testid={`home-building-${b.id}`}>
@@ -107,17 +155,18 @@ function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuildi
             <Pill tone={SURVEY_TONE[b.status]} dot size="sm">
               {b.statusLabel}
             </Pill>
-            {contractor ? (
-              <Pill tone="info" size="sm">
-                Contractor
+            {b.setsDates ? (
+              <Pill tone="info" size="sm" data-testid={`contractor-pill-${b.id}`}>
+                {contractor ? 'Contractor' : 'Surveyor and contractor'}
               </Pill>
             ) : null}
             {children}
           </div>
           <p className="m-0 mt-0.5 truncate text-sm text-muted">{b.address}</p>
         </div>
-        {contractor ? null : <Steps status={b.status} />}
+        {contractor ? null : <Steps status={b.status} claim={claim} />}
         {extra ? <TypologyBar counts={extra.byTypology} /> : null}
+        {merge ? <MergeCallouts intoId={b.id} /> : null}
         <p className="m-0 text-sm text-ink-soft">
           {contractor ? (
             <>
@@ -127,11 +176,16 @@ function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuildi
             <>
               <span className="font-medium tabular-nums text-ink">{b.itemCount}</span> {b.itemCount === 1 ? 'item' : 'items'} captured
               {b.lastCaptureOn ? <span className="text-muted">, last on {formatDate(b.lastCaptureOn)}</span> : null}
+              {b.setsDates ? (
+                <span className="text-muted" data-testid={`dates-set-${b.id}`}>
+                  . Dates set for {b.datedCount} of {b.itemCount}
+                </span>
+              ) : null}
             </>
           )}
         </p>
       </div>
-      <div className="flex shrink-0 gap-2 sm:flex-col md:flex-row">
+      <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:flex-nowrap md:flex-row">
         {contractor ? (
           <Button asChild variant="primary" icon={CalendarClock} className="max-sm:flex-1">
             <Link to={`${b.href}/availability`}>Set dates</Link>
@@ -148,6 +202,13 @@ function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuildi
             <Button asChild icon={List} className="max-sm:flex-1">
               <Link to={`${b.href}/inventory`}>Inventory</Link>
             </Button>
+            {b.setsDates ? (
+              <Button asChild icon={CalendarClock} className="max-sm:flex-1">
+                <Link to={`${b.href}/availability`} data-testid={`set-dates-${b.id}`}>
+                  Set dates
+                </Link>
+              </Button>
+            ) : null}
             <Button asChild variant="primary" icon={Camera} className="max-sm:flex-1">
               <Link to={`${b.href}/capture`} data-testid={`capture-${b.id}`}>
                 Capture
@@ -174,15 +235,17 @@ export function SurveyorHome() {
             <Button asChild icon={Plus}>
               <Link to="/app/buildings?new=1">Add building</Link>
             </Button>
-            <Button asChild variant="primary" icon={Camera}>
-              <Link to={v.quickCapture.href} data-testid="home-capture">
-                Capture
-              </Link>
-            </Button>
+            {v.contractorTiles ? null : (
+              <Button asChild variant="primary" icon={Camera}>
+                <Link to={v.quickCapture.href} data-testid="home-capture">
+                  Capture
+                </Link>
+              </Button>
+            )}
           </>
         }
       />
-      <Metrics v={v} />
+      {v.contractorTiles ? <ContractorMetrics v={v} t={v.contractorTiles} /> : <Metrics v={v} />}
 
       <section aria-labelledby="appointments-title" className="mt-10 flex min-w-0 flex-col gap-4">
         <SectionTitle id="appointments-title" title="Your appointments" description="Buildings owners appointed your firm to survey or to date, by client." className="mb-0" />
@@ -213,7 +276,7 @@ export function SurveyorHome() {
               </div>
               <ul className="m-0 list-none divide-y divide-line-soft p-0">
                 {g.buildings.map((b) => (
-                  <BuildingRow key={b.id} b={b} extra={v.extras[b.id]} />
+                  <BuildingRow key={b.id} b={b} extra={v.extras[b.id]} merge />
                 ))}
               </ul>
             </Card>
@@ -227,7 +290,7 @@ export function SurveyorHome() {
           <Card>
             <ul className="m-0 list-none divide-y divide-line-soft p-0">
               {v.unlinked.map((b) => (
-                <BuildingRow key={b.id} b={b} extra={v.unlinkedExtras[b.id]} ask={b.claim.status === 'not_linked' || b.claim.status === 'declined'}>
+                <BuildingRow key={b.id} b={b} extra={v.unlinkedExtras[b.id]} claim={b.claim} ask={b.claim.status === 'not_linked' || b.claim.status === 'declined'}>
                   <Pill tone={CLAIM_TONE[b.claim.status]} dot size="sm" data-testid={`claim-${b.id}`}>
                     {b.claim.label}
                   </Pill>

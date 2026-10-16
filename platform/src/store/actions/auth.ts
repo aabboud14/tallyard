@@ -6,6 +6,7 @@ import { defaultNotificationPrefs, isEmail, normaliseEmail, resolveOrgType } fro
 import { mint } from '../ids'
 import { notify } from '../notifications'
 import { clean, fail, ok, withWorld } from './common'
+import { resolveContractorInvites } from './contractor'
 
 export const AUTH_ERRORS = {
   mismatch: 'That email and password do not match.',
@@ -89,7 +90,8 @@ export function signUpState(state: AppData, f: Omit<SignUpFields, 'password'> & 
   s = withWorld(s, w)
   s = { ...s, orgProfiles: { ...s.orgProfiles, [om.id]: { address: '' } } }
   const r = addPerson(s, { name: clean(f.name, 80), email: f.email, title: '', orgId: om.id, salt: f.salt, passwordHash: f.passwordHash, now: f.now })
-  return ok(r.state, r.userId)
+  // A building waiting for a contractor at this email gets the new firm (audit 16 October, note 28).
+  return ok(resolveContractorInvites(r.state, r.userId, f.now), r.userId)
 }
 
 /** The invite behind a token, when it can still be used. */
@@ -110,7 +112,7 @@ export function acceptInviteState(state: AppData, token: string, f: { name: stri
   let s: AppData = { ...r.state, invites: { ...r.state.invites, [token]: { ...r.state.invites[token], status: 'accepted', acceptedUserId: r.userId } } }
   const orgName = s.world.orgs[inv.orgId]?.name ?? ''
   s = notify(s, { orgIds: [inv.orgId], kind: 'team', title: `${s.users[r.userId].name} joined ${orgName}`, body: `They accepted the invite sent to ${inv.email}.`, href: '/app/settings/team', at: f.now, actorUserId: r.userId })
-  return ok(s, r.userId)
+  return ok(resolveContractorInvites(s, r.userId, f.now), r.userId)
 }
 
 /** Sets a new password for the account with this email. */

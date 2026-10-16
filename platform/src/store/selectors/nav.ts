@@ -87,6 +87,19 @@ function lastActivityByProject(state: AppData, orgId: string): Map<string, strin
   return out
 }
 
+/** The role label for a surveying firm whose only buildings are ones it dates as deconstruction contractor. */
+export const CONTRACTOR_ROLE_LABEL = 'Deconstruction contractor'
+
+/**
+ * Whether a surveying or deconstruction firm works on buildings only as their contractor (it surveys none and added
+ * none): it reads as a deconstruction contractor and has no Capture page to use.
+ */
+export function contractorOnly(state: AppData, viewer: Viewer): boolean {
+  if (roleOfUser(state, viewer.userId) !== 'surveyor') return false
+  const sides = buildingsOfUser(state, viewer.userId).map((b) => buildingSide(state, viewer.userId, b.id))
+  return sides.length > 0 && sides.every((x) => x === 'contractor')
+}
+
 function badge(n: number): number | null {
   return n > 0 ? n : null
 }
@@ -149,8 +162,8 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
   } else if (role === 'owner') {
     const buildings = buildingsOfUser(state, viewer.userId)
     const own = projects.filter((p) => isProjectClient(state, viewer.userId, p.id))
-    // An owner with a New project reads the marketplace for it, as its client would.
-    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), ...(own.length > 0 ? [item('marketplace', 'Marketplace', MARKETPLACE_PATH, 'Store')] : [])]))
+    // A donor building owner may build too, so it always reads the marketplace as a client would (audit note C5).
+    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), item('marketplace', 'Marketplace', MARKETPLACE_PATH, 'Store')]))
     sections.push({
       id: 'buildings',
       title: 'Donor buildings',
@@ -171,7 +184,8 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
       return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href)) })
     }
     const unlinked = unlinkedBuildings(state, viewer)
-    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), item('capture', 'Capture', '/app/capture', 'Camera')]))
+    // A firm that only sets dates as a deconstruction contractor has nothing to capture in, so no Capture item.
+    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), ...(contractorOnly(state, viewer) ? [] : [item('capture', 'Capture', '/app/capture', 'Camera')])]))
     sections.push({
       id: 'clients',
       title: 'Clients',
@@ -189,7 +203,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     sections.push(navSection('engagements', 'Engagements', engagementsOf(state, viewer).map((e) => item(`engagement-${e.id}`, e.name, `/app/engagements/${e.id}/waste`, 'Recycle'))))
   }
   return {
-    org: { id: org.id, name: org.name, typeLabel: orgTypeLabel(org.type), roleLabel: ROLE_LABELS[role], initials: initials(org.name) },
+    org: { id: org.id, name: org.name, typeLabel: orgTypeLabel(org.type), roleLabel: role === 'surveyor' && contractorOnly(state, viewer) ? CONTRACTOR_ROLE_LABEL : ROLE_LABELS[role], initials: initials(org.name) },
     user: { id: user.id, name: user.name, email: user.email, title: user.title, initials: initials(user.name), colour: user.avatarColour, sample: user.sample },
     role,
     sections,
@@ -217,10 +231,12 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
   // Round 2: a donor building owner reads the marketplace and its projects once it is the client of a New project.
   const buyer = (): RouteAccess => (roles('architect', 'client', 'consultant') === 'ok' || ownerHasClientProject(state, viewer.userId) ? 'ok' : 'forbidden')
   // The old Discover address answers exactly as the Marketplace, so its redirect is reached before any refusal.
+  // Every donor building owner reads the marketplace, with or without a New project yet (audit note C5).
+  const reader = (): RouteAccess => (buyer() === 'ok' || role === 'owner' ? 'ok' : 'forbidden')
   if (section === 'marketplace' || section === 'discover') {
-    if (id === undefined) return buyer()
+    if (id === undefined) return reader()
     if (tab !== undefined) return 'not_found'
-    if (buyer() !== 'ok') return 'forbidden'
+    if (reader() !== 'ok') return 'forbidden'
     return materialView(state, viewer, id, null) ? 'ok' : 'forbidden'
   }
   if (section === 'capture') return id === undefined ? roles('owner', 'surveyor') : 'not_found'
@@ -249,7 +265,9 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     const side = buildingSide(state, viewer.userId, id)
     if (!side) return 'forbidden'
     if (tab === undefined) return 'ok'
-    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability'].includes(tab)) return 'not_found'
+    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability', 'activity'].includes(tab)) return 'not_found'
+    // Everyone with a side on the building reads its activity, filtered to what their organisation may read.
+    if (tab === 'activity') return sub === undefined ? 'ok' : 'not_found'
     // The records (inventory, capture, testing) are for the owner and the surveyor; a contractor alone sets dates only.
     const records = canCaptureIn(state, viewer.userId, id)
     if (tab === 'inventory' && sub !== undefined) {

@@ -1,13 +1,14 @@
 // Where the viewer is, as breadcrumbs for the top bar and a title for the browser tab. Names come only from
 // records the viewer may open: a route they cannot open reads as its section alone.
 import type { AppData, Viewer } from '../types'
-import { buildingSide, isBuildingContractor, projectSide } from '../access'
+import { buildingSide, isBuildingContractor, projectSide, roleOfUser } from '../access'
 import { listingOf, lotByPublicId } from '../lots'
 import { projectTabs } from './project'
 import { buildingTabs } from './owner'
 import { routeAccess } from './nav'
 import { MARKETPLACE_PATH } from '../paths'
 import { linkPageTitle } from './links'
+import { NOT_YET_LINKED } from './surveyor'
 
 export type AppCrumb = { label: string; href: string | null }
 
@@ -49,7 +50,8 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
   const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
   const [, section = 'home', id, tab, sub] = parts
   const access = routeAccess(state, viewer, pathname)
-  const sectionLabel = SECTION_LABELS[section] ?? slugLabel(section)
+  // A surveying firm's buildings page is its Appointments, as the page title says.
+  const sectionLabel = section === 'buildings' && roleOfUser(state, viewer.userId) === 'surveyor' ? 'Appointments' : (SECTION_LABELS[section] ?? slugLabel(section))
   const sectionHref = section === 'engagements' ? null : section === 'discover' ? MARKETPLACE_PATH : `/app/${section}`
   const done = (crumbs: AppCrumb[]): PageLocation => {
     const last = crumbs[crumbs.length - 1]
@@ -80,7 +82,9 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string): 
     const b = state.world.buildings[id]
     const side = buildingSide(state, viewer.userId, id)
     if (!b || !side) return done([crumb(sectionLabel, sectionHref)])
-    const base = [crumb(sectionLabel, sectionHref), crumb(b.name, `/app/buildings/${id}`)]
+    // A building the firm added itself is not an appointment yet: it sits under Not yet linked on that page.
+    const group = side === 'surveyor' && b.ownerOrgId === null ? [crumb(NOT_YET_LINKED, `${sectionHref}#not-yet-linked`)] : []
+    const base = [crumb(sectionLabel, sectionHref), ...group, crumb(b.name, `/app/buildings/${id}`)]
     if (tab === undefined) return done(base)
     const t = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).find((x) => x.id === tab)
     const tabCrumb = crumb(t ? t.label : slugLabel(tab), `/app/buildings/${id}/${tab}`)

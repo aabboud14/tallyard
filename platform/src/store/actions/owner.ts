@@ -152,13 +152,24 @@ export function createBuilding(state: AppData, actor: Actor, input: NewBuildingI
 
 export type BuildingPatch = Partial<Pick<NewBuildingInput, 'name' | 'address' | 'postcodeDistrict' | 'localAuthority' | 'region' | 'stripOutStart' | 'dismantlingStart' | 'clearBy'>>
 
-/** The owner edits a building's name, address, location or programme. */
+/**
+ * Whether the person may edit a building's details: its owner, or the surveying firm that added it while no owner has
+ * confirmed it (so a surveyor can correct what they typed, and the owner can correct it once linked).
+ */
+export function canEditBuildingDetails(state: AppData, userId: string, buildingId: string): boolean {
+  const b = state.world.buildings[buildingId]
+  if (!b) return false
+  if (isBuildingOwner(state, userId, buildingId)) return true
+  return buildingSide(state, userId, buildingId) === 'surveyor' && b.ownerOrgId === null && b.createdByOrgId === state.users[userId]?.orgId
+}
+
+/** The owner (or the firm that added an unlinked building) edits its name, address, location or programme. */
 export function updateBuilding(state: AppData, actor: Actor, buildingId: string, patch: BuildingPatch): ActionResult {
   const a = acting(state, actor)
   if (typeof a === 'string') return fail(state, a)
   const b = state.world.buildings[buildingId]
   if (!b) return fail(state, ERRORS.noBuilding)
-  if (!isBuildingOwner(state, actor.userId, buildingId)) return fail(state, ERRORS.role)
+  if (!canEditBuildingDetails(state, actor.userId, buildingId)) return fail(state, ERRORS.role)
   const programme = {
     stripOutStart: patch.stripOutStart !== undefined ? patch.stripOutStart : b.programme.stripOutStart,
     dismantlingStart: patch.dismantlingStart !== undefined ? patch.dismantlingStart : b.programme.dismantlingStart,

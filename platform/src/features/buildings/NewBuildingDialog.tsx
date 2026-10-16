@@ -12,7 +12,7 @@ import { blankElement } from '../../store/selectors/buildings-ui'
 import { Button, Dialog, Field, Input, RadioCards, Select, Textarea, toast } from '../../ui'
 import { StructureEditor } from './StructureCard'
 
-type Kind = 'donor' | 'project'
+export type Kind = 'donor' | 'project'
 
 type Draft = {
   name: string
@@ -74,10 +74,29 @@ function intOrNull(s: string): number | null {
 
 export type Created = { kind: 'building' | 'project'; id: string; name: string }
 
-export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = false }: { open: boolean; onOpenChange: (o: boolean) => void; onCreated?: (c: Created) => void; donorOnly?: boolean }) {
+export function NewBuildingDialog({
+  open,
+  onOpenChange,
+  onCreated,
+  donorOnly = false,
+  initialKind = 'donor',
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  onCreated?: (c: Created) => void
+  donorOnly?: boolean
+  /** The kind chosen when the dialog opens: an 'Add new project' button opens it on New project. */
+  initialKind?: Kind
+}) {
   const options = useView(selectors.newBuildingOptions)
   const navigate = useNavigate()
-  const [kind, setKind] = useState<Kind>('donor')
+  const [kind, setKind] = useState<Kind>(initialKind)
+  // Each opening starts on the kind the button asked for (state adjusted while rendering, as React recommends).
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setKind(initialKind)
+  }
   const [d, setD] = useState<Draft>(EMPTY)
   const [rows, setRows] = useState<StructuralElement[]>(START_ROWS)
   const [otherLa, setOtherLa] = useState(false)
@@ -89,7 +108,7 @@ export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = f
   const close = () => {
     setD(EMPTY)
     setRows(START_ROWS)
-    setKind('donor')
+    setKind(initialKind)
     setOtherLa(false)
     setError(null)
     onOpenChange(false)

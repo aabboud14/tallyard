@@ -69,10 +69,14 @@ export const act = {
   withdrawBuildingClaim: bind(claims.withdrawBuildingClaim),
   decideBuildingClaim: bind(claims.decideBuildingClaim),
   deleteSurveyBuilding: bind(claims.deleteSurveyBuilding),
+  mergeSurveyBuilding: bind(claims.mergeSurveyBuilding),
+  confirmBuildingClaimInto: bind(claims.confirmBuildingClaimInto),
   // Deconstruction contractor
   appointContractor: bind(contractor.appointContractor),
   setContractorDates: bind(contractor.setContractorDates),
   applyContractorDates: bind(contractor.applyContractorDates),
+  inviteContractorByEmail: bind(contractor.inviteContractorByEmail),
+  withdrawContractorInvite: bind(contractor.withdrawContractorInvite),
   // Testing
   requestTesting: bind(testing.requestTesting),
   recordTestingBooked: bind(testing.recordTestingBooked),

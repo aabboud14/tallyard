@@ -3,13 +3,14 @@
 import { describe, it, expect } from 'vitest'
 import { actor, addTestUser, fresh, must, U, viewer } from './fixtures'
 import { openShareLink } from '../store/actions/links'
-import { setContractorDates } from '../store/actions/contractor'
-import { createOwnerProject } from '../store/actions/owner'
+import { inviteContractorByEmail, setContractorDates } from '../store/actions/contractor'
+import { createBuilding, createOwnerProject } from '../store/actions/owner'
+import { createSurveyBuilding } from '../store/actions/claims'
 import { FENNICK_ID, TIVERNE_LINK_ID } from '../sandbox/seed-owner-surveyor'
 import { dateFormats } from '../domain/dates'
 import type { AppData, Viewer } from '../store/types'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from '../domain/privacy/privateStrings'
-import { itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
+import { HARROWDEN_ID, itemByTag, lotForItem, MERROWGATE_ID, ORG_IDS, SALLOW_ID, TIVERNE_ID } from '../domain/seed/world'
 import { DEFAULT_DISCOVER_QUERY } from '../store/selectors/discover'
 import * as sel from '../store/selectors'
 import { projectsOfUser, buildingsOfUser } from '../store/access'
@@ -152,6 +153,19 @@ function ownerViews(s: AppData, v: Viewer): [string, unknown][] {
       add(`draft ${item.tag}`, sel.listingDraftView(s, v, lot.id, { visibility: 'published', ask: '100', reserve: '90', availableFrom: '' }))
     }
   }
+  // Audit 16 October, note C5: every owner reads the marketplace, so its pages are owner views too.
+  for (const [name, view] of ownerMarketplaceViews(s, v)) add(name, view)
+  return out
+}
+
+/** The marketplace as a donor building owner reads it: the landing, a folder and each material page it can open. */
+function ownerMarketplaceViews(s: AppData, v: Viewer): [string, unknown][] {
+  const out: [string, unknown][] = [
+    ['marketplace', sel.discoverView(s, v, DEFAULT_DISCOVER_QUERY)],
+    ['marketplace structure', sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, typology: 'structure' })],
+    ['build prompt', sel.ownerBuildPrompt(s, v)],
+  ]
+  for (const l of marketplaceListings(s)) out.push([`material ${l.publicId}`, sel.materialView(s, v, l.publicId, null)])
   return out
 }
 
@@ -431,6 +445,59 @@ describe('P3 on the platform, round 2: share links, contractors and New projects
     const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)], ['capture', sel.captureTargets(s, v)]]
     for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)], [`inventory ${b.name}`, sel.inventoryView(s, v, b.id)], [`testing ${b.name}`, sel.testingView(s, v, b.id)])
     expectNone(dana, ['Wexcombe House', ...dateFormats(s.world.projects[r.value].startDate)], 'Dana')
+  })
+})
+
+describe('P3, audit 16 October: a donor building owner browsing the marketplace', () => {
+  it("sees other sellers' lots as public listings only, never its own lots, and no buyer", () => {
+    const s = busy()
+    const v = viewer(U.tom)
+    const views = ownerMarketplaceViews(s, v)
+    const own = new Set(Object.values(s.world.lots).filter((l) => s.world.buildings[s.world.items[l.itemId].buildingId]?.ownerOrgId === ORG_IDS.ostlea).map((l) => l.publicId))
+    const others = new Set<string>()
+    for (const lot of Object.values(s.world.lots)) {
+      const item = s.world.items[lot.itemId]
+      if (own.has(lot.publicId)) continue
+      for (const x of lotPrivateStrings(lot, item, s.world.buildings[item.buildingId], s.world)) others.add(x)
+    }
+    expectNone(views, [...others], 'Tom in the marketplace')
+    expectNone(views, allProjectStrings(s), 'Tom in the marketplace')
+    expectNoInternalIds(views, 'Tom in the marketplace')
+    const grid = sel.discoverView(s, v, DEFAULT_DISCOVER_QUERY)
+    expect(grid.cards.length).toBeGreaterThan(0)
+    for (const c of grid.cards) expect(own.has(c.publicId), c.publicId).toBe(false)
+    for (const id of own) expect(sel.materialView(s, v, id, null), id).toBeNull()
+    // The client view: prices kept, nothing to save to without a project.
+    expect(grid.canSave).toBe(false)
+    expect(grid.sortOptions).toContain('price')
+  })
+})
+
+describe('Privacy, review of 16 October: who is on Tallyard, and the owner\'s own buildings', () => {
+  it('inviting a contractor by email tells nobody whether an address is registered, or what kind of organisation it is at', () => {
+    const s = fresh()
+    const registered = must(inviteContractorByEmail(s, actor(U.tom), TIVERNE_ID, 'priya.nair@studiooriel.example'))
+    const owner = must(inviteContractorByEmail(s, actor(U.dana), HARROWDEN_ID, 'tom.ashby@ostlea.example'))
+    const unknown = must(inviteContractorByEmail(s, actor(U.tom), TIVERNE_ID, 'nobody@unknown.example'))
+    const unknownAtHarrowden = must(inviteContractorByEmail(s, actor(U.dana), HARROWDEN_ID, 'nobody@unknown.example'))
+    expect(registered.value).toEqual(unknown.value)
+    expect(owner.value).toEqual(unknownAtHarrowden.value)
+    expect(JSON.stringify(sel.buildingOverview(registered.state, viewer(U.tom), TIVERNE_ID))).not.toContain('Studio Oriel')
+  })
+
+  it("a surveyor never learns that the owner already had the building it asked about", () => {
+    let s = fresh()
+    const corbel = { name: 'Corbel Yard', address: '9 Lantry Street, London E1', postcodeDistrict: 'E1', localAuthority: 'Tower Hamlets', region: 'Inner London East', yearBuilt: null, storeys: null, giaM2: null, structureType: '', structure: [], stripOutStart: null, dismantlingStart: null, clearBy: null }
+    s = must(createSurveyBuilding(s, actor(U.dana), { ...corbel, owner: { email: 'tom.ashby@ostlea.example', name: '', message: '' } })).state
+    const toms = must(createBuilding(s, actor(U.tom), { ...corbel, address: 'Corbel Yard, Lantry Street', surveyorOrgId: null }))
+    s = toms.state
+    const claimId = Object.values(s.buildingClaims).find((c) => c.status === 'pending' && c.id !== 'clm_ambrey')!.id
+    // Not surveyed by Tarnbrook, so not offered as the same building to Tom either.
+    expect(sel.claimDuplicateOf(s, viewer(U.tom), claimId)).toBeNull()
+    const v = viewer(U.dana)
+    const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['candidates', sel.mergeCandidates(s, v)], ['duplicate', sel.claimDuplicateOf(s, v, claimId)]]
+    for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)])
+    expectNone(dana, ['Corbel Yard, Lantry Street', toms.value], 'Dana')
   })
 })
 

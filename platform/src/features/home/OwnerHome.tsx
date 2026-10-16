@@ -2,17 +2,21 @@
 // the buyer kept blind, and buildings surveyors ask the owner to confirm), each donor building and New project drawn
 // with its kind, and recent activity (collapsed). Every figure comes from ownerDashboard (P2).
 import { Link } from 'react-router'
-import { ArrowRight, Building2, CalendarDays, EyeOff, FolderPlus, Inbox, Layers, Leaf, Plus, Store } from 'lucide-react'
+import { ArrowRight, Building2, CalendarDays, Coins, EyeOff, FolderPlus, Inbox, Layers, Leaf, Plus } from 'lucide-react'
 import * as f from '../../domain/format'
 import type { Typology } from '../../domain/v1types'
 import { useView } from '../../store'
 import { ownerDashboard, type OwnerBuildingCard, type OwnerDashboard, type OwnerProjectCard } from '../../store/selectors/home-owner'
 import type { ClaimRow } from '../../store/selectors/claims'
 import type { RequestRow } from '../../store/selectors/owner'
-import { BuildingThumbnail, Button, Card, Donut, EmptyState, Legend, MARK, MaterialImage, MetricGrid, MetricTile, PageHeader, Pill, ProjectThumbnail, SegmentedBar, TYPOLOGY_FILL } from '../../ui'
+import { BuildingThumbnail, Button, Card, Donut, EmptyState, Legend, MaterialImage, MetricGrid, MetricTile, PageHeader, Pill, ProjectThumbnail, SegmentedBar, TYPOLOGY_FILL } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE, visibilitySegments } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
+import { clientHomeView } from '../../store/selectors/sustainability-screens'
+import { ClientMetrics } from './client/ClientMetrics'
+import { TodoList } from './client/TodoList'
+import { ProgrammeTimeline } from './client/ProgrammeTimeline'
 import { TileChart } from './TileChart'
 
 const TYPOLOGIES: { key: Typology; label: string }[] = [
@@ -29,11 +33,6 @@ function Metrics({ v }: { v: OwnerDashboard }) {
   const s = v.stats
   const m = v.metrics
   const typology = TYPOLOGIES.map((t) => ({ key: t.key, label: t.label, value: m.byTypology[t.key], colour: TYPOLOGY_FILL[t.key] }))
-  const visibility = [
-    { key: 'open', label: 'Published', value: s.listed, colour: MARK.brand },
-    { key: 'shared', label: 'Shared', value: s.shared, colour: MARK.info },
-    { key: 'private', label: 'Private', value: m.privateCount, colour: MARK.neutral },
-  ]
   const parts = [s.requestsAwaiting > 0 ? plural(s.requestsAwaiting, 'reservation', 'reservations') : null, s.claimsAwaiting > 0 ? plural(s.claimsAwaiting, 'building to confirm', 'buildings to confirm') : null].filter(Boolean)
   return (
     <MetricGrid label="Your figures" testId="home-stats" className="mt-6">
@@ -42,16 +41,17 @@ function Metrics({ v }: { v: OwnerDashboard }) {
         label="Items surveyed"
         icon={Layers}
         value={f.number(s.itemsSurveyed)}
-        sub={`Across ${plural(s.donorBuildings, 'donor building', 'donor buildings')}`}
+        sub={m.itemsSub}
         footer={<TileChart label="Items by typology" chart={<Donut segments={typology} label="Items by typology" size={48} />} legend={typology.map((t) => ({ key: t.key, label: t.label, colour: t.colour, valueText: String(t.value) }))} />}
       />
       <MetricTile
-        testId="metric-listed"
-        label="Listed"
-        icon={Store}
-        value={m.listed}
-        sub={`${s.listed} published, ${s.shared} shared, ${s.reserved} reserved`}
-        footer={<TileChart label="Items by visibility" chart={<Donut segments={visibility} label="Items by visibility" size={48} />} legend={visibility.map((t) => ({ key: t.key, label: t.label, colour: t.colour, valueText: String(t.value) }))} />}
+        testId="metric-value"
+        label="Recoverable value"
+        icon={Coins}
+        value={f.moneyWhole(m.recoverableValue)}
+        indicative
+        sub={`If recovered as the recovery plan ranks, ${plural(m.recoverCount, 'item', 'items')} worth recovering`}
+        href={v.buildingCards.length === 1 ? `${v.buildingCards[0].href}/priorities` : undefined}
       />
       <MetricTile
         testId="metric-requests"
@@ -226,6 +226,23 @@ function NewProjectCard({ p }: { p: OwnerProjectCard }) {
   )
 }
 
+/**
+ * An owner who builds sees what a developer sees for its New projects (audit 16 October, note C6): cost, saving,
+ * carbon and reuse, the approvals and reviews to do, and the programme, from the client dashboard selectors.
+ */
+function AsDeveloper() {
+  const d = useView(clientHomeView)
+  if (!d || d.projects.length === 0) return null
+  return (
+    <section aria-labelledby="as-developer-title" className="mt-10 flex min-w-0 flex-col gap-4" data-testid="owner-as-developer">
+      <SectionTitle id="as-developer-title" title="Your new projects as developer" description="Indicative cost, saving, carbon and reuse across your New projects, what waits for you, and their programme." className="mb-0" />
+      <ClientMetrics v={d} />
+      <TodoList todos={d.todos} overdue={d.todoCounts.overdue} />
+      <ProgrammeTimeline t={d.timeline} />
+    </section>
+  )
+}
+
 export function OwnerHome() {
   const v = useView(ownerDashboard)
   if (!v) return null
@@ -242,6 +259,7 @@ export function OwnerHome() {
       />
       <Metrics v={v} />
       <WaitingForYou v={v} />
+      <AsDeveloper />
 
       <div className="mt-10 grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:gap-6">
       <section aria-labelledby="buildings-title" className="min-w-0">
@@ -278,7 +296,7 @@ export function OwnerHome() {
               text="Add a new project to source reclaimed materials for it with your architect. You approve what they propose."
               action={
                 <Button asChild icon={FolderPlus}>
-                  <Link to="/app/buildings?new=1">Add new project</Link>
+                  <Link to="/app/buildings?new=project">Add new project</Link>
                 </Button>
               }
             />

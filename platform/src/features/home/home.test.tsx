@@ -77,7 +77,8 @@ function privateStrings(): string[] {
 
 const HOMES = [
   { who: 'priya', page: 'architect-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-projects', 'metric-shortlisted', 'metric-waiting', 'metric-carbon'] },
-  { who: 'tom', page: 'owner-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-items', 'metric-listed', 'metric-requests', 'metric-carbon'] },
+  // Audit 16 October, note C6: the owner's Listed tile gives way to Recoverable value; listed counts move to Items surveyed.
+  { who: 'tom', page: 'owner-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-items', 'metric-value', 'metric-requests', 'metric-carbon'] },
   { who: 'dana', page: 'surveyor-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-clients', 'metric-buildings', 'metric-items', 'metric-open'] },
   { who: 'marcus', page: 'consultant-home', grid: 'home-stats', prefix: 'metric-', tiles: ['metric-projects', 'metric-carbon', 'metric-targets', 'metric-engagements'] },
   // The client home's tiles keep their own ids; its Recent activity is the same shared panel as the others.

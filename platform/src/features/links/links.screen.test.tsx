@@ -55,8 +55,11 @@ describe('the share link page', () => {
     expectClean()
   })
 
-  it('reads as no longer active for an address that does not exist', async () => {
+  it('says a link this sandbox never saw is not in this sandbox, not that it was withdrawn', async () => {
     openAs('/app/links/lnk_nothere', U.isla)
-    await waitFor(() => q('link-inactive'))
+    const unknown = await waitFor(() => q('link-unknown'))
+    expect(unknown.textContent).toContain('This link is not in this sandbox')
+    expect(unknown.textContent).not.toContain('no longer active')
+    expect(q('link-inactive')).toBeNull()
   })
 })

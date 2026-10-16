@@ -14,6 +14,8 @@ import { SURVEY_TONE, visibilitySegments } from './labels'
 import { StructureCard } from './StructureCard'
 import { ContractorCard } from './ContractorCard'
 import { OwnerLinkCard } from './ClaimDialog'
+import { MergeCallouts } from './MergeCallout'
+import { activitySummaryText } from '../home/activityText'
 
 export function Overview() {
   const { buildingId = '' } = useParams()
@@ -25,8 +27,10 @@ export function Overview() {
   const records = side === 'owner' || side === 'surveyor'
   const base = `/app/buildings/${buildingId}`
   const claim = v.header.claim
+  const unlinked = !!claim && claim.status !== 'linked'
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]" data-testid="building-overview">
+      {unlinked ? <MergeCallouts fromId={buildingId} className="flex flex-col gap-2 lg:col-span-2" /> : null}
       <div className="flex min-w-0 flex-col gap-6">
         <Card>
           <CardHeader title="Programme" icon={CalendarRange} description={side === 'contractor' ? "The owner's dates for the strip-out and dismantling." : 'The dates materials can come out. Private to you and the firms on this building.'} />
@@ -84,9 +88,26 @@ export function Overview() {
           </CardBody>
         </Card>
 
-        <CollapsiblePanel id="building-activity" title="Recent activity" icon={ActivityIcon} count={v.activity.length} testId="building-activity">
+        <CollapsiblePanel
+          id="building-activity"
+          title="Recent activity"
+          icon={ActivityIcon}
+          count={v.activity.length > 0 ? v.activity.length : undefined}
+          summary={activitySummaryText(v.activitySummary)}
+          testId="building-activity"
+          actions={
+            <Link to={`${base}/activity`} className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-sm font-medium text-ink-soft hover:text-ink max-sm:hidden" data-testid="building-activity-all">
+              All activity <ArrowRight aria-hidden="true" className="size-3.5" />
+            </Link>
+          }
+        >
           <div className="px-4 pb-4 sm:px-5">
             <ActivityFeed rows={v.activity} emptyText="Captures, decisions and listings for this building appear here." />
+          </div>
+          <div className="border-t border-line-soft px-4 py-1 sm:hidden">
+            <Link to={`${base}/activity`} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-soft hover:text-ink">
+              All activity <ArrowRight aria-hidden="true" className="size-3.5" />
+            </Link>
           </div>
         </CollapsiblePanel>
       </div>

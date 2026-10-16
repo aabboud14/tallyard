@@ -83,12 +83,12 @@ function pickerProjects(state: AppData, viewer: Viewer): Project[] {
 
 /**
  * Whether the viewer buys: clients see the guide price, the price sort and the seller's details.
- * A donor building owner buys as the client of its own New project, so it reads them too.
+ * A donor building owner can build too (audit 16 October, note C5): it reads the marketplace as a client would, with
+ * or without a New project yet; saving needs a project.
  */
 function isClientSide(state: AppData, viewer: Viewer): boolean {
   const role = roleOfUser(state, viewer.userId)
-  if (role === 'client') return true
-  return role === 'owner' && pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) === 'client')
+  return role === 'client' || role === 'owner'
 }
 
 /** The sorts each role is offered: lowest guide price is for clients only. */
@@ -98,6 +98,17 @@ export function sortOptionsFor(state: AppData, viewer: Viewer): BrowseSort[] {
 
 /** How many architects' new materials the Marketplace landing shows. */
 export const NEW_FOR_PROJECTS_ON_LANDING = 4
+
+/** For a donor building owner, the public IDs of its own lots: left out of what it browses. Empty for anyone else. */
+function ownPublicIds(state: AppData, viewer: Viewer): Set<string> {
+  if (roleOfUser(state, viewer.userId) !== 'owner') return new Set()
+  const orgId = state.users[viewer.userId]?.orgId
+  return new Set(
+    Object.values(state.world.lots)
+      .filter((l) => state.world.buildings[state.world.items[l.itemId]?.buildingId ?? '']?.ownerOrgId === orgId)
+      .map((l) => l.publicId),
+  )
+}
 
 function savedOrg(state: AppData, viewer: Viewer): string | null {
   return roleOfUser(state, viewer.userId) === 'architect' ? (state.users[viewer.userId]?.orgId ?? null) : null
@@ -196,7 +207,8 @@ export function discoverView(state: AppData, viewer: Viewer, query: DiscoverQuer
   const today = todayOf(viewer)
   const projects = pickerProjects(state, viewer)
   const project = projects.find((p) => p.id === query.projectId) ?? null
-  const all = marketplaceListings(state)
+  const own = ownPublicIds(state, viewer)
+  const all = marketplaceListings(state).filter((l) => !own.has(l.publicId))
   const searched = all.filter((l) => matchesSearch(l, query.q))
   const filters = filtersOf(query, project)
   const count = (typology: Typology | null) => filterListings(searched, { ...filters, typology }, today).length
@@ -351,6 +363,8 @@ export type MaterialView = {
 function visibleLot(state: AppData, viewer: Viewer, publicId: string): Lot | null {
   const lot = lotByPublicId(state.world, publicId)
   if (!lot || lot.visibility === 'private') return null
+  // A donor building owner manages its own lots in its buildings; the marketplace shows it what others offer.
+  if (ownPublicIds(state, viewer).has(publicId)) return null
   const mine = pickerProjects(state, viewer)
   const held = acceptedReservation(state, lot.id)
   if (held && !mine.some((p) => p.id === held.projectId)) return null
@@ -361,11 +375,10 @@ function visibleLot(state: AppData, viewer: Viewer, publicId: string): Lot | nul
   return mine.some((p) => projectSide(state, viewer.userId, p.id) !== 'consultant' && projectCanSee(state.world, p, lot)) ? lot : null
 }
 
-/** Roles that read material pages: the buying side, and a donor building owner that is the client of a New project. */
+/** Roles that read material pages: the buying side, and a donor building owner, who may build too. */
 function readsMaterials(state: AppData, viewer: Viewer): boolean {
   const role = roleOfUser(state, viewer.userId)
-  if (role === 'architect' || role === 'client' || role === 'consultant') return true
-  return role === 'owner' && pickerProjects(state, viewer).some((p) => projectSide(state, viewer.userId, p.id) === 'client')
+  return role === 'architect' || role === 'client' || role === 'consultant' || role === 'owner'
 }
 
 /**
@@ -402,7 +415,9 @@ export function materialView(state: AppData, viewer: Viewer, publicId: string, p
   const client = isClientSide(state, viewer)
   const phrase = availabilityPhrase(listing.availability)
   const band = sustainabilityBand(listing.carbon)
+  const own = ownPublicIds(state, viewer)
   const similar = marketplaceListings(state)
+    .filter((l) => !own.has(l.publicId))
     .filter((l) => l.publicId !== listing.publicId && (l.family === listing.family || typologyOf(l.family) === typologyOf(listing.family)))
     .sort((a, b) => Number(b.family === listing.family) - Number(a.family === listing.family) || (a.publicId < b.publicId ? -1 : 1))
     .slice(0, 4)

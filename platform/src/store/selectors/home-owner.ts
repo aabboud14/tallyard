@@ -5,7 +5,7 @@ import { buildingSketch, projectSketch, type BuildingSketch } from '../../domain
 import { formatDate } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
-import { itemsOf, ownerHome, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
+import { itemsOf, ownerHome, priorityFor, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
 import { shortlistRows } from './shortlist'
 import { activitySummary, awaitingState, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
 
@@ -18,12 +18,24 @@ export type OwnerDashboard = OwnerHome & {
   metrics: {
     byTypology: Record<Typology, number>
     listed: number
+    /**
+     * The Items surveyed tile's line: 'Across 2 donor buildings. 6 offered: 1 published, 5 shared, 0 reserved'.
+     * Offered counts published and shared lots, so shared lots are not read as on the marketplace.
+     */
+    itemsSub: string
     /** Items kept private across the donor buildings, for the visibility chart beside published and shared. */
     privateCount: number
     /** Reservation requests and building confirmations waiting on the owner, together. */
     awaiting: number
     requestTone: MetricTone
     requestState: TileState | null
+    /**
+     * What the donor buildings could fetch, less the cost of careful removal, if recovered as each recovery plan ranks
+     * (the Recovery plan's own figure, summed). Indicative.
+     */
+    recoverableValue: number
+    /** Items the recovery plans say are worth recovering, and all items. */
+    recoverCount: number
   }
   buildingCards: OwnerBuildingCard[]
   newProjectCards: OwnerProjectCard[]
@@ -64,15 +76,25 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     if (item) requestThumbs[r.id] = { publicId: r.publicId, spec: item.spec, title: r.title }
   }
   const awaiting = home.stats.requestsAwaiting + home.stats.claimsAwaiting
+  let recoverableValue = 0
+  let recoverCount = 0
+  for (const c of home.buildings) {
+    const plan = priorityFor(state, c.id)
+    recoverableValue += plan.recoverableNetValue
+    recoverCount += plan.rows.filter((r) => r.route === 'recover').length
+  }
   return {
     ...home,
     metrics: {
       byTypology,
       listed: home.stats.listed + home.stats.shared,
+      itemsSub: `Across ${home.stats.donorBuildings} ${home.stats.donorBuildings === 1 ? 'donor building' : 'donor buildings'}. ${home.stats.listed + home.stats.shared} offered: ${home.stats.listed} published, ${home.stats.shared} shared, ${home.stats.reserved} reserved`,
       privateCount: home.buildings.reduce((n, c) => n + c.counts.private, 0),
       awaiting,
       requestTone: awaiting > 0 ? 'warning' : 'neutral',
       requestState: awaitingState(awaiting),
+      recoverableValue,
+      recoverCount,
     },
     buildingCards,
     newProjectCards,

@@ -92,6 +92,7 @@ export const routes: RouteObject[] = [
                   { path: 'sharing', lazy: lazyPage(() => import('../features/buildings/Sharing'), 'Sharing') },
                   { path: 'testing', lazy: lazyPage(() => import('../features/buildings/Testing'), 'Testing') },
                   { path: 'availability', lazy: lazyPage(() => import('../features/buildings/Availability'), 'Availability') },
+                  { path: 'activity', lazy: lazyPage(() => import('../features/buildings/Activity'), 'BuildingActivity') },
                   { path: '*', element: <AppNotFound /> },
                 ],
               },

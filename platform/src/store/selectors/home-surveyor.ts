@@ -6,6 +6,7 @@ import { formatDate } from '../../domain/dates'
 import type { AppData, SurveyStatus, Viewer } from '../types'
 import { itemsOf } from './owner'
 import { surveyorHome, type SurveyorHome } from './surveyor'
+import { contractorOnly } from './nav'
 import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type TileState } from './dashboard'
 
 export type SurveyorDashboard = SurveyorHome & {
@@ -19,6 +20,11 @@ export type SurveyorDashboard = SurveyorHome & {
   /** The same, by building ID, for the firm's own buildings no owner has confirmed yet. */
   unlinkedExtras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
   activitySummary: ActivitySummary
+  /**
+   * For a firm that only dates buildings as their deconstruction contractor (it surveys none and added none): the
+   * home shows the buildings to date and the dates set, not capture and survey counts. Null for every other firm.
+   */
+  contractorTiles: { buildings: number; dated: number; items: number; undated: number; undatedState: TileState | null; buildingsSubText: string; datedSubText: string; undatedSubText: string } | null
 }
 
 /** The surveyor's dashboard; null for anyone who is not a site surveyor. */
@@ -53,8 +59,26 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
   const notLinked = (n: number) => (n === 1 ? 'a building not yet linked' : 'buildings not yet linked')
   const itemsSubText = !lastCaptureText ? 'Nothing captured yet' : unlinkedItems > 0 ? `Last on ${lastCaptureText}, including ${unlinkedItems} at ${notLinked(home.unlinked.length)}` : `Last on ${lastCaptureText}`
   const openSubText = unlinkedOpen > 0 ? `Plus ${unlinkedOpen} at ${notLinked(unlinkedOpen)}` : open > 0 ? 'Not yet submitted to the owner' : 'Every survey submitted'
+  let contractorTiles: SurveyorDashboard['contractorTiles'] = null
+  if (contractorOnly(state, viewer)) {
+    const rows = home.appointments.flatMap((g) => g.buildings).filter((b) => b.setsDates)
+    const dated = rows.reduce((n, b) => n + b.datedCount, 0)
+    const items = rows.reduce((n, b) => n + b.itemCount, 0)
+    const waiting = rows.filter((b) => b.datedCount < b.itemCount).length
+    contractorTiles = {
+      buildings: rows.length,
+      dated,
+      items,
+      undated: items - dated,
+      undatedState: items - dated > 0 ? { state: 'warning', label: 'To do' } : null,
+      undatedSubText: items - dated === 0 ? 'Nothing waiting on you' : 'Items with no expected date yet',
+      buildingsSubText: waiting === 0 ? 'Every building dated' : `${waiting} ${waiting === 1 ? 'building' : 'buildings'} with items still to date`,
+      datedSubText: items === 0 ? 'No items recorded yet' : `Of ${items} ${items === 1 ? 'item' : 'items'}. The owner decides what buyers see`,
+    }
+  }
   return {
     ...home,
+    contractorTiles,
     metrics: { byStatus, lastCaptureText, openTone: open > 0 ? 'warning' : 'neutral', open, openState: open > 0 ? { state: 'warning', label: 'In progress' } : null, itemsSubText, openSubText },
     extras,
     unlinkedExtras,

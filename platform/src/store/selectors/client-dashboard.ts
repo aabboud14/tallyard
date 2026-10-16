@@ -11,10 +11,10 @@ import { goalDef } from '../../domain/reference/goals'
 import { typologyOf } from '../../domain/engines/typology'
 import * as f from '../../domain/format'
 import type { AppData, Viewer } from '../types'
-import { isProjectClient, projectsOfUser, roleOfUser } from '../access'
+import { isProjectClient, projectsOfUser } from '../access'
 import { applicableRequirements, effectiveTargets, sustainabilityOf } from '../sustainabilityRecord'
 import { todayOf, type ActivityRow } from './common'
-import { approvalsView, clientHome, reservationGroup, reservationsView, type ClientHome } from './client'
+import { approvalsView, buysAsClient, clientHome, reservationGroup, reservationsView, type ClientHome } from './client'
 import { projectMetrics, type ProjectMetrics } from './consultant'
 import { goalRows, sustainabilityTracking, type TrackingRow } from './sustainability'
 import { programmeOf, type ClientProgramme } from './portfolio'
@@ -50,7 +50,7 @@ const STAGE_LABELS: { key: FinanceStage; label: string }[] = [
 ]
 
 export function clientDashboard(state: AppData, viewer: Viewer): ClientDashboard | null {
-  if (roleOfUser(state, viewer.userId) !== 'client') return null
+  if (!buysAsClient(state, viewer)) return null
   const home = clientHome(state, viewer)!
   const today = todayOf(viewer)
   const projects = projectsOfUser(state, viewer.userId).filter((p) => isProjectClient(state, viewer.userId, p.id))

@@ -28,8 +28,17 @@ function clientProjects(state: AppData, viewer: Viewer) {
   return projectsOfUser(state, viewer.userId).filter((p) => isProjectClient(state, viewer.userId, p.id))
 }
 
+/**
+ * Whether the viewer sees the developer's dashboard figures: a client, or a donor building owner that is the client of
+ * its own New project (audit 16 October, note C6: an owner who builds sees what a developer sees).
+ */
+export function buysAsClient(state: AppData, viewer: Viewer): boolean {
+  const role = roleOfUser(state, viewer.userId)
+  return role === 'client' || (role === 'owner' && clientProjects(state, viewer).length > 0)
+}
+
 export function clientHome(state: AppData, viewer: Viewer): ClientHome | null {
-  if (roleOfUser(state, viewer.userId) !== 'client') return null
+  if (!buysAsClient(state, viewer)) return null
   const user = state.users[viewer.userId]
   const projects = clientProjects(state, viewer)
   const approvals: ClientHome['approvals'] = []
