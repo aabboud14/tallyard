@@ -50,8 +50,9 @@ describe('sketch', () => {
     expect(m.state).toBe('proposed')
     expect(m.use).toBe('office')
     expect(m.facades.length).toBeLessThanOrEqual(3)
-    expect(m.label).toBe('Illustration of an office project, drawn from its shortlisted materials')
-    expect(projectSketch(p, []).label).toBe('Illustration of an office project')
+    // Merrowgate's shortlist is all steel, which is not seen from outside: the facade is the office's typical one.
+    expect(m.label).toBe('Illustration of an office project, drawn from its shortlisted materials and a typical office facade')
+    expect(projectSketch(p, []).label).toBe('Illustration of an office project with a typical office facade')
     const b = s.world.buildings[TIVERNE_ID]
     const t = buildingSketch(b, ['stone_cladding', 'precast_cladding', 'curtain_wall', 'steel_section', 'stone_cladding'])
     expect(t).toMatchObject({ storeys: 7, frame: 'steel', state: 'existing', facades: ['stone', 'glass', 'precast'] })
@@ -66,6 +67,29 @@ describe('sketch', () => {
     expect(frameOfBuilding([el('frame', 'other')], 'Loadbearing brick')).toBe('masonry')
     expect(frameOfBuilding([el('floors', 'concrete_precast')], '')).toBe('unknown')
     expect(frameOfBuilding([], 'In situ concrete frame')).toBe('concrete')
+  })
+
+  it('gives a project with no facade material the facade typical of its use, and says so', () => {
+    const steelOnly = projectSketch({ id: 'p', name: 'P', projectType: 'office' }, ['steel_section', 'raised_floor'])
+    expect(steelOnly).toMatchObject({ facades: ['glass'], facadeSource: 'use', frame: 'steel' })
+    expect(projectSketch({ id: 'p', name: 'P', projectType: 'residential' }, ['raised_floor'])).toMatchObject({ facades: ['brick'], facadeSource: 'use' })
+    expect(projectSketch({ id: 'p', name: 'P', projectType: 'hotel' }, [])).toMatchObject({ facades: ['stone'], facadeSource: 'use' })
+    expect(projectSketch({ id: 'p', name: 'P', projectType: 'Logistics warehouse' }, [])).toMatchObject({ facades: ['precast'], facadeSource: 'use' })
+    expect(projectSketch({ id: 'p', name: 'P', projectType: 'education' }, []).label).toBe('Illustration of a project with a typical facade')
+    // A shortlisted facade material always wins over the typical one.
+    const withStone = projectSketch({ id: 'p', name: 'P', projectType: 'office' }, ['steel_section', 'stone_cladding'])
+    expect(withStone).toMatchObject({ facades: ['stone'], facadeSource: 'materials' })
+    expect(withStone.label).toBe('Illustration of an office project, drawn from its shortlisted materials')
+    // Buildings are drawn from their survey only.
+    expect(buildingSketch({ id: 'b', storeys: 3, structureType: 'Steel' }, ['steel_section'])).toMatchObject({ facades: [], facadeSource: 'none' })
+  })
+
+  it('draws no seeded project as a blank box', () => {
+    const s = fresh()
+    for (const p of Object.values(s.world.projects)) {
+      const families = (projectWishlist(s.world, p.id)?.items ?? []).filter((i) => i.status !== 'declined').map((i) => listingOf(s.world, lotByPublicId(s.world, i.publicId)!).family)
+      expect(projectSketch(p, families).facades.length, p.name).toBeGreaterThan(0)
+    }
   })
 
   it('never calls a drawing a photo', () => {

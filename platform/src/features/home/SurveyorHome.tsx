@@ -11,7 +11,7 @@ import type { SurveyStatus } from '../../store'
 import { surveyorDashboard, type SurveyorDashboard } from '../../store/selectors/home-surveyor'
 import type { AppointmentBuilding } from '../../store/selectors/surveyor'
 import type { ClaimState } from '../../store/selectors/claims'
-import { Avatar, BuildingThumb, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
+import { Avatar, BuildingThumb, BuildingThumbnail, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
@@ -43,10 +43,12 @@ function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): 'd
   return at < order || (at === order && status === 'submitted') ? 'done' : at === order ? 'current' : 'todo'
 }
 
-function Steps({ status }: { status: SurveyStatus }) {
+/** `firstLabel` names the first step: 'Appointed' when an owner appointed the firm, 'Added' for a building the firm added itself. */
+function Steps({ status, firstLabel = 'Appointed' }: { status: SurveyStatus; firstLabel?: string }) {
   return (
     <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0" aria-label="Survey progress">
-      {STEPS.map((s, i) => {
+      {STEPS.map((step, i) => {
+        const s = i === 0 ? { ...step, label: firstLabel } : step
         const st = stepState(status, s.key)
         return (
           <li key={s.key} className="flex items-center gap-2">
@@ -93,10 +95,12 @@ function Metrics({ v }: { v: SurveyorDashboard }) {
   )
 }
 
-function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuilding; extra: SurveyorDashboard['extras'][string] | undefined; children?: ReactNode; /** Offer to ask the owner to confirm the building. */ ask?: boolean }) {
+function BuildingRow({ b, extra, children, ask = false, unlinked = false }: { b: AppointmentBuilding; extra: SurveyorDashboard['extras'][string] | undefined; children?: ReactNode; /** Offer to ask the owner to confirm the building. */ ask?: boolean; /** The firm added the building itself; no owner has appointed it. */ unlinked?: boolean }) {
   const contractor = b.role === 'contractor'
   return (
     <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:px-5" data-testid={`home-building-${b.id}`}>
+      {/* A phone shows the drawing full width above the name; wider screens a compact one beside it. */}
+      {extra ? <BuildingThumbnail sketch={extra.sketch} aspect="16/10" rounded="md" className="w-full sm:hidden" testId={`home-building-thumb-${b.id}`} /> : null}
       {extra ? <BuildingThumb sketch={extra.sketch} size="lg" decorative={false} className="shrink-0 max-sm:hidden" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="min-w-0">
@@ -116,7 +120,7 @@ function BuildingRow({ b, extra, children, ask = false }: { b: AppointmentBuildi
           </div>
           <p className="m-0 mt-0.5 truncate text-sm text-muted">{b.address}</p>
         </div>
-        {contractor ? null : <Steps status={b.status} />}
+        {contractor ? null : <Steps status={b.status} firstLabel={unlinked ? 'Added' : 'Appointed'} />}
         {extra ? <TypologyBar counts={extra.byTypology} /> : null}
         <p className="m-0 text-sm text-ink-soft">
           {contractor ? (
@@ -227,7 +231,7 @@ export function SurveyorHome() {
           <Card>
             <ul className="m-0 list-none divide-y divide-line-soft p-0">
               {v.unlinked.map((b) => (
-                <BuildingRow key={b.id} b={b} extra={v.unlinkedExtras[b.id]} ask={b.claim.status === 'not_linked' || b.claim.status === 'declined'}>
+                <BuildingRow key={b.id} b={b} extra={v.unlinkedExtras[b.id]} unlinked ask={b.claim.status === 'not_linked' || b.claim.status === 'declined'}>
                   <Pill tone={CLAIM_TONE[b.claim.status]} dot size="sm" data-testid={`claim-${b.id}`}>
                     {b.claim.label}
                   </Pill>

@@ -5,17 +5,24 @@ import { projectSketch } from '../../domain/sketch'
 import type { AppData, Viewer } from '../types'
 import { projectSide, projectsOfUser } from '../access'
 import { projectWishlist } from '../lots'
-import { shortlistRows } from './shortlist'
+import { shortlistRows, type ShortlistRow } from './shortlist'
 import { thumbsOf, type ThumbMaterial } from './dashboard'
 
 export type ProjectVisual = { sketch: BuildingSketch; materials: ThumbMaterial[] }
 
+/**
+ * The one way a project is drawn, for every role: the families of every live (not declined) row on its shortlist,
+ * from the public cards, and up to three swatches. Screens that already hold the rows pass them here.
+ */
+export function visualFromRows(p: { id: string; name: string; projectType: string }, rows: ShortlistRow[]): ProjectVisual {
+  const families = rows.flatMap((r) => (r.card && r.status !== 'declined' ? [r.card.family] : []))
+  return { sketch: projectSketch(p, families), materials: thumbsOf(rows) }
+}
+
 function visualOf(state: AppData, viewer: Viewer, projectId: string): ProjectVisual {
   const p = state.world.projects[projectId]
   const list = projectWishlist(state.world, projectId)
-  const rows = list ? shortlistRows(state, viewer, list, p) : []
-  const families = rows.flatMap((r) => (r.card && r.status !== 'declined' ? [r.card.family] : []))
-  return { sketch: projectSketch(p, families), materials: thumbsOf(rows) }
+  return visualFromRows(p, list ? shortlistRows(state, viewer, list, p) : [])
 }
 
 /** One project's drawing, for anyone on the project; null for anyone else. */

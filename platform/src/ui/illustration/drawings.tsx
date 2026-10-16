@@ -242,7 +242,9 @@ const AREA = { left: SAFE.left, right: SAFE.right, top: SAFE.top + 8, bottom: SA
 export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { designation: string; lengthM: number; uid: string; view?: DrawingView }) {
   const s = sectionOrThrow(designation)
   const size = TEXT_SIZE[view]
-  const k = Math.min(140 / s.h, 104 / s.b)
+  // On a card the member is drawn at a size that follows its depth (a UB 610 stands about twice as tall as a UC 203),
+  // so a page of steel reads as different members; the detail view fills its board.
+  const k = view === 'card' ? Math.min(cardDepthPx(s.h) / s.h, 104 / s.b) : Math.min(140 / s.h, 104 / s.b)
   const h = s.h * k
   const b = s.b * k
   const tw = Math.max(1.5, s.tw * k)
@@ -296,8 +298,40 @@ export function SectionAxo({ designation, lengthM, uid, view = 'card' }: { desig
       <polygon points={pts(outline.map(at))} fill={FILL} />
       <polygon points={pts(outline.map(at))} fill={`url(#${hatch})`} stroke={INK} strokeWidth="1.25" strokeLinejoin="round" />
       <DimLine a={at([b, h])} b={far([b, h])} label={formatLength(lengthM)} offset={[9, 15.6]} anchor="start" size={size} />
+      {view === 'card' ? <SectionInset h={s.h} b={s.b} tw={s.tw} tf={s.tf} hatch={hatch} size={size} /> : null}
       {view === 'detail' ? <DimLine a={at([0, 0])} b={at([b, 0])} label={`${s.b}`} offset={[0, -12]} anchor="end" size={size} /> : null}
       <TitleStrip text={designation} view={view} />
+    </g>
+  )
+}
+
+/** Card depth in board px for a section depth in mm: 64 px at 150 mm and below, 140 px at 620 mm and above. */
+function cardDepthPx(depthMm: number): number {
+  return 64 + 76 * Math.min(1, Math.max(0, (depthMm - 150) / 470))
+}
+
+/** Every inset shares one scale, so the end views compare: 0.1 board px per mm. */
+const INSET_PX_PER_MM = 0.1
+
+/**
+ * The cut section in plain end view, top left of a card, at the one inset scale and labelled depth by width in
+ * millimetres: a flat view beside the axonometric, so a deep beam and a squat column read apart at a glance.
+ */
+function SectionInset({ h, b, tw, tf, hatch, size }: { h: number; b: number; tw: number; tf: number; hatch: string; size: number }) {
+  const k = INSET_PX_PER_MM
+  // Below the band where a card lays its status chip (top left), clear of the member below and to the right.
+  const x = AREA.left + 4
+  const y = AREA.top + 30
+  return (
+    <g data-part="section-inset" transform={`translate(${x} ${y})`}>
+      <path d={profilePath(h, b, tw, tf, 1.2 * tw)} transform={`scale(${k})`} fill={FILL} />
+      <path d={profilePath(h, b, tw, tf, 1.2 * tw)} transform={`scale(${k})`} fill={`url(#${hatch})`} stroke={INK} strokeWidth={1.1 / k} />
+      <text x={b * k + 8} y={size * 0.85} fontFamily={FONT} fontSize={size * 0.8} fontWeight="500" fill={DIM} style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {h} x {b}
+      </text>
+      <text x={b * k + 8} y={size * 1.85} fontFamily={FONT} fontSize={size * 0.8} fill={DIM}>
+        mm
+      </text>
     </g>
   )
 }

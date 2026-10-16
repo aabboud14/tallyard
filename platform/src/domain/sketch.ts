@@ -17,6 +17,12 @@ export type BuildingSketch = {
   storeys: number | null
   frame: SketchFrame
   facades: FacadeKind[]
+  /**
+   * Where the facades come from: the materials on the shortlist or in the inventory, or, for a project whose
+   * shortlist shows nothing seen from outside (steel, raised floors or nothing yet), the facade typical of its use.
+   * A typical facade is never a shortlisted material, and the label says so.
+   */
+  facadeSource: 'materials' | 'use' | 'none'
   /** A building coming down (existing) or a project going up (proposed). */
   state: 'existing' | 'proposed'
   /** The accessible name of the drawing. */
@@ -101,12 +107,30 @@ function facadesFrom(families: FamilyId[]): FacadeKind[] {
 
 const USE_WORDS: Record<SketchUse, string> = { office: 'an office', hotel: 'a hotel', residential: 'a residential', industrial: 'an industrial', other: 'a' }
 
-/** A project going up, drawn from the families on its shortlist (public listings only). */
+/** The facade a project of each use is typically drawn with when its shortlist shows no facade material. */
+const TYPICAL_FACADE: Record<SketchUse, FacadeKind> = { office: 'glass', residential: 'brick', hotel: 'stone', industrial: 'precast', other: 'brick' }
+
+/** The facade typical of a use, for a project whose shortlist has nothing seen from outside. */
+export function typicalFacade(use: SketchUse): FacadeKind {
+  return TYPICAL_FACADE[use]
+}
+
+const TYPICAL_WORDS: Record<SketchUse, string> = { office: 'a typical office facade', hotel: 'a typical hotel facade', residential: 'a typical residential facade', industrial: 'a typical industrial facade', other: 'a typical facade' }
+
+/**
+ * A project going up, drawn from the families on its shortlist (public listings only). When none of them is seen
+ * from outside, the drawing takes the facade typical of the project's use, so no project is drawn as a blank box,
+ * and the label says the facade is typical rather than shortlisted.
+ */
 export function projectSketch(p: { id: string; name: string; projectType: string }, families: FamilyId[]): BuildingSketch {
   const use = sketchUse(p.projectType)
   const frame: SketchFrame = families.includes('steel_section') ? 'steel' : families.includes('timber_joist') ? 'timber' : 'unknown'
   const base = `Illustration of ${USE_WORDS[use]} project`
-  return { seed: p.id, use, storeys: null, frame, facades: facadesFrom(families), state: 'proposed', label: families.length > 0 ? `${base}, drawn from its shortlisted materials` : base }
+  const fromMaterials = facadesFrom(families)
+  const typical = fromMaterials.length === 0
+  const facades = typical ? [typicalFacade(use)] : fromMaterials
+  const label = families.length > 0 ? (typical ? `${base}, drawn from its shortlisted materials and ${TYPICAL_WORDS[use]}` : `${base}, drawn from its shortlisted materials`) : `${base} with ${TYPICAL_WORDS[use]}`
+  return { seed: p.id, use, storeys: null, frame, facades, facadeSource: typical ? 'use' : 'materials', state: 'proposed', label }
 }
 
 /**
@@ -115,5 +139,6 @@ export function projectSketch(p: { id: string; name: string; projectType: string
  */
 export function buildingSketch(b: { id: string; storeys: number | null; structureType: string; structure?: StructuralElement[]; use?: string | null }, families: FamilyId[]): BuildingSketch {
   const label = b.storeys !== null ? `Illustration of a ${b.storeys} storey building, drawn from its survey` : 'Illustration of a building, drawn from its survey'
-  return { seed: b.id, use: sketchUse(b.use ?? ''), storeys: b.storeys, frame: frameOfBuilding(b.structure ?? [], b.structureType), facades: facadesFrom(families), state: 'existing', label }
+  const facades = facadesFrom(families)
+  return { seed: b.id, use: sketchUse(b.use ?? ''), storeys: b.storeys, frame: frameOfBuilding(b.structure ?? [], b.structureType), facades, facadeSource: facades.length > 0 ? 'materials' : 'none', state: 'existing', label }
 }

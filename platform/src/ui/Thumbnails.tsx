@@ -10,10 +10,11 @@ import { MaterialIllustration } from './MaterialImage'
 
 export type ThumbMaterial = { publicId: string; spec: Spec }
 
-type Aspect = '16/10' | '4/3' | '3/2' | '1/1'
+/** 'fill' takes its height from the container (the className sets it), for a frame that runs the height of a card. */
+type Aspect = '16/10' | '4/3' | '3/2' | '1/1' | 'fill'
 type Rounded = 'none' | 'md' | 'top'
 
-const ASPECT: Record<Aspect, string> = { '16/10': 'aspect-[16/10]', '4/3': 'aspect-[4/3]', '3/2': 'aspect-[3/2]', '1/1': 'aspect-square' }
+const ASPECT: Record<Aspect, string> = { '16/10': 'aspect-[16/10]', '4/3': 'aspect-[4/3]', '3/2': 'aspect-[3/2]', '1/1': 'aspect-square', fill: '' }
 const ROUNDED: Record<Rounded, string> = { none: '', md: 'rounded-md', top: 'rounded-t-lg' }
 
 export type ThumbnailProps = {
@@ -35,11 +36,19 @@ function Frame({ aspect, rounded, className, testId, children }: { aspect: Aspec
   )
 }
 
-export function ProjectThumbnail({ sketch, materials = [], aspect = '16/10', rounded = 'none', decorative = false, className, testId }: ThumbnailProps & { materials?: ThumbMaterial[] }) {
+/**
+ * `fit` crops the drawing to the building and scales it to fill the frame above the swatch band, for a frame whose
+ * shape is not the board's (a tall card column), so the building never sits small at the bottom of empty paper.
+ */
+export function ProjectThumbnail({ sketch, materials = [], aspect = '16/10', rounded = 'none', decorative = false, fit = false, className, testId }: ThumbnailProps & { materials?: ThumbMaterial[]; fit?: boolean }) {
   return (
     <Frame aspect={aspect} rounded={rounded} className={className} testId={testId}>
-      {/* The swatches sit bottom left, so the left trees give way to them. */}
-      <BuildingIllustration sketch={sketch} decorative={decorative} trees={materials.length > 0 ? 'right' : 'both'} className="absolute inset-0 size-full" />
+      {fit ? (
+        <BuildingIllustration sketch={sketch} decorative={decorative} fit className={cx('absolute inset-x-3 top-3 block h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)]', materials.length > 0 && 'h-[calc(100%-3.5rem)]')} />
+      ) : (
+        // The swatches sit bottom left, so the left trees give way to them.
+        <BuildingIllustration sketch={sketch} decorative={decorative} trees={materials.length > 0 ? 'right' : 'both'} className="absolute inset-0 size-full" />
+      )}
       {materials.length > 0 ? (
         <div aria-hidden="true" className="absolute bottom-2 left-2 flex gap-1.5">
           {materials.slice(0, 3).map((m) => (

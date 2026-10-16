@@ -3,10 +3,12 @@
 // Everything about a seller's material comes from the shortlist rows' public cards (P3).
 import type { Fit, WishStatus } from '../../domain/v1types'
 import { daysBetween, formatDate } from '../../domain/dates'
-import { projectSketch, type BuildingSketch } from '../../domain/sketch'
+import type { BuildingSketch } from '../../domain/sketch'
+import { timelineFit } from '../../domain/engines/timeline'
 import { programmeCheck, stageOn, type ProgrammeStatus } from '../../domain/engines/programme'
 import { niceMax } from '../../domain/engines/chartScale'
 import * as f from '../../domain/format'
+import type { ClientLinkStatus } from '../../domain/types'
 import type { AppData, Viewer } from '../types'
 import { isProjectArchitect, projectsOfUser, roleOfUser } from '../access'
 import { projectWishlist } from '../lots'
@@ -14,8 +16,12 @@ import { marketplaceHref } from '../paths'
 import { activityFor, firstName, greeting, longDate, projectRef, todayOf, type ActivityRow, type ListingCard, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf } from './shortlist'
 import { effectiveTargets } from './sustainability'
-import { activitySummary, earliestStart, fitCounts, fitState, fitTone, programmeState, targetState, thumbsOf, waitingState, waitingTone, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
-import { newForProjectsFeed, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
+import { visualFromRows } from './project-visuals'
+import { projectSetup } from './project'
+import { activitySummary, earliestStart, fitCounts, fitState, fitTone, programmeState, targetState, waitingState, waitingTone, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
+import { categoryFolders, newForProjectsFeed, NEW_LISTING_LIMIT, type CategoryFolder, type NewForProjects } from './marketplace'
+import { marketplaceListings } from '../lots'
+import { DISCOVER_PARAM } from './arch-discover'
 
 export { NEW_LISTING_DAYS, NEW_LISTING_LIMIT, type NewForProjects } from './marketplace'
 
@@ -36,7 +42,12 @@ export type ProjectCardView = ProjectRef & {
   liveT: number
   /** New listings in time for this project. */
   newFits: number
+  /** The same new listings by their fit against this project's start, so each card says what is new for it. */
+  newFitsBy: Record<Fit, number>
   marketplaceHref: string
+  /** The setup checklist's progress while it shows on the project, as on the projects list; null once set up. */
+  setup: { done: number; total: number; nextText: string | null; href: string } | null
+  linkStatus: ClientLinkStatus
 }
 
 export type WaitingItem = {
@@ -56,13 +67,18 @@ export type WaitingItem = {
 export type ArchitectHome = {
   greeting: string
   dateText: string
+  /** activeProjects: projects the client has accepted. A project still waiting for its client is not active yet. */
   stats: { activeProjects: number; shortlisted: number; avoidedApprovedT: number }
   metrics: {
+    /** Projects whose setup checklist still shows (new projects); they lead the project cards. */
+    settingUp: number
+    /** Projects whose client has not accepted (waiting or declined). */
+    notAccepted: number
     nextStart: { projectName: string; dateText: string } | null
     byStatus: Record<WishStatus, number>
     waiting: { count: number; oldestDays: number | null; tone: MetricTone; state: TileState | null }
     carbon: { approvedT: number; liveT: number; share: number; percentText: string; targetT: number; state: TileState | null }
-    /** Each project's declared stage against its programme dates. */
+    /** Each active project's declared stage against its confirmed programme dates; suggested dates are not judged. */
     programme: { behind: number; state: TileState | null }
     /** The live shortlists' fit against each project's start, summed. */
     timing: { fits: Record<Fit, number>; state: TileState | null }
@@ -78,6 +94,11 @@ export type ArchitectHome = {
   newForProjects: NewForProjects[]
   activity: ActivityRow[]
   activitySummary: ActivitySummary
+  /**
+   * For a practice with no projects yet: what the Marketplace holds now, by category, so the first screen shows
+   * real stock under the welcome. Null once there is a project.
+   */
+  firstRun: { total: number; folders: (Pick<CategoryFolder, 'typology' | 'label' | 'description' | 'count' | 'thumbs'> & { href: string; familiesText: string })[] } | null
 }
 
 export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | null {
@@ -92,6 +113,9 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
   let carbonTargetT = 0
   let approvedOnTargetedT = 0
   const programmeStatuses: ProgrammeStatus[] = []
+  // Only projects the client accepted are active; only confirmed programmes are judged and give the next start.
+  const active = projects.filter((p) => p.clientLink.status === 'accepted')
+  const judged = active.filter((p) => p.programme.source === 'set')
   const allFits: Fit[] = []
   const byStatus = Object.fromEntries(BOARD_COLUMNS.map((s) => [s, 0])) as Record<WishStatus, number>
   const waiting: WaitingItem[] = []
@@ -123,13 +147,16 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     for (const s of BOARD_COLUMNS) byStatus[s] += counts[s]
     const fits = fitCounts(live.map((r) => r.card?.fit?.fit ?? null))
     for (const r of live) if (r.card?.fit) allFits.push(r.card.fit.fit)
-    programmeStatuses.push(programmeCheck(p.programme, p.ribaStage, today).status)
+    if (judged.includes(p)) programmeStatuses.push(programmeCheck(p.programme, p.ribaStage, today).status)
     const target = effectiveTargets(state, p.id).avoidedCarbonT
     if (target > 0) {
       carbonTargetT += target
       approvedOnTargetedT += totals.approved.avoidedT
     }
-    const families = live.flatMap((r) => (r.card ? [r.card.family] : []))
+    const visual = visualFromRows(p, rows)
+    const fresh = feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id))
+    const newFitsBy = fitCounts(fresh.map((n) => timelineFit(n.listing.availability, p.startDate, today).fit))
+    const setup = projectSetup(state, viewer, p.id)
     return {
       ...projectRef(state, p),
       plannedStage: stageOn(p.programme, today),
@@ -138,17 +165,23 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
       href: `/app/projects/${p.id}`,
       fits,
       fitTone: fitTone(fits),
-      sketch: projectSketch(p, families),
-      materials: thumbsOf(rows),
+      sketch: visual.sketch,
+      materials: visual.materials,
       approvedT: totals.approved.avoidedT,
       liveT,
-      newFits: feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id)).length,
+      newFits: fresh.length,
+      newFitsBy,
       marketplaceHref: marketplaceHref(p.id),
+      setup: setup && setup.visible ? { done: setup.done, total: setup.total, nextText: setup.nextText, href: `/app/projects/${p.id}` } : null,
+      linkStatus: p.clientLink.status,
     }
   })
+  // New projects still setting up lead, newest first, so the next step is the first thing on the home; the rest
+  // keep their order.
+  const ordered = [...cards.filter((c) => c.setup).reverse(), ...cards.filter((c) => !c.setup)]
   waiting.sort((a, b) => (a.sentOn ?? '').localeCompare(b.sentOn ?? ''))
   const oldestDays = waiting.reduce<number | null>((m, w) => (w.daysWaiting === null ? m : m === null ? w.daysWaiting : Math.max(m, w.daysWaiting)), null)
-  const next = earliestStart(projects, today)
+  const next = earliestStart(judged, today)
   const share = liveTotalT > 0 ? avoidedApprovedT / liveTotalT : 0
   const activity = activityFor(state, viewer, {}, 8)
   const timing = fitCounts(allFits)
@@ -157,8 +190,10 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
   return {
     greeting: greeting(viewer.now, firstName(user.name)),
     dateText: longDate(today),
-    stats: { activeProjects: projects.length, shortlisted, avoidedApprovedT },
+    stats: { activeProjects: active.length, shortlisted, avoidedApprovedT },
     metrics: {
+      settingUp: ordered.filter((c) => c.setup).length,
+      notAccepted: projects.length - active.length,
       nextStart: next ? { projectName: next.name, dateText: formatDate(next.startDate) } : null,
       byStatus,
       waiting: { count: waiting.length, oldestDays, tone: waitingTone(waiting.length, oldestDays), state: waitingState(waiting.length, oldestDays) },
@@ -166,7 +201,7 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
       programme: { behind: programmeStatuses.filter((x) => x === 'behind').length, state: programme },
       timing: { fits: timing, state: fitState(timing) },
     },
-    projects: cards,
+    projects: ordered,
     carbonByProject: cards.map((c) => ({ id: c.id, name: c.name, href: c.href, approvedT: c.approvedT, liveT: c.liveT })),
     carbonScaleMax,
     carbonAxisMax: niceMax(carbonScaleMax),
@@ -174,5 +209,20 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     newForProjects: feed.slice(0, NEW_LISTING_LIMIT),
     activity,
     activitySummary: activitySummary(activity),
+    firstRun: projects.length === 0 ? firstRunView(state, viewer) : null,
   }
+}
+
+function firstRunView(state: AppData, viewer: Viewer): ArchitectHome['firstRun'] {
+  const listings = marketplaceListings(state)
+  const folders = categoryFolders(state, viewer, null, listings).map((c) => ({
+    typology: c.typology,
+    label: c.label,
+    description: c.description,
+    count: c.count,
+    thumbs: c.thumbs,
+    href: marketplaceHref(null, { [DISCOVER_PARAM.typology]: c.typology }),
+    familiesText: c.families.map((x) => x.label).join(', '),
+  }))
+  return { total: listings.length, folders }
 }
