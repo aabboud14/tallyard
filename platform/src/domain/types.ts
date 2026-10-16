@@ -91,6 +91,11 @@ export type SourceBuilding = {
   createdByOrgId: string | null
   /** The deconstruction contractor invited to set availability dates, if any. Private. */
   contractorOrgId: string | null
+  /**
+   * A contractor invited by email that is not on Tallyard yet (audit 16 October, note 28). When a surveying or
+   * deconstruction firm signs up with a member at that email, it becomes the contractor. Private.
+   */
+  contractorInvite?: ContractorInvite | null
   tenants: string[]
   programme: { stripOutStart: string | null; dismantlingStart: string | null; clearBy: string | null }
   defaultHubId: string | null
@@ -104,6 +109,8 @@ export type SourceBuilding = {
   distancesKm: Record<string, number>
   surveyedBy: { personaName: string; orgName: string; date: string } | null
 }
+
+export type ContractorInvite = { email: string; invitedAt: string; invitedByOrgId: string; invitedByUserId: string }
 
 export type InventoryItem = {
   id: string

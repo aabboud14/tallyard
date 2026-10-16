@@ -51,9 +51,10 @@ export function programmeOf(projects: Project[], today: string): ClientProgramme
   }
 }
 
-/** The client's projects on one time axis; null for anyone but a client. */
+/** The client's projects on one time axis (an owner's New projects too); null for anyone else. */
 export function clientProgramme(state: AppData, viewer: Viewer): ClientProgramme | null {
-  if (roleOfUser(state, viewer.userId) !== 'client') return null
+  const role = roleOfUser(state, viewer.userId)
+  if (role !== 'client' && role !== 'owner') return null
   const projects = projectsOfUser(state, viewer.userId).filter((p) => isProjectClient(state, viewer.userId, p.id))
   return programmeOf(projects, todayOf(viewer))
 }

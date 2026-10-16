@@ -90,12 +90,14 @@ export function shareLinksView(state: AppData, viewer: Viewer, buildingId: strin
 
 export type LinkView =
   | { state: 'inactive' }
+  | { state: 'unknown' }
   | { state: 'preview'; count: number; cards: ListingCard[] }
   | { state: 'terms'; count: number }
   | { state: 'open'; count: number; cards: ListingCard[]; materialLinks: boolean }
 
 /**
- * The link page for anyone signed in: inactive when revoked or unknown; the owner's own organisation sees a preview;
+ * The link page for anyone signed in: inactive when revoked; unknown when this sandbox has no such link (links live in
+ * the browser that made them, so a link pasted into another browser lands here); the owner's own organisation sees a preview;
  * everyone else first accepts the terms, then sees the lots as public listings.
  */
 /** The link page's title, which the breadcrumb follows: the owner's organisation previews its own link. */
@@ -110,7 +112,8 @@ export function linkPageTitle(state: AppData, viewer: Viewer, linkId: string): s
 export function linkView(state: AppData, viewer: Viewer, linkId: string): LinkView {
   const link = state.world.shareLinks[linkId]
   const user = state.users[viewer.userId]
-  if (!link || link.revokedAt !== null || !user) return { state: 'inactive' }
+  if (!link) return { state: 'unknown' }
+  if (link.revokedAt !== null || !user) return { state: 'inactive' }
   const today = todayOf(viewer)
   const role = roleOfUser(state, viewer.userId)
   const savedOrg = role === 'architect' ? user.orgId : null

@@ -5,7 +5,7 @@ import { FAMILIES, FAMILY_IDS } from '../../domain/reference/families'
 import { SECTIONS } from '../../domain/reference/sections'
 import { formatMonth, monthKey } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
-import { buildingSide, buildingsOfUser, canCaptureIn, roleOfUser } from '../access'
+import { buildingSide, buildingsOfUser, canCaptureIn, isBuildingContractor, roleOfUser } from '../access'
 import { QUANTITY_KIND } from '../capture'
 import { activityFor, firstName, greeting, longDate, todayOf, type ActivityRow } from './common'
 import { buildingHeader, inventoryView, itemQuantityText, itemsOf, surveyStatus, SURVEY_STATUS_LABELS, type BuildingRef } from './owner'
@@ -27,6 +27,8 @@ export type AppointmentBuilding = {
   roleLabel: 'Surveyor' | 'Contractor'
   /** Items with the contractor's expected date set. */
   datedCount: number
+  /** The firm sets this building's availability dates: as its contractor alone, or as its surveyor and contractor. */
+  setsDates: boolean
 }
 
 export type Appointment = { orgId: string; clientName: string; buildings: AppointmentBuilding[] }
@@ -61,6 +63,7 @@ function appointmentBuilding(state: AppData, viewer: Viewer, buildingId: string)
     role,
     roleLabel: role === 'contractor' ? 'Contractor' : 'Surveyor',
     datedCount: items.filter((i) => i.contractorAvailableFrom !== null).length,
+    setsDates: isBuildingContractor(state, viewer.userId, b.id),
   }
 }
 

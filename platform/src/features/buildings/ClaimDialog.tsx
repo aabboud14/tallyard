@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { MailQuestion, RotateCcw, Send, Trash2, Undo2 } from 'lucide-react'
+import { MoveIntoAppointment } from './MergeCallout'
 import { act } from '../../store'
 import type { ClaimState } from '../../store/selectors/claims'
 import { Button, Card, CardBody, CardHeader, Dialog, Field, Input, Pill, Textarea, toast } from '../../ui'
@@ -127,7 +128,8 @@ export function OwnerLinkCard({ buildingId, buildingName, claim }: { buildingId:
         <div className="flex flex-wrap gap-2">
           <ClaimActions buildingId={buildingId} buildingName={buildingName} claim={claim} />
         </div>
-        <div className="border-t border-line-soft pt-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+          <MoveIntoAppointment fromId={buildingId} fromName={buildingName} />
           <Button variant="ghost" size="sm" icon={Trash2} className="text-danger hover:text-danger" onClick={() => setDeleting(true)} data-testid="delete-building">
             Delete building
           </Button>

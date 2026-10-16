@@ -1,6 +1,7 @@
 // Round 2 seed additions for donor buildings and surveyors (owner-surveyor design 14.4.10): a deconstruction
 // contractor with dates on Tiverne House, the structure of both owned buildings, a building the surveyor added that
-// waits for its owner's confirmation, a booked testing request and an unused share link. No owner new project is
+// waits for its owner's confirmation, a booked testing request and an unused share link. Tarnbrook Deconstruction is
+// also the contractor on Harrowden Court, with no dates yet, so the surveyor's first sign-in shows a contractor job. No owner new project is
 // seeded: it would make the owner a buyer in the sample world and blur the seller privacy checks.
 import type { InventoryItem, Lot, SourceBuilding, StructuralElement, World } from '../domain/types'
 import { HARROWDEN_ID, itemByTag, lotForItem, ORG_IDS, PERSONA_IDS, TIVERNE_ID } from '../domain/seed/world'
@@ -63,6 +64,8 @@ export function withOwnerSurveyorWorld(world: World): World {
   const harrowden = w.buildings[HARROWDEN_ID]
   harrowden.structure = structuredClone(HARROWDEN_STRUCTURE)
   harrowden.structureType = ''
+  // Brackwater Estates invited Tarnbrook, which surveys Harrowden Court, to set its availability dates too.
+  harrowden.contractorOrgId = ORG_IDS.tarnbrook
 
   const hubKm = V1_ASSUMPTIONS.regionHubKm['Central London']
   const ambrey: SourceBuilding = {
@@ -179,6 +182,11 @@ export function withOwnerSurveyorHistory(state: AppData, h: HistoryClock): AppDa
   s = log(s, { at: h.at(5, 14), orgIds: contractorOrgs, projectId: null, buildingId: TIVERNE_ID, actorUserId: null, actor: 'Fennick Dismantling', text: `set dates for ${dated} items`, href: `/app/buildings/${TIVERNE_ID}/inventory` })
   s = notify(s, { orgIds: [ORG_IDS.ostlea], kind: 'availability_set', title: `Fennick Dismantling set dates for ${dated} items at ${tiverne.name}`, body: 'Review them in the inventory and apply the ones you agree with.', href: `/app/buildings/${TIVERNE_ID}/inventory`, at: h.at(5, 14), actorUserId: null })
   read(TOM)
+
+  // Harrowden Court: Brackwater Estates invited Tarnbrook to set availability dates; none are set yet.
+  const harrowden = s.world.buildings[HARROWDEN_ID]
+  s = log(s, { at: h.at(2, 9), orgIds: [ORG_IDS.brackwater, ORG_IDS.tarnbrook], projectId: null, buildingId: HARROWDEN_ID, actorUserId: null, actor: 'Brackwater Estates', text: 'invited Tarnbrook Deconstruction to set availability dates', href: `/app/buildings/${HARROWDEN_ID}` })
+  s = notify(s, { orgIds: [ORG_IDS.tarnbrook], kind: 'appointed', title: `Brackwater Estates invited you to set availability dates at ${harrowden.name}`, body: 'Say when each item is expected to come out. The owner decides what buyers see.', href: `/app/buildings/${HARROWDEN_ID}/availability`, at: h.at(2, 9), actorUserId: null })
 
   // Testing: Dana asked Brindmoor Testing for coupon tests on the primary steel; the visit is booked.
   const steel = ['TH-02', 'TH-03', 'TH-04', 'TH-05', 'TH-06'].map((t) => itemByTag(s.world, t).id)

@@ -6,7 +6,9 @@ import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { Building, Building2, CalendarClock, Camera, MapPin, Pencil, UserRound } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { BuildingRef } from '../../store/selectors/owner'
-import { BuildingThumb, Button, Dialog, Field, Input, Pill, Tabs, toast } from '../../ui'
+import { BuildingThumb, Button, Dialog, Field, Input, Pill, Select, Tabs, toast } from '../../ui'
+import { localAuthorityChoices } from '../../store/selectors/project'
+import { REGIONS } from '../../domain/reference/assumptions'
 import { buildingVisual } from '../../store/selectors/buildings-ui'
 import { ClaimActions } from './ClaimDialog'
 import { Page } from '../../app/Page'
@@ -45,11 +47,12 @@ export function BuildingLayout() {
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {owner ? (
+              {h.canEditDetails ? (
                 <Button icon={Pencil} onClick={() => setEditing(true)} data-testid="edit-building">
                   Edit details
                 </Button>
-              ) : h.side === 'contractor' ? (
+              ) : null}
+              {owner ? null : h.side === 'contractor' ? (
                 tab !== 'availability' ? (
                   <Button asChild variant="primary" icon={CalendarClock}>
                     <Link to={`/app/buildings/${h.id}/availability`}>Set dates</Link>
@@ -97,10 +100,13 @@ export function BuildingLayout() {
       <Page className="lg:pt-7">
         <Outlet />
       </Page>
-      {owner ? <EditBuildingDialog key={editing ? 'open' : 'closed'} header={h} open={editing} onOpenChange={setEditing} /> : null}
+      {h.canEditDetails ? <EditBuildingDialog key={editing ? 'open' : 'closed'} header={h} open={editing} onOpenChange={setEditing} /> : null}
     </div>
   )
 }
+
+/** The choice that reveals a text field for a local authority not in the list. */
+const OTHER_LA = '__other'
 
 function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRef; open: boolean; onOpenChange: (o: boolean) => void }) {
   const o = useView(selectors.buildingOverview, header.id)
@@ -110,10 +116,16 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
   const [strip, setStrip] = useState(date('Strip-out starts'))
   const [dismantle, setDismantle] = useState(date('Dismantling starts'))
   const [clear, setClear] = useState(date('Site clear by'))
+  const [postcode, setPostcode] = useState(header.postcodeDistrict)
+  const [region, setRegion] = useState(header.region)
+  const [authority, setAuthority] = useState(header.localAuthority)
+  const choices = localAuthorityChoices(region)
+  // A name outside the list (typed earlier, or another local authority) shows as Another local authority with its text.
+  const [otherLa, setOtherLa] = useState(!!header.localAuthority && !choices.options.includes(header.localAuthority))
   const [error, setError] = useState<string | null>(null)
   const save = (e: FormEvent) => {
     e.preventDefault()
-    const r = act.updateBuilding(header.id, { name, address, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
+    const r = act.updateBuilding(header.id, { name, address, postcodeDistrict: postcode, region, localAuthority: authority, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
     if (!r.ok) return setError(r.error)
     toast.success('Building details saved', { action: { label: 'Undo', onClick: r.undo } })
     onOpenChange(false)
@@ -123,7 +135,7 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
       open={open}
       onOpenChange={onOpenChange}
       title="Edit building details"
-      description="Private to your organisation and your surveyor."
+      description={header.side === 'owner' ? 'Private to your organisation and your surveyor.' : 'Private to your firm until its owner confirms it. The owner can correct these later.'}
       size="lg"
       footer={
         <>
@@ -146,6 +158,39 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
         <Field label="Address" required>
           <Input value={address} onChange={(e) => setAddress(e.target.value)} />
         </Field>
+        <div className="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)]">
+          <Field label="Postcode district" optional>
+            <Input value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="EC2" data-testid="edit-postcode" />
+          </Field>
+          <Field label="Region" required>
+            <Select
+              value={region}
+              onChange={(e) => {
+                setRegion(e.target.value)
+                setAuthority('')
+                setOtherLa(false)
+              }}
+              options={REGIONS.map((r) => ({ value: r, label: r }))}
+              data-testid="edit-region"
+            />
+          </Field>
+          <Field label="Local authority" optional>
+            <div className="flex flex-col gap-2">
+              <Select
+                value={otherLa ? OTHER_LA : authority}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setOtherLa(v === OTHER_LA)
+                  setAuthority(v === OTHER_LA ? (choices.options.includes(authority) ? '' : authority) : v)
+                }}
+                placeholder="Not set"
+                options={[...choices.options.map((x) => ({ value: x, label: x })), { value: OTHER_LA, label: 'Another local authority' }]}
+                data-testid="edit-local-authority"
+              />
+              {otherLa ? <Input aria-label="Local authority name" value={authority} onChange={(e) => setAuthority(e.target.value)} placeholder="Name of the local authority" /> : null}
+            </div>
+          </Field>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Strip-out starts" optional>
             <Input type="date" value={strip} onChange={(e) => setStrip(e.target.value)} />

@@ -76,7 +76,7 @@ export function Priorities() {
             </li>
           </ul>
         </div>
-        <Table caption="Priority ranking" data-testid="priority-table">
+        <Table caption="Recovery plan ranking" data-testid="priority-table">
           <THead>
             <tr>
               <TH className="w-10">#</TH>

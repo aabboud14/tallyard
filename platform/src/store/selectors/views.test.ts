@@ -418,7 +418,8 @@ describe('inbox, navigation, routes and search', () => {
     expect(titles(U.priya)).toEqual([[null, ['Home', 'Marketplace', 'Saved']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court', 'New project']]])
     // Round 2 (BRIEF 14.2): Kilnworth Place appears in Isla's projects, in name order (BRIEF 14.3).
     expect(titles(U.isla)).toEqual([[null, ['Home']], ['Projects', ['Kilnworth Place', 'Merrowgate Wharf']]])
-    expect(titles(U.tom)).toEqual([[null, ['Home']], ['Donor buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
+    // Audit 16 October, note C5: an owner may build too, so it always has the Marketplace.
+    expect(titles(U.tom)).toEqual([[null, ['Home', 'Marketplace']], ['Donor buildings', ['Tiverne House', 'Add building']], [null, ['Requests']]])
     expect(titles(U.dana)).toEqual([[null, ['Home', 'Capture']], ['Clients', ['Ostlea Estates', 'Brackwater Estates', 'Not yet linked', 'Add building']]])
     expect(titles(U.marcus)).toEqual([[null, ['Home']], ['Projects', ['Ferrymoor Yard', 'Merrowgate Wharf', 'Sallow Court']], ['Engagements', ['Durnley House']]])
     const isla = sel.navModel(s, viewer(U.isla))!
@@ -457,8 +458,10 @@ describe('inbox, navigation, routes and search', () => {
     expect(r(U.tom, `/app/buildings/${HARROWDEN_ID}`)).toBe('forbidden')
     expect(r(U.tom, `/app/buildings/${TIVERNE_ID}/inventory/${itemByTag(s.world, 'TH-01').id}`)).toBe('ok')
     expect(r(U.tom, `/app/buildings/${TIVERNE_ID}/inventory/${itemByTag(s.world, 'HC-01').id}`)).toBe('forbidden')
-    expect(r(U.tom, '/app/discover')).toBe('forbidden')
-    expect(r(U.tom, '/app/marketplace')).toBe('forbidden')
+    // Audit 16 October, note C5: every owner reads the marketplace; its own lots stay in its buildings.
+    expect(r(U.tom, '/app/discover')).toBe('ok')
+    expect(r(U.tom, '/app/marketplace')).toBe('ok')
+    expect(r(U.tom, `/app/marketplace/${lotForItem(s.world, itemByTag(s.world, 'TH-01').id).publicId}`)).toBe('forbidden')
     expect(r(U.dana, `/app/buildings/${HARROWDEN_ID}/capture`)).toBe('ok')
     expect(r(U.dana, `/app/buildings/${TIVERNE_ID}/priorities`)).toBe('forbidden')
     expect(r(U.marcus, `/app/projects/${MERROWGATE_ID}/compliance`)).toBe('ok')
@@ -478,7 +481,10 @@ describe('inbox, navigation, routes and search', () => {
     expect(priya.some((e) => e.href === '/app/marketplace/L-DAXNV3')).toBe(false)
     const tom = sel.searchIndex(s, viewer(U.tom))
     expect(sel.searchEntries(tom, 'th-07')[0]).toMatchObject({ kind: 'item' })
-    expect(tom.some((e) => e.kind === 'material' || e.kind === 'project')).toBe(false)
+    // Audit 16 October, note C5: an owner finds other sellers' materials, never its own lots, and no projects until it has one.
+    expect(tom.some((e) => e.kind === 'project')).toBe(false)
+    expect(tom.some((e) => e.kind === 'material')).toBe(true)
+    expect(tom.some((e) => e.href === `/app/marketplace/${lotForItem(s.world, itemByTag(s.world, 'TH-01').id).publicId}`)).toBe(false)
   })
 
   it('every activity line and notification leads to a page its reader can open', () => {

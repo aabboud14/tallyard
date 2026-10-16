@@ -4,12 +4,13 @@
 // sandbox: the request is recorded here and the other side is told.
 import { useState, type FormEvent } from 'react'
 import { useParams, useSearchParams } from 'react-router'
-import { CalendarCheck, ClipboardCheck, FlaskConical, Mail, Plus, X } from 'lucide-react'
+import { CalendarCheck, ClipboardCheck, Copy, Download, FileText, FlaskConical, Mail, Plus, Quote, X } from 'lucide-react'
 import type { SteelGrade } from '../../domain/types'
 import { FAMILIES } from '../../domain/reference/families'
 import { act, selectors, useView, type TestResult, type TestService } from '../../store'
 import type { TestingRow } from '../../store/selectors/testing'
 import { testingResultsForm } from '../../store/selectors/buildings-ui'
+import { downloadText } from '../../app/download'
 import { Button, Callout, Card, Checkbox, Dialog, EmptyState, Field, Input, Pill, RadioCards, Select, SegmentedControl, Textarea, toast } from '../../ui'
 
 export function Testing() {
@@ -21,8 +22,9 @@ export function Testing() {
   const [booking, setBooking] = useState<TestingRow | null>(null)
   const [recording, setRecording] = useState<TestingRow | null>(null)
   const [cancelling, setCancelling] = useState<TestingRow | null>(null)
+  const [viewing, setViewing] = useState<string | null>(null)
   if (!v) return null
-  const owner = v.header.side === 'owner'
+  const viewingRow = viewing ? (v.rows.find((r) => r.id === viewing) ?? null) : null
   const closeRequest = () => {
     setRequesting(false)
     if (params.has('items')) {
@@ -57,12 +59,13 @@ export function Testing() {
         <ul className="m-0 flex list-none flex-col gap-4 p-0">
           {v.rows.map((r) => (
             <li key={r.id}>
-              <RequestCard r={r} owner={owner} onBook={() => setBooking(r)} onRecord={() => setRecording(r)} onCancel={() => setCancelling(r)} />
+              <RequestCard r={r} owner={v.header.side === 'owner'} onView={() => setViewing(r.id)} onBook={() => setBooking(r)} onRecord={() => setRecording(r)} onCancel={() => setCancelling(r)} />
             </li>
           ))}
         </ul>
       )}
-      {requesting ? <RequestDialog buildingId={buildingId} owner={owner} preselect={preselect} onClose={closeRequest} /> : null}
+      {requesting ? <RequestDialog buildingId={buildingId} preselect={preselect} onClose={closeRequest} /> : null}
+      {viewingRow ? <SheetDialog row={viewingRow} onClose={() => setViewing(null)} /> : null}
       {booking ? <BookingDialog row={booking} onClose={() => setBooking(null)} /> : null}
       {recording ? <ResultsDialog row={recording} onClose={() => setRecording(null)} /> : null}
       {cancelling ? <CancelDialog row={cancelling} onClose={() => setCancelling(null)} /> : null}
@@ -76,7 +79,7 @@ const STEPS: { status: TestingRow['status']; label: string }[] = [
   { status: 'results', label: 'Results recorded' },
 ]
 
-function RequestCard({ r, owner, onBook, onRecord, onCancel }: { r: TestingRow; owner: boolean; onBook: () => void; onRecord: () => void; onCancel: () => void }) {
+function RequestCard({ r, owner, onView, onBook, onRecord, onCancel }: { r: TestingRow; owner: boolean; onView: () => void; onBook: () => void; onRecord: () => void; onCancel: () => void }) {
   const reached = STEPS.findIndex((s) => s.status === r.status)
   return (
     <Card className="overflow-hidden" data-testid={`testing-${r.id}`}>
@@ -126,9 +129,20 @@ function RequestCard({ r, owner, onBook, onRecord, onCancel }: { r: TestingRow; 
             <dd className="m-0 mt-0.5 text-base text-ink">
               {r.requestedByName}, {r.requestedText}
             </dd>
+            {r.preferredText ? (
+              <dd className="m-0 text-sm text-muted" data-testid="testing-preferred">
+                Preferred from {r.preferredText}
+              </dd>
+            ) : null}
             {r.bookedText ? <dd className="m-0 text-sm font-medium text-info">Visit {r.bookedText}</dd> : null}
           </div>
         </dl>
+        {r.message ? (
+          <blockquote className="m-0 flex gap-2 rounded-md bg-subtle px-3 py-2 text-sm text-ink-soft" data-testid="testing-message">
+            <Quote aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-faint" />
+            <span className="min-w-0 break-words">{r.message}</span>
+          </blockquote>
+        ) : null}
         {r.results.length > 0 ? (
           <table className="w-full border-collapse text-left text-sm" data-testid="testing-results">
             <caption className="sr-only">Results</caption>
@@ -158,10 +172,12 @@ function RequestCard({ r, owner, onBook, onRecord, onCancel }: { r: TestingRow; 
             </tbody>
           </table>
         ) : null}
-        {r.canBook || r.canRecord ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
-            <p className="m-0 text-sm text-muted">{r.canRecord && r.recordLocked && !owner ? 'Some items are shared or published. The owner records those results.' : 'Record what the company tells you. Nothing is sent from the sandbox.'}</p>
-            <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
+          <p className="m-0 text-sm text-muted">{r.canRecord && r.recordLocked && !owner ? 'Some items are shared or published. The owner records those results.' : r.canBook ? 'Record what the company tells you. Nothing is sent from the sandbox.' : 'What was asked of the company stays here for reference.'}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="ghost" icon={FileText} onClick={onView} data-testid="testing-view">
+              View request
+            </Button>
               {r.canCancel ? (
                 <Button size="sm" variant="ghost" icon={X} onClick={onCancel} data-testid="testing-cancel">
                   Cancel
@@ -177,15 +193,111 @@ function RequestCard({ r, owner, onBook, onRecord, onCancel }: { r: TestingRow; 
                   Record results
                 </Button>
               ) : null}
-            </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </Card>
   )
 }
 
-function RequestDialog({ buildingId, owner, preselect, onClose }: { buildingId: string; owner: boolean; preselect: string[]; onClose: () => void }) {
+/** What the testing company would receive, with copy and download. Nothing is sent from the sandbox. */
+function SheetDialog({ row, onClose }: { row: TestingRow; onClose: () => void }) {
+  const sh = row.sheet
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(row.sheetText)
+      toast.success('Request copied', { description: 'Paste it into an email to the company.' })
+    } catch {
+      toast.error('Could not copy here. Use Download .txt instead.')
+    }
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={(x) => !x && onClose()}
+      title={`Request to ${sh.companyName}`}
+      description="Nothing is sent from the sandbox. This is what the company would receive."
+      size="lg"
+      testId="testing-sheet"
+      footer={
+        <>
+          <Button icon={Copy} onClick={copy} data-testid="testing-sheet-copy">
+            Copy text
+          </Button>
+          <Button icon={Download} onClick={() => downloadText(row.sheetText, row.fileName, 'text/plain')} data-testid="testing-sheet-download">
+            Download .txt
+          </Button>
+          <Button variant="primary" onClick={onClose}>
+            Done
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5 text-base">
+        <dl className="m-0 grid gap-3 sm:grid-cols-2">
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">To</dt>
+            <dd className="m-0 mt-0.5 break-words text-ink">
+              {sh.companyName}
+              <span className="block text-sm text-muted">{sh.companyEmail}</span>
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">From</dt>
+            <dd className="m-0 mt-0.5 break-words text-ink">
+              {[sh.fromName, sh.fromOrg].filter(Boolean).join(', ')}
+              <span className="block text-sm text-muted">{sh.fromEmail}</span>
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">Building</dt>
+            <dd className="m-0 mt-0.5 break-words text-ink">
+              {sh.buildingName}
+              <span className="block text-sm text-muted">{sh.buildingAddress}</span>
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-xs text-muted">Requested</dt>
+            <dd className="m-0 mt-0.5 text-ink">{sh.requestedText}</dd>
+            <dd className="m-0 text-sm text-muted">Preferred from {sh.preferredText ?? 'any date'}</dd>
+          </div>
+        </dl>
+        <div>
+          <h3 className="m-0 text-sm font-semibold text-ink">Tests</h3>
+          <ul className="m-0 mt-1 list-disc pl-5 text-ink-soft">
+            {sh.tests.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="m-0 text-sm font-semibold text-ink">Items ({sh.items.length})</h3>
+          <ul className="m-0 mt-1 flex list-none flex-col divide-y divide-line-soft rounded-lg border border-line p-0" data-testid="testing-sheet-items">
+            {sh.items.map((i) => (
+              <li key={i.tag} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3">
+                <span className="shrink-0 text-xs font-medium tabular-nums text-muted">{i.tag}</span>
+                <span className="min-w-0 flex-1 text-ink">
+                  {i.title}, {i.quantityText}
+                </span>
+                {i.location ? <span className="text-sm text-muted">{i.location}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {sh.message ? (
+          <div>
+            <h3 className="m-0 text-sm font-semibold text-ink">Message</h3>
+            <p className="m-0 mt-1 whitespace-pre-line break-words text-ink-soft" data-testid="testing-sheet-message">
+              {sh.message}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </Dialog>
+  )
+}
+
+function RequestDialog({ buildingId, preselect, onClose }: { buildingId: string; preselect: string[]; onClose: () => void }) {
   const [itemIds, setItemIds] = useState<string[]>(preselect)
   const [services, setServices] = useState<TestService[]>([])
   const [companyId, setCompanyId] = useState('')
@@ -206,9 +318,11 @@ function RequestDialog({ buildingId, owner, preselect, onClose }: { buildingId: 
     e.preventDefault()
     const r = act.requestTesting({ buildingId, itemIds, services: chosenServices, companyId: company, preferredFrom: preferredFrom || null, message })
     if (!r.ok) return setError(r.error)
-    toast.success('Testing requested', { description: owner ? 'Recorded here. Your surveyor has been told.' : 'Recorded here. The owner has been told.', action: { label: 'Undo', onClick: r.undo } })
+    const to = o.companies.find((c) => c.id === company)?.name ?? 'the testing company'
+    toast.success(`Request to ${to} recorded`, { description: o.otherSideName ? `${o.otherSideName} has been told. Open View request to see what the company would receive.` : 'Recorded here. Open View request to see what the company would receive.', action: { label: 'Undo', onClick: r.undo } })
     onClose()
   }
+  const footnote = o.otherSideName ? `Nothing is sent in the sandbox. The request is recorded here and ${o.otherSideName} is told.` : 'Nothing is sent in the sandbox. The request is recorded here.'
   return (
     <Dialog
       open
@@ -219,7 +333,9 @@ function RequestDialog({ buildingId, owner, preselect, onClose }: { buildingId: 
       testId="testing-dialog"
       footer={
         <>
-          <p className="m-0 mr-auto hidden text-sm text-muted sm:block">Nothing is sent in the sandbox. The request is recorded here and {owner ? 'your surveyor is told' : 'the owner is told'}.</p>
+          <p className="m-0 mr-auto hidden text-sm text-muted sm:block" data-testid="testing-footnote">
+            {footnote}
+          </p>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" icon={FlaskConical} type="submit" form="testing-form" data-testid="testing-send">
             Send request
@@ -299,7 +415,7 @@ function RequestDialog({ buildingId, owner, preselect, onClose }: { buildingId: 
             <Textarea rows={2} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="For example: grade unconfirmed from the archive drawings." />
           </Field>
         </div>
-        <p className="m-0 text-sm text-muted sm:hidden">Nothing is sent in the sandbox. The request is recorded here and {owner ? 'your surveyor is told' : 'the owner is told'}.</p>
+        <p className="m-0 text-sm text-muted sm:hidden">{footnote}</p>
       </form>
     </Dialog>
   )

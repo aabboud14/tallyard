@@ -6,7 +6,9 @@ import type { ActionResult, Actor, AppData } from '../types'
 import { normaliseEmail, isEmail } from '../../sandbox/accounts'
 import { ERRORS, buildingSide, roleOfOrg, usersOfOrg } from '../access'
 import { mint } from '../ids'
-import { log, notify } from '../notifications'
+import { log, notify, plural } from '../notifications'
+import { nextTag } from '../worldOps'
+import type { SurveyStatus } from '../types'
 import { acting, clean, fail, ok, withWorld } from './common'
 import { buildingRecord, checkBuildingDetails, type BuildingDetailsInput } from './owner'
 
@@ -19,6 +21,8 @@ export const CLAIM_ERRORS = {
   notPending: 'That request is no longer waiting.',
   notAddressed: 'This request is addressed to someone else.',
   deleteLinked: 'A building linked to its owner cannot be deleted here.',
+  mergeFrom: 'Only a building your firm added, with no owner confirmed yet, can be moved into an appointment.',
+  mergeInto: 'Choose a building an owner appointed your firm to survey.',
 } as const
 
 export type ClaimRequestInput = { email: string; name: string; message: string }
@@ -172,4 +176,73 @@ export function deleteSurveyBuilding(state: AppData, actor: Actor, buildingId: s
   s = { ...s, surveys, testingRequests, buildingClaims }
   s = log(s, { at: a.now, orgIds: [a.org.id], buildingId: null, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: `deleted ${b.name}`, href: '/app/buildings' })
   return ok(s)
+}
+
+const SURVEY_ORDER: SurveyStatus[] = ['not_started', 'in_progress', 'submitted']
+
+export type MergeResult = { moved: number; intoId: string; intoName: string; retagged: boolean }
+
+/**
+ * The surveying firm moves what it captured in a building it added itself into the same building once its owner has
+ * appointed the firm (audit 16 October, note 26): every item, with its lot, photos and testing requests, moves across;
+ * structure and programme dates fill gaps on the appointed record; pending requests to the owner are withdrawn; and the
+ * firm's own record is removed. Items keep their tags unless the appointed building already has items, when they
+ * continue its numbering. The owner is told; the items stay private until the owner decides.
+ */
+export function mergeSurveyBuilding(state: AppData, actor: Actor, fromBuildingId: string, intoBuildingId: string): ActionResult<MergeResult> {
+  const a = acting(state, actor)
+  if (typeof a === 'string') return fail(state, a)
+  if (a.role !== 'surveyor') return fail(state, ERRORS.role)
+  const from = state.world.buildings[fromBuildingId]
+  const into = state.world.buildings[intoBuildingId]
+  if (!from || !into) return fail(state, ERRORS.noBuilding)
+  if (from.ownerOrgId !== null || from.createdByOrgId !== a.org.id || from.surveyorOrgId !== a.org.id) return fail(state, CLAIM_ERRORS.mergeFrom)
+  if (into.id === from.id || into.ownerOrgId === null || into.surveyorOrgId !== a.org.id) return fail(state, CLAIM_ERRORS.mergeInto)
+  const w = structuredClone(state.world)
+  const moving = Object.values(w.items)
+    .filter((i) => i.buildingId === from.id)
+    .sort((x, y) => x.tag.localeCompare(y.tag, 'en-GB', { numeric: true }))
+  const retag = Object.values(w.items).some((i) => i.buildingId === into.id) && moving.length > 0
+  for (const item of moving) {
+    // Each moved item takes the appointed building's next tag before it joins, so the numbering continues.
+    if (retag) item.tag = nextTag(w, into.id)
+    item.buildingId = into.id
+  }
+  const target = w.buildings[into.id]
+  if (target.structure.length === 0 && from.structure.length > 0) target.structure = structuredClone(from.structure)
+  if (!target.structureType && from.structureType) target.structureType = from.structureType
+  target.programme = {
+    stripOutStart: target.programme.stripOutStart ?? from.programme.stripOutStart,
+    dismantlingStart: target.programme.dismantlingStart ?? from.programme.dismantlingStart,
+    clearBy: target.programme.clearBy ?? from.programme.clearBy,
+  }
+  if (target.yearBuilt === null && from.yearBuilt !== null) {
+    target.yearBuilt = from.yearBuilt
+    target.eraBand = from.eraBand
+  }
+  if (target.storeys === null) target.storeys = from.storeys
+  if (target.giaM2 === null) target.giaM2 = from.giaM2
+  delete w.buildings[from.id]
+  let s = withWorld(state, w)
+  // The survey record: the further of the two, keeping the appointment.
+  const fromSurvey = s.surveys[from.id]
+  const intoSurvey = s.surveys[into.id] ?? { buildingId: into.id, status: 'not_started' as const, appointedAt: null, submittedAt: null, submittedByUserId: null }
+  const further = [fromSurvey?.status ?? 'not_started', intoSurvey.status, moving.length > 0 ? 'in_progress' : 'not_started'].reduce<SurveyStatus>((m, x) => (SURVEY_ORDER.indexOf(x as SurveyStatus) > SURVEY_ORDER.indexOf(m) ? (x as SurveyStatus) : m), 'not_started')
+  const surveys = { ...s.surveys, [into.id]: { ...intoSurvey, status: further } }
+  delete surveys[from.id]
+  const testingRequests = Object.fromEntries(Object.entries(s.testingRequests).map(([id, t]) => [id, t.buildingId === from.id ? { ...t, buildingId: into.id } : t]))
+  const buildingClaims = Object.fromEntries(Object.entries(s.buildingClaims).map(([id, c]) => [id, c.buildingId === from.id && c.status === 'pending' ? { ...c, status: 'withdrawn' as const, decidedAt: a.now, decidedByUserId: a.user.id } : c]))
+  // Links in the firm's own activity and notifications follow the items to the appointed building.
+  const oldHref = `/app/buildings/${from.id}`
+  const newHref = (href: string | null) => (href && (href === oldHref || href.startsWith(`${oldHref}/`)) ? `/app/buildings/${into.id}${href.slice(oldHref.length)}` : href)
+  const activity = s.activity.map((e) => (e.buildingId === from.id ? { ...e, buildingId: into.id, href: newHref(e.href) } : e))
+  const notifications = s.notifications.map((n) => (n.href ? { ...n, href: newHref(n.href) ?? n.href } : n))
+  s = { ...s, surveys, testingRequests, buildingClaims, activity, notifications }
+  const n = plural(moving.length, 'item')
+  const href = `/app/buildings/${into.id}`
+  s = log(s, { at: a.now, orgIds: [a.org.id, into.ownerOrgId], buildingId: into.id, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: `moved ${n} captured earlier into ${into.name}`, href: `${href}/inventory` })
+  if (moving.length > 0) {
+    s = notify(s, { orgIds: [into.ownerOrgId], kind: 'appointed', title: `${a.org.name} added ${n} to ${into.name}`, body: 'Captured before your appointment. Private until you decide.', href: `${href}/inventory`, at: a.now, actorUserId: a.user.id })
+  }
+  return ok(s, { moved: moving.length, intoId: into.id, intoName: into.name, retagged: retag })
 }

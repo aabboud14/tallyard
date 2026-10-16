@@ -39,6 +39,11 @@ export function ProjectLayout() {
                     <span className="text-faint"> · </span>
                     {header.stageLabel}
                   </span>
+                  {header.kindLabel ? (
+                    <Pill size="sm" variant="quiet" data-testid="project-kind">
+                      {header.kindLabel}
+                    </Pill>
+                  ) : null}
                   {pending ? (
                     header.linkStatus === 'declined' ? (
                       <Pill tone="warning" size="sm" icon={UserRoundX} data-testid="link-status">

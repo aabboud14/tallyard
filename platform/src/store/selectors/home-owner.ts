@@ -5,7 +5,7 @@ import { buildingSketch, projectSketch, type BuildingSketch } from '../../domain
 import { formatDate } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
-import { itemsOf, ownerHome, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
+import { itemsOf, ownerHome, priorityFor, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
 import { shortlistRows } from './shortlist'
 import { activitySummary, awaitingState, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
 
@@ -24,6 +24,13 @@ export type OwnerDashboard = OwnerHome & {
     awaiting: number
     requestTone: MetricTone
     requestState: TileState | null
+    /**
+     * What the donor buildings could fetch, less the cost of careful removal, if recovered as each recovery plan ranks
+     * (the Recovery plan's own figure, summed). Indicative.
+     */
+    recoverableValue: number
+    /** Items the recovery plans say are worth recovering, and all items. */
+    recoverCount: number
   }
   buildingCards: OwnerBuildingCard[]
   newProjectCards: OwnerProjectCard[]
@@ -64,6 +71,13 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
     if (item) requestThumbs[r.id] = { publicId: r.publicId, spec: item.spec, title: r.title }
   }
   const awaiting = home.stats.requestsAwaiting + home.stats.claimsAwaiting
+  let recoverableValue = 0
+  let recoverCount = 0
+  for (const c of home.buildings) {
+    const plan = priorityFor(state, c.id)
+    recoverableValue += plan.recoverableNetValue
+    recoverCount += plan.rows.filter((r) => r.route === 'recover').length
+  }
   return {
     ...home,
     metrics: {
@@ -73,6 +87,8 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
       awaiting,
       requestTone: awaiting > 0 ? 'warning' : 'neutral',
       requestState: awaitingState(awaiting),
+      recoverableValue,
+      recoverCount,
     },
     buildingCards,
     newProjectCards,

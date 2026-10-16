@@ -97,7 +97,8 @@ describe('share links', () => {
     s = must(revokeShareLink(s, actor(U.tom), TIVERNE_LINK_ID)).state
     expect(sel.linkView(s, viewer(U.priya), TIVERNE_LINK_ID)).toEqual({ state: 'inactive' })
     expect(sel.linkView(s, viewer(U.tom), TIVERNE_LINK_ID)).toEqual({ state: 'inactive' })
-    expect(sel.linkView(s, viewer(U.priya), 'lnk_nothere')).toEqual({ state: 'inactive' })
+    // Audit 16 October, note 33: an address this sandbox never saw has its own state, apart from a revoked link.
+    expect(sel.linkView(s, viewer(U.priya), 'lnk_nothere')).toEqual({ state: 'unknown' })
   })
 
   it("titles the link page, and its breadcrumb, as the owner's preview or as shared with you", () => {
@@ -336,7 +337,8 @@ describe('the sidebar', () => {
     const before = sel.navModel(s0, viewer(U.tom))!
     expect(before.sections.map((x) => x.title)).toEqual([null, 'Donor buildings', null])
     expect(before.sections[1].items[0].children.map((c) => c.label)).toEqual(['Overview', 'Inventory', 'Recovery plan', 'Listings', 'Sharing', 'Testing'])
-    expect(before.sections[0].items.map((i) => i.label)).toEqual(['Home'])
+    // Audit 16 October, note C5: the Marketplace is there before any New project too.
+    expect(before.sections[0].items.map((i) => i.label)).toEqual(['Home', 'Marketplace'])
     const r = must(createOwnerProject(s0, actor(U.tom), WEXCOMBE))
     const after = sel.navModel(r.state, viewer(U.tom))!
     expect(after.sections.map((x) => x.title)).toEqual([null, 'Donor buildings', 'New projects', null])
@@ -377,8 +379,9 @@ describe('routes', () => {
     expect(r(s1, U.dana, `/app/buildings/${TIVERNE_ID}/availability`)).toBe('ok')
     // The owner as client of a New project reads projects and the marketplace.
     expect(r(s0, U.tom, '/app/projects')).toBe('forbidden')
-    expect(r(s0, U.tom, '/app/discover')).toBe('forbidden')
-    expect(r(s0, U.tom, '/app/marketplace')).toBe('forbidden')
+    // Audit 16 October, note C5: the marketplace opens before any New project; projects still wait for one.
+    expect(r(s0, U.tom, '/app/discover')).toBe('ok')
+    expect(r(s0, U.tom, '/app/marketplace')).toBe('ok')
     const p = must(createOwnerProject(s0, actor(U.tom), WEXCOMBE))
     expect(r(p.state, U.tom, '/app/projects')).toBe('ok')
     expect(r(p.state, U.tom, `/app/projects/${p.value}`)).toBe('ok')

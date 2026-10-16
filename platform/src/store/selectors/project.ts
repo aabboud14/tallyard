@@ -22,7 +22,7 @@ import { projectRequirementsView, type ProjectRequirementsView } from './require
 import { projectWishlist } from '../lots'
 import { sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
 import { plural } from '../notifications'
-import { architectOptions } from './owner'
+import { architectOptions, NEW_PROJECT } from './owner'
 
 export type ProjectTab = { id: string; label: string; href: string; badge: number | null; soon: boolean }
 
@@ -96,6 +96,8 @@ export type ProjectHeader = ProjectRef & {
   /** "Today: stage 2, Concept Design", or "Programme starts 1 Nov 2026". */
   plannedStageText: string
   linkStatus: ClientLinkStatus
+  /** 'New project' for a donor building owner on their own New project, matching the 'Donor building' pill; else null. */
+  kindLabel: string | null
 }
 
 export const NO_ARCHITECT_TEXT = 'Not appointed yet'
@@ -136,6 +138,7 @@ export function projectHeader(state: AppData, viewer: Viewer, projectId: string)
     completionText: formatDate(p.programme.practicalCompletion),
     plannedStageText: plannedStageText(p, todayOf(viewer)),
     linkStatus: p.clientLink.status,
+    kindLabel: side === 'client' && roleOfUser(state, viewer.userId) === 'owner' && state.users[viewer.userId]?.orgId === p.clientOrgId ? NEW_PROJECT : null,
   }
 }
 

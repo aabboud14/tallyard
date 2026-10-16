@@ -192,6 +192,7 @@ test('a deconstruction contractor sets a date and the owner applies it', async (
   await page.getByTestId('contractor-select').selectOption({ label: 'Shaw Surveys' })
   await page.getByTestId('contractor-save').click()
   await expect(page.getByTestId('contractor-card')).toContainText('Shaw Surveys')
+  await expect(page.getByText("Fennick Dismantling's 5 dates were cleared.").first()).toBeVisible()
   await signOut(page)
 
   await page.getByTestId('signin-email').fill('lee.shaw@shawsurveys.example')
@@ -199,7 +200,8 @@ test('a deconstruction contractor sets a date and the owner applies it', async (
   await page.getByTestId('signin-submit').click()
   await page.waitForURL('**/app/home**')
   await page.goto(`/app/buildings/${TIVERNE}/availability`)
-  // TH-07 still carries the month the previous contractor gave; Lee changes it.
+  // Audit 16 October, note 28: a new contractor no longer inherits the previous one's months, so TH-07 starts unset.
+  await page.getByTestId('avail-TH-07-set').click()
   await page.getByTestId('avail-TH-07-month').selectOption('6')
   await page.getByTestId('save-dates').click()
   await expect(page.getByText('1 date saved').first()).toBeVisible()

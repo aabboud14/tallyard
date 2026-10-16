@@ -186,7 +186,7 @@ const RULES: { icon: LucideIcon; title: string; text: ReactNode }[] = [
   { icon: Boxes, title: 'Generated geometry', text: '3D views and the DXF, OBJ and IFC files are generated from the recorded dimensions, with square corners. Panel depths for curtain walls and raised floors are placeholders.' },
   { icon: Tag, title: 'Guide price', text: `A range from the family's reference price, adjusted for condition, testing and demand. ${LABELS.L10}.` },
   { icon: Handshake, title: 'Indicative package', text: 'Storage at the nearest suitable yard until the start, testing where the material is untested, handling and delivery to site.' },
-  { icon: ListOrdered, title: 'Priority ranking', text: `Out of 100 points: ${scoreWeights().map((w) => `${w.label.toLowerCase()} ${w.max}`).join(', ')}. Items that would cost more to recover than they fetch, or will not come out intact, go to recycling.` },
+  { icon: ListOrdered, title: 'Recovery plan ranking', text: `Out of 100 points: ${scoreWeights().map((w) => `${w.label.toLowerCase()} ${w.max}`).join(', ')}. Items that would cost more to recover than they fetch, or will not come out intact, go to recycling.` },
   { icon: Layers, title: 'Decision tree', text: LABELS.L41 },
   { icon: ShieldCheck, title: 'Disclosure score', text: 'Points for how precisely published listings show location and timing, how many open lots a building has, a structural frame pattern and public photos. Publishing is refused at High.' },
   { icon: Camera, title: 'Capture', text: 'The description is read by fixed rules: section designations from the steel tables, counts, lengths, areas and volumes, connections for recoverability, and the location. Nothing is guessed silently.' },

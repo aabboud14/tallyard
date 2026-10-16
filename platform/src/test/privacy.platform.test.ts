@@ -152,6 +152,19 @@ function ownerViews(s: AppData, v: Viewer): [string, unknown][] {
       add(`draft ${item.tag}`, sel.listingDraftView(s, v, lot.id, { visibility: 'published', ask: '100', reserve: '90', availableFrom: '' }))
     }
   }
+  // Audit 16 October, note C5: every owner reads the marketplace, so its pages are owner views too.
+  for (const [name, view] of ownerMarketplaceViews(s, v)) add(name, view)
+  return out
+}
+
+/** The marketplace as a donor building owner reads it: the landing, a folder and each material page it can open. */
+function ownerMarketplaceViews(s: AppData, v: Viewer): [string, unknown][] {
+  const out: [string, unknown][] = [
+    ['marketplace', sel.discoverView(s, v, DEFAULT_DISCOVER_QUERY)],
+    ['marketplace structure', sel.discoverView(s, v, { ...DEFAULT_DISCOVER_QUERY, typology: 'structure' })],
+    ['build prompt', sel.ownerBuildPrompt(s, v)],
+  ]
+  for (const l of marketplaceListings(s)) out.push([`material ${l.publicId}`, sel.materialView(s, v, l.publicId, null)])
   return out
 }
 
@@ -431,6 +444,31 @@ describe('P3 on the platform, round 2: share links, contractors and New projects
     const dana: [string, unknown][] = [['home', sel.surveyorHome(s, v)], ['nav', sel.navModel(s, v)], ['inbox', sel.inboxView(s, v)], ['search', sel.searchIndex(s, v)], ['capture', sel.captureTargets(s, v)]]
     for (const b of buildingsOfUser(s, U.dana)) dana.push([`overview ${b.name}`, sel.buildingOverview(s, v, b.id)], [`inventory ${b.name}`, sel.inventoryView(s, v, b.id)], [`testing ${b.name}`, sel.testingView(s, v, b.id)])
     expectNone(dana, ['Wexcombe House', ...dateFormats(s.world.projects[r.value].startDate)], 'Dana')
+  })
+})
+
+describe('P3, audit 16 October: a donor building owner browsing the marketplace', () => {
+  it("sees other sellers' lots as public listings only, never its own lots, and no buyer", () => {
+    const s = busy()
+    const v = viewer(U.tom)
+    const views = ownerMarketplaceViews(s, v)
+    const own = new Set(Object.values(s.world.lots).filter((l) => s.world.buildings[s.world.items[l.itemId].buildingId]?.ownerOrgId === ORG_IDS.ostlea).map((l) => l.publicId))
+    const others = new Set<string>()
+    for (const lot of Object.values(s.world.lots)) {
+      const item = s.world.items[lot.itemId]
+      if (own.has(lot.publicId)) continue
+      for (const x of lotPrivateStrings(lot, item, s.world.buildings[item.buildingId], s.world)) others.add(x)
+    }
+    expectNone(views, [...others], 'Tom in the marketplace')
+    expectNone(views, allProjectStrings(s), 'Tom in the marketplace')
+    expectNoInternalIds(views, 'Tom in the marketplace')
+    const grid = sel.discoverView(s, v, DEFAULT_DISCOVER_QUERY)
+    expect(grid.cards.length).toBeGreaterThan(0)
+    for (const c of grid.cards) expect(own.has(c.publicId), c.publicId).toBe(false)
+    for (const id of own) expect(sel.materialView(s, v, id, null), id).toBeNull()
+    // The client view: prices kept, nothing to save to without a project.
+    expect(grid.canSave).toBe(false)
+    expect(grid.sortOptions).toContain('price')
   })
 })
 

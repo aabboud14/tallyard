@@ -31,6 +31,7 @@ import { acceptedReservation, lotOfItem, projectWishlist } from '../lots'
 import { checkPrices, disclosureWith, type LotVisibilityChoice, type PriceCheck } from '../actions/owner'
 import { PROJECT_TYPES } from '../actions/projects'
 import { claimRowsForOwner, claimStateFor, type ClaimRow, type ClaimState } from './claims'
+import { activitySummary, type ActivitySummary } from './dashboard'
 import { activityFor, firstName, greeting, listingCard, longDate, RESERVATION_STATUS_LABELS, stageLabel, timeAgo, todayOf, type ActivityRow, type ListingCard } from './common'
 
 export const SURVEY_STATUS_LABELS: Record<SurveyStatus, string> = { not_started: 'Not started', in_progress: 'In progress', submitted: 'Submitted' }
@@ -86,9 +87,12 @@ export type BuildingRef = {
   address: string
   region: string
   localAuthority: string
+  postcodeDistrict: string
   clientName: string
   surveyorName: string
   side: BuildingSide
+  /** The owner, or the surveying firm that added a building no owner has confirmed yet, may edit its details. */
+  canEditDetails: boolean
   tabs: BuildingTab[]
   surveyStatus: SurveyStatus
   surveyStatusLabel: string
@@ -109,9 +113,11 @@ function buildingRef(state: AppData, b: SourceBuilding, side: BuildingSide, view
     address: b.address,
     region: b.region,
     localAuthority: b.localAuthority,
+    postcodeDistrict: b.postcodeDistrict,
     clientName: b.ownerOrgId ? (state.world.orgs[b.ownerOrgId]?.name ?? '') : '',
     surveyorName: b.surveyorOrgId ? (state.world.orgs[b.surveyorOrgId]?.name ?? '') : '',
     side,
+    canEditDetails: side === 'owner' || (side === 'surveyor' && b.ownerOrgId === null && !!viewer && b.createdByOrgId === state.users[viewer.userId]?.orgId),
     tabs: buildingTabs(side, b.id, { contractor: isContractor }),
     surveyStatus: status,
     surveyStatusLabel: SURVEY_STATUS_LABELS[status],
@@ -453,6 +459,10 @@ export type BuildingOverview = {
   contractor: { orgId: string; name: string; datedCount: number; itemCount: number } | null
   /** Firms that can be invited as contractor (owner and surveyor sides). */
   contractorOptions: { orgId: string; name: string }[]
+  /** A contractor invited by email that has not joined Tallyard yet (owner and surveyor sides). */
+  contractorInvite: { email: string; invitedText: string } | null
+  /** The collapsed activity panel's one line: how many updates and the latest. */
+  activitySummary: ActivitySummary
   /** Testing requests still open, for the owner and surveyor sides; null for a contractor. */
   testing: { open: number; href: string } | null
 }
@@ -477,6 +487,7 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
   const datedCount = items.filter((i) => i.contractorAvailableFrom !== null).length
   const openTests = Object.values(state.testingRequests).filter((t) => t.buildingId === buildingId && (t.status === 'requested' || t.status === 'booked')).length
   const typologies = ['structure', 'envelope', 'finishes'] as const
+  const activity = activityFor(state, viewer, { buildingId }, 8)
   return {
     header,
     surveyorOrgId: b.surveyorOrgId,
@@ -494,7 +505,8 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
       return { typology: t, label: TYPOLOGY_LABELS[t], count: xs.length, massT: xs.reduce((s, i) => s + itemMeasures(i).massT, 0) }
     }),
     counts: visibilityCounts(state, buildingId),
-    activity: activityFor(state, viewer, { buildingId }, 8),
+    activity,
+    activitySummary: activitySummary(activity),
     structure: {
       rows: b.structure.map((e) => ({ kind: e.kind, label: ELEMENT_LABELS[e.kind], materialLabel: e.material ? MATERIAL_LABELS[e.material] : 'Not recorded', systemLabel: e.systemId ? (structureSystemById(e.systemId)?.label ?? '') : 'Not recorded', note: e.note })),
       summary,
@@ -504,6 +516,7 @@ export function buildingOverview(state: AppData, viewer: Viewer, buildingId: str
     },
     contractor: b.contractorOrgId ? { orgId: b.contractorOrgId, name: state.world.orgs[b.contractorOrgId]?.name ?? '', datedCount, itemCount: items.length } : null,
     contractorOptions: records ? surveyorOptions(state) : [],
+    contractorInvite: records && b.contractorInvite ? { email: b.contractorInvite.email, invitedText: formatDate(b.contractorInvite.invitedAt.slice(0, 10)) } : null,
     testing: records ? { open: openTests, href: `/app/buildings/${buildingId}/testing` } : null,
   }
 }
@@ -875,4 +888,18 @@ export function sharingView(state: AppData, viewer: Viewer): SharingView | null 
     })
   const sharedLotCount = Object.values(state.world.lots).filter((l) => l.visibility === 'matched_only' && state.world.buildings[state.world.items[l.itemId].buildingId]?.ownerOrgId === orgId).length
   return { rows, sharedLotCount, grantedCount: rows.filter((r) => r.granted).length, empty: rows.length === 0 }
+}
+
+/**
+ * The Marketplace prompt for a donor building owner with no New project yet (audit 16 October, note C5): it reads the
+ * marketplace as a client would, and a New project lets its architect save materials to it. Null for anyone else.
+ */
+export function ownerBuildPrompt(state: AppData, viewer: Viewer): { title: string; text: string; href: string } | null {
+  if (roleOfUser(state, viewer.userId) !== 'owner') return null
+  if (ownerProjects(state, viewer).length > 0) return null
+  return {
+    title: 'Building something too?',
+    text: 'Add a new project to save materials to it and check them against its start on site.',
+    href: '/app/buildings?new=project',
+  }
 }

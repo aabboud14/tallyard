@@ -15,6 +15,7 @@ import { useMediaQuery } from '../../app/media'
 import { ListingTile } from './ListingTile'
 import { ActiveFilters, FiltersButton } from './DiscoverFilters'
 import { CheckingBar } from './CheckingBar'
+import { OwnerBuildStrip } from '../buildings/OwnerBuildStrip'
 import { CategoryFolders } from './CategoryFolders'
 import { NewForProjectsRow } from './NewForProjectsRow'
 import { FolderHeader } from './FamilyChips'
@@ -271,6 +272,7 @@ export function Discover() {
           })}
         </nav>
       </header>
+      <OwnerBuildStrip className="mt-5" />
 
       {shared ? (
         <div className="mt-8 flex flex-col gap-12" data-testid="shared-with-you">
