@@ -11,6 +11,14 @@ From the recording audit of 16 October 2026. One line per note, then the existin
 - Incidental, old tabs never learn of a new build (fixed for every build from this one on): `NewVersionPrompt` (rendered beside the Toaster in `main.tsx`) checks the served index page when the person returns to the tab, and every ten minutes while it is in view, at most every 30 s. If its entry script differs from the running one, a bar says "A new version of Tallyard is available." with Reload and Not now. Production builds only. The 14 October build itself cannot be changed; its tab stops affecting the new one (above) and reloads into the new build on its next lazy page or reload.
 - Incidental, the old tab's own work thrown away by the new tab (fixed): the new build never writes the old key, so the old tab's in-memory work is untouched while it stays open. The new build removes the old key on its next load; the old tab reloads into the new build anyway.
 
+## After the adversarial review
+
+- Major, visitors who already opened the live round 2 build got no notice (fixed): that build had already replaced their version 1 sandbox without a word and written version 2 to the old key. When this build carries such a record over, it now also records `tallyard-platform-v2-whatsnew` (dated by the one clock). The home then shows the same notice and "See what changed" without the sentence about earlier work, which was kept: "The sandbox was updated on 16 October with the changes from the 14 October review." Pure selectors in `src/store/upgrade.ts`: `upgradeNoticeKind` (a replaced sandbox wins, a closed notice stays closed), `upgradeNoticeText`, `currentUpgradeNotice`, and `sandboxWasUpdated` (replaced or carried). Reset clears the new key. The sign-in hints below also apply to a carried browser, because accounts made in its older sandbox are gone too.
+- Minor, close button not in the corner (fixed): `IconButton`'s own `relative` class overrode `absolute`. It now sits in an absolutely placed wrapper at the notice's top right, with a 56 px gutter on phones for the 44 px button. At 390 px the notice is 5 lines instead of 7; the button is 7 px from the top and right edges at 390, 1024 and 1440.
+- Minor, a mistyped sample email was told its account is gone (fixed): `signInUpgradeHint` now skips the hint when `looksLikeAccountTypo` holds: the email's domain is within two letters of a sample organisation's domain, or the whole address is within two letters of an account in the sandbox (`editDistance`, Levenshtein). Known limit: an account made in the old sandbox with a sample organisation's domain gets the plain message only. "Create your account again" now passes the typed address in the link's router state and sign-up starts with it (`signUpEmailFrom`, `SignUpForm` `defaultEmail`); the link's address stays `/signup`.
+- Minor, a remembered sign-in to a gone account landed on a plain sign-in page (fixed): when the sandbox was updated and the remembered user is not in the data (`staleSessionHint`), the sign-in page shows the same line and link in an information callout before any attempt, and forgets the dead sign-in. The callout gives way to the error once the person tries.
+- Minor, a tab of the live round 2 build left open beside this build (known limit, not changed): its sandbox is carried over once. After that the two tabs diverge, and on its next load this build clears the old key because it already has data, so anything done in the round 2 tab after the copy is dropped, and that tab has no reload prompt. Keeping the newer one by `seq` would only move the loss to the other tab, because both copies changed from the same start, and reading the old key's version 2 writes live would bring back a shared key with the 14 October build. The round 2 tab reloads into this build on its next lazy page or reload.
+
 ## Shared files touched (smallest change)
 
 - `src/store/storage.ts`: `APP_PREFIX`, `STATE_VERSION` (moved here so the key can follow it; `app.ts` re-exports it), `stateKey`, `legacyStateKeys`; `clearAppKeys` matches `APP_PREFIX` so it clears every build's keys.
@@ -18,12 +26,14 @@ From the recording audit of 16 October 2026. One line per note, then the existin
 - `src/features/home/Home.tsx`: renders `UpgradeNotice` above the role's home.
 - `src/features/help/Help.tsx`: one topic entry, one branch, the active topic scrolled into view.
 - `src/store/selectors/arch-breadcrumbs.ts`: `updated` in `HELP_TOPIC_LABELS`.
-- `src/features/auth/SignInForm.tsx` (optional `errorHint`), `SignInPage.tsx`, `src/main.tsx`.
+- `src/features/auth/SignInForm.tsx` (optional `errorHint` and `notice`), `SignInPage.tsx`, `SignUpPage.tsx`, `SignUpForm.tsx` (optional `defaultEmail`), `src/main.tsx`.
 
 ## Tests added
 
 - `src/store/upgrade.test.ts`, `src/store/app.upgrade.test.ts` (jsdom: load over a version 1 sandbox, version 1 storage events change nothing, a version 2 event is picked up, Reset forgets the upgrade), `src/store/selectors/whatChanged.test.ts`, `src/app/version.test.ts`, `src/features/help/upgrade.screen.test.tsx`, `e2e/r2-upgrade.spec.ts` (returning visitor with the notice, Help and sign-in line at 390, 1024 and 1440; an old tab writing beside the new one; the new version bar).
 
+After the review: more cases in `src/store/upgrade.test.ts` (carried over notice, notice kinds, typos, stale sign-in, sign-up email) and `src/features/help/upgrade.screen.test.tsx` (carried notice, close button placement, typo, carried sign-in hint, prefilled sign-up, stale sign-in on arrival), one more journey in `e2e/r2-upgrade.spec.ts` (a version 2 record on the old key at 390, 1024 and 1440), and two added checks in its first journey (the stale sign-in notice, the session forgotten). The `clean()` helper in `upgrade.test.ts` also removes the new key.
+
 ## Existing test assertions changed
 
-None. `src/store/app.test.ts` imports `STATE_KEY` and still passes unchanged: its keys now resolve to `tallyard-platform-v2-state`.
+None, after the review as before. `src/store/app.test.ts` imports `STATE_KEY` and still passes unchanged: its keys now resolve to `tallyard-platform-v2-state`.

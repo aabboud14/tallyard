@@ -15,6 +15,8 @@ export type SignUpFormProps = {
   error?: string | null
   pending?: boolean
   signInHref?: string
+  /** The email to start with, for example one typed at sign-in. */
+  defaultEmail?: string
 }
 
 type Errors = Partial<Record<'name' | 'email' | 'password' | 'orgName', string>>
@@ -31,10 +33,10 @@ function Steps({ step }: { step: 1 | 2 }) {
   )
 }
 
-export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/signin' }: SignUpFormProps) {
+export function SignUpForm({ onSubmit, error, pending = false, signInHref = '/signin', defaultEmail = '' }: SignUpFormProps) {
   const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
   const [orgName, setOrgName] = useState('')
   const [orgType, setOrgType] = useState<OrgType>('architect')

@@ -1,8 +1,9 @@
 // Create an account and its organisation, then go home. A new organisation starts empty; its home page runs the
 // short onboarding for its type (an architect creates a first project).
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { signUp } from '../../store'
+import { signUpEmailFrom } from '../../store/upgrade'
 import { toast } from '../../ui'
 import { AuthLayout } from './AuthLayout'
 import { SignUpForm } from './SignUpForm'
@@ -10,6 +11,8 @@ import type { SignUpValues } from './constants'
 
 export function SignUpPage() {
   const navigate = useNavigate()
+  // From the sign-in hint after the update: the address the visitor already typed.
+  const defaultEmail = signUpEmailFrom(useLocation().state)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -29,7 +32,7 @@ export function SignUpPage() {
   return (
     <AuthLayout>
       <div data-testid="signup-page">
-        <SignUpForm onSubmit={submit} error={error} pending={pending} />
+        <SignUpForm onSubmit={submit} error={error} pending={pending} defaultEmail={defaultEmail} />
       </div>
     </AuthLayout>
   )

@@ -50,6 +50,9 @@ test('a returning visitor from before round 2 is told the sandbox was updated, a
   await page.waitForURL('**/signin**')
   expect(await read(page, V1_STATE)).toBeNull()
   expect(await read(page, 'tallyard-platform-v2-upgraded')).not.toBeNull()
+  // Before any attempt, the page says why, and the dead sign-in is forgotten.
+  await expect(page.getByTestId('signin-notice')).toContainText('The sandbox was updated on 16 October. Accounts made before then need to be created again.')
+  await expect.poll(() => read(page, SESSION)).toBeNull()
 
   await page.getByTestId('signin-email').fill('jo@parkstudio.example')
   await page.locator('input[autocomplete="current-password"]').fill('drawings1')
@@ -98,6 +101,51 @@ test('a returning visitor from before round 2 is told the sandbox was updated, a
   await page.reload()
   await expect(page.getByTestId('home-stats')).toBeVisible()
   await expect(notice).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('a visitor who already opened the round 2 build before this one keeps their work and is told what changed', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.goto('/signin')
+  await page.evaluate(() => window.localStorage.clear())
+  await page.getByTestId(`sample-${PRIYA}`).click()
+  await page.waitForURL('**/app/home')
+  await page.goto('/app/settings/profile')
+  await page.getByTestId('profile-name').fill('Priya Renamed')
+  await page.getByTestId('profile-save').click()
+  await expect.poll(async () => (await read(page, V2_STATE)) ?? '').toContain('Priya Renamed')
+
+  // The browser as the round 2 build deployed before this fix left it: a version 2 sandbox on the old key.
+  await page.evaluate(
+    ([oldKey, newKey]) => {
+      const v = window.localStorage.getItem(newKey)!
+      for (const k of Object.keys(window.localStorage)) if (k.startsWith('tallyard-platform-') && !k.endsWith('-session')) window.localStorage.removeItem(k)
+      window.localStorage.setItem(oldKey, v)
+    },
+    [V1_STATE, V2_STATE],
+  )
+  await page.goto('/app/home')
+  const notice = page.getByTestId('upgrade-notice')
+  await expect(notice).toContainText('The sandbox was updated on 16 October with the changes from the 14 October review.')
+  await expect(notice).not.toContainText('back to the sample data')
+  expect(await read(page, V1_STATE)).toBeNull()
+  expect(await read(page, V2_STATE)).toContain('Priya Renamed')
+  expect(await read(page, 'tallyard-platform-v2-whatsnew')).not.toBeNull()
+
+  // The close button sits in the notice's top corner at every width, and the text keeps its width.
+  for (const width of [390, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(await horizontalOverflow(page), `home at ${width}`).toBe(0)
+    const box = (await notice.boundingBox())!
+    const close = (await page.getByTestId('upgrade-notice-close').boundingBox())!
+    expect(box.x + box.width - (close.x + close.width), `close at ${width}`).toBeLessThanOrEqual(8)
+    expect(close.y - box.y, `close at ${width}`).toBeLessThanOrEqual(8)
+    if (width === 390) expect(close.height).toBeGreaterThanOrEqual(44)
+  }
+  await page.getByTestId('upgrade-notice-link').click()
+  await page.waitForURL('**/app/help/updated')
+  await page.goto('/app/settings/profile')
+  await expect(page.getByTestId('profile-name')).toHaveValue('Priya Renamed')
   expect(errors).toEqual([])
 })
 

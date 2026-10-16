@@ -39,6 +39,8 @@ export type SignInFormProps = {
   error?: string | null
   /** A further line under the error, for example that accounts made before an upgrade are gone. */
   errorHint?: ReactNode
+  /** Something to know before signing in, shown until there is an error. */
+  notice?: ReactNode
   pending?: boolean
   defaultEmail?: string
   forgotHref?: string
@@ -47,7 +49,7 @@ export type SignInFormProps = {
   heading?: boolean
 }
 
-export function SignInForm({ onSubmit, error, errorHint, pending = false, defaultEmail = '', forgotHref = '/forgot-password', signUpHref = '/signup', heading = true }: SignInFormProps) {
+export function SignInForm({ onSubmit, error, errorHint, notice, pending = false, defaultEmail = '', forgotHref = '/forgot-password', signUpHref = '/signup', heading = true }: SignInFormProps) {
   const [email, setEmail] = useState(defaultEmail)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -88,6 +90,10 @@ export function SignInForm({ onSubmit, error, errorHint, pending = false, defaul
                 {errorHint}
               </div>
             ) : null}
+          </Callout>
+        ) : notice ? (
+          <Callout tone="info" role="status">
+            <div data-testid="signin-notice">{notice}</div>
           </Callout>
         ) : null}
         <Field label="Email" error={errors.email}>
