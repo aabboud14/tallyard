@@ -11,10 +11,10 @@ import { PROJECT_TYPE_OTHER_MAX } from '../../domain/reference/projectTypes'
 import { PRODUCT_NAME } from '../../domain/constants'
 import { act, useView } from '../../store'
 import { newProjectOptions } from '../../store/selectors/project'
-import { requirementChoiceSummary, requirementChoices } from '../../store/selectors/requirements'
+import { requirementChoiceSummary, requirementChoices, requirementsAfterMove } from '../../store/selectors/requirements'
 import { validateNewProject, type NewProjectInput, type ProjectField } from '../../store/actions/projects'
 import { Button, Callout, cx, Dialog, Field, Input, Select, Textarea, toast } from '../../ui'
-import { LocalAuthorityField } from './LocalAuthorityField'
+import { LocalAuthorityField, RegionField, type Place } from './LocalAuthorityField'
 import { RequirementsPicker } from './RequirementsPicker'
 
 const NEW_CLIENT = '__new__'
@@ -53,6 +53,8 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
   const [description2, setDescription2] = useState('')
   const [requirementsOpen, setRequirementsOpen] = useState(false)
   const [picked, setPicked] = useState<Set<string> | null>(null)
+  /** What the last change of location did to the ticks the architect had changed, said under the summary. */
+  const [moveNote, setMoveNote] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<ProjectField, string>>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -64,6 +66,16 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
   const choices = requirementChoices(region, localAuthority, [])
   // Until the architect touches the picker, the suggestions for the current location are the ticks.
   const ticks = picked ?? new Set(choices.suggestedIds)
+  // A new location keeps the ticks that still apply and adds the new place's suggestions, as moving a project does.
+  const setPlace = (next: Place) => {
+    if (picked !== null) {
+      const move = requirementsAfterMove([...picked], { region, localAuthority }, next, { ticked: true })
+      setPicked(new Set(move.preselect))
+      setMoveNote(move.text)
+    }
+    setRegion(next.region)
+    setLocalAuthority(next.localAuthority)
+  }
   const place = [localAuthority, region].filter(Boolean).join(', ')
   const summary = requirementChoiceSummary(choices, [...ticks], place)
 
@@ -83,6 +95,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
     setDescription2('')
     setRequirementsOpen(false)
     setPicked(null)
+    setMoveNote(null)
     setErrors({})
     setError(null)
   }
@@ -101,7 +114,8 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
       startDate: materialsFrom || siteStart,
       siteStart: siteStart || undefined,
       practicalCompletion: completion || undefined,
-      requirementIds: !short && requirementsOpen ? [...ticks] : undefined,
+      // Opened or changed: the ticks are the architect's choice. Left closed: the suggestions are tracked until they choose.
+      requirementIds: !short && (requirementsOpen || picked !== null) ? [...ticks] : undefined,
       clientMessage,
       clientEmail: newClient ? clientEmail : undefined,
       description: description2,
@@ -160,19 +174,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
     </>
   )
 
-  const regionField = (
-    <Field label="Region" error={errors.region}>
-      <Select
-        value={region}
-        onChange={(e) => {
-          setRegion(e.target.value)
-          setLocalAuthority('')
-        }}
-        options={options.regions.map((r) => ({ value: r, label: r }))}
-        data-testid="project-region"
-      />
-    </Field>
-  )
+  const regionField = <RegionField region={region} onChange={setPlace} error={errors.region} />
 
   return (
     <Dialog
@@ -245,7 +247,7 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
 
             <Section title="Location and requirements">
               {regionField}
-              <LocalAuthorityField key={region} region={region} value={localAuthority} onChange={setLocalAuthority} error={errors.localAuthority} />
+              <LocalAuthorityField key={region} region={region} value={localAuthority} onChange={setPlace} error={errors.localAuthority} />
               <div className="sm:col-span-2">
                 <div className="rounded-lg border border-line">
                   <button
@@ -263,9 +265,15 @@ export function NewProjectDialog({ open, onOpenChange, short = false, title = 'N
                       <span className="block text-sm text-muted" data-testid="project-requirements-summary">
                         {summary.text}
                       </span>
+                      {!requirementsOpen && picked === null ? <span className="mt-0.5 block text-sm text-muted">Left closed, the suggested ones are tracked until you choose.</span> : null}
                     </span>
                     <ChevronDown aria-hidden="true" className={cx('size-4 shrink-0 text-muted transition-transform', requirementsOpen && 'rotate-180')} />
                   </button>
+                  {moveNote ? (
+                    <p role="status" className="m-0 border-t border-line-soft px-3.5 py-2.5 text-sm text-ink-soft" data-testid="project-requirements-move">
+                      {moveNote}
+                    </p>
+                  ) : null}
                   <div id="new-project-requirements" hidden={!requirementsOpen} className="border-t border-line-soft p-3.5">
                     {requirementsOpen ? <RequirementsPicker choices={choices} selected={ticks} onChange={setPicked} selectedText={summary.selectedText} /> : null}
                   </div>

@@ -18,6 +18,7 @@ import { ClientMetrics } from './client/ClientMetrics'
 import { TodoList } from './client/TodoList'
 import { ProgrammeTimeline } from './client/ProgrammeTimeline'
 import { TileChart } from './TileChart'
+import { BuildingRequirementsLine } from './BuildingRequirementsLine'
 
 const TYPOLOGIES: { key: Typology; label: string }[] = [
   { key: 'structure', label: 'Structure' },
@@ -183,6 +184,7 @@ function BuildingCard({ b }: { b: OwnerBuildingCard }) {
           <CalendarDays aria-hidden="true" className="size-3.5 shrink-0 text-faint" />
           {b.programmeText}
         </p>
+        {b.requirements ? <BuildingRequirementsLine r={b.requirements} testId={`home-building-requirements-${b.id}`} className="-my-1" /> : null}
         <SegmentedBar label={`${b.itemCount} items by visibility`} segments={visibilitySegments(b.counts)} size="sm" />
         <Legend label="Items by typology" items={typology} className="mt-auto gap-x-3 text-xs" />
       </div>

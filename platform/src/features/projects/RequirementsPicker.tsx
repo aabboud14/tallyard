@@ -3,6 +3,7 @@
 import { ChevronDown, Eraser, ListChecks } from 'lucide-react'
 import type { RequirementChoices } from '../../store/selectors/requirements'
 import { PRODUCT_NAME } from '../../domain/constants'
+import { PLACEHOLDER_LABEL } from '../../domain/reference/requirements'
 import { Button, Checkbox, IndicativeMarker, Pill } from '../../ui'
 
 type Props = {
@@ -66,6 +67,11 @@ export function RequirementsPicker({ choices, selected, onChange, selectedText, 
                         {r.suggested ? (
                           <Pill size="sm" tone="brand">
                             Suggested
+                          </Pill>
+                        ) : null}
+                        {r.placeholder ? (
+                          <Pill size="sm" tone="info" data-testid={`requirement-placeholder-${r.id}`}>
+                            {PLACEHOLDER_LABEL}
                           </Pill>
                         ) : null}
                         <Pill size="sm">{r.kindLabel}</Pill>

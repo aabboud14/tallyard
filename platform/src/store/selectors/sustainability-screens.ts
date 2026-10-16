@@ -20,7 +20,7 @@ import { programmeInput } from './portfolio'
 import type { ReservationGroup, ReservationsView, ApprovalsView } from './client'
 import type { ProjectCarbon } from './project'
 import type { ComplianceView } from './consultant'
-import type { GoalRow, RequirementTrackRow, SchemeSummaryView } from './sustainability'
+import type { GoalRow, SchemeSummaryView } from './sustainability'
 
 // ---------- One goal against its target ----------
 
@@ -314,7 +314,7 @@ export type RequirementFilterKey = 'all' | 'at_risk' | 'open' | 'evidence_ready'
 const OPEN: readonly TrackStatus[] = ['not_started', 'in_progress', 'at_risk']
 
 /** The filter chips on Requirements, with their counts and the requirements each one shows. */
-export function requirementFilters(rows: RequirementTrackRow[]): { key: RequirementFilterKey; label: string; count: number; ids: string[] }[] {
+export function requirementFilters(rows: { id: string; status: TrackStatus }[]): { key: RequirementFilterKey; label: string; count: number; ids: string[] }[] {
   const of = (test: (s: TrackStatus) => boolean) => rows.filter((r) => test(r.status)).map((r) => r.id)
   const chips: [RequirementFilterKey, string, string[]][] = [
     ['all', 'All', rows.map((r) => r.id)],

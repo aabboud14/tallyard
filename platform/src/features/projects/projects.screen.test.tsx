@@ -234,7 +234,7 @@ describe('a new project', () => {
 })
 
 describe('editing project details', () => {
-  it('says which requirements a move drops, and offers to review them with the new suggestions', async () => {
+  it('says which requirements a move drops, and opens the review with the new suggestions', async () => {
     open(`/app/projects/${SALLOW_ID}`)
     await waitFor(() => Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Edit'))
     click(Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Edit')!)
@@ -248,11 +248,9 @@ describe('editing project details', () => {
     click(byTestId('edit-project-save'))
     await waitFor(() => getData().world.projects[SALLOW_ID].localAuthority === 'Hackney')
     expect(getData().world.projects[SALLOW_ID].planningRequirementIds).not.toContain('la-camden-cc1')
-    // The toast says it again and offers the review (the toaster is mounted above the router, so call its action).
-    const saved = snapshot().find((t) => t.title === 'Project details saved')!
-    expect(saved.description).toBe('2 chosen requirements no longer apply to Hackney, Inner London East. 1 more is suggested there.')
-    expect(saved.action!.label).toBe('Review requirements')
-    act(() => saved.action!.onClick())
+    // Changed 16 October 2026 (recording audit, note 20 incidental): saving opens the review at once, so the toast
+    // is short and offers nothing that would cover the dialog (the toaster is mounted above the router).
+    expect(snapshot().some((t) => t.title === 'Project details saved')).toBe(true)
     await waitFor(() => q('requirements-picker'))
     expect(byTestId('requirement-check-la-hackney-lp33').getAttribute('data-state')).toBe('checked')
     expect(byTestId('requirement-check-lp-si7').getAttribute('data-state')).toBe('checked')

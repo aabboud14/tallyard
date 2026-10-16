@@ -6,10 +6,10 @@ import { Link, Outlet, useLocation, useParams } from 'react-router'
 import { Building, Building2, CalendarClock, Camera, MapPin, Pencil, UserRound } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { BuildingRef } from '../../store/selectors/owner'
-import { BuildingThumb, Button, Dialog, Field, Input, Pill, Select, Tabs, toast } from '../../ui'
-import { localAuthorityChoices } from '../../store/selectors/project'
-import { REGIONS } from '../../domain/reference/assumptions'
+import { BuildingThumb, Button, Callout, Dialog, Field, Input, Pill, Tabs, toast } from '../../ui'
 import { buildingVisual } from '../../store/selectors/buildings-ui'
+import { buildingMoveNote } from '../../store/selectors/buildingRequirements'
+import { LocalAuthorityField, RegionField, type Place } from '../projects/LocalAuthorityField'
 import { ClaimActions } from './ClaimDialog'
 import { Page } from '../../app/Page'
 import { SURVEY_TONE } from './labels'
@@ -93,7 +93,7 @@ export function BuildingLayout() {
             <span className="text-muted">{roleText}</span>
           </div>
           <div className="mt-5">
-            <Tabs label="Building" items={h.tabs.map((t) => ({ label: t.label, href: t.href, active: t.id === tab, testId: `tab-${t.id}` }))} />
+            <Tabs label="Building" items={h.tabs.map((t) => ({ label: t.label, href: t.href, active: t.id === tab, testId: `tab-${t.id}`, count: t.badge ?? undefined }))} />
           </div>
         </div>
       </div>
@@ -105,9 +105,6 @@ export function BuildingLayout() {
   )
 }
 
-/** The choice that reveals a text field for a local authority not in the list. */
-const OTHER_LA = '__other'
-
 function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRef; open: boolean; onOpenChange: (o: boolean) => void }) {
   const o = useView(selectors.buildingOverview, header.id)
   const date = (label: string) => o?.programme.find((p) => p.label === label)?.date ?? ''
@@ -117,15 +114,12 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
   const [dismantle, setDismantle] = useState(date('Dismantling starts'))
   const [clear, setClear] = useState(date('Site clear by'))
   const [postcode, setPostcode] = useState(header.postcodeDistrict)
-  const [region, setRegion] = useState(header.region)
-  const [authority, setAuthority] = useState(header.localAuthority)
-  const choices = localAuthorityChoices(region)
-  // A name outside the list (typed earlier, or another local authority) shows as Another local authority with its text.
-  const [otherLa, setOtherLa] = useState(!!header.localAuthority && !choices.options.includes(header.localAuthority))
+  const [place, setPlace] = useState<Place>({ region: header.region, localAuthority: header.localAuthority })
   const [error, setError] = useState<string | null>(null)
+  const moveNote = buildingMoveNote(header, place)
   const save = (e: FormEvent) => {
     e.preventDefault()
-    const r = act.updateBuilding(header.id, { name, address, postcodeDistrict: postcode, region, localAuthority: authority, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
+    const r = act.updateBuilding(header.id, { name, address, postcodeDistrict: postcode, region: place.region, localAuthority: place.localAuthority, stripOutStart: strip || null, dismantlingStart: dismantle || null, clearBy: clear || null })
     if (!r.ok) return setError(r.error)
     toast.success('Building details saved', { action: { label: 'Undo', onClick: r.undo } })
     onOpenChange(false)
@@ -162,35 +156,16 @@ function EditBuildingDialog({ header, open, onOpenChange }: { header: BuildingRe
           <Field label="Postcode district" optional>
             <Input value={postcode} onChange={(e) => setPostcode(e.target.value)} placeholder="EC2" data-testid="edit-postcode" />
           </Field>
-          <Field label="Region" required>
-            <Select
-              value={region}
-              onChange={(e) => {
-                setRegion(e.target.value)
-                setAuthority('')
-                setOtherLa(false)
-              }}
-              options={REGIONS.map((r) => ({ value: r, label: r }))}
-              data-testid="edit-region"
-            />
-          </Field>
-          <Field label="Local authority" optional>
-            <div className="flex flex-col gap-2">
-              <Select
-                value={otherLa ? OTHER_LA : authority}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setOtherLa(v === OTHER_LA)
-                  setAuthority(v === OTHER_LA ? (choices.options.includes(authority) ? '' : authority) : v)
-                }}
-                placeholder="Not set"
-                options={[...choices.options.map((x) => ({ value: x, label: x })), { value: OTHER_LA, label: 'Another local authority' }]}
-                data-testid="edit-local-authority"
-              />
-              {otherLa ? <Input aria-label="Local authority name" value={authority} onChange={(e) => setAuthority(e.target.value)} placeholder="Name of the local authority" /> : null}
-            </div>
-          </Field>
+          <RegionField region={place.region} onChange={setPlace} required testId="edit-building-region" />
+          <LocalAuthorityField key={place.region} region={place.region} value={place.localAuthority} onChange={setPlace} testId="edit-building-local-authority" />
         </div>
+        {moveNote ? (
+          <div data-testid="edit-building-requirements-note">
+            <Callout tone="info" role="status">
+              {moveNote}
+            </Callout>
+          </div>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Strip-out starts" optional>
             <Input type="date" value={strip} onChange={(e) => setStrip(e.target.value)} />

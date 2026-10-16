@@ -56,11 +56,11 @@ describe('the surveyor corrects her own building (note 26)', () => {
   it('edits the region and local authority of Ambrey House', async () => {
     openAs(`/app/buildings/${AMBREY_ID}`, U.dana)
     click(await waitFor(() => q('edit-building')))
-    const region = await waitFor(() => q('edit-region'))
+    const region = await waitFor(() => q('edit-building-region'))
     expect(q('edit-postcode')).not.toBeNull()
     chooseOption(region, 'Inner London West')
     await settle()
-    chooseOption(byTestId('edit-local-authority'), 'Wandsworth')
+    chooseOption(byTestId('edit-building-local-authority'), 'Wandsworth')
     click(document.querySelector<HTMLElement>('button[form="edit-building-form"]')!)
     await waitFor(() => getData().world.buildings[AMBREY_ID].localAuthority === 'Wandsworth')
     expect(getData().world.buildings[AMBREY_ID].region).toBe('Inner London West')

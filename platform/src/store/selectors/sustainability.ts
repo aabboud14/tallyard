@@ -275,6 +275,8 @@ export type RequirementTrackRow = {
   scopeLabel: string
   source: string
   summary: string
+  /** Names what to check without summarising it yet. */
+  placeholder: boolean
   status: TrackStatus
   statusLabel: string
   evidence: { id: string; text: string; outputLabel: string | null; outputHref: string | null; by: string; onText: string; canRemove: boolean }[]
@@ -317,6 +319,7 @@ function requirementRowsOf(state: AppData, viewer: Viewer, p: Project, side: Pro
       scopeLabel: r.level === 'local' ? p.localAuthority : SCOPE_LABELS[r.level],
       source: r.source,
       summary: r.summary,
+      placeholder: r.placeholder,
       status,
       statusLabel: TRACK_STATUS_LABELS[status],
       evidence: (t?.evidence ?? []).map((e) => ({
@@ -601,6 +604,8 @@ export type TrackingRow = {
   projectId: string
   projectName: string
   href: string
+  /** Where the requirements come from: "Newham, Inner London East". */
+  locationText: string
   /** The consultancy once it has joined, "Halewick Sustainability, waiting to accept" (or declined) before; null when none is named. */
   consultantName: string | null
   schemes: Record<'breeam' | 'leed' | 'well', TrackingScheme>
@@ -628,6 +633,7 @@ export function sustainabilityTracking(state: AppData, viewer: Viewer, projectId
     projectId: p.id,
     projectName: p.name,
     href: `${base(p)}/sustainability`,
+    locationText: [p.localAuthority, p.region].filter((x) => x).join(', '),
     consultantName: consultantText(state, p),
     schemes: { breeam: scheme('breeam'), leed: scheme('leed'), well: scheme('well') },
     circular: { content: goals.find((g) => g.id === 'content_by_value') ?? null, statementLabel: statementLabel(side, status), statementTone: status === 'reviewed' ? 'brand' : status === 'ready_for_review' ? 'info' : 'neutral' },

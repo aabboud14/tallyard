@@ -6,7 +6,7 @@ import { orgTypeLabel, ROLE_LABELS, SAMPLE_ACCOUNTS, SAMPLE_PASSWORD } from '../
 import { parameterRows, type Parameter } from '../../domain/reference/assumptions'
 import { V1_PARAMETER_ROWS } from '../../domain/reference/v1assumptions'
 import { PROGRAMME_PARAMETER_ROWS } from '../../domain/engines/programme'
-import { requirementsMethodology } from '../../domain/reference/requirements'
+import { requirementsMethodology, donorRequirementsMethodology } from '../../domain/reference/requirements'
 import { LABELS } from '../../domain/reference/labels'
 import { formatDate } from '../../domain/dates'
 import { initials, timeAgo } from './common'
@@ -90,5 +90,5 @@ export function methodologyView(): { groups: MethodologyGroup[]; indicative: str
     if (g) g.rows.push(r)
     else groups.push({ group: r.group, rows: [r] })
   }
-  return { groups, indicative: [LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10, LABELS.L41, LABELS.L20], references: requirementsMethodology() }
+  return { groups, indicative: [LABELS.L11, LABELS.L37, LABELS.L38, LABELS.L10, LABELS.L41, LABELS.L20], references: [...requirementsMethodology(), ...donorRequirementsMethodology()] }
 }

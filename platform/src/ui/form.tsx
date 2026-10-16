@@ -101,7 +101,27 @@ export function Textarea({ className, rows = 4, ...props }: ComponentProps<'text
   return <textarea rows={rows} className={cx(control, 'block resize-y px-3 py-2 leading-5 read-only:bg-subtle', className)} {...p} />
 }
 
-export type SelectOption = { value: string; label: string; disabled?: boolean }
+/** group puts the option under an optgroup of that label; options of one group should sit together. */
+export type SelectOption = { value: string; label: string; disabled?: boolean; group?: string }
+
+/** Runs of options with the same group, in order; options without a group form runs of their own. */
+function optionRuns(options: SelectOption[]): { group: string | undefined; options: SelectOption[] }[] {
+  const runs: { group: string | undefined; options: SelectOption[] }[] = []
+  for (const o of options) {
+    const last = runs[runs.length - 1]
+    if (last && last.group === o.group) last.options.push(o)
+    else runs.push({ group: o.group, options: [o] })
+  }
+  return runs
+}
+
+function optionOf(o: SelectOption) {
+  return (
+    <option key={o.value} value={o.value} disabled={o.disabled}>
+      {o.label}
+    </option>
+  )
+}
 
 export type SelectProps = Omit<ComponentProps<'select'>, 'children'> & {
   options: SelectOption[]
@@ -116,11 +136,15 @@ export function Select({ options, placeholder, selectSize = 'md', className, ...
     <div className={cx('relative min-w-0', className)}>
       <select className={cx(control, 'cursor-pointer appearance-none pr-9', selectSize === 'sm' ? 'h-8 pl-2.5 text-sm max-sm:h-11' : 'h-9 pl-3 max-sm:h-11')} {...p}>
         {placeholder !== undefined ? <option value="">{placeholder}</option> : null}
-        {options.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
+        {optionRuns(options).map((run, i) =>
+          run.group === undefined ? (
+            run.options.map(optionOf)
+          ) : (
+            <optgroup key={`${run.group}-${i}`} label={run.group}>
+              {run.options.map(optionOf)}
+            </optgroup>
+          ),
+        )}
       </select>
       <ChevronsUpDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" />
     </div>

@@ -17,6 +17,7 @@ import { SURVEY_TONE } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
 import { MergeCallouts } from '../buildings/MergeCallout'
 import { TileChart } from './TileChart'
+import { BuildingRequirementsLine } from './BuildingRequirementsLine'
 
 const STEPS = [
   { key: 'appointed', label: 'Appointed' },
@@ -166,6 +167,7 @@ function BuildingRow({
         </div>
         {contractor ? null : <Steps status={b.status} claim={claim} />}
         {extra ? <TypologyBar counts={extra.byTypology} /> : null}
+        {extra?.requirements ? <BuildingRequirementsLine r={extra.requirements} testId={`home-building-requirements-${b.id}`} /> : null}
         {merge ? <MergeCallouts intoId={b.id} /> : null}
         <p className="m-0 text-sm text-ink-soft">
           {contractor ? (

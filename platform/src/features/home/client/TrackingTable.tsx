@@ -91,6 +91,11 @@ function RequirementsCell({ r }: { r: TrackingRow }) {
           {q.atRisk} at risk
         </Pill>
       ) : null}
+      {r.locationText ? (
+        <span className="mt-1 text-xs text-muted" data-testid={`tracking-location-${r.projectId}`}>
+          For {r.locationText}
+        </span>
+      ) : null}
     </div>
   )
 }

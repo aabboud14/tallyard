@@ -1,13 +1,17 @@
 // Requirements (/app/projects/:id/requirements) for every side: the planning and sustainability requirements that
 // apply to the project, each with its status, the live figures Tallyard holds for it and an evidence log. The client
-// and the consultant edit; the architect reads. Indicative summaries of policy, to check against the current text.
+// and the consultant edit; the architect reads the tracking and chooses which requirements apply, here or on the
+// overview. Indicative summaries of policy, to check against the current text.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { FilePlus2, Landmark, Link2, ScrollText, Trash2 } from 'lucide-react'
+import { FilePlus2, Landmark, Link2, ListChecks, PencilLine, ScrollText, Trash2 } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { RequirementsView, RequirementTrackRow } from '../../store/selectors/sustainability'
 import { requirementFilters, type RequirementFilterKey } from '../../store/selectors/sustainability-screens'
 import type { OutputRef } from '../../domain/sustainabilityTypes'
+import { PLACEHOLDER_LABEL } from '../../domain/reference/requirements'
+import { projectRequirementsView } from '../../store/selectors/requirements'
+import { RequirementsDialog } from '../projects/RequirementsDialog'
 import { Button, Callout, Card, cx, EmptyState, Pill, Select, Textarea, toast, TRACK_STATUS, TrackStatusPill, TrackStatusSelect } from '../../ui'
 import { Page } from '../../app/Page'
 import { TabHeader, TrackBar } from './parts'
@@ -97,6 +101,11 @@ function RequirementCard({ row, v, projectId }: { row: RequirementTrackRow; v: R
             <Pill size="sm" variant="quiet" icon={Landmark}>
               {row.scopeLabel}
             </Pill>
+            {row.placeholder ? (
+              <Pill size="sm" tone="info">
+                {PLACEHOLDER_LABEL}
+              </Pill>
+            ) : null}
             <span className="text-xs text-muted">{row.source}</span>
           </div>
           <h3 className="m-0 mt-1.5 text-md font-semibold text-ink">{row.title}</h3>
@@ -184,15 +193,35 @@ function RequirementCard({ row, v, projectId }: { row: RequirementTrackRow; v: R
 export function Requirements() {
   const { projectId = '' } = useParams()
   const v = useView(selectors.requirementsView, projectId)
+  const choice = useView(projectRequirementsView, projectId)
   const [filter, setFilter] = useState<RequirementFilterKey>('all')
+  const [choosing, setChoosing] = useState(false)
   if (!v) return null
+  const canChoose = !!choice?.canEdit
   const filters = requirementFilters(v.rows)
   const shown = new Set(filters.find((x) => x.key === filter)?.ids ?? [])
   const rows = v.rows.filter((r) => shown.has(r.id))
   return (
     <Page testId="requirements-page" className="lg:pt-7">
       <div className="flex flex-col gap-6">
-        <TabHeader title="Planning and sustainability requirements" subtitle={v.locationText ? `${v.locationText}. ${v.canEdit ? 'Keep the status and the evidence current for the whole team.' : 'The client and the consultant keep the status and evidence current.'}` : undefined} />
+        <TabHeader
+          title="Planning and sustainability requirements"
+          subtitle={v.locationText ? `${v.locationText}. ${v.canEdit ? 'Keep the status and the evidence current for the whole team.' : 'The client and the consultant keep the status and evidence current.'}` : undefined}
+          actions={
+            canChoose ? (
+              <Button variant={choice?.suggestedOnly ? 'primary' : 'secondary'} icon={choice?.suggestedOnly ? ListChecks : PencilLine} onClick={() => setChoosing(true)} data-testid="requirements-tab-choose">
+                {choice?.suggestedOnly ? 'Review requirements' : choice?.reviewed ? 'Edit requirements' : 'Choose requirements'}
+              </Button>
+            ) : undefined
+          }
+        />
+        {choice?.suggestedNote ? (
+          <div data-testid="requirements-tab-suggested">
+            <Callout tone="info" title="Suggested for this location">
+              {choice.suggestedNote}
+            </Callout>
+          </div>
+        ) : null}
         {v.header.canAppointArchitect ? (
           <Callout
             tone="info"
@@ -210,7 +239,13 @@ export function Requirements() {
           {v.caveat}
         </Callout>
         {v.empty ? (
-          <EmptyState variant="card" illustration="targets" title="No requirements recorded yet" text="No requirements recorded for this project yet. The architect chooses them from the local authority and region in the project settings." testId="requirements-empty" />
+          <EmptyState
+            variant="card"
+            illustration="targets"
+            title="No requirements recorded yet"
+            text={canChoose ? 'No requirements are tracked on this project. Choose the ones that apply to its location.' : 'No requirements are tracked on this project yet. The architect chooses them on the project overview.'}
+            testId="requirements-empty"
+          />
         ) : (
           <>
             <Card padding="lg" data-testid="requirements-summary">
@@ -246,6 +281,7 @@ export function Requirements() {
           </>
         )}
       </div>
+      {canChoose ? <RequirementsDialog projectId={projectId} open={choosing} onOpenChange={setChoosing} /> : null}
     </Page>
   )
 }

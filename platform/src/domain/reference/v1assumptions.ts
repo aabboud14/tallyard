@@ -24,10 +24,26 @@ export const V1_ASSUMPTIONS: V1Assumptions = {
     'Outer London West': { 'HUB-BARK': 33, 'HUB-PARK': 8, 'HUB-TILB': 56 },
     'East of England': { 'HUB-BARK': 34, 'HUB-PARK': 58, 'HUB-TILB': 16 },
     'South East': { 'HUB-BARK': 52, 'HUB-PARK': 47, 'HUB-TILB': 61 },
+    // Added on 16 October 2026 with the regions outside London and the South East: road km from the region's main
+    // city to each hub, rounded. Tallyard's own estimates, not from the call (ESTIMATED_REGION_SOURCE).
+    'East Midlands': { 'HUB-BARK': 175, 'HUB-PARK': 165, 'HUB-TILB': 185 },
+    'West Midlands': { 'HUB-BARK': 200, 'HUB-PARK': 180, 'HUB-TILB': 215 },
+    'North West': { 'HUB-BARK': 335, 'HUB-PARK': 320, 'HUB-TILB': 350 },
+    'North East': { 'HUB-BARK': 455, 'HUB-PARK': 460, 'HUB-TILB': 455 },
+    'Yorkshire and the Humber': { 'HUB-BARK': 315, 'HUB-PARK': 320, 'HUB-TILB': 320 },
+    'South West': { 'HUB-BARK': 200, 'HUB-PARK': 175, 'HUB-TILB': 225 },
+    Wales: { 'HUB-BARK': 250, 'HUB-PARK': 225, 'HUB-TILB': 275 },
+    Scotland: { 'HUB-BARK': 660, 'HUB-PARK': 650, 'HUB-TILB': 665 },
   },
 }
 
 export const V1_SOURCE = 'Founder and partner, call of 7 October 2026'
+
+/** The source of the hub distances for regions added after the call. */
+export const ESTIMATED_REGION_SOURCE = "Tallyard's estimate of road distance from the region's main city, 16 October 2026"
+
+/** The regions whose hub distances were agreed on the call; the others are estimates. */
+const CALL_REGIONS = ['Central London', 'Inner London East', 'Inner London West', 'Outer London East', 'Outer London West', 'East of England', 'South East']
 
 const HUB_IDS: HubId[] = ['HUB-BARK', 'HUB-PARK', 'HUB-TILB']
 
@@ -57,7 +73,7 @@ export function v1ParameterRows(a: V1Assumptions = V1_ASSUMPTIONS): Parameter[] 
       label: `Hub distances, ${region}`,
       value: HUB_IDS.map((h) => `${hubPlace(h)} ${km[h]}`).join(', '),
       unit: 'km, for projects created in the tool',
-      source: V1_SOURCE,
+      source: CALL_REGIONS.includes(region) ? V1_SOURCE : ESTIMATED_REGION_SOURCE,
       status: 'placeholder',
     })
   }

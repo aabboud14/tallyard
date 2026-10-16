@@ -8,7 +8,7 @@ import { projectWishlist } from '../lots'
 import { initials } from './common'
 import { pendingLinkRequestCount, projectTabs } from './project'
 import { pendingConsultantRequestCount } from './consultant-requests'
-import { buildingTabs } from './owner'
+import { badgedBuildingTabs } from './owner'
 import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
 import { pendingClaimCount } from './claims'
 import { engagementsOf } from './consultant'
@@ -170,7 +170,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
       title: 'Donor buildings',
       tools: null,
       items: [
-        ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: buildingTabs('owner', b.id).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href)) })),
+        ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: badgedBuildingTabs(state, b, 'owner', { contractor: false }).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })),
         item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
       ],
     })
@@ -181,8 +181,8 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     const buildingItem = (id: string, name: string, href: string) => {
       const side = buildingSide(state, viewer.userId, id)!
       // Overview first, as on the owner's building folders: the Owner, Structure and contractor cards live there.
-      const tabs = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) })
-      return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href)) })
+      const tabs = badgedBuildingTabs(state, state.world.buildings[id], side, { contractor: isBuildingContractor(state, viewer.userId, id) })
+      return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })
     }
     const unlinked = unlinkedBuildings(state, viewer)
     // A firm that only sets dates as a deconstruction contractor has nothing to capture in, so no Capture item.
@@ -268,7 +268,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     const side = buildingSide(state, viewer.userId, id)
     if (!side) return 'forbidden'
     if (tab === undefined) return 'ok'
-    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability', 'activity'].includes(tab)) return 'not_found'
+    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'requirements', 'availability', 'activity'].includes(tab)) return 'not_found'
     // Everyone with a side on the building reads its activity, filtered to what their organisation may read.
     if (tab === 'activity') return sub === undefined ? 'ok' : 'not_found'
     // The records (inventory, capture, testing) are for the owner and the surveyor; a contractor alone sets dates only.
@@ -278,7 +278,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
       return records && state.world.items[sub]?.buildingId === id ? 'ok' : 'forbidden'
     }
     if (sub !== undefined) return 'not_found'
-    if (tab === 'inventory' || tab === 'capture' || tab === 'testing') return records ? 'ok' : 'forbidden'
+    if (tab === 'inventory' || tab === 'capture' || tab === 'testing' || tab === 'requirements') return records ? 'ok' : 'forbidden'
     if (tab === 'availability') return isBuildingContractor(state, viewer.userId, id) ? 'ok' : 'forbidden'
     return side === 'owner' ? 'ok' : 'forbidden'
   }

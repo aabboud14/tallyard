@@ -3,7 +3,7 @@
 // reference data, so no viewer is needed.
 import { GOAL_DEFAULTS, goalDef } from '../../domain/reference/goals'
 import { PROJECT_TYPE_LABELS } from '../../domain/reference/projectTypes'
-import { REQUIREMENTS_NOTE, requirementById, requirementsMethodology } from '../../domain/reference/requirements'
+import { REQUIREMENTS_NOTE, requirementById, requirementsMethodology, donorRequirementsMethodology } from '../../domain/reference/requirements'
 import { CERT_CAVEAT, FINANCE_CAVEAT, REQ_CAVEAT, STATEMENT_CAVEAT, TARGET_CAVEAT } from '../../domain/reference/sustainabilityCopy'
 import { STATEMENT_SECTIONS } from '../../domain/engines/statement'
 import { goalValueText } from '../../domain/engines/goals'
@@ -59,7 +59,7 @@ export function methodologyNotes(): MethodologyNotes {
     requirementsNote: REQ_CAVEAT,
     statementNote: STATEMENT_CAVEAT,
     statementSections: STATEMENT_SECTIONS.map((s) => s.heading),
-    references: requirementsMethodology(),
+    references: [...requirementsMethodology(), ...donorRequirementsMethodology()],
     referencesNote: REQUIREMENTS_NOTE,
     localNote: 'Local authority entries name the adopted plan to check; they do not summarise every policy.',
   }

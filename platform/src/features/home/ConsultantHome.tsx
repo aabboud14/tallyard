@@ -1,9 +1,10 @@
 // The sustainability consultant's home as a dashboard: four figures, each project against its effective targets
-// (reused and recycled content by value and upfront carbon avoided by reuse, as on Goals and targets) with links to its Sustainability, Goals and
-// targets and Certification tabs, the waste engagements and recent activity (collapsed). Indicative throughout.
+// (reused and recycled content by value and upfront carbon avoided by reuse, as on Goals and targets, as target
+// meters, then its requirement tracking with any at risk) with links to its Sustainability, Goals and targets,
+// Certification and Requirements tabs, the waste engagements and recent activity (collapsed). Indicative throughout.
 // Every figure and state comes from consultantDashboard (P2).
 import { Link } from 'react-router'
-import { ArrowRight, FileSpreadsheet, FolderKanban, Leaf, Recycle, Target } from 'lucide-react'
+import { ArrowRight, FileSpreadsheet, FolderKanban, Leaf, Recycle, Target, TriangleAlert } from 'lucide-react'
 import * as f from '../../domain/format'
 import { useView } from '../../store'
 import { consultantDashboard, type ConsultantDashboard, type TargetRowView } from '../../store/selectors/home-consultant'
@@ -82,6 +83,37 @@ function Meter({ label, t, testId }: { label: string; t: TargetRowView; testId: 
   )
 }
 
+function Requirements({ r }: { r: ConsultantDashboard['rows'][number] }) {
+  const q = r.requirements
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-line-soft px-4 py-3.5 sm:px-5" data-testid={`consultant-requirements-${r.id}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="text-sm font-medium text-ink">Requirements</span>
+        <span className="flex items-center gap-2 text-sm tabular-nums text-ink-soft">
+          {q.readyText}
+          {q.atRisk > 0 ? (
+            <Pill size="sm" tone="warning" icon={TriangleAlert}>
+              {q.atRisk} at risk
+            </Pill>
+          ) : null}
+        </span>
+      </div>
+      {q.atRiskItems.length > 0 ? (
+        <ul className="m-0 flex list-none flex-col p-0">
+          {q.atRiskItems.map((x) => (
+            <li key={x.id}>
+              <Link to={x.href} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm text-ink-soft outline-none hover:text-ink hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11" data-testid={`consultant-at-risk-${r.id}-${x.id}`}>
+                Check {x.title}
+                <ArrowRight aria-hidden="true" className="size-3.5 shrink-0" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+
 function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
   return (
     <Card as="article" className="flex flex-col" data-testid={`consultant-project-${r.id}`}>
@@ -95,6 +127,11 @@ function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
               </Link>
             </h3>
             <p className="m-0 mt-0.5 truncate text-sm text-muted">{r.clientName}</p>
+            {r.locationText ? (
+              <p className="m-0 truncate text-xs text-muted" data-testid={`consultant-location-${r.id}`}>
+                {r.locationText}
+              </p>
+            ) : null}
           </div>
           <RibaStageStrip stage={r.plannedStage ?? r.stage} showLabel size="sm" className="text-sm text-ink-soft" />
         </div>
@@ -103,6 +140,7 @@ function ProjectCard({ r }: { r: ConsultantDashboard['rows'][number] }) {
         <Meter label={r.content.label} t={r.content} testId={`meter-content-${r.id}`} />
         <Meter label={r.carbon.label} t={r.carbon} testId={`meter-carbon-${r.id}`} />
       </div>
+      <Requirements r={r} />
       <nav aria-label={`${r.name} pages`} className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft px-4 py-2.5 sm:px-5">
         {r.links.map((l) => (
           <Link key={l.id} to={l.href} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-brand-700 outline-none hover:underline hover:underline-offset-4 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 max-sm:min-h-11">

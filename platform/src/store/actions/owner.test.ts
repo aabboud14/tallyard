@@ -112,7 +112,7 @@ describe('sharing with projects', () => {
 })
 
 describe('buildings', () => {
-  const input: NewBuildingInput = { name: 'Wexcombe House', address: '9 Lantry Street, London SE1', postcodeDistrict: 'se1', localAuthority: 'Southwark', region: 'Inner London East', yearBuilt: 1979, storeys: 6, giaM2: 4100, structureType: 'Steel frame', stripOutStart: '2027-03-01', dismantlingStart: '2027-04-05', clearBy: '2027-07-30', surveyorOrgId: ORG_IDS.tarnbrook }
+  const input: NewBuildingInput = { name: 'Wexcombe House', address: '9 Lantry Street, London SE1', postcodeDistrict: 'se1', localAuthority: 'Southwark', region: 'Central London', yearBuilt: 1979, storeys: 6, giaM2: 4100, structureType: 'Steel frame', stripOutStart: '2027-03-01', dismantlingStart: '2027-04-05', clearBy: '2027-07-30', surveyorOrgId: ORG_IDS.tarnbrook }
 
   it('the owner adds a building and appoints a surveyor, who is told', () => {
     const s0 = fresh()
@@ -144,7 +144,7 @@ describe('buildings', () => {
 })
 
 describe('round 2: building records, structure and new projects', () => {
-  const donor: NewBuildingInput = { name: 'Wexcombe House', address: '9 Lantry Street, London SE1', postcodeDistrict: 'se1', localAuthority: 'Southwark', region: 'Inner London East', yearBuilt: 1979, storeys: 6, giaM2: 4100, structureType: '', structure: [{ kind: 'facade', material: 'masonry', systemId: null, note: '' }, { kind: 'frame', material: null, systemId: 'frame_steel_bolted', note: '' }], stripOutStart: '2027-03-01', dismantlingStart: '2027-04-05', clearBy: '2027-07-30', surveyorOrgId: null }
+  const donor: NewBuildingInput = { name: 'Wexcombe House', address: '9 Lantry Street, London SE1', postcodeDistrict: 'se1', localAuthority: 'Southwark', region: 'Central London', yearBuilt: 1979, storeys: 6, giaM2: 4100, structureType: '', structure: [{ kind: 'facade', material: 'masonry', systemId: null, note: '' }, { kind: 'frame', material: null, systemId: 'frame_steel_bolted', note: '' }], stripOutStart: '2027-03-01', dismantlingStart: '2027-04-05', clearBy: '2027-07-30', surveyorOrgId: null }
 
   it('the owner is recorded as the creator, and the structure is kept in element order', () => {
     const s0 = fresh()

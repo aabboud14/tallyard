@@ -298,7 +298,10 @@ describe('setProjectRequirements', () => {
     expect(cleared.world.projects[id].requirementsReviewed).toBe(true)
     expect(cleared.activity[0].text).toBe('cleared the planning and sustainability requirements')
     const moved = must(updateProject(chosen, actor(U.priya), id, { region: 'South East', localAuthority: 'Reading' })).state
-    expect(moved.world.projects[id].planningRequirementIds).toEqual(['nppf'])
+    // Changed 16 October 2026 (requirements follow-up review): a move of a project whose requirements are chosen also
+    // adds the suggestions new to the place (here Reading's local plan entry), so a cancelled review keeps what the
+    // Edit project dialog said would happen.
+    expect(moved.world.projects[id].planningRequirementIds).toEqual(['nppf', 'la-reading'])
   })
 })
 

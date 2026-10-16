@@ -1,12 +1,16 @@
 // Planning and sustainability requirements: the single dataset every part of the product reads (review of
-// 14 October 2026). Three levels: national (England), London (London Plan 2021 and GLA guidance) and local
-// (hand-written entries for six boroughs, otherwise a generated "local plan" entry for any authority).
-// Every entry is an indicative summary as at October 2026, never legal advice.
-import { isLondonRegion } from './places'
+// 14 October 2026). Three levels: national (England; in Wales and Scotland a placeholder plus the UK standards),
+// London (London Plan 2021 and GLA guidance) and local (hand-written entries for six boroughs, otherwise a generated
+// "local plan" placeholder for any authority). Projects being built read one set; donor buildings coming down read
+// the items that bite before demolition (the review of 16 October 2026). Every entry is an indicative summary as at
+// October 2026, never legal advice; a placeholder says it is not yet summarised.
+import { isLondonRegion, nationOfRegion, normaliseLocalAuthority } from './places'
 
 export type RequirementLevel = 'national' | 'london' | 'local'
 export type RequirementKind = 'planning_policy' | 'regulation' | 'guidance' | 'voluntary_standard' | 'certification' | 'method'
 export type RequirementTopic = 'planning' | 'energy' | 'whole_life_carbon' | 'circular_economy' | 'net_zero' | 'breeam' | 'leed' | 'well'
+/** What an entry applies to: a project being built, or a donor building coming down. */
+export type RequirementSubject = 'project' | 'donor'
 
 export type PlanningRequirement = {
   id: string
@@ -24,8 +28,14 @@ export type PlanningRequirement = {
   helps: string | null
   /** Pre-ticked in the form: statutory policy, regulation and GLA guidance only. */
   suggested: boolean
+  /** True for a generated or general entry that names what to check but does not summarise it yet. */
+  placeholder: boolean
+  appliesTo: RequirementSubject[]
   status: 'indicative'
 }
+
+/** The label a placeholder carries wherever it is shown. */
+export const PLACEHOLDER_LABEL = 'Not yet summarised'
 
 export const REQUIREMENTS_AS_AT = 'October 2026'
 export const REQUIREMENTS_NOTE = 'Indicative summaries as at October 2026. Check the current published documents before you rely on them.'
@@ -41,11 +51,12 @@ export const KIND_LABELS: Record<RequirementKind, string> = {
   method: 'Method',
 }
 
-type Entry = Omit<PlanningRequirement, 'level' | 'status'>
+type Entry = Omit<PlanningRequirement, 'level' | 'status' | 'placeholder' | 'appliesTo'> & Partial<Pick<PlanningRequirement, 'placeholder' | 'appliesTo'>>
 
-const national = (e: Entry): PlanningRequirement => ({ ...e, level: 'national', status: 'indicative' })
-const london = (e: Entry): PlanningRequirement => ({ ...e, level: 'london', status: 'indicative' })
-const local = (e: Entry): PlanningRequirement => ({ ...e, level: 'local', status: 'indicative' })
+const make = (level: RequirementLevel) => (e: Entry): PlanningRequirement => ({ placeholder: false, appliesTo: ['project'], ...e, level, status: 'indicative' })
+const national = make('national')
+const london = make('london')
+const local = make('local')
 
 const CARBON_INPUT = 'Avoided carbon on reused items is an input to the assessment, not a result.'
 
@@ -245,6 +256,7 @@ export const LOCAL_REQUIREMENTS: Record<string, PlanningRequirement[]> = {
   'City of London': [
     local({
       id: 'la-city-of-london-carbon-options',
+      appliesTo: ['project', 'donor'],
       code: 'Carbon options',
       title: 'Carbon Options guidance',
       source: 'City of London planning advice note, 2023',
@@ -260,6 +272,7 @@ export const LOCAL_REQUIREMENTS: Record<string, PlanningRequirement[]> = {
   Westminster: [
     local({
       id: 'la-westminster-retrofit-first',
+      appliesTo: ['project', 'donor'],
       code: 'Retrofit first',
       title: 'Retrofit first approach',
       source: 'Westminster City Plan review',
@@ -275,6 +288,7 @@ export const LOCAL_REQUIREMENTS: Record<string, PlanningRequirement[]> = {
   Camden: [
     local({
       id: 'la-camden-cc1',
+      appliesTo: ['project', 'donor'],
       code: 'Policy CC1',
       title: 'Climate change mitigation',
       source: 'Camden Local Plan 2017',
@@ -324,7 +338,7 @@ const LOCAL_SUMMARY_ELSEWHERE = 'Local policies apply alongside national policy.
 
 /** The local level for an authority: its hand-written entries, or one generated "local plan" entry; [] when la is ''. */
 export function localRequirements(region: string, la: string): PlanningRequirement[] {
-  const name = la.trim()
+  const name = normaliseLocalAuthority(la)
   if (!name) return []
   if (Object.prototype.hasOwnProperty.call(LOCAL_REQUIREMENTS, name)) return LOCAL_REQUIREMENTS[name]
   return [
@@ -340,17 +354,67 @@ export function localRequirements(region: string, la: string): PlanningRequireme
       asks: ['The statements on the local validation list'],
       helps: null,
       suggested: true,
+      placeholder: true,
     }),
   ]
+}
+
+/** National entries that apply across the UK: the voluntary standards, the method and the certifications. */
+const UK_WIDE_IDS = ['nzcbs', 'riba2030', 'rics-wlca', 'breeam-nc', 'leed-v5', 'well-v2']
+
+/** In Wales and Scotland the national planning policy and building rules differ from England's, and are not yet summarised. */
+export const DEVOLVED_NATIONAL: Record<'Wales' | 'Scotland', PlanningRequirement> = {
+  Wales: national({
+    id: 'wales-national',
+    code: 'National policy',
+    title: 'Planning policy and building regulations in Wales',
+    source: 'Planning Policy Wales and the Building Regulations in Wales',
+    kind: 'planning_policy',
+    topic: 'planning',
+    trigger: '',
+    summary: 'Not yet summarised in Tallyard. National planning policy and the building regulations in Wales differ from those in England. Check the current Welsh Government documents.',
+    asks: ['The statements the local planning authority asks for'],
+    helps: null,
+    suggested: true,
+    placeholder: true,
+  }),
+  Scotland: national({
+    id: 'scotland-national',
+    code: 'National policy',
+    title: 'Planning policy and building standards in Scotland',
+    source: 'National Planning Framework 4 and the Scottish building standards',
+    kind: 'planning_policy',
+    topic: 'planning',
+    trigger: '',
+    summary: 'Not yet summarised in Tallyard. National planning policy and the building standards in Scotland differ from those in England. Check the current Scottish Government documents.',
+    asks: ['The statements the planning authority asks for'],
+    helps: null,
+    suggested: true,
+    placeholder: true,
+  }),
+}
+
+/** The national group for a region: England's entries, or in Wales and Scotland a placeholder and the UK-wide entries. */
+function nationalGroup(region: string): RequirementGroup {
+  const nation = nationOfRegion(region)
+  if (nation === 'Wales' || nation === 'Scotland') {
+    return {
+      level: 'national',
+      title: 'National',
+      subtitle: `${nation}: national requirements not yet summarised, UK standards shown`,
+      items: [DEVOLVED_NATIONAL[nation], ...NATIONAL_REQUIREMENTS.filter((r) => UK_WIDE_IDS.includes(r.id))],
+    }
+  }
+  return { level: 'national', title: 'National', subtitle: 'England, statutory and voluntary', items: NATIONAL_REQUIREMENTS }
 }
 
 export type RequirementGroup = { level: RequirementLevel; title: string; subtitle: string; items: PlanningRequirement[] }
 
 /** The groups that apply to a location: national always, London for a London region, local when an authority is set. */
 export function requirementsFor(region: string, localAuthority: string): RequirementGroup[] {
-  const groups: RequirementGroup[] = [{ level: 'national', title: 'National', subtitle: 'England, statutory and voluntary', items: NATIONAL_REQUIREMENTS }]
+  const groups: RequirementGroup[] = [nationalGroup(region)]
   if (isLondonRegion(region)) groups.push({ level: 'london', title: 'London Plan 2021 and GLA guidance', subtitle: 'Applies across Greater London', items: LONDON_REQUIREMENTS })
-  const la = localAuthority.trim()
+  const la = normaliseLocalAuthority(localAuthority)
   if (la) groups.push({ level: 'local', title: la, subtitle: 'Local plan and guidance', items: localRequirements(region, la) })
   return groups
 }
@@ -371,6 +435,26 @@ export function keepApplicable(ids: string[], region: string, localAuthority: st
   return applicableIds(region, localAuthority).filter((id) => wanted.has(id))
 }
 
+export type Location = { region: string; localAuthority: string }
+
+/**
+ * The chosen requirements after a move: the ones that still apply, plus the suggestions new to the place (ones the
+ * architect could already pick and left out stay left out), in dataset order. Each part is returned for the copy.
+ */
+export function idsAfterMoveParts(chosen: string[], from: Location, to: Location): { kept: string[]; added: string[]; ids: string[] } {
+  const kept = keepApplicable(chosen, to.region, to.localAuthority)
+  const keptSet = new Set(kept)
+  const before = new Set(applicableIds(from.region, from.localAuthority))
+  const added = suggestedRequirementIds(to.region, to.localAuthority).filter((id) => !keptSet.has(id) && !before.has(id))
+  const wanted = new Set([...kept, ...added])
+  return { kept, added, ids: applicableIds(to.region, to.localAuthority).filter((id) => wanted.has(id)) }
+}
+
+/** What a project's chosen requirements become when it moves: kept and new suggestions once chosen; otherwise only what still applies. */
+export function idsAfterMove(chosen: string[], from: Location, to: Location, reviewed: boolean): string[] {
+  return reviewed ? idsAfterMoveParts(chosen, from, to).ids : keepApplicable(chosen, to.region, to.localAuthority)
+}
+
 /** The requirement with this ID at this location, or null. */
 export function requirementById(id: string, region: string, localAuthority: string): PlanningRequirement | null {
   for (const g of requirementsFor(region, localAuthority)) for (const r of g.items) if (r.id === id) return r
@@ -380,5 +464,133 @@ export function requirementById(id: string, region: string, localAuthority: stri
 /** Every entry the product names, with its source, for Help, Methodology. */
 export function requirementsMethodology(): { title: string; source: string; status: 'Indicative summary' }[] {
   const all = [...NATIONAL_REQUIREMENTS, ...LONDON_REQUIREMENTS, ...Object.values(LOCAL_REQUIREMENTS).flat()]
+  return all.map((r) => ({ title: `${r.code}, ${r.title}`, source: r.source, status: 'Indicative summary' as const }))
+}
+
+// ---------- Donor buildings coming down ----------
+
+const donor = (level: RequirementLevel) => (e: Entry): PlanningRequirement => make(level)({ ...e, appliesTo: ['donor'] })
+
+/** Before demolition, nationally: notice to the local authority, and a plan for the waste. Placeholders. */
+export const DONOR_NATIONAL: Record<'England' | 'Wales' | 'Scotland', PlanningRequirement> = {
+  England: donor('national')({
+    id: 'dem-notice',
+    code: 'Section 80',
+    title: 'Demolition notice and site waste plan',
+    source: 'Building Act 1984, section 80, and site waste management good practice',
+    kind: 'regulation',
+    topic: 'planning',
+    trigger: 'Most demolition',
+    summary: 'Not yet summarised in full. Most demolition needs notice to the local authority first, and some needs prior approval under planning rules. A site waste management plan is good practice; it is no longer a legal duty in England.',
+    asks: ['Notice of the demolition to the local authority', 'A plan for the waste and for the materials kept for reuse'],
+    helps: 'The inventory and the recovery plan show which materials are kept for reuse and where they go.',
+    suggested: true,
+    placeholder: true,
+  }),
+  Wales: donor('national')({
+    id: 'dem-notice-wales',
+    code: 'Section 80',
+    title: 'Demolition notice in Wales',
+    source: 'Building Act 1984, section 80',
+    kind: 'regulation',
+    topic: 'planning',
+    trigger: 'Most demolition',
+    summary: 'Not yet summarised in full. Most demolition needs notice to the local authority first. Check the current Welsh Government guidance on demolition and waste.',
+    asks: ['Notice of the demolition to the local authority'],
+    helps: 'The inventory and the recovery plan show which materials are kept for reuse and where they go.',
+    suggested: true,
+    placeholder: true,
+  }),
+  Scotland: donor('national')({
+    id: 'dem-warrant-scotland',
+    code: 'Scotland',
+    title: 'Building warrant for demolition',
+    source: 'Building (Scotland) Act 2003',
+    kind: 'regulation',
+    topic: 'planning',
+    trigger: 'Most demolition',
+    summary: 'Not yet summarised in full. Demolition in Scotland generally needs a building warrant from the local authority. Check the current Scottish Government guidance.',
+    asks: ['A building warrant for the demolition'],
+    helps: 'The inventory and the recovery plan show which materials are kept for reuse and where they go.',
+    suggested: true,
+    placeholder: true,
+  }),
+}
+
+/** Before demolition, in London: the pre-demolition audit and the diversion target of Policy SI 7. */
+export const DONOR_LONDON: PlanningRequirement[] = [
+  donor('london')({
+    id: 'lp-si7-pda',
+    code: 'Policy SI 7',
+    title: 'Pre-demolition audit',
+    source: 'London Plan 2021 and the GLA Circular Economy Statements guidance, 2022',
+    kind: 'planning_policy',
+    topic: 'circular_economy',
+    trigger: 'Applications referable to the Mayor that involve demolition',
+    summary: 'Before demolition, an audit records the materials in the building and how much of each can be reused or recycled. It forms part of the Circular Economy Statement for the scheme that replaces it.',
+    asks: ['A pre-demolition audit', 'Reuse and recycling routes for the main materials'],
+    helps: 'The inventory and the recovery plan hold the items, quantities and routes the audit asks for.',
+    suggested: true,
+  }),
+  donor('london')({
+    id: 'lp-si7-diversion',
+    code: 'Policy SI 7',
+    title: 'Demolition waste put to beneficial use',
+    source: 'London Plan 2021',
+    kind: 'planning_policy',
+    topic: 'circular_economy',
+    trigger: 'Applications referable to the Mayor',
+    summary: 'Policy targets include putting at least 95% of construction and demolition waste to beneficial use instead of landfill.',
+    asks: ['Records of where the demolition materials and waste go'],
+    helps: 'Listings, reservations and sales show what leaves the site for reuse.',
+    suggested: true,
+  }),
+]
+
+/** The local level before demolition: the authority's hand-written demolition entries, or one generated placeholder. */
+export function donorLocalRequirements(region: string, la: string): PlanningRequirement[] {
+  const name = normaliseLocalAuthority(la)
+  if (!name) return []
+  const written = (Object.prototype.hasOwnProperty.call(LOCAL_REQUIREMENTS, name) ? LOCAL_REQUIREMENTS[name] : []).filter((r) => r.appliesTo.includes('donor'))
+  if (written.length > 0) return written
+  return [
+    donor('local')({
+      id: `la-${localSlug(name)}-demolition`,
+      code: 'Local plan',
+      title: `${name} local plan, demolition and waste`,
+      source: `${name} local plan and supplementary planning documents`,
+      kind: 'planning_policy',
+      topic: 'planning',
+      trigger: '',
+      summary: isLondonRegion(region)
+        ? 'Not yet summarised in Tallyard. Check the local plan for policies on demolition, retrofit first, waste and the circular economy, alongside the London Plan.'
+        : 'Not yet summarised in Tallyard. Check the local plan for policies on demolition, retrofit first and waste.',
+      asks: ['The statements on the local validation list'],
+      helps: null,
+      suggested: true,
+      placeholder: true,
+    }),
+  ]
+}
+
+/** The groups a donor building coming down tracks: national, London for a London region, local when an authority is set. */
+export function donorRequirementsFor(region: string, localAuthority: string): RequirementGroup[] {
+  const nation = nationOfRegion(region) ?? 'England'
+  const groups: RequirementGroup[] = [{ level: 'national', title: 'National', subtitle: `${nation}, before demolition`, items: [DONOR_NATIONAL[nation]] }]
+  if (isLondonRegion(region)) groups.push({ level: 'london', title: 'London Plan 2021 and GLA guidance', subtitle: 'Applies across Greater London', items: DONOR_LONDON })
+  const la = normaliseLocalAuthority(localAuthority)
+  if (la) groups.push({ level: 'local', title: la, subtitle: 'Local plan and guidance', items: donorLocalRequirements(region, la) })
+  return groups
+}
+
+/** The requirement a donor building at this location tracks with this ID, or null. */
+export function donorRequirementById(id: string, region: string, localAuthority: string): PlanningRequirement | null {
+  for (const g of donorRequirementsFor(region, localAuthority)) for (const r of g.items) if (r.id === id) return r
+  return null
+}
+
+/** The summarised entries only donor buildings track, for Help, Methodology; placeholders summarise nothing yet. */
+export function donorRequirementsMethodology(): { title: string; source: string; status: 'Indicative summary' }[] {
+  const all = [...Object.values(DONOR_NATIONAL), ...DONOR_LONDON].filter((r) => !r.placeholder)
   return all.map((r) => ({ title: `${r.code}, ${r.title}`, source: r.source, status: 'Indicative summary' as const }))
 }

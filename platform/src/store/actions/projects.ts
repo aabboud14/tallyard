@@ -5,8 +5,8 @@ import type { ProjectType } from '../../domain/v1types'
 import { REGIONS } from '../../domain/reference/assumptions'
 import { V1_ASSUMPTIONS } from '../../domain/reference/v1assumptions'
 import { blindProjectType, PROJECT_TYPE_OTHER_MAX, PROJECT_TYPES } from '../../domain/reference/projectTypes'
-import { isValidLocalAuthority } from '../../domain/reference/places'
-import { applicableIds, keepApplicable } from '../../domain/reference/requirements'
+import { isValidLocalAuthority, normaliseLocalAuthority } from '../../domain/reference/places'
+import { applicableIds, idsAfterMove, keepApplicable } from '../../domain/reference/requirements'
 import { defaultCompletion, PROGRAMME_ERRORS, suggestProgramme, validateProgramme } from '../../domain/engines/programme'
 import { daysBetween, isOnOrBefore } from '../../domain/dates'
 import type { ActionResult, Actor, AppData } from '../types'
@@ -172,6 +172,11 @@ export type ProjectRecordInput = {
   /** The request to the consultancy, when one is named. */
   consultantLink?: ClientLink
   requirementIds: string[]
+  /**
+   * Whether requirementIds is the architect's choice, an empty one included. Left out, a non-empty list counts as
+   * chosen and an empty one as not yet chosen, so the suggestions are tracked meanwhile.
+   */
+  requirementsReviewed?: boolean
   description: string
   /** What a seller reads as the buyer's organisation type; 'Design team' unless given. */
   blindOrgType?: string
@@ -180,7 +185,7 @@ export type ProjectRecordInput = {
 /** A new project record with an empty bill, schedule and plan. Pure: the caller resolves the IDs and the client. */
 export function projectRecord(input: ProjectRecordInput): Project {
   const type = input.projectType
-  const localAuthority = clean(input.localAuthority, 80)
+  const localAuthority = normaliseLocalAuthority(clean(input.localAuthority, 80))
   const planningRequirementIds = keepApplicable(input.requirementIds, input.region, localAuthority)
   return {
     id: input.id,
@@ -193,7 +198,7 @@ export function projectRecord(input: ProjectRecordInput): Project {
     programme: { stageStarts: [...input.programme.stageStarts], siteStart: input.programme.siteStart, practicalCompletion: input.programme.practicalCompletion, source: input.programme.source },
     clientLink: { ...input.clientLink },
     planningRequirementIds,
-    requirementsReviewed: planningRequirementIds.length > 0,
+    requirementsReviewed: input.requirementsReviewed ?? planningRequirementIds.length > 0,
     startDate: input.startDate,
     createdBy: input.createdByPersonaId,
     teamOrgIds: [input.architectOrgId, input.consultantOrgId].filter((x) => x),
@@ -283,6 +288,8 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
     clientLink: pendingClientLink(a.today, a.persona.id, input.clientMessage ?? ''),
     consultantLink: consultantOrgId ? pendingConsultantLink(a.today, a.persona.id) : undefined,
     requirementIds: input.requirementIds ?? [],
+    // A list sent from the form is the architect's choice, even when they cleared every tick.
+    requirementsReviewed: input.requirementIds !== undefined,
     description: input.description ?? '',
   })
   w.projects[id] = project
@@ -465,9 +472,11 @@ export function updateProject(state: AppData, actor: Actor, projectId: string, p
     next.region = patch.region
     if (patch.region !== p.region) next.hubDistancesKm = { ...V1_ASSUMPTIONS.regionHubKm[patch.region] }
   }
-  if (patch.localAuthority !== undefined) next.localAuthority = clean(patch.localAuthority, 80)
+  if (patch.localAuthority !== undefined) next.localAuthority = normaliseLocalAuthority(clean(patch.localAuthority, 80))
   if (!isValidLocalAuthority(next.region, next.localAuthority)) return fail(state, PROJECT_ERRORS.localAuthority)
-  if (next.region !== p.region || next.localAuthority !== p.localAuthority) next.planningRequirementIds = keepApplicable(p.planningRequirementIds, next.region, next.localAuthority)
+  // A move keeps the chosen requirements that still apply and adds the suggestions new to the place, so the review
+  // that follows only confirms the set and a cancelled review leaves what the dialog said.
+  if (next.region !== p.region || next.localAuthority !== p.localAuthority) next.planningRequirementIds = idsAfterMove(p.planningRequirementIds, p, next, p.requirementsReviewed)
   if (patch.description !== undefined) next.description = clean(patch.description, 600)
   const w = structuredClone(state.world)
   w.projects[projectId] = next

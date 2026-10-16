@@ -6,10 +6,11 @@ import { formatDate } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
 import { itemsOf, ownerHome, priorityFor, type BuildingCard, type OwnerHome, type OwnerProjectRow } from './owner'
+import { buildingRequirementsRollup, type BuildingRequirementsRollup } from './buildingRequirements'
 import { shortlistRows } from './shortlist'
 import { activitySummary, awaitingState, typologyCounts, type ActivitySummary, type MetricTone, type ThumbMaterial, type TileState } from './dashboard'
 
-export type OwnerBuildingCard = BuildingCard & { kindLabel: 'Donor building'; sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string }
+export type OwnerBuildingCard = BuildingCard & { kindLabel: 'Donor building'; sketch: BuildingSketch; byTypology: Record<Typology, number>; programmeText: string; requirements: BuildingRequirementsRollup | null }
 
 /** One of the owner's New projects, drawn going up from its live shortlist's public cards, with its site start. */
 export type OwnerProjectCard = OwnerProjectRow & { kindLabel: 'New project'; sketch: BuildingSketch; programmeText: string }
@@ -61,6 +62,7 @@ export function ownerDashboard(state: AppData, viewer: Viewer): OwnerDashboard |
       sketch: buildingSketch({ id: c.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families),
       byTypology: counts,
       programmeText: start ? `Dismantling starts ${formatDate(start)}` : 'Programme not set',
+      requirements: b ? buildingRequirementsRollup(state, b) : null,
     }
   })
   const newProjectCards: OwnerProjectCard[] = home.newProjects.map((row) => {
