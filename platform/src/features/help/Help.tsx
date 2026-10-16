@@ -360,7 +360,7 @@ function MethodNotes() {
             <p className="m-0 text-muted">{n.certificationNote}</p>
           </NoteCard>
           <NoteCard icon={Landmark} title="Requirements">
-            <p className="m-0">Each project tracks the planning and sustainability requirements chosen for its location, with a status and evidence for each.</p>
+            <p className="m-0">Each project tracks the planning and sustainability requirements chosen for its location, with a status and evidence for each. Each donor building tracks the ones that apply before demolition. Entries marked Not yet summarised name the document to check and summarise nothing yet.</p>
             <p className="m-0 text-muted">{n.requirementsNote}</p>
           </NoteCard>
           <NoteCard icon={FileText} title="Circular economy statement">

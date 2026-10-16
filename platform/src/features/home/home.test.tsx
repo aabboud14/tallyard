@@ -174,7 +174,7 @@ describe('surveyor home', () => {
 })
 
 describe('consultant home', () => {
-  it('reads each project against its targets, with meters and the three links', async () => {
+  it('reads each project against its targets, with meters, the requirements and the four links', async () => {
     open('/app/home', U.marcus)
     await waitFor(() => document.querySelector('[data-testid="consultant-home"]'))
     const card = byTestId(`consultant-project-${MERROWGATE_ID}`)
@@ -182,7 +182,12 @@ describe('consultant home', () => {
     expect(meters.length).toBe(2)
     expect(meters[0].getAttribute('aria-valuetext')).toBe('19.9%. Aim at least 25%. Off target')
     const links = Array.from(card.querySelectorAll('nav a')).map((a) => a.getAttribute('href'))
-    expect(links).toEqual([`/app/projects/${MERROWGATE_ID}/sustainability`, `/app/projects/${MERROWGATE_ID}/targets`, `/app/projects/${MERROWGATE_ID}/certification`])
+    // Changed 16 October 2026 (recording audit, note 41): the card links to Requirements too.
+    expect(links).toEqual([`/app/projects/${MERROWGATE_ID}/sustainability`, `/app/projects/${MERROWGATE_ID}/targets`, `/app/projects/${MERROWGATE_ID}/certification`, `/app/projects/${MERROWGATE_ID}/requirements`])
+    // The seeded BREEAM item at risk shows on the card, with a link to it, and the card names the borough and region.
+    expect(byTestId(`consultant-requirements-${MERROWGATE_ID}`).textContent).toContain('1 at risk')
+    expect(byTestId(`consultant-at-risk-${MERROWGATE_ID}-breeam-nc`).getAttribute('href')).toBe(`/app/projects/${MERROWGATE_ID}/requirements#requirement-breeam-nc`)
+    expect(byTestId(`consultant-location-${MERROWGATE_ID}`).textContent).toBe('Newham, Inner London East')
     expect(byTestId('metric-targets').textContent).toContain('2 off target')
     expect(byTestId('metric-projects').textContent).toContain('3 with a content target, 1 with a carbon target')
     const body = document.body.textContent ?? ''

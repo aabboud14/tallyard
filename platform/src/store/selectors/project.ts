@@ -5,7 +5,7 @@ import type { Typology, WishStatus } from '../../domain/v1types'
 import { REGIONS } from '../../domain/reference/assumptions'
 import { PROJECT_TYPE_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/labels'
 import { RIBA_STAGES } from '../../domain/reference/policy'
-import { isLondonRegion, localAuthoritiesFor } from '../../domain/reference/places'
+import { isLondonRegion, localAuthoritiesFor, localAuthorityGroups, regionGroups, regionHint } from '../../domain/reference/places'
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
 import { clientLinked } from '../../domain/access'
 import { CONSTRUCTION_DAYS } from '../../domain/engines/programme'
@@ -20,7 +20,7 @@ import { BOARD_COLUMNS, shortlistRows, totalsOf, type ShortlistRow, type TotalsB
 import { plannedStageText, programmeView, type ProgrammeView } from './programme'
 import { projectRequirementsView, type ProjectRequirementsView } from './requirements'
 import { projectWishlist } from '../lots'
-import { sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
+import { applicableRequirements, sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
 import { plural } from '../notifications'
 import { architectOptions } from './owner'
 
@@ -211,7 +211,18 @@ export function newProjectOptions(state: AppData, viewer: Viewer): NewProjectOpt
   }
 }
 
-export type LocalAuthorityChoices = { options: string[]; allowsOther: boolean; london: boolean }
+export type LocalAuthorityChoices = {
+  options: string[]
+  allowsOther: boolean
+  london: boolean
+  /** Every listed authority by region, this region first, so a borough can be found without knowing its region. */
+  groups: { label: string; items: string[] }[]
+}
+
+/** The region dropdown in groups (London, the rest of England, Wales and Scotland), with the line under it. */
+export function regionChoices(region: string): { groups: { label: string; items: string[] }[]; hint: string | null } {
+  return { groups: regionGroups(REGIONS), hint: regionHint(region) }
+}
 
 /**
  * The local authority dropdown for a region: its listed authorities, and whether a typed name is accepted.
@@ -220,7 +231,7 @@ export type LocalAuthorityChoices = { options: string[]; allowsOther: boolean; l
  */
 export function localAuthorityChoices(region: string): LocalAuthorityChoices {
   const london = isLondonRegion(region)
-  return { options: [...localAuthoritiesFor(region)], allowsOther: !london, london }
+  return { options: [...localAuthoritiesFor(region)], allowsOther: !london, london, groups: localAuthorityGroups(region, REGIONS) }
 }
 
 // ---------- Overview ----------
@@ -434,6 +445,18 @@ function lowerFirst(s: string): string {
 }
 
 /** The setup checklist on a new project, for its architect. It hides once the programme, the client and the shortlist are done. */
+/** How many suggested requirements a project tracks while the architect has not chosen (applicableRequirements). */
+function suggestedCount(p: Project): number {
+  return p.requirementsReviewed ? 0 : applicableRequirements(p).length
+}
+
+/** The setup step's line before the architect chooses: the suggestions are tracked meanwhile, so the step says so. */
+function suggestedRequirementsText(p: Project): string {
+  const n = suggestedCount(p)
+  if (n === 0) return 'Pick the policies and standards to track for this location.'
+  return `${plural(n, 'suggested requirement')} ${n === 1 ? 'is' : 'are'} tracked until you review them.`
+}
+
 export function projectSetup(state: AppData, viewer: Viewer, projectId: string): ProjectSetup | null {
   if (projectSide(state, viewer.userId, projectId) !== 'architect') return null
   const p = state.world.projects[projectId]
@@ -473,9 +496,9 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
     id: 'requirements',
     title: 'Choose planning and sustainability requirements',
     short: 'Requirements',
-    text: p.requirementsReviewed ? plural(p.planningRequirementIds.length, 'requirement') + ' chosen.' : 'Pick the policies and standards to track for this location.',
+    text: p.requirementsReviewed ? plural(p.planningRequirementIds.length, 'requirement') + ' chosen.' : suggestedRequirementsText(p),
     optional: true,
-    action: { label: p.requirementsReviewed ? 'Edit requirements' : 'Choose requirements', href: null, intent: 'requirements' },
+    action: { label: p.requirementsReviewed ? 'Edit requirements' : suggestedCount(p) > 0 ? 'Review requirements' : 'Choose requirements', href: null, intent: 'requirements' },
     secondary: null,
     done: p.requirementsReviewed,
     waiting: false,

@@ -311,7 +311,12 @@ describe('project header, list and options', () => {
     expect(o.types[o.types.length - 1]).toEqual({ value: 'other', label: 'Other' })
     expect(o.today).toBe('2026-10-08')
     expect(o.typicalCompletionDays).toBe(CONSTRUCTION_DAYS)
-    expect(sel.localAuthorityChoices('Central London')).toEqual({ options: ['City of London', 'Westminster', 'Camden', 'Islington', 'Kensington and Chelsea', 'Lambeth', 'Southwark'], allowsOther: false, london: true })
+    // Changed 16 October 2026 (recording audit, notes 20 and C7): the choices also carry every authority by region, this region first.
+    const central = sel.localAuthorityChoices('Central London')
+    expect(central).toMatchObject({ options: ['City of London', 'Westminster', 'Camden', 'Islington', 'Kensington and Chelsea', 'Lambeth', 'Southwark'], allowsOther: false, london: true })
+    expect(central.groups[0]).toEqual({ label: 'Central London', items: central.options })
+    expect(central.groups.map((g) => g.label)).toHaveLength(15)
+    expect(central.groups.flatMap((g) => g.items)).toContain('Merton')
     expect(sel.localAuthorityChoices('South East')).toMatchObject({ allowsOther: true, london: false })
   })
 })

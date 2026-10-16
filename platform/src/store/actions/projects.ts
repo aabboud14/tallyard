@@ -164,6 +164,11 @@ export type ProjectRecordInput = {
   programme: ProjectProgramme
   clientLink: ClientLink
   requirementIds: string[]
+  /**
+   * Whether requirementIds is the architect's choice, an empty one included. Left out, a non-empty list counts as
+   * chosen and an empty one as not yet chosen, so the suggestions are tracked meanwhile.
+   */
+  requirementsReviewed?: boolean
   description: string
   /** What a seller reads as the buyer's organisation type; 'Design team' unless given. */
   blindOrgType?: string
@@ -185,7 +190,7 @@ export function projectRecord(input: ProjectRecordInput): Project {
     programme: { stageStarts: [...input.programme.stageStarts], siteStart: input.programme.siteStart, practicalCompletion: input.programme.practicalCompletion, source: input.programme.source },
     clientLink: { ...input.clientLink },
     planningRequirementIds,
-    requirementsReviewed: planningRequirementIds.length > 0,
+    requirementsReviewed: input.requirementsReviewed ?? planningRequirementIds.length > 0,
     startDate: input.startDate,
     createdBy: input.createdByPersonaId,
     teamOrgIds: [input.architectOrgId, input.consultantOrgId].filter((x) => x),
@@ -273,6 +278,8 @@ export function createProject(state: AppData, actor: Actor, input: NewProjectInp
     programme: { ...dates, source: 'suggested' },
     clientLink: pendingClientLink(a.today, a.persona.id, input.clientMessage ?? ''),
     requirementIds: input.requirementIds ?? [],
+    // A list sent from the form is the architect's choice, even when they cleared every tick.
+    requirementsReviewed: input.requirementIds !== undefined,
     description: input.description ?? '',
   })
   w.projects[id] = project

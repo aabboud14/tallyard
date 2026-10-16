@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { REGIONS } from './assumptions'
-import { V1_ASSUMPTIONS, V1_PARAMETER_ROWS, V1_SOURCE } from './v1assumptions'
+import { ESTIMATED_REGION_SOURCE, V1_ASSUMPTIONS, V1_PARAMETER_ROWS, V1_SOURCE } from './v1assumptions'
 
 describe('V1_ASSUMPTIONS', () => {
   it('holds the placeholders agreed on the call', () => {
@@ -19,9 +19,11 @@ describe('V1_ASSUMPTIONS', () => {
   it('lists every value as a placeholder row with the call as its source', () => {
     expect(V1_SOURCE).toBe('Founder and partner, call of 7 October 2026')
     expect(V1_PARAMETER_ROWS).toHaveLength(3 + REGIONS.length)
+    // Changed 16 October 2026: regions added after the call carry Tallyard's estimate as their source, not the call.
+    const added = ['East Midlands', 'West Midlands', 'North West', 'North East', 'Yorkshire and the Humber', 'South West', 'Wales', 'Scotland'].map((r) => `regionHubKm.${r}`)
     for (const r of V1_PARAMETER_ROWS) {
       expect(r.status).toBe('placeholder')
-      expect(r.source).toBe(V1_SOURCE)
+      expect(r.source).toBe(added.includes(r.id) ? ESTIMATED_REGION_SOURCE : V1_SOURCE)
     }
     const byId = Object.fromEntries(V1_PARAMETER_ROWS.map((r) => [r.id, r]))
     expect(byId['timeline.tightDays'].value).toBe('60')

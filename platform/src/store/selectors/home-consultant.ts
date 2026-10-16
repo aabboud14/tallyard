@@ -9,7 +9,8 @@ import { todayOf } from './common'
 import { shortlistRows } from './shortlist'
 import { consultantHome, type ConsultantHome } from './consultant'
 import { projectTabs } from './project'
-import { effectiveTargets } from './sustainability'
+import { effectiveTargets, requirementsRollup } from './sustainability'
+import type { TrackerSummary } from '../../domain/engines/tracker'
 import { niceMax } from '../../domain/engines/chartScale'
 import { metricState, type MetricState } from '../../domain/engines/metricState'
 import { activitySummary, targetProgress, targetsMetState, targetState, targetStatusText, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
@@ -54,12 +55,16 @@ export type ConsultantDashboard = ConsultantHome & {
     links: { id: string; label: string; href: string }[]
     content: TargetRowView
     carbon: TargetRowView
+    /** Where the requirements come from: "Newham, Inner London East". */
+    locationText: string
+    /** The project's requirement tracking: counts, the at-risk ones as links, and the tab. */
+    requirements: TrackerSummary & { readyText: string; atRiskItems: { id: string; title: string; href: string }[]; href: string }
   }[]
   activitySummary: ActivitySummary
 }
 
 /** The tabs a project card links to; the sidebar folder shows all of them (client-consultant design, open questions). */
-const CARD_LINKS: string[] = ['sustainability', 'targets', 'certification']
+const CARD_LINKS: string[] = ['sustainability', 'targets', 'certification', 'requirements']
 
 /** Headroom above the larger of figure and target, so the target tick sits inside the meter. */
 const METER_HEADROOM = 1.1
@@ -137,6 +142,12 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
         .map((t) => ({ id: t.id, label: t.label, href: t.href })),
       content,
       carbon,
+      locationText: [p.localAuthority, p.region].filter((x) => x).join(', '),
+      requirements: (() => {
+        const r = requirementsRollup(state, p)
+        const href = `/app/projects/${p.id}/requirements`
+        return { ...r, readyText: r.total === 0 ? 'None recorded' : `${r.ready} of ${r.total} ready`, atRiskItems: r.atRiskItems.map((x) => ({ ...x, href: `${href}#requirement-${x.id}` })), href }
+      })(),
     }
   })
   return {

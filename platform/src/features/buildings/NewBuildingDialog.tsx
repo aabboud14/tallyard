@@ -222,7 +222,7 @@ export function NewBuildingDialog({ open, onOpenChange, onCreated, donorOnly = f
                     setOtherLa(v === OTHER_LA)
                     setD((x) => ({ ...x, localAuthority: v === OTHER_LA ? '' : v }))
                   }}
-                  placeholder="Not set"
+                  placeholder="Choose a local authority"
                   options={[...la.options.map((o) => ({ value: o, label: o })), ...(la.allowsOther ? [{ value: OTHER_LA, label: 'Another local authority' }] : [])]}
                   data-testid="nb-local-authority"
                 />
@@ -310,7 +310,7 @@ function ProjectFields({ d, set, options }: { d: Draft; set: (k: keyof Draft) =>
         <Select value={d.projectType} onChange={set('projectType')} placeholder="Choose a type" options={options.projectTypes} data-testid="nb-project-type" />
       </Field>
       {d.projectType === 'other' ? (
-        <Field label="Describe the project" optional hint="For your team only. Sellers never see it.">
+        <Field label="Describe the type" optional hint="For your team only. Sellers never see it.">
           <Input value={d.projectTypeOther} onChange={set('projectTypeOther')} />
         </Field>
       ) : (

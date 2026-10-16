@@ -249,7 +249,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
     const side = buildingSide(state, viewer.userId, id)
     if (!side) return 'forbidden'
     if (tab === undefined) return 'ok'
-    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'availability'].includes(tab)) return 'not_found'
+    if (!['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'requirements', 'availability'].includes(tab)) return 'not_found'
     // The records (inventory, capture, testing) are for the owner and the surveyor; a contractor alone sets dates only.
     const records = canCaptureIn(state, viewer.userId, id)
     if (tab === 'inventory' && sub !== undefined) {
@@ -257,7 +257,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
       return records && state.world.items[sub]?.buildingId === id ? 'ok' : 'forbidden'
     }
     if (sub !== undefined) return 'not_found'
-    if (tab === 'inventory' || tab === 'capture' || tab === 'testing') return records ? 'ok' : 'forbidden'
+    if (tab === 'inventory' || tab === 'capture' || tab === 'testing' || tab === 'requirements') return records ? 'ok' : 'forbidden'
     if (tab === 'availability') return isBuildingContractor(state, viewer.userId, id) ? 'ok' : 'forbidden'
     return side === 'owner' ? 'ok' : 'forbidden'
   }

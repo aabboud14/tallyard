@@ -7,6 +7,8 @@ import type { AppData, SurveyStatus, Viewer } from '../types'
 import { itemsOf } from './owner'
 import { surveyorHome, type SurveyorHome } from './surveyor'
 import { activitySummary, typologyCounts, type ActivitySummary, type MetricTone, type TileState } from './dashboard'
+import { buildingRequirementsRollup, type BuildingRequirementsRollup } from './buildingRequirements'
+import { buildingSide } from '../access'
 
 export type SurveyorDashboard = SurveyorHome & {
   /**
@@ -14,10 +16,10 @@ export type SurveyorDashboard = SurveyorHome & {
    * confirmed yet, and the sub-lines say what those add: their items and their surveys, which stay open until linked.
    */
   metrics: { byStatus: Record<SurveyStatus, number>; lastCaptureText: string | null; openTone: MetricTone; open: number; openState: TileState | null; itemsSubText: string; openSubText: string }
-  /** By building ID. */
-  extras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
+  /** By building ID. requirements is null where the firm only dates availability as contractor. */
+  extras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number>; requirements: BuildingRequirementsRollup | null }>
   /** The same, by building ID, for the firm's own buildings no owner has confirmed yet. */
-  unlinkedExtras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
+  unlinkedExtras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number>; requirements: BuildingRequirementsRollup | null }>
   activitySummary: ActivitySummary
 }
 
@@ -26,6 +28,11 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
   const home = surveyorHome(state, viewer)
   if (!home) return null
   const byStatus: Record<SurveyStatus, number> = { not_started: 0, in_progress: 0, submitted: 0 }
+  // Requirement tracking for the buildings the firm surveys; a contractor alone does not track them.
+  const rollup = (id: string): BuildingRequirementsRollup | null => {
+    const b = state.world.buildings[id]
+    return b && buildingSide(state, viewer.userId, id) === 'surveyor' ? buildingRequirementsRollup(state, b) : null
+  }
   const extras: SurveyorDashboard['extras'] = {}
   let last: string | null = null
   for (const g of home.appointments) {
@@ -34,7 +41,7 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
       if (row.lastCaptureOn && (last === null || row.lastCaptureOn > last)) last = row.lastCaptureOn
       const b = state.world.buildings[row.id]
       const families = itemsOf(state, row.id).map((i) => i.family)
-      extras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families) }
+      extras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families), requirements: rollup(row.id) }
     }
   }
   // The firm's own buildings no owner has confirmed yet are drawn too; they do not count as appointments.
@@ -43,7 +50,7 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
     if (row.lastCaptureOn && (last === null || row.lastCaptureOn > last)) last = row.lastCaptureOn
     const b = state.world.buildings[row.id]
     const families = itemsOf(state, row.id).map((i) => i.family)
-    unlinkedExtras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families) }
+    unlinkedExtras[row.id] = { sketch: buildingSketch({ id: row.id, storeys: b?.storeys ?? null, structureType: b?.structureType ?? '', structure: b?.structure ?? [] }, families), byTypology: typologyCounts(families), requirements: rollup(row.id) }
   }
   // A building no owner has confirmed cannot be submitted yet, so its survey is always open; it is told apart.
   const unlinkedOpen = home.unlinked.length

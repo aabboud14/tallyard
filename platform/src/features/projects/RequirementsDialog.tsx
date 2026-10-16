@@ -30,12 +30,12 @@ export function RequirementsDialog({ projectId, open, onOpenChange, preselect = 
         </>
       }
     >
-      {open ? <RequirementsForm projectId={projectId} initial={preselect ?? view.selected.map((r) => r.id)} onDone={() => onOpenChange(false)} /> : null}
+      {open ? <RequirementsForm projectId={projectId} initial={preselect ?? view.tracked.map((r) => r.id)} onDone={() => onOpenChange(false)} /> : null}
     </Dialog>
   )
 }
 
-/** Mounted each time the dialog opens, so the ticks start from what the project tracks now. */
+/** Mounted each time the dialog opens, so the ticks start from what the project tracks now: the choice, or the suggestions. */
 function RequirementsForm({ projectId, initial, onDone }: { projectId: string; initial: string[]; onDone: () => void }) {
   const view = useView(projectRequirementsView, projectId)
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial))

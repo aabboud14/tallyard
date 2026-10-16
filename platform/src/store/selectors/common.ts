@@ -262,8 +262,8 @@ const PROJECT_TABS_OF: Record<ProjectSide, string[]> = {
 /** The consultant's own sustainability pages: other sides read the same records on the Sustainability tab. */
 const CONSULTANT_SUSTAINABILITY_TABS = ['targets', 'certification', 'compliance', 'statement']
 const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
-  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing'],
-  surveyor: ['inventory', 'capture', 'testing', 'availability'],
+  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'requirements'],
+  surveyor: ['inventory', 'capture', 'testing', 'requirements', 'availability'],
   contractor: ['availability'],
 }
 

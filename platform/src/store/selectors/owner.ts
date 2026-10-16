@@ -63,16 +63,16 @@ export const DONOR_BUILDING = 'Donor building'
 export const NEW_PROJECT = 'New project'
 
 /**
- * The tabs for a side. The owner's priorities page reads Recovery plan (its address stays /priorities). A surveying
- * firm that is also the building's deconstruction contractor gets Availability too; a contractor alone, Overview and
- * Availability.
+ * The tabs for a side. The owner's priorities page reads Recovery plan (its address stays /priorities). The owner and
+ * the surveyor both track the requirements that apply before demolition. A surveying firm that is also the
+ * building's deconstruction contractor gets Availability too; a contractor alone, Overview and Availability.
  */
 export function buildingTabs(side: BuildingSide, buildingId: string, opts: { contractor: boolean } = { contractor: false }): BuildingTab[] {
   const base = `/app/buildings/${buildingId}`
   const tab = (id: string, label: string, path: string): BuildingTab => ({ id, label, href: `${base}${path}` })
-  if (side === 'owner') return [tab('overview', 'Overview', ''), tab('inventory', 'Inventory', '/inventory'), tab('priorities', 'Recovery plan', '/priorities'), tab('listings', 'Listings', '/listings'), tab('sharing', 'Sharing', '/sharing'), tab('testing', 'Testing', '/testing')]
+  if (side === 'owner') return [tab('overview', 'Overview', ''), tab('inventory', 'Inventory', '/inventory'), tab('priorities', 'Recovery plan', '/priorities'), tab('listings', 'Listings', '/listings'), tab('sharing', 'Sharing', '/sharing'), tab('testing', 'Testing', '/testing'), tab('requirements', 'Requirements', '/requirements')]
   if (side === 'contractor') return [tab('overview', 'Overview', ''), tab('availability', 'Availability', '/availability')]
-  return [tab('overview', 'Overview', ''), tab('capture', 'Capture', '/capture'), tab('inventory', 'Inventory', '/inventory'), tab('testing', 'Testing', '/testing'), ...(opts.contractor ? [tab('availability', 'Availability', '/availability')] : [])]
+  return [tab('overview', 'Overview', ''), tab('capture', 'Capture', '/capture'), tab('inventory', 'Inventory', '/inventory'), tab('testing', 'Testing', '/testing'), tab('requirements', 'Requirements', '/requirements'), ...(opts.contractor ? [tab('availability', 'Availability', '/availability')] : [])]
 }
 
 /** The tabs the viewer gets on a building, from their side and whether their firm is its contractor. */

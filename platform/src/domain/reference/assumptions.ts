@@ -104,7 +104,8 @@ export const HAULIERS: Haulier[] = [
   { name: 'Haulier C', fixed: 195, perKm: 2.1, noticeDays: 5 },
 ]
 
-export const REGIONS = ['Central London', 'Inner London East', 'Inner London West', 'Outer London East', 'Outer London West', 'South East', 'East of England'] as const
+/** The product regions: the five London regions, the English regions outside London, then Wales and Scotland (places.ts). */
+export const REGIONS = ['Central London', 'Inner London East', 'Inner London West', 'Outer London East', 'Outer London West', 'South East', 'East of England', 'East Midlands', 'West Midlands', 'North West', 'North East', 'Yorkshire and the Humber', 'South West', 'Wales', 'Scotland'] as const
 
 /** Read-only rows for the Assumptions screen and the Assumptions sheets. */
 export function parameterRows(a: Assumptions = DEFAULT_ASSUMPTIONS): Parameter[] {

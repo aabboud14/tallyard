@@ -21,6 +21,7 @@ import { shiftWorld } from './shift'
 import { withOwnerSurveyorHistory, withOwnerSurveyorWorld } from './seed-owner-surveyor'
 import { addClientPortfolio } from './seed-portfolio'
 import { seedSustainability } from './seed-sustainability'
+import { seedBuildingRequirements } from './seed-building-requirements'
 
 /** The date the seed world is written for. */
 export const SEED_REFERENCE_DATE = DEMO_TODAY
@@ -118,6 +119,7 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
     orgProfiles: Object.fromEntries(Object.keys(w.orgs).map((id) => [id, { address: '' }])),
     buildingClaims: {},
     testingRequests: {},
+    buildingTracks: {},
     ui: { ...DEFAULT_UI, checkingProjectId: {}, captureBuildingId: {} },
   }
 
@@ -224,6 +226,8 @@ export function firstRun(todayIso: string, now: string = `${todayIso}T09:00:00.0
   s = withOwnerSurveyorHistory(s, { at, day, todayIso })
   // Sustainability records: Merrowgate Wharf's targets, credits, requirements and statement, with their history.
   s = seedSustainability(s, todayIso, now)
+  // Tiverne House's requirements before demolition: what the owner and the surveyor have done so far.
+  s = seedBuildingRequirements(s, at)
 
   // Keep everything newest first.
   const byTime = <T extends { at: string }>(xs: T[]) => [...xs].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0))

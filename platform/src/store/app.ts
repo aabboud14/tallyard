@@ -32,7 +32,7 @@ export type AppStore = AppData & {
   resetSandbox: () => Promise<void>
 }
 
-const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'sustainability', 'orgProfiles', 'buildingClaims', 'testingRequests', 'ui'] as const satisfies readonly (keyof AppData)[]
+const DATA_KEYS = ['version', 'seededOn', 'seq', 'world', 'users', 'invites', 'notifications', 'activity', 'reservations', 'surveys', 'specs', 'sustainability', 'orgProfiles', 'buildingClaims', 'testingRequests', 'buildingTracks', 'ui'] as const satisfies readonly (keyof AppData)[]
 
 /** The data part of the store, without the functions. */
 export function dataOf(s: AppData): AppData {

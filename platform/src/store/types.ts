@@ -3,7 +3,7 @@
 import type { CostLine, SteelGrade, World } from '../domain/types'
 import type { Fit } from '../domain/v1types'
 import type { TestService } from '../domain/reference/testing'
-import type { ProjectSustainability } from '../domain/sustainabilityTypes'
+import type { ProjectSustainability, RequirementTrack } from '../domain/sustainabilityTypes'
 
 /** The workspace an organisation's type gives its people (BRIEF section 1, principle 2). */
 export type PlatformRole = 'architect' | 'client' | 'owner' | 'surveyor' | 'consultant'
@@ -246,6 +246,11 @@ export type AppData = {
   buildingClaims: Record<string, BuildingClaim>
   /** Round 2: testing requests per building. */
   testingRequests: Record<string, TestingRequest>
+  /**
+   * Per donor building, the status and evidence of each requirement that applies before demolition, by requirement
+   * ID (review of 16 October 2026). Read defensively: a sandbox stored before then has none.
+   */
+  buildingTracks: Record<string, Record<string, RequirementTrack>>
   ui: UiState
 }
 

@@ -92,7 +92,11 @@ describe('consultant dashboard', () => {
     expect(['met', 'below']).toContain(merrow.content.status)
     expect(['met', 'below']).toContain(merrow.carbon.status)
     // Round 2 (client-consultant design 11 and open questions): Carbon is now Sustainability, and the card links to Sustainability, Goals and targets and Certification.
-    expect(merrow.links.map((l) => l.id)).toEqual(['sustainability', 'targets', 'certification'])
+    // Changed 16 October 2026 (recording audit, note 41): Requirements joins them, with the roll-up and the location.
+    expect(merrow.links.map((l) => l.id)).toEqual(['sustainability', 'targets', 'certification', 'requirements'])
+    expect(merrow.requirements).toMatchObject({ total: 10, atRisk: 1, readyText: `${merrow.requirements.ready} of 10 ready`, href: `/app/projects/${MERROWGATE_ID}/requirements` })
+    expect(merrow.requirements.atRiskItems).toEqual([{ id: 'breeam-nc', title: 'BREEAM New Construction', href: `/app/projects/${MERROWGATE_ID}/requirements#requirement-breeam-nc` }])
+    expect(merrow.locationText).toBe('Newham, Inner London East')
     expect(merrow.sketch.state).toBe('proposed')
     const sallow = d.rows.find((r) => r.id === SALLOW_ID)!
     // Round 2 (client-consultant design 1 and 12): targets come from effectiveTargets, so Sallow Court and Ferrymoor Yard carry the
