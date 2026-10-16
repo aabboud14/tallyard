@@ -27,8 +27,20 @@ export function reportingFrameworks(): ReportingFramework[] {
     { id: 'london-plan', name: londonPlan, line: `${si7.title}, and ${sentence(si2.title)}` },
     ...(['breeam-nc', 'leed-v5', 'well-v2'] as const).map((id) => {
       const r = entry(id)
-      return { id: r.id, name: r.code, line: r.title }
+      return { id: r.id, name: r.code, line: whatItCovers(r.summary) }
     }),
-    { id: 'nzcbs', name: entry('nzcbs').title, line: 'Limits on upfront embodied carbon and energy use' },
+    { id: 'nzcbs', name: entry('nzcbs').title, line: whatItCovers(entry('nzcbs').summary) },
   ]
+}
+
+/**
+ * What a scheme covers, from its summary: the last sentence, which says what it asks about materials and carbon
+ * ("Mat 01 covers life cycle assessment ..."), without its full stop or an opening "Its". A one-sentence summary
+ * is used whole.
+ */
+export function whatItCovers(summary: string): string {
+  const sentences = summary.split(/(?<=\.)\s+/).filter((x) => x.length > 0)
+  // A last sentence that opens with "Its" stands under the scheme's name without the pronoun.
+  const last = sentences[sentences.length - 1].replace(/\.$/, '').replace(/^Its\s+(\w)/, (_m, c: string) => c.toUpperCase())
+  return last
 }

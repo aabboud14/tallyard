@@ -19,6 +19,8 @@ export type SurveyorDashboard = SurveyorHome & {
   /** The same, by building ID, for the firm's own buildings no owner has confirmed yet. */
   unlinkedExtras: Record<string, { sketch: BuildingSketch; byTypology: Record<Typology, number> }>
   activitySummary: ActivitySummary
+  /** A firm with no buildings at all, appointed or its own: the home leads with the first steps instead of zero tiles. */
+  firstRun: boolean
 }
 
 /** The surveyor's dashboard; null for anyone who is not a site surveyor. */
@@ -52,12 +54,15 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
   const unlinkedItems = home.stats.unlinkedItems
   const notLinked = (n: number) => (n === 1 ? 'a building not yet linked' : 'buildings not yet linked')
   const itemsSubText = !lastCaptureText ? 'Nothing captured yet' : unlinkedItems > 0 ? `Last on ${lastCaptureText}, including ${unlinkedItems} at ${notLinked(home.unlinked.length)}` : `Last on ${lastCaptureText}`
-  const openSubText = unlinkedOpen > 0 ? `Plus ${unlinkedOpen} at ${notLinked(unlinkedOpen)}` : open > 0 ? 'Not yet submitted to the owner' : 'Every survey submitted'
+  const appointed = byStatus.not_started + byStatus.in_progress + byStatus.submitted
+  // 'Every survey submitted' only when there are surveys to have submitted.
+  const openSubText = unlinkedOpen > 0 ? `Plus ${unlinkedOpen} at ${notLinked(unlinkedOpen)}` : open > 0 ? 'Not yet submitted to the owner' : appointed > 0 ? 'Every survey submitted' : 'No surveys yet'
   return {
     ...home,
     metrics: { byStatus, lastCaptureText, openTone: open > 0 ? 'warning' : 'neutral', open, openState: open > 0 ? { state: 'warning', label: 'In progress' } : null, itemsSubText, openSubText },
     extras,
     unlinkedExtras,
     activitySummary: activitySummary(home.activity),
+    firstRun: appointed === 0 && home.unlinked.length === 0,
   }
 }

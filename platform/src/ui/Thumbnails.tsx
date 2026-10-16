@@ -62,10 +62,15 @@ export function ProjectThumbnail({ sketch, materials = [], aspect = '16/10', rou
   )
 }
 
-export function BuildingThumbnail({ sketch, aspect = '16/10', rounded = 'none', decorative = false, className, testId }: ThumbnailProps) {
+/** `fit`, as on a project thumbnail, crops the drawing to the building and scales it to fill the frame. */
+export function BuildingThumbnail({ sketch, aspect = '16/10', rounded = 'none', decorative = false, fit = false, className, testId }: ThumbnailProps & { fit?: boolean }) {
   return (
     <Frame aspect={aspect} rounded={rounded} className={className} testId={testId}>
-      <BuildingIllustration sketch={sketch} decorative={decorative} className="absolute inset-0 size-full" />
+      {fit ? (
+        <BuildingIllustration sketch={sketch} decorative={decorative} fit className="absolute inset-3 block h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)]" />
+      ) : (
+        <BuildingIllustration sketch={sketch} decorative={decorative} className="absolute inset-0 size-full" />
+      )}
     </Frame>
   )
 }

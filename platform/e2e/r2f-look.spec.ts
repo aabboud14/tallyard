@@ -78,6 +78,9 @@ test('a new project leads the home with its setup, and its client is told what c
   await expect(page.getByTestId(`home-setup-next-${id}`)).toBeVisible()
   await expect(page.getByTestId('metric-projects')).toContainText('3')
   await expect(page.getByTestId('metric-projects-setup')).toHaveText('1 setting up')
+  // Nothing shortlisted yet: named under Carbon by project, with no 0.0 of 0.0 bar.
+  await expect(page.getByTestId('carbon-not-yet')).toHaveText('Nothing shortlisted yet on Corbel Yard.')
+  await expect(page.getByTestId('carbon-by-project')).not.toContainText('0.0 of 0.0')
   await fits(page, '/app/home', `home-setup-pill-${id}`)
   await page.getByTestId(`home-setup-next-${id}`).click()
   await page.waitForURL(`**/app/projects/${id}`)
@@ -136,4 +139,38 @@ test("the surveyor's buildings are drawn on a phone", async ({ page }) => {
   expect(await horizontalOverflow(page)).toBe(0)
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(thumbs.first()).toBeHidden()
+})
+
+test('each steel tile on the Marketplace shows its own end view, type and depth, at every width', async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'priya')
+  await page.goto('/app/marketplace')
+  const cards = page.locator('[data-part="section-card"]')
+  await expect(cards.first()).toBeVisible()
+  expect(await cards.count()).toBeGreaterThanOrEqual(11)
+  const types = await page.locator('[data-part="section-card"] [data-part="designation-type"]').allTextContents()
+  expect(new Set(types).size).toBeGreaterThanOrEqual(5)
+  expect(types.some((t) => t.startsWith('UB'))).toBe(true)
+  expect(types.some((t) => t.startsWith('UC'))).toBe(true)
+  await expect(page.locator('[data-part="section-card"]', { hasText: 'Not to scale' })).toHaveCount(0)
+  await fits(page, '/app/marketplace', 'discover-grid')
+  expect(errors).toEqual([])
+})
+
+test('a new surveying firm, owner and consultancy open on their first steps, not zero tiles', async ({ page }) => {
+  const errors = watchErrors(page)
+  const cases = [
+    { name: 'Lee Shaw', email: 'lee.shaw@shawsurveys.example', org: 'Shaw Surveys', index: 3, card: 'surveyor-first-run' },
+    { name: 'Ash Reed', email: 'ash.reed@reedholdings.example', org: 'Reed Holdings', index: 2, card: 'owner-first-run' },
+    { name: 'Ruth Calder', email: 'ruth.calder@parkstudio.example', org: 'Park Studio', index: 4, card: 'consultant-first-run' },
+  ]
+  for (const c of cases) {
+    await signUp(page, c.name, c.email, c.org, c.index)
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId(c.card)).toBeVisible()
+    await expect(page.getByTestId('home-stats')).toHaveCount(0)
+    await fits(page, '/app/home', c.card)
+    await signOut(page)
+  }
+  expect(errors).toEqual([])
 })

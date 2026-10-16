@@ -16,11 +16,18 @@ import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
+import { FirstRunCard } from './FirstRunCard'
 
 const STEPS = [
   { key: 'appointed', label: 'Appointed' },
   { key: 'in_progress', label: 'Capturing' },
   { key: 'submitted', label: 'Submitted' },
+] as const
+
+const SURVEYOR_FIRST_STEPS = [
+  { title: 'Add a building, or wait for an appointment', text: 'Add a building your firm is surveying now. When an owner appoints your firm, their buildings appear here too.' },
+  { title: 'Capture each item on site', text: 'Photos, sizes, condition and where each item sits, from your phone, room by room.' },
+  { title: 'Submit the survey to the owner', text: 'Once the owner confirms the building, you submit the survey and they decide what to recover and list.' },
 ] as const
 
 const STATUS_ORDER: { key: SurveyStatus; label: string }[] = [
@@ -100,7 +107,7 @@ function BuildingRow({ b, extra, children, ask = false, unlinked = false }: { b:
   return (
     <li className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:px-5" data-testid={`home-building-${b.id}`}>
       {/* A phone shows the drawing full width above the name; wider screens a compact one beside it. */}
-      {extra ? <BuildingThumbnail sketch={extra.sketch} aspect="16/10" rounded="md" className="w-full sm:hidden" testId={`home-building-thumb-${b.id}`} /> : null}
+      {extra ? <BuildingThumbnail sketch={extra.sketch} aspect="16/10" rounded="md" fit className="w-full sm:hidden" testId={`home-building-thumb-${b.id}`} /> : null}
       {extra ? <BuildingThumb sketch={extra.sketch} size="lg" decorative={false} className="shrink-0 max-sm:hidden" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         <div className="min-w-0">
@@ -186,11 +193,25 @@ export function SurveyorHome() {
           </>
         }
       />
-      <Metrics v={v} />
+      {v.firstRun ? null : <Metrics v={v} />}
 
       <section aria-labelledby="appointments-title" className="mt-10 flex min-w-0 flex-col gap-4">
         <SectionTitle id="appointments-title" title="Your appointments" description="Buildings owners appointed your firm to survey or to date, by client." className="mb-0" />
-        {none ? (
+        {v.firstRun ? (
+          <FirstRunCard
+            spot="building"
+            titleAs="h3"
+            testId="surveyor-first-run"
+            title="No appointments yet"
+            text="Buildings your firm surveys appear here, by client, each drawn from its survey with its progress."
+            steps={SURVEYOR_FIRST_STEPS}
+            actions={
+              <Button asChild variant="primary" icon={Plus}>
+                <Link to="/app/buildings?new=1">Add building</Link>
+              </Button>
+            }
+          />
+        ) : none ? (
           <Card>
             <EmptyState
               illustration="building"

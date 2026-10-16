@@ -14,12 +14,19 @@ import { Page, SectionTitle } from '../../app/Page'
 import { SURVEY_TONE, visibilitySegments } from '../buildings/labels'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
+import { FirstRunCard } from './FirstRunCard'
 
 const TYPOLOGIES: { key: Typology; label: string }[] = [
   { key: 'structure', label: 'Structure' },
   { key: 'envelope', label: 'Envelope' },
   { key: 'finishes', label: 'Finishes' },
 ]
+
+const OWNER_FIRST_STEPS = [
+  { title: 'Add a building coming down', text: 'Its address, storeys and when dismantling starts. A building going up is added the same way, as a new project.' },
+  { title: 'Appoint a surveyor', text: 'They capture each item on site and submit the survey to you.' },
+  { title: 'Decide what to recover and who may see it', text: 'Publish each item to the Marketplace, share it with chosen architects, or keep it private.' },
+] as const
 
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`
@@ -240,6 +247,23 @@ export function OwnerHome() {
           </Button>
         }
       />
+      {v.firstRun ? (
+        <div className="mt-6">
+          <FirstRunCard
+            spot="building"
+            testId="owner-first-run"
+            title="Add your first building"
+            text="Your buildings appear here, each drawn from its survey, with what is listed and the requests waiting on you."
+            steps={OWNER_FIRST_STEPS}
+            actions={
+              <Button asChild variant="primary" icon={Plus}>
+                <Link to="/app/buildings?new=1">Add building</Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <>
       <Metrics v={v} />
       <WaitingForYou v={v} />
 
@@ -292,6 +316,8 @@ export function OwnerHome() {
         )}
       </section>
       </div>
+        </>
+      )}
 
       <ActivityPanel panelId="home-activity-owner" rows={v.activity} summary={v.activitySummary} emptyText="Captures, listings and requests across your buildings appear here." className="mt-10" />
     </Page>

@@ -1,6 +1,7 @@
 // The public landing page: what the product is, who it is for, how it works, and the way in. Technical drawing
-// and real product views, never decoration: no glows, masks, halos, blur or floating cards. Every figure on the
-// page is a fixed sample from the fictional world, labelled as such.
+// and real product views, never decoration: no glows, masks, halos, blur or floating cards. The product shot is
+// the real architect home on a fresh sandbox (landingDashboard), at today's date; the other figures are samples
+// from the fictional world, labelled as such.
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Bookmark, Building2, Camera, ChevronDown, CircleHelp, ClipboardCheck, Compass, FolderClosed, FolderKanban, Hourglass, House, Layers, Leaf, Lock, Search, Settings, Store, Users } from 'lucide-react'
@@ -33,7 +34,7 @@ import {
   TargetMeter,
 } from '../../ui'
 import { BANDS, SAMPLE_DASHBOARD, SAMPLE_MATERIALS } from '../../ui/samples'
-import { ARCHITECT_TILE_LABELS as T, STATUS_SEGMENTS } from '../home/architectTiles'
+import { ARCHITECT_TILE_LABELS as T, carbonStateLabel, FIT_WORDS, projectsSub, STATUS_SEGMENTS, waitingSub } from '../home/architectTiles'
 import { LandingScene } from './LandingScene'
 import { HERO, LANDING_CTA, LANDING_FACTS, LANDING_PRINCIPLES, LANDING_ROLES, LANDING_STEPS, type LandingRoleKey } from './landingContent'
 
@@ -163,7 +164,6 @@ function NavItem({ icon: Icon, label, active = false, count }: { icon?: typeof H
 
 const NAV_ICON = { home: House, marketplace: Store, saved: Bookmark } as const
 
-const FIT_WORDS = { in_time: 'in time', tight: 'tight', late: 'late', now: 'available now' } as const
 
 function DashboardShot() {
   const frame = SAMPLE_DASHBOARD
@@ -222,13 +222,15 @@ function DashboardShot() {
               value={d.stats.activeProjects}
               state={m.programme.state?.state}
               stateLabel={m.programme.state?.label}
-              sub={m.nextStart ? `Next start on site ${m.nextStart.dateText}, ${m.nextStart.projectName}` : 'No start dates ahead'}
+              sub={projectsSub(m)}
             />
             <MetricTile
               icon={Layers}
               label={T.shortlisted}
               value={d.stats.shortlisted}
               testId="product-shot-shortlisted"
+              state={m.timing.state?.state}
+              stateLabel={m.timing.state?.label}
               sub="Shortlisted, waiting or approved"
               chart={<Donut segments={segments} label="Shortlist by status" />}
               footer={<Legend items={segments.map((s) => ({ key: s.key, label: s.label, colour: s.colour, valueText: String(s.value) }))} className="text-xs" />}
@@ -239,6 +241,8 @@ function DashboardShot() {
               value={f.number(m.carbon.approvedT, 1)}
               unit="tCO2e"
               testId="product-shot-carbon"
+              state={m.carbon.state?.state}
+              stateLabel={carbonStateLabel(m)}
               chart={<ProgressRing value={m.carbon.approvedT} max={m.carbon.liveT} label="Approved carbon of live shortlists" valueText={`${f.number(m.carbon.approvedT, 1)} of ${f.number(m.carbon.liveT, 1)} tCO2e`} centre={m.carbon.percentText} />}
               sub="On approved materials, against buying new"
               indicative
@@ -249,7 +253,7 @@ function DashboardShot() {
               value={m.waiting.count}
               state={m.waiting.state?.state}
               stateLabel={m.waiting.state?.label}
-              sub={m.waiting.oldestDays === null ? 'Nothing waiting' : m.waiting.oldestDays === 0 ? 'Sent today' : `Oldest sent ${m.waiting.oldestDays} ${m.waiting.oldestDays === 1 ? 'day' : 'days'} ago`}
+              sub={waitingSub(m.waiting.count, m.waiting.oldestDays)}
             />
           </div>
           <div>

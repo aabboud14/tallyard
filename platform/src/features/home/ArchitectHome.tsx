@@ -17,11 +17,10 @@ import { NewProjectDialog } from '../projects/NewProjectDialog'
 import { ProjectProgress } from '../projects/ProjectParts'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
-import { ARCHITECT_TILE_LABELS, STATUS_SEGMENTS } from './architectTiles'
+import { ARCHITECT_TILE_LABELS, carbonStateLabel, FIT_WORDS, projectsSub, STATUS_SEGMENTS, waitingSub } from './architectTiles'
 
 /** Shortlist status, in the mark colours of the shortlist board: shortlisted neutral, waiting info, approved good. */
 
-const FIT_WORDS: Record<Fit, string> = { in_time: 'in time', tight: 'tight', late: 'late', now: 'available now' }
 
 function sentText(days: number | null): string {
   if (days === null) return 'Sent'
@@ -30,19 +29,7 @@ function sentText(days: number | null): string {
   return `Sent ${days} days ago`
 }
 
-function waitingSub(count: number, oldestDays: number | null): string {
-  if (count === 0) return 'Nothing waiting'
-  if (oldestDays === null) return 'With your clients'
-  if (oldestDays === 0) return 'Sent today'
-  return `Oldest sent ${oldestDays} ${oldestDays === 1 ? 'day' : 'days'} ago`
-}
 
-function projectsSub(v: ArchitectHomeView): string {
-  const m = v.metrics
-  if (m.nextStart) return `Next start on site ${m.nextStart.dateText}, ${m.nextStart.projectName}`
-  if (m.settingUp > 0 || m.notAccepted > 0) return 'Counted once the client accepts and the programme is confirmed'
-  return 'No start dates ahead'
-}
 
 function Metrics({ v }: { v: ArchitectHomeView }) {
   const m = v.metrics
@@ -57,7 +44,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
         value={v.stats.activeProjects}
         state={m.programme.state?.state}
         stateLabel={m.programme.state?.label}
-        sub={projectsSub(v)}
+        sub={projectsSub(m)}
         href="/app/projects"
         footer={
           m.settingUp > 0 ? (
@@ -95,7 +82,7 @@ function Metrics({ v }: { v: ArchitectHomeView }) {
         unit="tCO2e"
         indicative
         state={m.carbon.state?.state}
-        stateLabel={m.carbon.state ? `${m.carbon.state.label}, aim ${f.number(m.carbon.targetT, 0)} tCO2e` : undefined}
+        stateLabel={carbonStateLabel(m)}
         sub={m.carbon.liveT > 0 ? 'On approved materials, against buying new' : 'Shows once materials are shortlisted'}
         footer={
           m.carbon.liveT <= 0 ? undefined : <TileChart
@@ -149,7 +136,8 @@ function SetupPills({ p }: { p: ProjectCardView }) {
 }
 
 function NewFits({ p }: { p: ProjectCardView }) {
-  const parts = FITS.filter((k) => p.newFitsBy[k] > 0).map((k) => `${p.newFitsBy[k]} ${FIT_WORDS[k]}`)
+  // What is new for this project in particular leads: how many are of a kind already on its shortlist, then the split by fit.
+  const parts = [...(p.newLikeShortlist > 0 ? [`${p.newLikeShortlist} like your shortlist`] : []), ...FITS.filter((k) => p.newFitsBy[k] > 0).map((k) => `${p.newFitsBy[k]} ${FIT_WORDS[k]}`)]
   return (
     <div className="relative z-[1] flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-line-soft px-4 py-2 sm:px-5">
       <Link
@@ -263,7 +251,7 @@ function Waiting({ items }: { items: WaitingItem[] }) {
 
 function CarbonByProject({ v }: { v: ArchitectHomeView }) {
   const rows = v.carbonByProject
-  const any = rows.some((r) => r.liveT > 0)
+  const any = rows.length > 0
   return (
     <Card data-testid="carbon-by-project">
       <CardHeader title="Carbon by project" icon={Leaf} titleAs="h2" description="Approved and on live shortlists" actions={<IndicativeMarker />} />
@@ -295,6 +283,11 @@ function CarbonByProject({ v }: { v: ArchitectHomeView }) {
         ) : (
           <p className="m-0 text-sm text-muted">Shortlist materials to see their avoided carbon here.</p>
         )}
+        {any && v.carbonNotYet.length > 0 ? (
+          <p className="m-0 text-xs text-muted" data-testid="carbon-not-yet">
+            Nothing shortlisted yet on {v.carbonNotYet.map((x) => x.name).join(', ')}.
+          </p>
+        ) : null}
       </div>
     </Card>
   )
@@ -323,15 +316,29 @@ function MarketplaceNow({ firstRun }: { firstRun: NonNullable<ArchitectHomeView[
               data-testid={`first-category-${c.typology}`}
               className="group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             >
-              {/* One large tile beside two stacked, so each keeps the drawings' 4 by 3 board and nothing is cropped. */}
-              <div aria-hidden="true" className="grid aspect-[2/1] grid-cols-[2fr_1fr] grid-rows-2 gap-px border-b border-line bg-line">
-                {c.thumbs.map((t, i) => (
-                  <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="fill" className={cx('size-full', i === 0 && 'row-span-2')} />
-                ))}
-                {Array.from({ length: Math.max(0, 3 - c.thumbs.length) }, (_, i) => (
-                  <span key={i} className={cx('bg-paper', c.thumbs.length === 0 && i === 0 && 'row-span-2')} />
-                ))}
-              </div>
+              {/*
+                Laid out by how many drawings there are, never with blank cells: three as one large tile beside two
+                stacked (each keeps the 4 by 3 board), two side by side, one centred on the paper at its own 4 by 3.
+              */}
+              {c.thumbs.length >= 3 ? (
+                <div aria-hidden="true" className="grid aspect-[2/1] grid-cols-[2fr_1fr] grid-rows-2 gap-px border-b border-line bg-line" data-layout="three">
+                  {c.thumbs.slice(0, 3).map((t, i) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="fill" className={cx('size-full', i === 0 && 'row-span-2')} />
+                  ))}
+                </div>
+              ) : c.thumbs.length === 2 ? (
+                <div aria-hidden="true" className="grid aspect-[2/1] grid-cols-2 gap-px border-b border-line bg-line" data-layout="two">
+                  {c.thumbs.map((t) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="fill" className="size-full" />
+                  ))}
+                </div>
+              ) : (
+                <div aria-hidden="true" className="flex aspect-[2/1] justify-center border-b border-line bg-paper" data-layout="one">
+                  {c.thumbs.map((t) => (
+                    <MaterialImage key={t.publicId} spec={t.spec} publicId={t.publicId} aspect="4/3" className="h-full" />
+                  ))}
+                </div>
+              )}
               <div className="relative flex flex-1 flex-col gap-1 py-4 pl-5 pr-4">
                 <span aria-hidden="true" className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-[2px]" style={{ background: TYPOLOGY_VIZ[c.typology] }} />
                 <span className="flex items-center justify-between gap-3">

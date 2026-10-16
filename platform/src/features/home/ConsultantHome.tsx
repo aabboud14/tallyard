@@ -126,7 +126,8 @@ export function ConsultantHome() {
   return (
     <Page testId="consultant-home">
       <PageHeader title={v.greeting} subtitle={v.dateText} />
-      <Metrics v={v} />
+      {/* A new consultancy has no figures yet; the first steps below lead instead of four zero tiles. */}
+      {v.firstRun ? null : <Metrics v={v} />}
 
       <section aria-labelledby="projects-title" className="mt-10">
         <SectionTitle id="projects-title" title="Projects against targets" description="Reused content by value and avoided carbon against the targets set for each project." actions={<IndicativeMarker />} />

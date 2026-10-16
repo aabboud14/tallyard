@@ -44,6 +44,8 @@ export type ProjectCardView = ProjectRef & {
   newFits: number
   /** The same new listings by their fit against this project's start, so each card says what is new for it. */
   newFitsBy: Record<Fit, number>
+  /** Of the new listings in time for this project, those of a family already on its live shortlist. */
+  newLikeShortlist: number
   marketplaceHref: string
   /** The setup checklist's progress while it shows on the project, as on the projects list; null once set up. */
   setup: { done: number; total: number; nextText: string | null; href: string } | null
@@ -84,7 +86,10 @@ export type ArchitectHome = {
     timing: { fits: Record<Fit, number>; state: TileState | null }
   }
   projects: ProjectCardView[]
+  /** Projects with something on a live shortlist; the others are named in carbonNotYet instead of a 0.0 of 0.0 bar. */
   carbonByProject: { id: string; name: string; href: string; approvedT: number; liveT: number }[]
+  /** Projects with nothing on a live shortlist yet, by name. */
+  carbonNotYet: { id: string; name: string }[]
   carbonScaleMax: number
   /** A round scale end for the carbon chart, at least carbonScaleMax. */
   carbonAxisMax: number
@@ -156,6 +161,7 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
     const visual = visualFromRows(p, rows)
     const fresh = feed.filter((n) => n.fitsProjects.some((x) => x.id === p.id))
     const newFitsBy = fitCounts(fresh.map((n) => timelineFit(n.listing.availability, p.startDate, today).fit))
+    const liveFamilies = new Set(live.flatMap((r) => (r.card ? [r.card.family] : [])))
     const setup = projectSetup(state, viewer, p.id)
     return {
       ...projectRef(state, p),
@@ -171,6 +177,7 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
       liveT,
       newFits: fresh.length,
       newFitsBy,
+      newLikeShortlist: fresh.filter((n) => liveFamilies.has(n.family)).length,
       marketplaceHref: marketplaceHref(p.id),
       setup: setup && setup.visible ? { done: setup.done, total: setup.total, nextText: setup.nextText, href: `/app/projects/${p.id}` } : null,
       linkStatus: p.clientLink.status,
@@ -202,7 +209,8 @@ export function architectHome(state: AppData, viewer: Viewer): ArchitectHome | n
       timing: { fits: timing, state: fitState(timing) },
     },
     projects: ordered,
-    carbonByProject: cards.map((c) => ({ id: c.id, name: c.name, href: c.href, approvedT: c.approvedT, liveT: c.liveT })),
+    carbonByProject: cards.filter((c) => c.liveT > 0).map((c) => ({ id: c.id, name: c.name, href: c.href, approvedT: c.approvedT, liveT: c.liveT })),
+    carbonNotYet: cards.filter((c) => c.liveT <= 0).map((c) => ({ id: c.id, name: c.name })),
     carbonScaleMax,
     carbonAxisMax: niceMax(carbonScaleMax),
     waitingForApproval: waiting,

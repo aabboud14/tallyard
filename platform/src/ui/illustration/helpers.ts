@@ -9,6 +9,13 @@ export const BOARD = { width: 480, height: 360 } as const
 /** Where a drawing keeps its content so that 16:10 and square frames, which slice the board, never cut it. */
 export const SAFE = { left: 64, right: BOARD.width - 64, top: 36, bottom: BOARD.height - 34 } as const
 
+/** Every steel card draws its end view at this one scale, so a page of steel compares member against member. */
+export const STEEL_CARD_PX_PER_MM = 0.34
+/** And its length bar at this one scale: board px per metre, up to the width of the column. */
+export const STEEL_CARD_PX_PER_M = 14
+/** A beam and a column are told apart by colour as well as shape: blue steel for a UB, oxide primer for a UC. */
+export const STEEL_TINT = { UB: '#46657f', UC: '#9a563a' } as const
+
 /** `card` for cards and thumbnails; `detail` for the material page, drawn larger. */
 export type DrawingView = 'card' | 'detail'
 

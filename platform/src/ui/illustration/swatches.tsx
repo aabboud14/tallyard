@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 import type { Spec } from '../../domain/types'
 import { between, pick, type Rng } from './rng'
 import { BOARD, SAFE, TEXT_SIZE, type DrawingView } from './helpers'
-import { INK, PAPER, PanelAxo, PanelElevation, SectionAxo } from './drawings'
+import { INK, PAPER, PanelAxo, PanelElevation, SectionAxo, SectionCard } from './drawings'
 
 const W = BOARD.width
 const H = BOARD.height
@@ -30,7 +30,8 @@ export function MaterialArt({ spec, r, uid, view = 'card' }: { spec: Spec; r: Rn
     case 'timber_joist':
       return <Timber r={r} uid={uid} view={view} />
     case 'steel_section':
-      return <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} />
+      // A card shows the cut end at one shared scale, so a page of steel reads member by member; the material page keeps the axonometric.
+      return view === 'card' ? <SectionCard designation={spec.designation} lengthM={spec.lengthM} uid={uid} /> : <SectionAxo designation={spec.designation} lengthM={spec.lengthM} uid={uid} view={view} />
   }
 }
 

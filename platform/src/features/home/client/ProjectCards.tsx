@@ -50,7 +50,7 @@ export function ProjectCards({ v }: { v: ClientHomeView }) {
                   </Link>
                 </h3>
                 {extra?.status ? (
-                  <Pill tone={extra.status.kind === 'setting_up' ? 'brand' : 'neutral'} icon={extra.status.kind === 'setting_up' ? ListChecks : Hourglass} size="sm" className="mt-2" data-testid={`client-project-status-${p.id}`}>
+                  <Pill tone={extra.status.kind === 'setting_up' ? 'brand' : extra.status.kind === 'shortlisting' ? 'info' : 'neutral'} icon={extra.status.kind === 'setting_up' ? ListChecks : Hourglass} size="sm" className="mt-2" data-testid={`client-project-status-${p.id}`}>
                     {extra.status.label}
                   </Pill>
                 ) : null}

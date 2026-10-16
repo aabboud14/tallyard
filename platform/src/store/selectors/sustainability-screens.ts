@@ -15,8 +15,7 @@ import type { AppData, Viewer } from '../types'
 import type { ProjectSide } from '../access'
 import { inSentence, STATEMENT_STATUS_FOR_CLIENT, STATEMENT_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
 import { activitySummary, type ActivitySummary, type ThumbMaterial } from './dashboard'
-import { projectVisual } from './project-visuals'
-import { projectWishlist } from '../lots'
+import { clientProjectVisual } from './project-visuals'
 import { clientDashboard, type ClientDashboard } from './client-dashboard'
 import { programmeInput } from './portfolio'
 import type { ReservationGroup, ReservationsView, ApprovalsView } from './client'
@@ -130,8 +129,12 @@ export type ClientCardExtra = {
   materials: ThumbMaterial[]
   /** 'Office, Newham', or 'Office' when no local authority is recorded. */
   placeText: string
-  /** 'Being set up' while the architect has not confirmed the programme and nothing is shortlisted; 'Nothing shortlisted yet' after that. */
-  status: { kind: 'setting_up' | 'no_shortlist'; label: string } | null
+  /**
+   * Null once the client has materials to see (sent or approved). Before that: 'Shortlisting under way' while the
+   * architect holds shortlisted materials not yet sent, 'Being set up' while the programme is still suggested, and
+   * 'Nothing shortlisted yet' after that. Read from the rows the client can see, never the architect's pending ones.
+   */
+  status: { kind: 'shortlisting' | 'setting_up' | 'no_shortlist'; label: string } | null
 }
 
 /** The line above a client project card's name: its type, then its local authority when one is recorded. */
@@ -188,11 +191,18 @@ export function clientHomeView(state: AppData, viewer: Viewer): ClientHomeView |
   const cardExtras: Record<string, ClientCardExtra> = {}
   for (const card of d.projects) {
     const p = state.world.projects[card.id]
-    const visual = p ? projectVisual(state, viewer, card.id) : null
+    // The same drawing as every role; swatches and status only from what the client can see.
+    const visual = p ? clientProjectVisual(state, viewer, card.id) : null
     if (!p || !visual) continue
     sketches[card.id] = visual.sketch
-    const live = (projectWishlist(state.world, p.id)?.items ?? []).filter((i) => i.status !== 'declined').length
-    const status: ClientCardExtra['status'] = live > 0 ? null : p.programme.source === 'set' ? { kind: 'no_shortlist', label: 'Nothing shortlisted yet' } : { kind: 'setting_up', label: 'Being set up' }
+    const status: ClientCardExtra['status'] =
+      visual.sentOrApproved > 0
+        ? null
+        : visual.pendingWithArchitect > 0
+          ? { kind: 'shortlisting', label: 'Shortlisting under way' }
+          : p.programme.source === 'set'
+            ? { kind: 'no_shortlist', label: 'Nothing shortlisted yet' }
+            : { kind: 'setting_up', label: 'Being set up' }
     cardExtras[card.id] = { materials: visual.materials, placeText: clientPlaceText(card.typeLabel, card.localAuthority), status }
   }
   const rows: ClientTimelineRow[] = d.programme.rows.map((r) => {

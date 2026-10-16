@@ -56,6 +56,8 @@ export type ConsultantDashboard = ConsultantHome & {
     carbon: TargetRowView
   }[]
   activitySummary: ActivitySummary
+  /** A consultancy on no project and with no engagement: the home leads with the first steps instead of zero tiles. */
+  firstRun: boolean
 }
 
 /** The tabs a project card links to; the sidebar folder shows all of them (client-consultant design, open questions). */
@@ -160,5 +162,6 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
     },
     rows,
     activitySummary: activitySummary(home.activity),
+    firstRun: home.projects.length === 0 && home.engagements.length === 0,
   }
 }
