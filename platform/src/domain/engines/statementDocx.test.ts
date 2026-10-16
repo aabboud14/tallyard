@@ -34,6 +34,20 @@ describe('the statement as a Word document', () => {
     expect(doc).toContain('<w:i/>')
   })
 
+  it('writes list lines as bulleted paragraphs, with the numbering part, its type and its relationship', () => {
+    const parts = docxParts({ ...input, sections: [{ heading: 'Next steps', text: 'Before the next issue:\n\u2022 Reserve the approved materials.\n\u2022 Record a result.' }] })
+    const doc = parts['word/document.xml']
+    expect(doc.match(/<w:numId w:val="1"\/>/g)).toHaveLength(2)
+    expect(doc).toContain('<w:t xml:space="preserve">Reserve the approved materials.</w:t>')
+    expect(doc).not.toContain('\u2022 Reserve')
+    expect(doc.match(/<w:p>/g)!.length).toBe(2 + 1 + 3 + 1)
+    expect(parts['word/numbering.xml']).toContain('<w:numFmt w:val="bullet"/>')
+    expect(parts['word/numbering.xml']).toContain('<w:num w:numId="1">')
+    expect(parts['[Content_Types].xml']).toContain('/word/numbering.xml')
+    expect(parts['word/_rels/document.xml.rels']).toContain('Target="numbering.xml"')
+    expect(parts['word/styles.xml']).toContain('w:styleId="ListParagraph"')
+  })
+
   it('is A4 and holds no dash, arrow or comparison sign in its text', () => {
     const parts = docxParts(input)
     expect(parts['word/document.xml']).toContain('w:w="11906" w:h="16838"')

@@ -2,7 +2,7 @@
 // people. A client that has not accepted shows by name only, never its people. The architect sets the consultancy; anyone can invite a colleague into their own organisation.
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
-import { Check, Copy, Hourglass, Mail, UserPlus } from 'lucide-react'
+import { Check, Copy, Hourglass, Mail, RotateCcw, UserPlus, UserRoundX } from 'lucide-react'
 import { act, useView } from '../../store'
 import { projectTeam, type TeamSection } from '../../store/selectors/project'
 import { Avatar, Badge, Button, Card, CardHeader, Dialog, Field, Input, Select, toast, type AvatarColourName } from '../../ui'
@@ -103,7 +103,11 @@ function SectionCard({ s, action }: { s: TeamSection; action?: ReactNode }) {
         actions={
           <>
             {s.yours ? <Badge tone="brand">Your organisation</Badge> : null}
-            {s.pending ? (
+            {s.declined ? (
+              <Badge tone="warning" icon={UserRoundX}>
+                Declined
+              </Badge>
+            ) : s.pending ? (
               <Badge tone="info" icon={Hourglass}>
                 Waiting to accept
               </Badge>
@@ -114,7 +118,7 @@ function SectionCard({ s, action }: { s: TeamSection; action?: ReactNode }) {
       />
       {s.pending ? (
         <p className="m-0 px-5 py-5 text-sm text-muted" data-testid="team-pending">
-          {s.orgName} has not accepted this project yet. Their people appear here once they do.
+          {s.note ?? `${s.orgName} has not accepted this project yet. Their people appear here once they do.`}
         </p>
       ) : s.members.length === 0 ? (
         <p className="m-0 px-5 py-5 text-sm text-muted">No one from {s.orgName} has joined the platform yet.</p>
@@ -168,11 +172,27 @@ export function Team() {
                     const id = e.target.value || null
                     const r = act.setProjectConsultant(projectId, id)
                     if (!r.ok) toast.error(r.error ?? 'That could not be changed.')
-                    else toast.success(id ? 'Consultant added' : 'Consultant removed', { action: { label: 'Undo', onClick: r.undo } })
+                    else toast.success(id ? 'Consultancy asked to join' : 'Consultant removed', { description: id ? 'They see the project once they accept, and once the client has.' : undefined, action: { label: 'Undo', onClick: r.undo } })
                   }}
                   data-testid="consultant-select"
                 />
               </Field>
+              {consultant?.declined ? (
+                <Button
+                  className="mt-3"
+                  icon={RotateCcw}
+                  onClick={() => {
+                    const r = act.setProjectConsultant(projectId, consultant.orgId)
+                    if (!r.ok) toast.error(r.error ?? 'That could not be done.')
+                    else toast.success(`Asked ${consultant.orgName} again`, { action: { label: 'Undo', onClick: r.undo } })
+                  }}
+                  data-testid="consultant-ask-again"
+                >
+                  Ask again
+                </Button>
+              ) : (
+                <p className="m-0 mt-3 text-sm text-muted">The consultancy is asked to accept, once the client has accepted the project.</p>
+              )}
             </div>
           </Card>
         ) : null}

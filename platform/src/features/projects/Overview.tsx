@@ -19,6 +19,7 @@ import { ProgrammeDialog } from './ProgrammeDialog'
 import { RequirementsCard } from './RequirementsCard'
 import { RequirementsDialog } from './RequirementsDialog'
 import { AppointArchitectCard } from './AppointArchitect'
+import { ConsultantOverview } from './ConsultantOverview'
 
 type DialogState = { kind: 'programme' } | { kind: 'requirements' } | { kind: 'client'; mode: ChangeClientMode } | null
 
@@ -67,45 +68,51 @@ export function Overview() {
 
         {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
 
+        {h.side === 'consultant' ? <ConsultantOverview projectId={projectId} /> : null}
+
         <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} />
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <Card className="flex flex-col" data-testid="overview-shortlist">
-            <CardHeader
-              title="Shortlist"
-              icon={ListChecks}
-              actions={
-                h.side === 'architect' ? (
-                  <Link to={`/app/projects/${projectId}/shortlist`} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
-                    Open <ArrowRight aria-hidden="true" className="size-3.5" />
-                  </Link>
-                ) : undefined
-              }
-            />
-            <CardBody className="flex flex-1 flex-col gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums text-ink">{total}</span>
-                <span className="text-sm text-muted">
-                  {total === 1 ? 'material' : 'materials'}, {f.massT(view.totals.all.massT)}
-                </span>
-              </div>
-              <ProjectProgress counts={view.counts} total={total} />
-            </CardBody>
-          </Card>
-          <Card className="flex flex-col" data-testid="overview-carbon">
-            <CardHeader title="Avoided carbon" icon={Leaf} actions={<IndicativeMarker />} />
-            <CardBody className="flex flex-1 flex-col gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums text-ink">{f.number(view.carbon.securedT, 1)}</span>
-                <span className="text-sm text-muted">tCO2e secured by approval</span>
-              </div>
-              <ProgressBar value={view.carbon.securedT} max={view.carbon.shortlistedT} label="Avoided carbon secured by approval, against everything live on the shortlist" />
-              <p className="m-0 text-xs text-muted">
-                Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, A1 to A4.
-              </p>
-            </CardBody>
-          </Card>
-          <Card className="md:col-span-2 xl:col-span-1" data-testid="next-steps">
+        <div className={h.side === 'consultant' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'}>
+          {h.side === 'consultant' ? null : (
+            <>
+              <Card className="flex flex-col" data-testid="overview-shortlist">
+                <CardHeader
+                  title="Shortlist"
+                  icon={ListChecks}
+                  actions={
+                    h.side === 'architect' ? (
+                      <Link to={`/app/projects/${projectId}/shortlist`} className="inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-medium text-ink-soft hover:text-ink max-sm:min-h-11">
+                        Open <ArrowRight aria-hidden="true" className="size-3.5" />
+                      </Link>
+                    ) : undefined
+                  }
+                />
+                <CardBody className="flex flex-1 flex-col gap-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold tabular-nums text-ink">{total}</span>
+                    <span className="text-sm text-muted">
+                      {total === 1 ? 'material' : 'materials'}, {f.massT(view.totals.all.massT)}
+                    </span>
+                  </div>
+                  <ProjectProgress counts={view.counts} total={total} />
+                </CardBody>
+              </Card>
+              <Card className="flex flex-col" data-testid="overview-carbon">
+                <CardHeader title="Avoided carbon" icon={Leaf} actions={<IndicativeMarker />} />
+                <CardBody className="flex flex-1 flex-col gap-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold tabular-nums text-ink">{f.number(view.carbon.securedT, 1)}</span>
+                    <span className="text-sm text-muted">tCO2e approved</span>
+                  </div>
+                  <ProgressBar value={view.carbon.securedT} max={view.carbon.shortlistedT} label="Avoided carbon of the approved materials, against everything live on the shortlist" />
+                  <p className="m-0 text-xs text-muted">
+                    Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, A1 to A4.
+                  </p>
+                </CardBody>
+              </Card>
+            </>
+          )}
+          <Card className={h.side === 'consultant' ? undefined : 'md:col-span-2 xl:col-span-1'} data-testid="next-steps">
             <CardHeader title="Next steps" icon={ListTodo} />
             {view.nextSteps.length === 0 ? (
               <p className="m-0 px-5 py-5 text-sm text-muted">{link ? 'More steps appear here once the client accepts the project.' : 'You are up to date on this project.'}</p>
@@ -137,7 +144,7 @@ export function Overview() {
                 items={[
                   { label: 'Client', value: clientValue },
                   { label: 'Architect', value: h.architectText },
-                  { label: 'Consultant', value: h.consultantName || 'None yet' },
+                  { label: 'Consultant', value: h.consultantName || h.consultantLinkText || 'None yet' },
                   { label: 'Type', value: h.typeLabel },
                   { label: 'Stage', value: h.stageLabel },
                   { label: 'Region', value: h.region },

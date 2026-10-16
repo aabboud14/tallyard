@@ -99,14 +99,18 @@ describe('the circular economy statement', () => {
     expect(approach).toMatchObject({ edited: true, stale: false })
     expect(approach.text).toMatch(/^Lantern Quay Developments has asked the design team/)
     const content = v.sections.find((x) => x.id === 'content')!.text
-    for (const p of ['19.91%', '20.29%', '17.62%', '25%']) expect(content).toContain(p)
+    // Round 2 follow-up (review of the r2f fixes): one decimal, as the targets and next steps of the same statement.
+    for (const p of ['19.9%', '20.3%', '17.6%', '25%']) expect(content).toContain(p)
+    for (const p of ['19.91%', '20.29%', '17.62%']) expect(content).not.toContain(p)
     const carbon = v.sections.find((x) => x.id === 'carbon')!.text
     expect(carbon).toContain('47.8 tCO2e')
     expect(carbon).toContain('148.6 tCO2e')
-    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')[1]).toMatch(/^L-R8Q33F, /)
-    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')).toHaveLength(5)
+    // Round 2 follow-up (audit note 44): the materials are grouped by status and family, without listing codes.
+    expect(v.sections.find((x) => x.id === 'reuse')!.text.split('\n')[1]).toBe('Secured through earlier deals or accepted reservations:')
+    expect(v.sections.find((x) => x.id === 'reuse')!.text).not.toContain('L-R8Q33F')
     expect(v).toMatchObject({ status: 'ready_for_review', statusLabel: 'With the client for review', canSend: false, fileName: 'merrowgate-wharf-circular-economy-statement-2026-10-08.docx', title: 'Merrowgate Wharf: circular economy statement', subtitle: 'Prepared by Halewick Sustainability for Lantern Quay Developments, 8 October 2026' })
-    expect(v.sentText).toBe('Sent to Lantern Quay Developments on 7 Oct 2026')
+    // Round 2 follow-up review: the long date, as the subtitle a few lines away gives it.
+    expect(v.sentText).toBe('Sent to Lantern Quay Developments on 7 October 2026')
     expect(v.plainText.startsWith('Merrowgate Wharf: circular economy statement\n')).toBe(true)
     expect(v.docx.sections).toHaveLength(8)
   })
@@ -119,8 +123,12 @@ describe('the circular economy statement', () => {
     s = must(decideItem(s, actor(U.isla), M, 'wli_hp23zk_3', 'approved', '')).state
     const after = sel.statementView(s, viewer(U.marcus), M)!.sections.find((x) => x.id === 'carbon')!
     expect(after).toMatchObject({ edited: true, stale: true, text: 'Our words.' })
-    // A draft stays with the consultant.
-    expect(sel.statementView(s, viewer(U.isla), M)!.sections).toEqual([])
+    // Round 2 follow-up review: an edit after sending no longer pulls the statement back from the client. Lantern
+    // goes on reading the version that was sent; a statement never sent still stays with the consultant.
+    const isla = sel.statementView(s, viewer(U.isla), M)!
+    expect(isla.sections.find((x) => x.id === 'carbon')!.text).not.toBe('Our words.')
+    expect(isla.status).toBe('ready_for_review')
+    expect(sel.statementView(s, viewer(U.isla), KILNWORTH_ID)!.sections).toEqual([])
   })
 })
 

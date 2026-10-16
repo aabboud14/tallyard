@@ -7,6 +7,7 @@ import { mint } from '../ids'
 import { notify } from '../notifications'
 import { clean, fail, ok, withWorld } from './common'
 import { resolveContractorInvites } from './contractor'
+import { clientInviteForEmail } from './clientInvite'
 
 export const AUTH_ERRORS = {
   mismatch: 'That email and password do not match.',
@@ -36,14 +37,19 @@ export function findUserByEmail(state: AppData, email: string): User | null {
 /** `orgType` may be the world's type ('Architect'), the workspace role ('architect') or the label. */
 export type SignUpFields = { name: string; email: string; password: string; orgName: string; orgType: string }
 
-/** Every sign-up field error at once, in form order. */
+/**
+ * Every sign-up field error at once, in form order. A person whose email has a client invite joins that client
+ * organisation (round 2 follow-up, audit note C3), so the organisation fields are not needed.
+ */
 export function validateSignUp(state: AppData, f: SignUpFields): [keyof SignUpFields, string][] {
+  const joining = clientInviteForEmail(state, f.email) !== null
   const out: [keyof SignUpFields, string][] = []
   if (!f.name.trim()) out.push(['name', AUTH_ERRORS.name])
   if (!isEmail(f.email)) out.push(['email', AUTH_ERRORS.email])
   else if (findUserByEmail(state, f.email)) out.push(['email', AUTH_ERRORS.taken])
   const pw = validatePassword(f.password)
   if (pw) out.push(['password', pw])
+  if (joining) return out
   if (!f.orgName.trim()) out.push(['orgName', AUTH_ERRORS.orgName])
   if (!resolveOrgType(f.orgType)) out.push(['orgType', AUTH_ERRORS.orgType])
   return out
@@ -78,10 +84,16 @@ function addPerson(state: AppData, input: { name: string; email: string; title: 
   return { state: { ...s, users: { ...s.users, [um.id]: user } }, userId: um.id }
 }
 
-/** A new person with a new organisation. Returns the user ID. The password was hashed by the caller. */
+/**
+ * A new person with a new organisation, or, when their email has a client invite, a new person in that client
+ * organisation, where the request to accept the project waits for them. Returns the user ID. The password was
+ * hashed by the caller.
+ */
 export function signUpState(state: AppData, f: Omit<SignUpFields, 'password'> & { salt: string; passwordHash: string; now: string }): ActionResult<string> {
   const invalid = validateSignUp(state, { ...f, password: 'x'.repeat(MIN_PASSWORD) })
   if (invalid.length > 0) return fail(state, invalid[0][1])
+  const joining = clientInviteForEmail(state, f.email)
+  if (joining) return acceptInviteState(state, joining.invite.token, { name: f.name, salt: f.salt, passwordHash: f.passwordHash, now: f.now })
   const om = mint(state, 'org', (id) => !!state.world.orgs[id])
   let s = om.state
   const org: Org = { id: om.id, name: clean(f.orgName, 120), type: resolveOrgType(f.orgType)! }
@@ -112,6 +124,9 @@ export function acceptInviteState(state: AppData, token: string, f: { name: stri
   let s: AppData = { ...r.state, invites: { ...r.state.invites, [token]: { ...r.state.invites[token], status: 'accepted', acceptedUserId: r.userId } } }
   const orgName = s.world.orgs[inv.orgId]?.name ?? ''
   s = notify(s, { orgIds: [inv.orgId], kind: 'team', title: `${s.users[r.userId].name} joined ${orgName}`, body: `They accepted the invite sent to ${inv.email}.`, href: '/app/settings/team', at: f.now, actorUserId: r.userId })
+  // An invite to answer a project request: the practice that asked hears that someone can now accept.
+  const p = state.invites[token].projectId ? s.world.projects[state.invites[token].projectId!] : null
+  if (p && p.architectOrgId) s = notify(s, { orgIds: [p.architectOrgId], kind: 'team', title: `${s.users[r.userId].name} joined ${orgName}`, body: `They can now accept ${p.name}.`, href: `/app/projects/${p.id}`, at: f.now, actorUserId: r.userId })
   return ok(resolveContractorInvites(s, r.userId, f.now), r.userId)
 }
 

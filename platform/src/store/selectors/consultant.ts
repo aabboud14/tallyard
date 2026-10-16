@@ -43,7 +43,8 @@ export function slug(s: string): string {
     .replace(/^-|-$/g, '')
 }
 
-export type ProjectMetricsItem = ReusedItem & { family: FamilyId; eraBand: EraBand | null; testStatus: TestStatus | null }
+/** `withSeller`: an approved material whose reservation request waits on the seller. */
+export type ProjectMetricsItem = ReusedItem & { family: FamilyId; eraBand: EraBand | null; testStatus: TestStatus | null; withSeller?: boolean }
 
 /** A project's reuse figures for any side of it: content and reuse by value, avoided carbon and the reclaimed items. Indicative, from public listings. */
 export type ProjectMetrics = {
@@ -96,7 +97,7 @@ export function projectMetrics(state: AppData, viewer: Viewer, projectId: string
     if (row.status !== 'approved' || !row.card || reservedIds.has(row.publicId)) continue
     const l = row.card.listing
     add(withApproved, row.card.family, l.quantity.value)
-    items.push({ publicId: row.publicId, description: row.title, quantityLabel: row.card.quantityText, massT: row.card.massT, status: 'Approved', date: row.decidedOn, avoidedT: row.card.avoidedT ?? 0, source: 'approval', family: l.family, eraBand: l.eraBand, testStatus: l.testStatus })
+    items.push({ publicId: row.publicId, description: row.title, quantityLabel: row.card.quantityText, massT: row.card.massT, status: 'Approved', date: row.decidedOn, avoidedT: row.card.avoidedT ?? 0, source: 'approval', family: l.family, eraBand: l.eraBand, testStatus: l.testStatus, withSeller: row.reservation?.status === 'pending' })
     avoidedApprovedT += row.card.avoidedT ?? 0
   }
   const securedResult = contentByValue(p.billOfMaterials, secured)

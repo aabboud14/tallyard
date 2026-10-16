@@ -1,29 +1,61 @@
-// Project requests (/app/projects/requests): architects ask before they add a client organisation to a project.
-// The client sees the project's name, the practice, who asked, its type, place, stage and key dates and the
-// message, never a shortlist, a listing or a figure, then accepts or declines. PendingLinkRequests shows the
-// waiting cards alone, for the top of the client home.
+// Project requests (/app/projects/requests): architects ask before they add a client organisation to a project,
+// and before they add a sustainability consultancy (asked once the client has accepted). Each sees the project's
+// name, the practice, who asked, its type, place, stage and key dates and the message (the consultancy also sees the
+// client), never a shortlist, a listing or a figure, then accepts or declines. PendingLinkRequests shows the waiting
+// cards alone, for the top of the client's and the consultant's home.
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Check, FolderOpen, Inbox, MessageSquareQuote, X } from 'lucide-react'
 import { act, useView } from '../../store'
 import { clientLinkRequests, type LinkRequestRow } from '../../store/selectors/project'
+import { consultantLinkRequests } from '../../store/selectors/consultant-requests'
 import { Button, Card, cx, DescriptionList, Dialog, EmptyState, Field, PageHeader, Pill, Textarea, toast } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
 
+type Kind = 'client' | 'consultant'
+type Row = LinkRequestRow & { clientName?: string }
+
+/** The requests for whichever side the person answers for: a client, or a sustainability consultancy. */
+function useRequests(): { kind: Kind; pending: Row[]; answered: Row[] } | null {
+  const client = useView(clientLinkRequests)
+  const consultant = useView(consultantLinkRequests)
+  if (client) return { kind: 'client', ...client }
+  if (consultant) return { kind: 'consultant', ...consultant }
+  return null
+}
+
+const COPY = {
+  client: {
+    subtitle: 'Architects ask before they add you as the client on a project. Accept to see the project and approve materials for it.',
+    emptyTitle: 'No project requests',
+    emptyText: 'When an architect asks to add you as the client on a project, it appears here for you to accept or decline.',
+    wants: 'wants to add you as client',
+    hint: 'Accepting shows you the project and lets you approve materials for it.',
+  },
+  consultant: {
+    subtitle: 'Architects ask before they add your consultancy to a project, once its client has accepted it. Accept to see the project and set its targets.',
+    emptyTitle: 'No project requests',
+    emptyText: 'When an architect asks to add you as the sustainability consultant on a project, it appears here once the client has accepted.',
+    wants: 'wants to add you as sustainability consultant',
+    hint: 'Accepting shows you the project, its targets and its circular economy statement.',
+  },
+} as const
+
 export function LinkRequests() {
-  const v = useView(clientLinkRequests)
+  const v = useRequests()
   if (!v) return null
+  const copy = COPY[v.kind]
   const nothing = v.pending.length === 0 && v.answered.length === 0
   return (
     <Page testId="link-requests">
-      <PageHeader title="Project requests" subtitle="Architects ask before they add you as the client on a project. Accept to see the project and approve materials for it." />
+      <PageHeader title="Project requests" subtitle={copy.subtitle} />
       {v.pending.length === 0 ? (
         nothing ? (
           <EmptyState
             variant="page"
             illustration="inbox"
-            title="No project requests"
-            text="When an architect asks to add you as the client on a project, it appears here for you to accept or decline."
+            title={copy.emptyTitle}
+            text={copy.emptyText}
             className="mt-6 rounded-xl border border-dashed border-line-strong bg-surface"
             testId="link-requests-empty"
           />
@@ -35,7 +67,7 @@ export function LinkRequests() {
           <SectionTitle id="pending-title" title="Waiting for your answer" description={v.pending.length === 1 ? 'One request' : `${v.pending.length} requests`} />
           <div className="flex flex-col gap-4">
             {v.pending.map((r) => (
-              <RequestCard key={r.projectId} row={r} />
+              <RequestCard key={r.projectId} row={r} kind={v.kind} />
             ))}
           </div>
         </section>
@@ -73,25 +105,27 @@ export function LinkRequests() {
   )
 }
 
-/** The waiting requests alone, for the client home. Renders nothing when there are none. */
+/** The waiting requests alone, for the client's or the consultant's home. Renders nothing when there are none. */
 export function PendingLinkRequests({ className }: { className?: string }) {
-  const v = useView(clientLinkRequests)
+  const v = useRequests()
   if (!v || v.pending.length === 0) return null
   return (
     <section aria-label="Project requests" className={cx('flex flex-col gap-4', className)} data-testid="pending-link-requests">
       {v.pending.map((r) => (
-        <RequestCard key={r.projectId} row={r} />
+        <RequestCard key={r.projectId} row={r} kind={v.kind} />
       ))}
     </section>
   )
 }
 
-function RequestCard({ row }: { row: LinkRequestRow }) {
+function RequestCard({ row, kind }: { row: Row; kind: Kind }) {
   const navigate = useNavigate()
   const [declining, setDeclining] = useState(false)
   const [note, setNote] = useState('')
+  const decide = kind === 'client' ? act.decideClientLink : act.decideConsultantLink
+  const copy = COPY[kind]
   const accept = () => {
-    const r = act.decideClientLink(row.projectId, 'accepted', '')
+    const r = decide(row.projectId, 'accepted', '')
     if (!r.ok) {
       toast.error(r.error ?? 'That could not be done.')
       return
@@ -99,7 +133,7 @@ function RequestCard({ row }: { row: LinkRequestRow }) {
     toast.success(`You joined ${row.projectName}`, { action: { label: 'Open project', onClick: () => navigate(`/app/projects/${row.projectId}`) } })
   }
   const decline = () => {
-    const r = act.decideClientLink(row.projectId, 'declined', note)
+    const r = decide(row.projectId, 'declined', note)
     if (!r.ok) {
       toast.error(r.error ?? 'That could not be done.')
       return
@@ -116,7 +150,9 @@ function RequestCard({ row }: { row: LinkRequestRow }) {
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="m-0 text-lg font-semibold text-ink">{row.projectName}</h2>
-            <p className="m-0 text-base text-ink-soft">{row.architectName} wants to add you as client</p>
+            <p className="m-0 text-base text-ink-soft">
+              {row.architectName} {copy.wants}
+            </p>
             <p className="m-0 mt-0.5 text-sm text-muted">
               Asked by {row.requestedBy || row.architectName}, {row.requestedText}
             </p>
@@ -129,6 +165,8 @@ function RequestCard({ row }: { row: LinkRequestRow }) {
           layout="grid"
           columns={3}
           items={[
+            ...(row.clientName ? [{ label: 'Client', value: row.clientName }] : []),
+            ...(row.proposedConsultant ? [{ label: 'Sustainability consultant', value: `${row.proposedConsultant}, asked once you accept` }] : []),
             { label: 'Type', value: row.typeLabel },
             { label: 'Location', value: row.locationText || 'Not set' },
             { label: 'Stage', value: row.stageText },
@@ -149,7 +187,7 @@ function RequestCard({ row }: { row: LinkRequestRow }) {
           <Button onClick={() => setDeclining(true)} data-testid={`decline-link-${row.projectId}`}>
             Decline
           </Button>
-          <p className="m-0 text-sm text-muted sm:ml-2">Accepting shows you the project and lets you approve materials for it.</p>
+          <p className="m-0 text-sm text-muted sm:ml-2">{copy.hint}</p>
         </div>
       </div>
       <Dialog
@@ -169,7 +207,7 @@ function RequestCard({ row }: { row: LinkRequestRow }) {
         }
       >
         <Field label={`Tell ${row.architectName} why`} optional>
-          <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="For example, we are not the client on this scheme" data-testid="decline-link-note" />
+          <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === 'client' ? 'For example, we are not the client on this scheme' : 'For example, we cannot take this on before spring'} data-testid="decline-link-note" />
         </Field>
       </Dialog>
     </Card>

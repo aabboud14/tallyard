@@ -28,7 +28,7 @@ export function Statement() {
       toast.error(r.error ?? 'Could not save the section.')
       return
     }
-    toast.success('Section saved', { description: v.status !== 'draft' ? 'The statement is back to draft.' : undefined, action: { label: 'Undo', onClick: r.undo } })
+    toast.success('Section saved', { description: v.status !== 'draft' ? 'The client keeps the version you sent until you send the update.' : undefined, action: { label: 'Undo', onClick: r.undo } })
   }
   const reset = (id: StatementSectionId) => {
     const r = act.resetStatementSection(projectId, id)
@@ -94,13 +94,20 @@ export function Statement() {
                   Download for Word
                 </Button>
                 {v.canEdit ? (
-                  <Button variant="primary" icon={sent ? SendHorizontal : Send} disabled={!v.canSend} onClick={send} data-testid="statement-send">
-                    {sent ? 'Sent for review' : `Send to ${clientName} for review`}
+                  <Button variant="primary" icon={sent && !v.canSend ? SendHorizontal : Send} disabled={!v.canSend} onClick={send} data-testid="statement-send">
+                    {v.sendLabel}
                   </Button>
                 ) : null}
               </>
             }
           />
+          {v.changedSinceSent ? (
+            <div data-testid="statement-changed">
+              <Callout tone="info" title="Changed since you sent it" role="status">
+                {v.changedSinceSent}
+              </Callout>
+            </div>
+          ) : null}
           <Callout tone="warning" title="Check before you submit">
             {v.caveat}
           </Callout>

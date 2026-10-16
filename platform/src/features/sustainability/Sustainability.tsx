@@ -10,7 +10,7 @@ import type { SustainabilityView } from '../../store/selectors/sustainability'
 import { goalMeter, schemeCard, STATEMENT_TONE } from '../../store/selectors/sustainability-screens'
 import * as f from '../../domain/format'
 import { CERT_CAVEAT } from '../../domain/reference/sustainabilityCopy'
-import { Button, Callout, Card, Dialog, Field, MetricGrid, MetricTile, Pill, ProgressRing, Textarea, toast } from '../../ui'
+import { Button, Callout, Card, Dialog, Field, MetricGrid, MetricTile, Pill, ProgressRing, StatementText, Textarea, toast } from '../../ui'
 import { Page } from '../../app/Page'
 import { CarbonSection } from '../carbon/ProjectCarbon'
 import { GoalMeterView, MethodologyFooter, TabHeader, TabSection, TrackBar, TrackLegend } from './parts'
@@ -21,7 +21,7 @@ function shareText(share: number): string {
   return `${f.fixed(share * 100, 0)}%`
 }
 
-function Metrics({ v }: { v: SustainabilityView }) {
+export function Metrics({ v }: { v: SustainabilityView }) {
   const carbonRow = v.metrics.carbon
   const contentRow = v.metrics.content
   const carbon = carbonRow ? goalMeter(carbonRow) : null
@@ -60,12 +60,12 @@ function Metrics({ v }: { v: SustainabilityView }) {
   )
 }
 
-function Targets({ v }: { v: SustainabilityView }) {
+export function Targets({ v }: { v: SustainabilityView }) {
   return (
     <TabSection
       id="targets"
       title="Targets"
-      description={v.side === 'consultant' ? 'From the requirements that apply and your overrides.' : `${v.targetsNote}.`}
+      description={v.side === 'consultant' ? 'From the requirements that apply and your overrides.' : v.targetsNote}
       indicative
       testId="sustainability-targets"
       actions={
@@ -89,7 +89,7 @@ function Targets({ v }: { v: SustainabilityView }) {
   )
 }
 
-function Schemes({ v }: { v: SustainabilityView }) {
+export function Schemes({ v }: { v: SustainabilityView }) {
   return (
     <TabSection
       id="certification"
@@ -150,7 +150,7 @@ function Schemes({ v }: { v: SustainabilityView }) {
   )
 }
 
-function RequirementsRollup({ v }: { v: SustainabilityView }) {
+export function RequirementsRollup({ v }: { v: SustainabilityView }) {
   const r = v.requirements
   return (
     <TabSection
@@ -184,24 +184,26 @@ function RequirementsRollup({ v }: { v: SustainabilityView }) {
   )
 }
 
-function StatementCard({ v, projectId }: { v: SustainabilityView; projectId: string }) {
+export function StatementCard({ v, projectId }: { v: SustainabilityView; projectId: string }) {
   const [open, setOpen] = useState(false)
   const s = v.statement
   if (!s) return null
   const isClient = v.side === 'client'
   const line = s.canReview
     ? `${s.sentText ?? 'Sent'}. Read it and mark it reviewed, with any comments for the consultant.`
-    : s.status === 'reviewed'
-      ? isClient
+    : isClient
+      ? s.status === 'reviewed'
         ? 'You reviewed this statement. The consultant sees your comments.'
-        : 'The client has reviewed it. Editing returns it to draft.'
-      : isClient
-        ? s.status === 'draft'
+        : s.status === 'draft'
           ? 'The consultant is drafting it. You will be asked to review it.'
           : (s.sentText ?? '')
-        : s.status === 'ready_for_review'
-          ? `${s.sentText ?? 'Sent'}. Waiting for the client's review.`
-          : 'Drafted from the project records. Edit it, then send it to the client for review.'
+      : s.changedSinceSent
+        ? `${s.sentText ?? 'Sent'}. It has changed since, so send the updated statement.`
+        : s.status === 'reviewed'
+          ? 'The client has reviewed it. If you change it, send the updated statement for another review.'
+          : s.status === 'ready_for_review'
+            ? `${s.sentText ?? 'Sent'}. Waiting for the client's review.`
+            : 'Drafted from the project records. Edit it, then send it to the client for review.'
   return (
     <section id="statement" aria-labelledby="statement-title" className="scroll-mt-24" data-testid="statement-card">
       <div className={`flex flex-col gap-4 rounded-lg border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${s.canReview ? 'border-info-line bg-info-soft/60' : 'border-line bg-surface'}`}>
@@ -284,10 +286,17 @@ function ReviewDialog({ projectId, open, onClose }: { projectId: string; open: b
     >
       <div className="flex flex-col gap-5">
         <Callout tone="warning">{st.caveat}</Callout>
+        {st.changedSinceSent ? (
+          <div data-testid="statement-review-changed">
+            <Callout tone="info" role="status">
+              {st.changedSinceSent}
+            </Callout>
+          </div>
+        ) : null}
         {st.sections.map((s) => (
           <section key={s.id} className="flex flex-col gap-1.5">
             <h3 className="m-0 text-base font-semibold text-ink">{s.heading}</h3>
-            <p className="m-0 whitespace-pre-line text-base leading-6 text-ink-soft">{s.text}</p>
+            <StatementText text={s.text} className="text-ink-soft" />
           </section>
         ))}
         {st.reviewedText ? (

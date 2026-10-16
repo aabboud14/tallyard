@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router'
 import { ArrowRight, Check, CheckCheck, ClipboardCheck, Hourglass, Leaf, MessageSquareText, X } from 'lucide-react'
 import { act, selectors, useView } from '../../store'
 import type { ApprovalCard } from '../../store/selectors/client'
-import { approvalsStrip } from '../../store/selectors/sustainability-screens'
+import { approvalsStrip, savingWholeText } from '../../store/selectors/sustainability-screens'
 import { formatDate, formatDateShort } from '../../domain/dates'
 import { LABELS } from '../../domain/reference/labels'
 import * as f from '../../domain/format'
@@ -150,7 +150,7 @@ function ApprovalsBody() {
                         {item.decidedOn ? ` · Decided ${formatDate(item.decidedOn)}` : ''}
                       </p>
                       <p className="m-0 mt-0.5 truncate text-sm tabular-nums text-muted" data-testid={`decided-cost-${item.publicId}`}>
-                        {f.moneyWhole(item.cost.total)} · {f.savingShort(item.cost.saving)} <span className="sr-only">Indicative</span>
+                        {f.moneyWhole(item.cost.total)} · {savingWholeText(item.cost.saving)} <span className="sr-only">Indicative</span>
                       </p>
                       {item.decisionNote ? (
                         <p className="m-0 mt-1 flex items-start gap-1.5 text-sm text-ink-soft">

@@ -2,7 +2,7 @@
 import type { Band, WishStatus } from '../../domain/v1types'
 import type { CostLine, Project } from '../../domain/types'
 import { financeTotals, type FinanceLine, type FinanceTotals } from '../../domain/engines/finance'
-import { FINANCE_CAVEAT } from '../../domain/reference/sustainabilityCopy'
+import { FINANCE_CAVEAT, RESERVATIONS_FINANCE_CAVEAT } from '../../domain/reference/sustainabilityCopy'
 import * as f from '../../domain/format'
 import type { AppData, ExchangedContacts, ReservationEstimate, ReservationStatus, Viewer } from '../types'
 import { isProjectClient, projectsOfUser, roleOfUser } from '../access'
@@ -237,6 +237,6 @@ export function reservationsView(state: AppData, viewer: Viewer, projectId: stri
   return {
     ...base,
     summary: { cost: byGroup, total: financeTotals(lines), carbon: byGroup, securedProjectT: m.avoidedSecuredT, carbonGoal: goalRows(state, viewer, projectId)?.find((g) => g.id === 'avoided_carbon') ?? null },
-    caveat: FINANCE_CAVEAT,
+    caveat: RESERVATIONS_FINANCE_CAVEAT,
   }
 }

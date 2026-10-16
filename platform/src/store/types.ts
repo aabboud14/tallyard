@@ -60,6 +60,8 @@ export type Invite = {
   createdAt: string
   status: InviteStatus
   acceptedUserId: string | null
+  /** Set when an architect invites a contact at a new client to answer a project request (16 October 2026). */
+  projectId?: string | null
 }
 
 /** Addressed to an organisation; read state is per person. */

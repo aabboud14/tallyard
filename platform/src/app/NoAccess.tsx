@@ -1,11 +1,31 @@
 // Calm pages for a route the person may not open, or one that does not exist, inside the app shell. Neither
 // says anything about the record behind the address.
 import { Link } from 'react-router'
-import { Compass, House, LockKeyhole } from 'lucide-react'
+import { Compass, House, Inbox, LockKeyhole } from 'lucide-react'
 import { Button, EmptyState } from '../ui'
 import { Page } from './Page'
 
-export function NoAccess() {
+/** request: set when the person's organisation has been asked to join this project and has not answered yet. */
+export function NoAccess({ request = null }: { request?: { projectName: string; href: string } | null }) {
+  if (request)
+    return (
+      <Page width="narrow" testId="no-access">
+        <EmptyState
+          variant="page"
+          icon={Inbox}
+          title={`Accept ${request.projectName} to open it`}
+          text="Your organisation has been asked to join this project. It opens here once you accept the request."
+          action={
+            <Button asChild variant="primary" icon={Inbox}>
+              <Link to={request.href} data-testid="no-access-request">
+                Open project requests
+              </Link>
+            </Button>
+          }
+          testId="no-access-request-state"
+        />
+      </Page>
+    )
   return (
     <Page width="narrow" testId="no-access">
       <EmptyState

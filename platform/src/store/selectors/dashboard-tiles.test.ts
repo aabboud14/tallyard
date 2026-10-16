@@ -117,11 +117,14 @@ describe('consultant dashboard tiles', () => {
     expect(sallow.content.meter.state).toBe('neutral')
     expect(sallow.carbon.meter.target).toBeNull()
     expect(sallow.carbon.aimText).toBeNull()
-    expect(d.metrics.targetsBelow).toBe(2)
-    expect(d.metrics.targetsWaiting).toBe(2)
+    // Round 2 follow-up (audit note 43): every goal with a target counts, so BREEAM (Very good against Excellent)
+    // is a third below target, and the goals with no result yet (C&D diversion, the defaults on Sallow and Ferrymoor) wait.
+    expect(d.metrics.targetsBelow).toBe(3)
+    expect(d.metrics.targetsWaiting).toBe(7)
     expect(d.metrics.targetsMet + d.metrics.targetsBelow + d.metrics.targetsWaiting).toBe(d.metrics.targetsSet)
-    // Both Merrowgate targets are more than 10% short, so they read off target on the tile as on the meters.
-    expect([d.metrics.targetsNear, d.metrics.targetsOff]).toEqual([0, 2])
+    // Both Merrowgate meter targets are more than 10% short, so they read off target on the tile as on the meters;
+    // BREEAM one level short reads near target, as on Goals and targets.
+    expect([d.metrics.targetsNear, d.metrics.targetsOff]).toEqual([1, 2])
     expect(d.metrics.targetsState).toEqual({ state: 'critical', label: '2 off target' })
     expect(merrow.content.statusText).toBe('Off target')
     expect(merrow.carbon.statusText).toBe('Off target')

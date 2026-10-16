@@ -7,6 +7,7 @@ import { orgTypeLabel, ROLE_LABELS } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
 import { pendingLinkRequestCount, projectTabs } from './project'
+import { pendingConsultantRequestCount } from './consultant-requests'
 import { buildingTabs } from './owner'
 import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
 import { pendingClaimCount } from './claims'
@@ -199,7 +200,9 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
   } else {
     sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House')]))
     const a = arranged(projects.filter((p) => projectSide(state, viewer.userId, p.id) === 'consultant'))
-    sections.push(navSection('projects', 'Projects', a.items, a.tools))
+    // Project requests shows only while an architect waits for the consultancy's answer, as for a client.
+    const requests = pendingConsultantRequestCount(state, org.id)
+    sections.push(navSection('projects', 'Projects', requests > 0 ? [...a.items, item('project-requests', 'Project requests', '/app/projects/requests', 'Inbox', { badge: badge(requests) })] : a.items, a.tools))
     sections.push(navSection('engagements', 'Engagements', engagementsOf(state, viewer).map((e) => item(`engagement-${e.id}`, e.name, `/app/engagements/${e.id}/waste`, 'Recycle'))))
   }
   return {
@@ -248,7 +251,7 @@ export function routeAccess(state: AppData, viewer: Viewer, pathname: string): R
   if (section === 'projects') {
     if (id === undefined) return buyer()
     if (id === 'new') return tab === undefined ? roles('architect') : 'not_found'
-    if (id === 'requests') return tab === undefined ? roles('client') : 'not_found'
+    if (id === 'requests') return tab === undefined ? roles('client', 'consultant') : 'not_found'
     if (!ID.test(id)) return 'not_found'
     const side = projectSide(state, viewer.userId, id)
     if (!side) return 'forbidden'

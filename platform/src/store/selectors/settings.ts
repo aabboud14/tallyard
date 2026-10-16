@@ -58,12 +58,18 @@ export function sandboxView(state: AppData, viewer: Viewer) {
 }
 
 /** What the invite page shows before anyone is signed in, or why the link cannot be used. */
-export function inviteDetails(state: AppData, token: string): { orgName: string; orgTypeLabel: string; invitedBy: string; email: string } | { error: string } {
+/**
+ * What an invite link shows. An invite to answer a project request also names the project and the practice that
+ * asked, as the sign-up page used to; the link is the proof the person was sent it.
+ */
+export function inviteDetails(state: AppData, token: string): { orgName: string; orgTypeLabel: string; invitedBy: string; email: string; project: { projectName: string; architectName: string } | null } | { error: string } {
   const inv = state.invites[token]
   if (!inv) return { error: 'This invite link is not valid.' }
   if (inv.status !== 'pending') return { error: 'This invite has already been used or was revoked.' }
   const org = state.world.orgs[inv.orgId]
-  return { orgName: org?.name ?? '', orgTypeLabel: orgTypeLabel(org?.type ?? ''), invitedBy: state.users[inv.invitedByUserId]?.name ?? '', email: inv.email }
+  const p = inv.projectId ? state.world.projects[inv.projectId] : undefined
+  const project = p && p.clientOrgId === inv.orgId ? { projectName: p.name, architectName: state.world.orgs[p.architectOrgId]?.name ?? '' } : null
+  return { orgName: org?.name ?? '', orgTypeLabel: orgTypeLabel(org?.type ?? ''), invitedBy: state.users[inv.invitedByUserId]?.name ?? '', email: inv.email, project }
 }
 
 /** The sample accounts for the sign-in page, which has no viewer. */

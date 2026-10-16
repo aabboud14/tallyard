@@ -13,11 +13,12 @@ import { STATEMENT_SECTIONS } from '../../domain/engines/statement'
 import { clientLinked } from '../../domain/access'
 import { daysBetween } from '../../domain/dates'
 import type { ActionResult, Actor, AppData } from '../types'
-import { ERRORS, projectOrgIds, projectSide, type ProjectSide } from '../access'
+import { ERRORS, linkedConsultantOrgId, projectOrgIds, projectSide, type ProjectSide } from '../access'
 import { log, notify } from '../notifications'
 import { mint } from '../ids'
 import { applicableRequirements, isProjectMaterial, mappedItems, schemeTargeted, sustainabilityOf, withSustainability } from '../sustainabilityRecord'
 import { acting, clean, fail, isIsoDate, ok, type Acting } from './common'
+import { currentStatementSections } from '../selectors/sustainability'
 
 export const SUSTAINABILITY_ERRORS = {
   noGoal: 'That target could not be found.',
@@ -156,7 +157,7 @@ export function setRequirementStatus(state: AppData, actor: Actor, projectId: st
   const word = TRACK_STATUS_LABELS[status].toLowerCase()
   s = record(s, o, `marked ${req.title} as ${word}`, '/requirements')
   if (status === 'at_risk' || status === 'evidence_ready') {
-    const other = o.side === 'client' ? (o.p.consultantOrgId ? [o.p.consultantOrgId] : []) : clientOrg(o.p)
+    const other = o.side === 'client' ? (linkedConsultantOrgId(o.p) ? [linkedConsultantOrgId(o.p)] : []) : clientOrg(o.p)
     s = notify(s, { orgIds: other, kind: 'sustainability', title: `${req.title} is ${word} on ${o.p.name}`, body: `Marked by ${o.a.user.name}, ${o.a.org.name}.`, href: `${base(o.p)}/requirements`, at: o.a.now, actorUserId: o.a.user.id })
   }
   return ok(s)
@@ -277,7 +278,11 @@ function isSection(id: string): id is StatementSectionId {
   return STATEMENT_SECTIONS.some((s) => s.id === id)
 }
 
-/** The consultant's text for a section, with the generated text it replaces. Empty text returns to the generated text. Editing after sending returns the statement to draft. */
+/**
+ * The consultant's text for a section, with the generated text it replaces. Empty text returns to the generated text.
+ * Editing after sending keeps the status: the client goes on reading (and reviewing) the version that was sent, and
+ * the consultant is offered to send the updated statement.
+ */
 export function editStatementSection(state: AppData, actor: Actor, projectId: string, sectionId: StatementSectionId, text: string, basis: string): ActionResult {
   const o = onProject(state, actor, projectId, ['consultant'])
   if (typeof o === 'string') return fail(state, o)
@@ -290,7 +295,7 @@ export function editStatementSection(state: AppData, actor: Actor, projectId: st
   const edits = { ...doc.edits }
   if (body) edits[sectionId] = { text: body, basis, editedAt: o.a.now, editedByUserId: o.a.user.id }
   else delete edits[sectionId]
-  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits, status: 'draft' } })))
+  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits } })))
 }
 
 export function resetStatementSection(state: AppData, actor: Actor, projectId: string, sectionId: StatementSectionId): ActionResult {
@@ -301,20 +306,31 @@ export function resetStatementSection(state: AppData, actor: Actor, projectId: s
   if (!doc.edits[sectionId]) return ok(state)
   const edits = { ...doc.edits }
   delete edits[sectionId]
-  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits, status: 'draft' } })))
+  return ok(withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, edits } })))
 }
 
-/** The consultant sends the statement to the client for review. */
+function sameSnapshot(a: StatementDoc['sentSections'], b: StatementDoc['sentSections']): boolean {
+  if (!a || !b) return false
+  return a.length === b.length && a.every((x, i) => x.id === b[i].id && x.heading === b[i].heading && x.text === b[i].text)
+}
+
+/**
+ * The consultant sends the statement to the client for review. The text is frozen as sent, so the client reviews
+ * that version while the records move on. While it waits for review, sending again is only possible once the text
+ * has changed, and it replaces the frozen version.
+ */
 export function sendStatementForReview(state: AppData, actor: Actor, projectId: string): ActionResult {
   const o = onProject(state, actor, projectId, ['consultant'])
   if (typeof o === 'string') return fail(state, o)
   if (!clientLinked(o.p)) return fail(state, SUSTAINABILITY_ERRORS.noClient)
   const doc = statementOf(state, projectId)
-  if (doc.status === 'ready_for_review') return ok(state)
-  let s = withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, status: 'ready_for_review', sentAt: o.a.now, sentByUserId: o.a.user.id, reviewedAt: null, reviewedByUserId: null, reviewNote: null } }))
+  const sections = currentStatementSections(state, { userId: actor.userId, now: actor.now }, projectId) ?? []
+  const again = doc.status === 'ready_for_review'
+  if (again && (!doc.sentSections || sameSnapshot(doc.sentSections, sections))) return ok(state)
+  let s = withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, status: 'ready_for_review', sentAt: o.a.now, sentByUserId: o.a.user.id, reviewedAt: null, reviewedByUserId: null, reviewNote: null, sentSections: sections } }))
   const clientName = state.world.orgs[o.p.clientOrgId]?.name ?? 'the client'
-  s = record(s, o, `sent the circular economy statement to ${clientName} for review`, '/statement')
-  s = notify(s, { orgIds: [o.p.clientOrgId], kind: 'sustainability', title: 'Circular economy statement ready for review', body: `${o.p.name}. Sent by ${o.a.user.name}, ${o.a.org.name}.`, href: `${base(o.p)}/sustainability#statement`, at: o.a.now, actorUserId: o.a.user.id })
+  s = record(s, o, again ? `sent an updated circular economy statement to ${clientName} for review` : `sent the circular economy statement to ${clientName} for review`, '/statement')
+  s = notify(s, { orgIds: [o.p.clientOrgId], kind: 'sustainability', title: again ? 'Updated circular economy statement ready for review' : 'Circular economy statement ready for review', body: `${o.p.name}. Sent by ${o.a.user.name}, ${o.a.org.name}.`, href: `${base(o.p)}/sustainability#statement`, at: o.a.now, actorUserId: o.a.user.id })
   return ok(s)
 }
 
@@ -327,6 +343,6 @@ export function reviewStatement(state: AppData, actor: Actor, projectId: string,
   const text = clean(note, 2000)
   let s = withSustainability(state, projectId, (r) => ({ ...r, statement: { ...doc, status: 'reviewed', reviewedAt: o.a.now, reviewedByUserId: o.a.user.id, reviewNote: text || null } }))
   s = record(s, o, 'reviewed the circular economy statement', '/statement')
-  s = notify(s, { orgIds: o.p.consultantOrgId ? [o.p.consultantOrgId] : [], kind: 'sustainability', title: `${o.a.org.name} reviewed the circular economy statement`, body: text || 'No comments.', href: `${base(o.p)}/statement`, at: o.a.now, actorUserId: o.a.user.id })
+  s = notify(s, { orgIds: linkedConsultantOrgId(o.p) ? [linkedConsultantOrgId(o.p)] : [], kind: 'sustainability', title: `${o.a.org.name} reviewed the circular economy statement`, body: text || 'No comments.', href: `${base(o.p)}/statement`, at: o.a.now, actorUserId: o.a.user.id })
   return ok(s)
 }

@@ -1,5 +1,6 @@
-// The sustainability consultant's dashboard: each project against the targets set at inception (reused content
-// by value and avoided carbon, read through effectiveTargets), drawn from its shortlist's public cards, plus waste engagements. Indicative.
+// The sustainability consultant's dashboard: each project against its targets, read from the same goal rows as the
+// Goals and targets tab (reused and recycled content by value and upfront carbon avoided by reuse, both secured), so
+// an override shows here as it does there. Drawn from the shortlist's public cards, plus waste engagements. Indicative.
 import * as f from '../../domain/format'
 import { projectSketch, type BuildingSketch } from '../../domain/sketch'
 import { stageOn } from '../../domain/engines/programme'
@@ -7,9 +8,11 @@ import type { AppData, Viewer } from '../types'
 import { projectWishlist } from '../lots'
 import { todayOf } from './common'
 import { shortlistRows } from './shortlist'
-import { consultantHome, type ConsultantHome } from './consultant'
+import { consultantHome, projectMetrics, type ConsultantHome } from './consultant'
 import { projectTabs } from './project'
-import { effectiveTargets } from './sustainability'
+import { goalRows, type GoalRow } from './sustainability'
+import { goalDef } from '../../domain/reference/goals'
+import { goalState } from '../../domain/engines/goals'
 import { niceMax } from '../../domain/engines/chartScale'
 import { metricState, type MetricState } from '../../domain/engines/metricState'
 import { activitySummary, targetProgress, targetsMetState, targetState, targetStatusText, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
@@ -17,7 +20,16 @@ import { activitySummary, targetProgress, targetsMetState, targetState, targetSt
 /** A meter's scale and state: value and target on one scale whose right end is a round figure at least both. */
 export type TargetMeterView = { value: number; max: number; target: number | null; state: MetricState }
 
-export type TargetRowView = TargetProgress & { actualText: string; targetText: string | null; statusText: string; meter: TargetMeterView; /** The target in round words, for the meter: "Aim at least 25%". */ aimText: string | null }
+export type TargetRowView = TargetProgress & {
+  /** The goal's name, as on Goals and targets: "Reused and recycled content by value". */
+  label: string
+  actualText: string
+  targetText: string | null
+  statusText: string
+  meter: TargetMeterView
+  /** The target in round words, for the meter: "Aim at least 25%". */
+  aimText: string | null
+}
 
 export type ConsultantDashboard = ConsultantHome & {
   metrics: {
@@ -37,8 +49,12 @@ export type ConsultantDashboard = ConsultantHome & {
     /** Set targets with no figure yet (no bill of materials). */
     targetsWaiting: number
     billsReviewed: number
-    /** Approved avoided carbon on the targeted projects, the figure the ring and its state read. */
+    /** Secured avoided carbon on the projects with a carbon target, the figure the ring and its state read (as Goals and targets). */
+    carbonSecuredT: number
+    /** Avoided carbon of the approved materials not yet reserved on those projects, for a second line. */
     carbonApprovedT: number
+    /** "Across 6 goals on 3 projects": what the Targets met tile counts. */
+    targetsScopeText: string
     carbonState: TileState | null
     targetsState: TileState | null
   }
@@ -64,7 +80,7 @@ const CARD_LINKS: string[] = ['sustainability', 'targets', 'certification']
 /** Headroom above the larger of figure and target, so the target tick sits inside the meter. */
 const METER_HEADROOM = 1.1
 
-function targetRow(actual: number | null, target: number, format: (x: number) => string, round: (x: number) => string): TargetRowView {
+function targetRow(label: string, actual: number | null, target: number, format: (x: number) => string, round: (x: number) => string): TargetRowView {
   const p = targetProgress(actual, target)
   const value = actual ?? 0
   const meter: TargetMeterView = {
@@ -74,7 +90,7 @@ function targetRow(actual: number | null, target: number, format: (x: number) =>
     // No figure yet reads as no state, not as off target.
     state: actual === null ? 'neutral' : metricState(value, target > 0 ? target : null, 'at_least'),
   }
-  return { ...p, actualText: actual === null ? 'Not known' : format(actual), targetText: target > 0 ? format(target) : null, statusText: targetStatusText(actual, target), meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
+  return { ...p, label, actualText: actual === null ? 'Not known' : format(actual), targetText: target > 0 ? format(target) : null, statusText: targetStatusText(actual, target), meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
 }
 
 /** The Projects tile's line: how many projects carry each kind of target, so it never claims more than the cards show. */
@@ -86,12 +102,24 @@ export function targetsSetText(withContent: number, withCarbon: number): string 
   return parts.join(', ')
 }
 
+function numberOf(row: GoalRow | undefined, key: 'actual' | 'target'): number | null {
+  const v = row?.[key]
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+/** "Across 6 goals on 2 projects". */
+function scopeText(goals: number, projects: number): string {
+  if (goals === 0) return 'No targets set yet'
+  return `Across ${goals} ${goals === 1 ? 'goal' : 'goals'} on ${projects} ${projects === 1 ? 'project' : 'projects'}`
+}
+
 /** The consultant's dashboard; null for anyone who is not a sustainability consultant. */
 export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantDashboard | null {
   const home = consultantHome(state, viewer)
   if (!home) return null
   let carbonTargetT = 0
-  let approvedAgainstTargetT = 0
+  let securedAgainstTargetT = 0
+  let approvedOnTargetedT = 0
   let withTargets = 0
   let targetsSet = 0
   let targetsMet = 0
@@ -100,26 +128,37 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
   let targetsOff = 0
   let withContent = 0
   let withCarbon = 0
+  let projectsWithGoals = 0
   const rows = home.projects.map((c) => {
     const p = state.world.projects[c.id]
-    // The consultant's overrides, or the defaults from the requirements (client-consultant design: the one source of targets).
-    const targets = effectiveTargets(state, p.id)
-    const content = targetRow(c.contentPercent, targets.contentByValue, f.percent, (x) => `${f.number(x * 100, 0)}%`)
-    const carbon = targetRow(c.avoidedApprovedT, targets.avoidedCarbonT, f.carbon, (x) => `${f.number(x, 0)} tCO2e`)
-    if (targets.contentByValue > 0 || targets.avoidedCarbonT > 0) withTargets += 1
-    if (targets.contentByValue > 0) withContent += 1
-    if (targets.avoidedCarbonT > 0) withCarbon += 1
-    for (const t of [content, carbon]) {
-      if (t.status === 'no_target') continue
+    // The rows the Goals and targets tab shows: the consultant's overrides, or the defaults from the requirements,
+    // against the secured figures Tallyard works out.
+    const goals = goalRows(state, viewer, p.id) ?? []
+    const contentGoal = goals.find((g) => g.id === 'content_by_value')
+    const carbonGoal = goals.find((g) => g.id === 'avoided_carbon')
+    const contentTarget = numberOf(contentGoal, 'target') ?? 0
+    const carbonTarget = numberOf(carbonGoal, 'target') ?? 0
+    const content = targetRow(goalDef('content_by_value').label, numberOf(contentGoal, 'actual'), contentTarget, f.percent, (x) => `${f.number(x * 100, 0)}%`)
+    const carbon = targetRow(goalDef('avoided_carbon').label, numberOf(carbonGoal, 'actual'), carbonTarget, f.carbon, (x) => `${f.number(x, 0)} tCO2e`)
+    if (contentTarget > 0 || carbonTarget > 0) withTargets += 1
+    if (contentTarget > 0) withContent += 1
+    if (carbonTarget > 0) withCarbon += 1
+    // Targets met counts every goal with a target, as the Goals and targets tab lists them, judged by goalState.
+    const targeted = goals.filter((g) => g.progress.status !== 'no_target')
+    if (targeted.length > 0) projectsWithGoals += 1
+    for (const g of targeted) {
       targetsSet += 1
-      if (t.status === 'met') targetsMet += 1
-      if (t.status === 'below') targetsBelow += 1
-      if (t.status === 'below' && t.meter.state === 'warning') targetsNear += 1
-      if (t.status === 'below' && t.meter.state === 'critical') targetsOff += 1
+      if (g.progress.status === 'met') targetsMet += 1
+      if (g.progress.status !== 'below') continue
+      targetsBelow += 1
+      const st = goalState(goalDef(g.id), g.target, g.actual)
+      if (st === 'warning') targetsNear += 1
+      if (st === 'critical') targetsOff += 1
     }
-    if (targets.avoidedCarbonT > 0) {
-      carbonTargetT += targets.avoidedCarbonT
-      approvedAgainstTargetT += c.avoidedApprovedT
+    if (carbonTarget > 0) {
+      carbonTargetT += carbonTarget
+      securedAgainstTargetT += numberOf(carbonGoal, 'actual') ?? 0
+      approvedOnTargetedT += projectMetrics(state, viewer, p.id)?.avoidedApprovedT ?? 0
     }
     // Families from the live shortlist's public cards only.
     const list = projectWishlist(state.world, p.id)
@@ -145,8 +184,8 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
       withTargets,
       targetsSetText: targetsSetText(withContent, withCarbon),
       carbonTargetT,
-      carbonShare: targetProgress(approvedAgainstTargetT, carbonTargetT).share,
-      carbonValueText: f.number(approvedAgainstTargetT, 1),
+      carbonShare: targetProgress(securedAgainstTargetT, carbonTargetT).share,
+      carbonValueText: f.number(securedAgainstTargetT, 1),
       targetsMet,
       targetsSet,
       targetsBelow,
@@ -154,8 +193,10 @@ export function consultantDashboard(state: AppData, viewer: Viewer): ConsultantD
       targetsOff,
       targetsWaiting: targetsSet - targetsMet - targetsBelow,
       billsReviewed: home.engagements.filter((e) => e.hasBill).length,
-      carbonApprovedT: approvedAgainstTargetT,
-      carbonState: targetState(approvedAgainstTargetT, carbonTargetT),
+      carbonSecuredT: securedAgainstTargetT,
+      carbonApprovedT: approvedOnTargetedT,
+      targetsScopeText: scopeText(targetsSet, projectsWithGoals),
+      carbonState: targetState(securedAgainstTargetT, carbonTargetT),
       targetsState: targetsMetState({ good: targetsMet, warning: targetsNear, critical: targetsOff, set: targetsSet }),
     },
     rows,

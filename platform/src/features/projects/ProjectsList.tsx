@@ -11,6 +11,8 @@ import { Button, Card, EmptyState, Pill, ProjectThumbnail, SegmentedControl, Tab
 import { projectVisuals, type ProjectVisual } from '../../store/selectors/project-visuals'
 import { Page } from '../../app/Page'
 import { ProjectProgress } from './ProjectParts'
+import { consultantProjectSummaries, type ConsultantProjectSummary } from '../../store/selectors/consultant-projects'
+import { ConsultantCardSummary, ConsultantProjectsTable } from './ConsultantProjects'
 
 const SIDE_EMPTY = {
   architect: 'Create a project to start shortlisting materials against its programme.',
@@ -41,7 +43,7 @@ function StatusPills({ p }: { p: ProjectListRow }) {
   )
 }
 
-function ProjectCardLarge({ p, now, visual }: { p: ProjectListRow; now: string; visual: ProjectVisual | undefined }) {
+function ProjectCardLarge({ p, now, visual, summary }: { p: ProjectListRow; now: string; visual: ProjectVisual | undefined; summary?: ConsultantProjectSummary }) {
   return (
     <Card interactive as="article" className="flex flex-col overflow-hidden" data-testid={`project-card-${p.id}`}>
       {visual ? <ProjectThumbnail sketch={visual.sketch} materials={visual.materials} aspect="16/10" decorative className="border-b border-line-soft" /> : null}
@@ -76,7 +78,9 @@ function ProjectCardLarge({ p, now, visual }: { p: ProjectListRow; now: string; 
           </div>
         </dl>
         <div className="mt-auto flex flex-col gap-3 border-t border-line-soft pt-4">
-          {p.setup?.nextText ? (
+          {summary ? (
+            <ConsultantCardSummary s={summary} projectId={p.id} />
+          ) : p.setup?.nextText ? (
             <p className="m-0 text-sm font-medium text-brand-700" data-testid={`setup-next-${p.id}`}>
               {p.setup.nextText}
             </p>
@@ -143,6 +147,7 @@ function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
 export function ProjectsList() {
   const view = useView(projectsListView)
   const visuals = useView(projectVisuals)
+  const summaries = useView(consultantProjectSummaries)
   const layout = useApp((s) => s.ui.projectsLayout)
   const setUi = useApp((s) => s.setUi)
   const now = useNow()
@@ -203,13 +208,13 @@ export function ProjectsList() {
         />
       ) : layout === 'table' ? (
         <div className="mt-8 max-md:hidden">
-          <ProjectsTable rows={view.rows} now={now} />
+          {summaries ? <ConsultantProjectsTable rows={view.rows} summaries={summaries} lastActivity={(p) => (p.lastActivityAt ? timeAgoStart(p.lastActivityAt, now) : 'No activity')} /> : <ProjectsTable rows={view.rows} now={now} />}
         </div>
       ) : null}
       {!view.empty ? (
         <div className={layout === 'table' ? 'mt-8 grid grid-cols-1 gap-4 md:hidden' : 'mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'} data-testid="projects-cards">
           {view.rows.map((p) => (
-            <ProjectCardLarge key={p.id} p={p} now={now} visual={visuals?.[p.id]} />
+            <ProjectCardLarge key={p.id} p={p} now={now} visual={visuals?.[p.id]} summary={summaries?.[p.id]} />
           ))}
         </div>
       ) : null}

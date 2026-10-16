@@ -2,24 +2,25 @@
 // tracking, the circular economy statement and the shared Sustainability tab. Items and figures come from the public
 // listings (through projectMetrics) and the project's own records. No view here holds a money figure.
 import type { Project, ReferenceStatus } from '../../domain/types'
-import type { GoalId, GoalValue, OutputRef, StatementSectionId, StatementStatus, TrackStatus } from '../../domain/sustainabilityTypes'
-import { GOAL_DEFS, GOAL_DEFAULTS, goalDef } from '../../domain/reference/goals'
+import type { GoalId, GoalValue, OutputRef, StatementSectionId, StatementSnapshotSection, StatementStatus, TrackStatus } from '../../domain/sustainabilityTypes'
+import { GOAL_DEFS, GOAL_DEFAULTS, goalDef, RATING_REQUIREMENTS } from '../../domain/reference/goals'
 import { CREDITS, SCHEMES, creditsOf, schemeDef, type SchemeId } from '../../domain/reference/certification'
-import { CERT_CAVEAT, GOAL_STATUS_TEXT, OUTPUT_LABELS, REQ_CAVEAT, SCOPE_LABELS, STATEMENT_CAVEAT, STATEMENT_STATUS_FOR_CLIENT, STATEMENT_STATUS_LABELS, TARGET_CAVEAT, TRACK_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
+import { CERT_CAVEAT, GOAL_STATUS_TEXT, OUTPUT_LABELS, REQ_CAVEAT, SCOPE_LABELS, STATEMENT_CAVEAT, statementStatusText, TARGET_CAVEAT, TRACK_STATUS_LABELS } from '../../domain/reference/sustainabilityCopy'
 import { requirementById } from '../../domain/reference/requirements'
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
-import { goalProgress, goalValueText, type GoalProgress } from '../../domain/engines/goals'
+import { goalProgress, goalReading, goalValueText, type GoalProgress } from '../../domain/engines/goals'
+import type { MetricState } from '../../domain/engines/metricState'
 import { creditItems, defaultTargeted, schemeCounts, suggestedStatus, type CreditMetrics, type MappedItem } from '../../domain/engines/certification'
 import { trackerSummary, type TrackerSummary } from '../../domain/engines/tracker'
 import { isStale, statementPlainText, statementSections, type StatementInput } from '../../domain/engines/statement'
 import type { DocxInput } from '../../domain/engines/statementDocx'
-import { clientLinked } from '../../domain/access'
+import { clientLinked, consultantLinked } from '../../domain/access'
 import { formatDate, formatDateShort } from '../../domain/dates'
 import * as f from '../../domain/format'
 import type { AppData, CreditTrack, Viewer } from '../types'
 import { projectSide, type ProjectSide } from '../access'
 import { applicableRequirements, effectiveTargets, goalTargets, schemeTargeted, sustainabilityOf } from '../sustainabilityRecord'
-import { projectHeader, projectCarbon, type ProjectCarbon, type ProjectHeader } from './project'
+import { consultantText, projectHeader, projectCarbon, type ProjectCarbon, type ProjectHeader } from './project'
 import { projectMetrics, slug, type ProjectMetrics } from './consultant'
 import { stageLabel, todayOf } from './common'
 
@@ -223,7 +224,7 @@ function creditRowsOf(state: AppData, p: Project, m: ProjectMetrics, credits = C
       else if (ev === 'reused_items') shown.push({ label: 'Reclaimed items mapped', value: String(included.length) })
       else if (ev === 'hazard_screening') shown.push({ label: 'Items to screen', value: String(included.length) })
       else if (ev === 'specification') shown.push({ label: 'Items in the specification schedule', value: String(included.length) })
-      else if (ev === 'statement') shown.push({ label: 'Circular economy statement', value: metrics.statement ? STATEMENT_STATUS_LABELS[metrics.statement] : 'Not started' })
+      else if (ev === 'statement') shown.push({ label: 'Circular economy statement', value: statementStatusText('consultant', metrics.statement) })
       else if (ev === 'waste_reporting') shown.push({ label: 'Waste reports', value: 'Not held in Tallyard' })
     }
     return {
@@ -294,8 +295,7 @@ export function outputHref(side: ProjectSide, output: OutputRef, p: Project): st
 }
 
 function statementLabel(side: ProjectSide, status: StatementStatus | null): string {
-  if (status === null) return 'Not started'
-  return side === 'client' ? STATEMENT_STATUS_FOR_CLIENT[status] : STATEMENT_STATUS_LABELS[status]
+  return statementStatusText(side, status)
 }
 
 function requirementRowsOf(state: AppData, viewer: Viewer, p: Project, side: ProjectSide, goals: GoalRow[]): RequirementTrackRow[] {
@@ -374,7 +374,12 @@ export function statementInputFor(state: AppData, p: Project, side: ProjectSide,
   const orgName = (id: string) => (id ? (state.world.orgs[id]?.name ?? '') : '')
   const goal = (id: GoalId) => goals.find((g) => g.id === id)!
   const num = (v: GoalValue | null) => (typeof v === 'number' && v > 0 ? v : null)
-  const credits = CREDITS.map((d) => ({ d, t: effectiveCredit(state, p, d.id) })).filter((x) => x.t.targeted)
+  // The statement's own measure is left out: the statement does not cite itself as evidence.
+  const isSelf = (d: (typeof CREDITS)[number]) => d.evidence.length === 1 && d.evidence[0] === 'statement'
+  const credits = CREDITS.filter((d) => !isSelf(d))
+    .map((d) => ({ d, t: effectiveCredit(state, p, d.id) }))
+    .filter((x) => x.t.targeted)
+  const self = CREDITS.find((d) => isSelf(d) && effectiveCredit(state, p, d.id).targeted)
   return {
     projectName: p.name,
     clientName: orgName(p.clientOrgId),
@@ -385,6 +390,7 @@ export function statementInputFor(state: AppData, p: Project, side: ProjectSide,
     localAuthority: p.localAuthority,
     region: p.region,
     stageText: stageLabel(p.ribaStage),
+    ribaStage: p.ribaStage,
     requirementTitles: applicableRequirements(p).map((r) => r.title),
     hasBill: m.hasBill,
     contentSecured: m.secured.percent,
@@ -395,9 +401,15 @@ export function statementInputFor(state: AppData, p: Project, side: ProjectSide,
     avoidedSecuredT: m.avoidedSecuredT,
     avoidedApprovedT: m.avoidedApprovedT,
     carbonTargetT: num(goal('avoided_carbon').target),
-    items: m.items.map((i) => ({ publicId: i.publicId, description: i.description, quantityLabel: i.quantityLabel, family: i.family, status: i.status })),
-    targets: goals.filter((g) => g.target !== null).map((g) => ({ label: g.label, targetText: g.targetText, actualText: g.actualText, statusText: g.statusText })),
-    credits: credits.map(({ d, t }) => ({ schemeLabel: schemeDef(d.scheme).label, code: d.code, title: d.title, statusLabel: TRACK_STATUS_LABELS[t.status] })),
+    items: m.items.map((i) => ({ publicId: i.publicId, description: i.description, quantityLabel: i.quantityLabel, family: i.family, status: i.status, withSeller: !!i.withSeller })),
+    targets: goals.filter((g) => g.target !== null).map((g) => ({ label: g.label, targetText: g.targetText, actualText: g.actualText, statusText: g.statusText, status: g.progress.status })),
+    untargeted: goals.flatMap((g) => {
+      const reqId = RATING_REQUIREMENTS[g.id]
+      const req = reqId && g.target === null ? applicableRequirements(p).find((r) => r.id === reqId) : undefined
+      return req ? [{ label: g.label, requirementTitle: req.title }] : []
+    }),
+    credits: credits.map(({ d, t }) => ({ schemeLabel: schemeDef(d.scheme).label, code: d.code, title: d.title, statusLabel: TRACK_STATUS_LABELS[t.status], status: t.status, kind: d.scheme === 'circular' ? ('measure' as const) : ('credit' as const) })),
+    selfMeasureScheme: self ? schemeDef(self.scheme).label : null,
   }
 }
 
@@ -414,14 +426,37 @@ export type StatementView = {
   reviewNote: string | null
   canEdit: boolean
   canSend: boolean
+  /** "Send to Lantern Quay Developments for review", "Send the updated statement" or "Sent for review". */
+  sendLabel: string
   canReview: boolean
+  /**
+   * Set once the text has moved on from what was sent (a target or a material changed): the consultant is asked to
+   * send it again, and the client is told that what they read is the version sent on that date.
+   */
+  changedSinceSent: string | null
   plainText: string
   docx: DocxInput
   fileName: string
   caveat: string
 }
 
-/** The statement: the consultant edits and sends it; the client reads it once sent and reviews it; null for the architect. */
+function sameSections(a: StatementSnapshotSection[], b: { id: string; heading: string; text: string }[]): boolean {
+  return a.length === b.length && a.every((x, i) => x.id === b[i].id && x.heading === b[i].heading && x.text === b[i].text)
+}
+
+/** The sections as the consultant has them now: the generated text, or their edit. For sending and for comparing. */
+export function currentStatementSections(state: AppData, viewer: Viewer, projectId: string): StatementSnapshotSection[] | null {
+  const side = projectSide(state, viewer.userId, projectId)
+  if (side !== 'consultant') return null
+  const p = state.world.projects[projectId]
+  const doc = sustainabilityOf(state, projectId).statement
+  return statementSections(statementInputFor(state, p, side, projectMetrics(state, viewer, projectId)!)).map((g) => ({ id: g.id, heading: g.heading, text: doc?.edits[g.id]?.text ?? g.text }))
+}
+
+/**
+ * The statement. The consultant edits the live text and sends it; the client reads the version that was sent (frozen
+ * at sending, dated by when it was sent) and reviews it; null for the architect.
+ */
 export function statementView(state: AppData, viewer: Viewer, projectId: string): StatementView | null {
   const side = projectSide(state, viewer.userId, projectId)
   if (side !== 'consultant' && side !== 'client') return null
@@ -430,20 +465,33 @@ export function statementView(state: AppData, viewer: Viewer, projectId: string)
   const doc = sustainabilityOf(state, projectId).statement
   const status: StatementStatus = doc?.status ?? 'draft'
   const generated = statementSections(statementInputFor(state, p, side, m))
+  const live = generated.map((g) => {
+    const edit = doc?.edits[g.id]
+    return { id: g.id, heading: g.heading, text: edit ? edit.text : g.text, generated: g.text, edited: !!edit, stale: isStale(edit, g.text) }
+  })
+  const sentOnce = status !== 'draft' && !!doc?.sentAt
+  const snapshot = sentOnce ? (doc?.sentSections ?? null) : null
+  const changed = snapshot !== null && !sameSections(snapshot, live)
   // The client reads what was sent; a statement being drafted stays with the consultant.
-  const visible = side === 'consultant' || status !== 'draft'
-  const sections = visible
-    ? generated.map((g) => {
-        const edit = doc?.edits[g.id]
-        return { id: g.id, heading: g.heading, text: edit ? edit.text : g.text, generated: g.text, edited: !!edit, stale: isStale(edit, g.text) }
-      })
-    : []
+  const sections =
+    side === 'consultant'
+      ? live
+      : status === 'draft'
+        ? []
+        : snapshot
+          ? snapshot.map((x) => ({ ...x, generated: x.text, edited: false, stale: false }))
+          : live.map((x) => ({ ...x, edited: false, stale: false }))
   const clientName = state.world.orgs[p.clientOrgId]?.name ?? ''
-  const consultantName = p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : ''
+  const consultantName = consultantLinked(p) ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : ''
   const today = todayOf(viewer)
+  // The client's copy is dated when it was sent; the consultant's working copy is dated today.
+  const dated = side === 'client' && sentOnce && doc?.sentAt ? doc.sentAt.slice(0, 10) : today
   const title = `${p.name}: circular economy statement`
-  const subtitle = consultantName ? `Prepared by ${consultantName} for ${clientName}, ${formatDate(today)}` : `Prepared for ${clientName}, ${formatDate(today)}`
+  const subtitle = consultantName ? `Prepared by ${consultantName} for ${clientName}, ${formatDate(dated)}` : `Prepared for ${clientName}, ${formatDate(dated)}`
   const plain = sections.map((s) => ({ heading: s.heading, text: s.text }))
+  // Long dates, as the subtitle's "Prepared ... 16 October 2026" a few lines away.
+  const sentOn = doc?.sentAt ? formatDate(doc.sentAt.slice(0, 10)) : ''
+  const canSend = side === 'consultant' && (status !== 'ready_for_review' || changed) && clientLinked(p)
   return {
     header: projectHeader(state, viewer, projectId)!,
     title,
@@ -451,13 +499,19 @@ export function statementView(state: AppData, viewer: Viewer, projectId: string)
     sections,
     status,
     statusLabel: statementLabel(side, status),
-    sentText: doc?.sentAt ? `Sent to ${clientName} on ${dateOf(doc.sentAt)}` : null,
-    reviewedText: doc?.reviewedAt ? `Reviewed by ${nameOf(state, doc.reviewedByUserId)} on ${dateOf(doc.reviewedAt)}` : null,
+    sentText: doc?.sentAt ? `Sent to ${clientName} on ${sentOn}` : null,
+    reviewedText: doc?.reviewedAt ? `Reviewed by ${nameOf(state, doc.reviewedByUserId)} on ${formatDate(doc.reviewedAt.slice(0, 10))}` : null,
     reviewNote: doc?.reviewNote ?? null,
     canEdit: side === 'consultant',
-    canSend: side === 'consultant' && status !== 'ready_for_review' && clientLinked(p),
+    canSend,
+    sendLabel: status === 'ready_for_review' ? (changed ? 'Send the updated statement' : 'Sent for review') : status === 'reviewed' && changed ? 'Send the updated statement' : `Send to ${clientName || 'the client'} for review`,
     canReview: side === 'client' && status === 'ready_for_review',
-    plainText: visible ? statementPlainText(title, subtitle, plain, STATEMENT_CAVEAT) : '',
+    changedSinceSent: changed
+      ? side === 'consultant'
+        ? `Sent on ${sentOn}. Send the updated statement so ${clientName || 'the client'} reviews the latest version.`
+        : `This is the version sent on ${sentOn}. ${consultantName || 'The consultant'} has updated the statement since, so ask them for the latest if you need it.`
+      : null,
+    plainText: sections.length > 0 ? statementPlainText(title, subtitle, plain, STATEMENT_CAVEAT) : '',
     docx: { title, subtitle, sections: plain, footer: STATEMENT_CAVEAT },
     fileName: `${slug(p.name)}-circular-economy-statement-${today}.docx`,
     caveat: STATEMENT_CAVEAT,
@@ -474,10 +528,19 @@ export type SustainabilityView = {
   goals: GoalRow[]
   schemes: SchemeSummaryView[]
   requirements: TrackerSummary & { atRiskItems: { id: string; title: string }[]; href: string }
-  statement: { status: StatementStatus; label: string; sentText: string | null; canReview: boolean; href: string | null } | null
+  statement: { status: StatementStatus; label: string; sentText: string | null; canReview: boolean; href: string | null; /** The consultant's text has moved on from the version the client has. */ changedSinceSent: boolean } | null
   links: { targets: string | null; certification: string | null; statement: string | null; requirements: string }
-  /** "Targets are set by Halewick Sustainability", or that no consultant is appointed. */
+  /** "Targets are set by Halewick Sustainability.", or that no consultant is appointed; a sentence with its full stop. */
   targetsNote: string
+}
+
+/** Who sets the targets, in one sentence: the consultancy once it has joined, or why the defaults are shown. */
+export function targetsNote(state: AppData, p: Project): string {
+  const name = p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? 'The consultancy') : ''
+  if (!name) return 'No consultant appointed yet. Defaults from the requirements are shown.'
+  if (consultantLinked(p)) return `Targets are set by ${name}.`
+  if (p.consultantLink?.status === 'declined') return `${name} declined to join. Defaults from the requirements are shown.`
+  return clientLinked(p) ? `${name} has not accepted the project yet. Defaults from the requirements are shown.` : `${name} is asked to join once the client accepts. Defaults from the requirements are shown.`
 }
 
 /** The shared Sustainability tab, for every side of the project. */
@@ -490,7 +553,6 @@ export function sustainabilityView(state: AppData, viewer: Viewer, projectId: st
   const carbon = projectCarbon(state, viewer, projectId)!
   const doc = sustainabilityOf(state, projectId).statement
   const consultant = side === 'consultant'
-  const consultantName = p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : ''
   return {
     header: projectHeader(state, viewer, projectId)!,
     side,
@@ -515,20 +577,31 @@ export function sustainabilityView(state: AppData, viewer: Viewer, projectId: st
             sentText: doc?.sentAt ? `Sent on ${dateOf(doc.sentAt)}` : null,
             canReview: side === 'client' && doc?.status === 'ready_for_review',
             href: consultant ? `${base(p)}/statement` : doc && doc.status !== 'draft' ? `${base(p)}/sustainability#statement` : null,
+            changedSinceSent: consultant && !!doc && doc.status !== 'draft' && !!doc.sentSections && !sameSections(doc.sentSections, currentStatementSections(state, viewer, projectId) ?? []),
           },
     links: { targets: consultant ? `${base(p)}/targets` : null, certification: consultant ? `${base(p)}/certification` : null, statement: consultant ? `${base(p)}/statement` : null, requirements: `${base(p)}/requirements` },
-    targetsNote: consultantName ? `Targets are set by ${consultantName}` : 'No consultant appointed yet. Defaults from the requirements are shown.',
+    targetsNote: targetsNote(state, p),
   }
 }
 
 // ---------- Tracking across projects ----------
 
-export type TrackingScheme = { targetText: string; predictedText: string | null; targeted: number; ready: number; atRisk: number; tone: string }
+export type TrackingScheme = {
+  targetText: string
+  predictedText: string | null
+  targeted: number
+  ready: number
+  atRisk: number
+  tone: string
+  /** The latest rating against the target, judged as on the Sustainability tab ("Near target"); null without both. */
+  state: { state: MetricState; label: string } | null
+}
 
 export type TrackingRow = {
   projectId: string
   projectName: string
   href: string
+  /** The consultancy once it has joined, "Halewick Sustainability, waiting to accept" (or declined) before; null when none is named. */
   consultantName: string | null
   schemes: Record<'breeam' | 'leed' | 'well', TrackingScheme>
   circular: { content: GoalRow | null; statementLabel: string; statementTone: string }
@@ -545,7 +618,9 @@ export function sustainabilityTracking(state: AppData, viewer: Viewer, projectId
   const summaries = schemeSummaries(state, p)
   const scheme = (id: 'breeam' | 'leed' | 'well'): TrackingScheme => {
     const s = summaries.find((x) => x.scheme === id)!
-    return { targetText: s.ratingTarget ?? 'Not targeted', predictedText: s.ratingPredicted, targeted: s.targeted, ready: s.ready, atRisk: s.atRisk, tone: s.tone }
+    const goal = goals.find((g) => g.id === id)
+    const reading = goal ? goalReading(goalDef(id), goal.target, goal.actual) : null
+    return { targetText: s.ratingTarget ?? 'Not targeted', predictedText: s.ratingPredicted, targeted: s.targeted, ready: s.ready, atRisk: s.atRisk, tone: s.tone, state: reading ? { state: reading.state, label: reading.word } : null }
   }
   const status = sustainabilityOf(state, projectId).statement?.status ?? null
   const { atRiskItems: _list, ...requirements } = requirementsRollup(state, p)
@@ -553,7 +628,7 @@ export function sustainabilityTracking(state: AppData, viewer: Viewer, projectId
     projectId: p.id,
     projectName: p.name,
     href: `${base(p)}/sustainability`,
-    consultantName: p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? null) : null,
+    consultantName: consultantText(state, p),
     schemes: { breeam: scheme('breeam'), leed: scheme('leed'), well: scheme('well') },
     circular: { content: goals.find((g) => g.id === 'content_by_value') ?? null, statementLabel: statementLabel(side, status), statementTone: status === 'reviewed' ? 'brand' : status === 'ready_for_review' ? 'info' : 'neutral' },
     requirements,

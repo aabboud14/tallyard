@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSeed, PERSONA_IDS, ORG_IDS, TIVERNE_ID, HARROWDEN_ID, MERROWGATE_ID, SALLOW_ID, FERRYMOOR_ID, DURNLEY_ID } from './seed/world'
-import { roleOf, buildingsFor, clientsFor, projectsFor, engagementsFor, canAccess, clientLinked } from './access'
+import { roleOf, buildingsFor, clientsFor, projectsFor, engagementsFor, canAccess, clientLinked, consultantLinked } from './access'
 
 const w = createSeed()
 const ids = <T extends { id: string }>(xs: T[]) => xs.map((x) => x.id)
@@ -107,14 +107,29 @@ describe('the seed behind the access rules', () => {
 })
 
 describe('round 2: the client reaches a project only once it has accepted', () => {
-  it('a pending link hides the project from the client and from no one else', () => {
+  it('a pending link hides the project from the client and its consultant, and from no one else', () => {
     const w2 = createSeed()
     w2.projects[MERROWGATE_ID].clientLink = { ...w2.projects[MERROWGATE_ID].clientLink, status: 'pending', decidedOn: null, decidedByPersonaId: null }
     expect(clientLinked(w2.projects[MERROWGATE_ID])).toBe(false)
     expect(projectsFor(w2, PERSONA_IDS.isla)).toEqual([])
     expect(canAccess(w2, PERSONA_IDS.isla, { projectId: MERROWGATE_ID })).toBe(false)
     expect(ids(projectsFor(w2, PERSONA_IDS.priya))).toEqual([MERROWGATE_ID, SALLOW_ID, FERRYMOOR_ID])
+    // Round 2 follow-up (audit of 16 October, note C2): the consultancy reaches a project only once its client has
+    // accepted it, so no third party sees a project before its client does.
+    expect(canAccess(w2, PERSONA_IDS.marcus, { projectId: MERROWGATE_ID })).toBe(false)
+    expect(consultantLinked(w2.projects[MERROWGATE_ID])).toBe(false)
+  })
+  it('a consultancy reaches a project once it and the client have accepted; a seeded project counts as accepted', () => {
+    expect(consultantLinked(w.projects[MERROWGATE_ID])).toBe(true)
+    const w2 = createSeed()
+    const asked = { status: 'pending' as const, requestedOn: '2026-10-08', requestedByPersonaId: PERSONA_IDS.priya, message: '', decidedOn: null, decidedByPersonaId: null, decisionNote: '' }
+    w2.projects[MERROWGATE_ID].consultantLink = asked
+    expect(canAccess(w2, PERSONA_IDS.marcus, { projectId: MERROWGATE_ID })).toBe(false)
+    w2.projects[MERROWGATE_ID].consultantLink = { ...asked, status: 'declined' }
+    expect(canAccess(w2, PERSONA_IDS.marcus, { projectId: MERROWGATE_ID })).toBe(false)
+    w2.projects[MERROWGATE_ID].consultantLink = { ...asked, status: 'accepted' }
     expect(canAccess(w2, PERSONA_IDS.marcus, { projectId: MERROWGATE_ID })).toBe(true)
+    expect(canAccess(w2, PERSONA_IDS.isla, { projectId: MERROWGATE_ID })).toBe(true)
   })
   it('every seeded project is already linked', () => {
     for (const p of Object.values(w.projects)) expect(clientLinked(p), p.name).toBe(true)

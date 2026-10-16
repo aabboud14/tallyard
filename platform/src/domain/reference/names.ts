@@ -80,6 +80,9 @@ export const ALLOWED_FACILITIES = [
 // Group 4: fictional names that appear only in the platform's tests (sign-ups, invites, a new project and building).
 export const TEST_ONLY_NAMES = ['Corbel Yard', 'Wexcombe House', '9 Lantry Street', 'Park Studio', 'Reed Holdings', 'Shaw Surveys', 'Jo Park', 'Ash Reed', 'Lee Shaw', 'Alex Moore', 'Ruth Calder', '2 Wharf Lane'] as const
 
+// Group 4, continued (16 October 2026): the consultancy's consent and a new client's invite in the platform's tests.
+export const TEST_ONLY_NAMES_R2F = ['Tamsin Wharf', 'Pellow Row', 'Harrowgate Homes', 'Ada Quist'] as const
+
 // Group 5: real places, named only as references for location and policy, never as actors.
 export { ALL_REFERENCE_PLACES as REFERENCE_PLACES } from './places'
 

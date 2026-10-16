@@ -9,7 +9,7 @@ import type { AppData } from '../store/types'
 import { log, notify } from '../store/notifications'
 import { mint } from '../store/ids'
 import { applicableRequirements, withSustainability } from '../store/sustainabilityRecord'
-import { statementView } from '../store/selectors/sustainability'
+import { currentStatementSections, statementView } from '../store/selectors/sustainability'
 import { SAMPLE_ACCOUNTS } from './accounts'
 import { KILNWORTH_ID, TESSALY_ORG_ID } from './seed-portfolio'
 
@@ -98,6 +98,9 @@ export function seedSustainability(state: AppData, todayIso: string, now: string
   // The approach section is the consultant's own words, written over the text generated from these records.
   const generated = statementView(s, { userId: MARCUS, now }, MERROWGATE_ID)!.sections.find((x) => x.id === 'approach')!.generated
   s = withSustainability(s, MERROWGATE_ID, (r) => ({ ...r, statement: { ...r.statement!, edits: { approach: { text: APPROACH_EDIT, basis: generated, editedAt: at(2, 15), editedByUserId: MARCUS } } } }))
+  // The version Lantern Quay is reviewing, frozen when it was sent.
+  const sentSections = currentStatementSections(s, { userId: MARCUS, now }, MERROWGATE_ID)
+  s = withSustainability(s, MERROWGATE_ID, (r) => ({ ...r, statement: { ...r.statement!, sentSections } }))
 
   // History, oldest first.
   const entry = (k: number, hh: number, text: string, path: string) => {

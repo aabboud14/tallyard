@@ -4,13 +4,82 @@
 // setup checklist as one line (variant 'inline'), so the programme stays on the first screen; a decline keeps the
 // full banner.
 import { useState } from 'react'
-import { Hourglass, Send, UserRoundX, Users } from 'lucide-react'
+import { Check, Copy, Hourglass, Mail, RotateCcw, Send, UserRoundX, Users } from 'lucide-react'
 import { act, useView } from '../../store'
 import { PRODUCT_NAME } from '../../domain/constants'
-import { changeClientOptions, clientLinkView } from '../../store/selectors/project'
+import { changeClientOptions, clientLinkView, type ClientLinkView } from '../../store/selectors/project'
 import { Button, Callout, Dialog, Field, Input, Select, Textarea, toast } from '../../ui'
 
 const NEW_CLIENT = '__new__'
+
+/**
+ * For a client nobody uses yet: invite a contact there by email, then share the link (the sandbox sends no email),
+ * send a new invite, or use another email. The contact joins the client organisation and answers the request.
+ */
+function ClientInvite({ projectId, link, compact = false }: { projectId: string; link: ClientLinkView; compact?: boolean }) {
+  const inv = link.invite
+  const [editing, setEditing] = useState(!inv)
+  const [email, setEmail] = useState(inv?.email ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const send = (to: string) => {
+    const r = act.inviteClientContact(projectId, to)
+    if (!r.ok) {
+      setError(r.error ?? 'The invite could not be sent.')
+      return
+    }
+    setError(null)
+    setEditing(false)
+    setCopied(false)
+    toast.success(`Invite ready for ${to.trim()}`, { description: 'In the sandbox no email is sent. Copy the link for them.', action: { label: 'Undo', onClick: r.undo } })
+  }
+  const copy = async () => {
+    if (!inv) return
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/invite/${inv.token}`)
+      setCopied(true)
+    } catch {
+      toast.error('The link could not be copied.')
+    }
+  }
+  if (inv && !editing)
+    return (
+      <div className="flex flex-col gap-2" data-testid="client-invite-sent">
+        <p className="m-0 text-sm text-ink-soft">
+          <span className="font-medium text-ink">{inv.sentText}.</span> They join {link.clientName} and accept the project from their home. In the sandbox no email is sent, so copy the link for them.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" icon={copied ? Check : Copy} onClick={() => void copy()} data-testid="client-invite-copy">
+            {copied ? 'Link copied' : 'Copy invite link'}
+          </Button>
+          <Button size="sm" variant="ghost" icon={RotateCcw} onClick={() => send(inv.email)} data-testid="client-invite-resend">
+            Resend
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} data-testid="client-invite-other">
+            Use another email
+          </Button>
+        </div>
+      </div>
+    )
+  return (
+    <form
+      noValidate
+      className={compact ? 'flex max-w-xl flex-col gap-2 sm:flex-row sm:items-start' : 'flex flex-col gap-2 sm:flex-row sm:items-start'}
+      onSubmit={(e) => {
+        e.preventDefault()
+        send(email)
+      }}
+      data-testid="client-invite-form"
+    >
+      <Field label={`Contact at ${link.clientName}`} error={error ?? undefined} className="min-w-0 flex-1">
+        <Input type="email" icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.example" data-testid="client-invite-email" />
+      </Field>
+      <Button type="submit" size="md" variant="primary" icon={Send} className="sm:mt-6" data-testid="client-invite-send">
+        Send invite
+      </Button>
+    </form>
+  )
+}
 
 export type ChangeClientMode = 'ask_again' | 'another'
 
@@ -25,7 +94,7 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
   if (variant === 'inline' && !declined) {
     const Icon = link.clientHasMembers ? Hourglass : Users
     return (
-      <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-3 md:flex-row md:items-center md:justify-between md:gap-4">
+      <div data-testid="client-link-banner" data-status={link.status} data-variant="inline" className="mt-3 flex flex-col gap-2 border-t border-brand-100 pt-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4">
         <p className="m-0 flex min-w-0 items-start gap-2.5 text-sm text-ink-soft">
           <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
           <span>
@@ -38,7 +107,7 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
                 <span className="font-medium text-ink">
                   Nobody from {link.clientName} uses {PRODUCT_NAME} yet.
                 </span>{' '}
-                Nobody can accept this project until someone joins. You can still shortlist materials.
+                Invite a contact there to join and accept the project. You can still shortlist materials.
               </>
             )}
           </span>
@@ -46,6 +115,11 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
         <Button size="sm" variant="ghost" onClick={() => open('another')} data-testid="link-change-client" className="shrink-0 self-start max-md:ml-4 md:self-auto">
           Change client
         </Button>
+        {link.clientHasMembers ? null : (
+          <div className="md:basis-full max-md:ml-6">
+            <ClientInvite projectId={projectId} link={link} compact />
+          </div>
+        )}
         {dialog}
       </div>
     )
@@ -83,7 +157,10 @@ export function ClientLinkBanner({ projectId, onChangeClient, variant = 'banner'
         ) : link.clientHasMembers ? (
           <p className="m-0">Until they do, they cannot see it and you cannot send materials for approval. {link.requestedText}.</p>
         ) : (
-          <p className="m-0">Nobody can accept this project until someone from {link.clientName} joins. You can still shortlist materials. Sending for approval opens once the client accepts.</p>
+          <div className="flex flex-col gap-3">
+            <p className="m-0">Invite a contact at {link.clientName} to join {PRODUCT_NAME} and accept the project. You can still shortlist materials. Sending for approval opens once the client accepts.</p>
+            <ClientInvite projectId={projectId} link={link} />
+          </div>
         )}
         <div className="mt-3">{buttons}</div>
       </Callout>
@@ -124,6 +201,7 @@ function ChangeClientForm({ projectId, mode, onDone }: { projectId: string; mode
   const [choice, setChoice] = useState<string>(() => (options ? ((mode === 'ask_again' ? options.defaults.ask_again : options.defaults.another) ?? NEW_CLIENT) : NEW_CLIENT))
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
+  const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   if (!options) return null
   const isNew = choice === NEW_CLIENT
@@ -138,7 +216,7 @@ function ChangeClientForm({ projectId, mode, onDone }: { projectId: string; mode
           setError('Enter the client.')
           return
         }
-        const r = act.requestClientLink(projectId, isNew ? { name } : { orgId: choice }, message)
+        const r = act.requestClientLink(projectId, isNew ? { name } : { orgId: choice }, message, isNew ? email : undefined)
         if (!r.ok) {
           setError(r.error ?? 'The request could not be sent.')
           return
@@ -156,6 +234,11 @@ function ChangeClientForm({ projectId, mode, onDone }: { projectId: string; mode
       {isNew ? (
         <Field label={options.options.length > 0 ? 'New client name' : 'Client'} error={error ?? undefined}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Client organisation" autoFocus data-testid="change-client-name" />
+        </Field>
+      ) : null}
+      {isNew ? (
+        <Field label="Client contact email" optional hint={`If nobody there uses ${PRODUCT_NAME} yet, they are invited to join and accept.`}>
+          <Input type="email" icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.example" data-testid="change-client-email" />
         </Field>
       ) : error ? (
         <Callout tone="danger" role="alert">

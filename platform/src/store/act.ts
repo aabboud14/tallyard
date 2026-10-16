@@ -3,6 +3,7 @@
 import type { ActionResult, Actor, AppData } from './types'
 import { useApp, type Outcome } from './app'
 import * as projects from './actions/projects'
+import * as clientInvite from './actions/clientInvite'
 import * as shortlist from './actions/shortlist'
 import * as reservations from './actions/reservations'
 import * as owner from './actions/owner'
@@ -25,6 +26,7 @@ export const act = {
   updateProject: bind(projects.updateProject),
   decideClientLink: bind(projects.decideClientLink),
   requestClientLink: bind(projects.requestClientLink),
+  inviteClientContact: bind(clientInvite.inviteClientContact),
   setProjectProgramme: bind(projects.setProjectProgramme),
   setProjectRequirements: bind(projects.setProjectRequirements),
   acceptTerms: bind(projects.acceptTerms),
@@ -90,6 +92,7 @@ export const act = {
   loadWasteBill: bind(consultant.loadWasteBill),
   editWasteRow: bind(consultant.editWasteRow),
   clearWasteBill: bind(consultant.clearWasteBill),
+  decideConsultantLink: bind(consultant.decideConsultantLink),
   // Sustainability: targets, results, requirements, certification and the circular economy statement
   setGoalTarget: bind(sustainability.setGoalTarget),
   resetGoalTarget: bind(sustainability.resetGoalTarget),

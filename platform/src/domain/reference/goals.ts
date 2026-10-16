@@ -72,6 +72,9 @@ export const GOAL_DEFAULTS: GoalDefault[] = [
   },
 ]
 
+/** The requirement that records each rating scheme for a project, so a scheme required but not targeted can be named. */
+export const RATING_REQUIREMENTS: Partial<Record<GoalId, string>> = { breeam: 'breeam-nc', leed: 'leed-v5', well: 'well-v2' }
+
 export function goalDef(id: GoalId): GoalDef {
   const d = GOAL_DEFS.find((g) => g.id === id)
   if (!d) throw new Error('No goal ' + id)

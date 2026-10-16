@@ -101,7 +101,10 @@ describe('consultant dashboard', () => {
     expect(sallow.content.status).toBe('no_data')
     expect(sallow.content.statusText).toBe('No result yet')
     expect(sallow.carbon.status).toBe('no_target')
-    expect(d.metrics.targetsSet).toBe(4)
+    // Round 2 follow-up (audit of 16 October, note 43): Targets met counts every goal with a target, as Goals and
+    // targets lists them: six on Merrowgate, three on Sallow Court and three on Ferrymoor Yard.
+    expect(d.metrics.targetsSet).toBe(12)
+    expect(d.metrics.targetsScopeText).toBe('Across 12 goals on 3 projects')
     expect(d.metrics.withTargets).toBe(3)
     expect(d.metrics.carbonTargetT).toBe(150)
     expect(d.metrics.billsReviewed).toBe(d.engagements.filter((e) => e.hasBill).length)

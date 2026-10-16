@@ -7,13 +7,14 @@ import { PROJECT_TYPE_LABELS, TYPOLOGY_LABELS } from '../../domain/reference/lab
 import { RIBA_STAGES } from '../../domain/reference/policy'
 import { isLondonRegion, localAuthoritiesFor } from '../../domain/reference/places'
 import { projectTypeLabel } from '../../domain/reference/projectTypes'
-import { clientLinked } from '../../domain/access'
+import { clientLinked, consultantLinked } from '../../domain/access'
 import { CONSTRUCTION_DAYS } from '../../domain/engines/programme'
 import { addDays, daysBetween, formatDate, formatQuarter, maxDate, quarterWindow } from '../../domain/dates'
 import type { AppData, Viewer } from '../types'
 import { marketplaceHref } from '../paths'
 import { projectSide, projectsOfUser, roleOfOrg, roleOfUser, usersOfOrg, type ProjectSide } from '../access'
 import { existingClientOrgIds, PROJECT_TYPES } from '../actions/projects'
+import { pendingClientInvite } from '../actions/clientInvite'
 import { orgTypeLabel } from '../../sandbox/accounts'
 import { activityFor, initials, projectRef, SHORTLIST_STATUS_LABELS, stageLabel, todayOf, type ActivityRow, type ProjectRef } from './common'
 import { BOARD_COLUMNS, shortlistRows, totalsOf, type ShortlistRow, type TotalsByState } from './shortlist'
@@ -23,6 +24,7 @@ import { projectWishlist } from '../lots'
 import { sustainabilityBadges, sustainabilityOf } from '../sustainabilityRecord'
 import { plural } from '../notifications'
 import { architectOptions, NEW_PROJECT } from './owner'
+import { consultantLinkRequests } from './consultant-requests'
 
 export type ProjectTab = { id: string; label: string; href: string; badge: number | null; soon: boolean }
 
@@ -84,7 +86,10 @@ export type ProjectHeader = ProjectRef & {
   tabs: ProjectTab[]
   team: TeamAvatar[]
   description: string
+  /** The consultancy once it has accepted (and the client has); '' otherwise. */
   consultantName: string
+  /** For the architect and the client while a named consultancy has not joined: "Halewick Sustainability, waiting to accept". */
+  consultantLinkText: string | null
   /** The practice's name, or '' while an owner's New project has none. */
   architectName: string
   /** The practice's name, or 'Not appointed yet'. */
@@ -116,12 +121,26 @@ export function appointArchitectView(state: AppData, viewer: Viewer, projectId: 
   return { projectId, projectName: p.name, options: architectOptions(state) }
 }
 
+/** A named consultancy that has not joined, in words for the architect; null when none is named or it has joined. */
+export function consultantLinkText(state: AppData, p: Project): string | null {
+  if (!p.consultantOrgId || consultantLinked(p)) return null
+  const name = state.world.orgs[p.consultantOrgId]?.name ?? 'The consultancy'
+  if (p.consultantLink?.status === 'declined') return `${name}, declined`
+  return clientLinked(p) ? `${name}, waiting to accept` : `${name}, asked once the client accepts`
+}
+
+/** The consultancy as the client and the architect should read it: its name once it has joined, its state while it has not, null when none is named. */
+export function consultantText(state: AppData, p: Project): string | null {
+  if (!p.consultantOrgId) return null
+  return consultantLinked(p) ? (state.world.orgs[p.consultantOrgId]?.name ?? null) : consultantLinkText(state, p)
+}
+
 /** The workspace header and tabs for a project the viewer works on; null otherwise. Client members appear only once the client has accepted. */
 export function projectHeader(state: AppData, viewer: Viewer, projectId: string): ProjectHeader | null {
   const side = projectSide(state, viewer.userId, projectId)
   if (!side) return null
   const p = state.world.projects[projectId]
-  const team = [p.architectOrgId, clientLinked(p) ? p.clientOrgId : '', p.consultantOrgId]
+  const team = [p.architectOrgId, clientLinked(p) ? p.clientOrgId : '', consultantLinked(p) ? p.consultantOrgId : '']
     .filter((x) => x)
     .flatMap((orgId) => usersOfOrg(state, orgId).map((u) => ({ userId: u.id, name: u.name, initials: initials(u.name), colour: u.avatarColour, orgName: state.world.orgs[orgId]?.name ?? '' })))
   return {
@@ -130,7 +149,8 @@ export function projectHeader(state: AppData, viewer: Viewer, projectId: string)
     tabs: projectTabs(state, side, p),
     team,
     description: p.description,
-    consultantName: p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
+    consultantName: consultantLinked(p) ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
+    consultantLinkText: side === 'architect' || side === 'client' ? consultantLinkText(state, p) : null,
     architectName: state.world.orgs[p.architectOrgId]?.name ?? '',
     architectText: state.world.orgs[p.architectOrgId]?.name ?? NO_ARCHITECT_TEXT,
     canAppointArchitect: canAppointArchitect(state, viewer, p),
@@ -154,7 +174,7 @@ export type ProjectListRow = ProjectRef & {
   linkStatus: ClientLinkStatus
 }
 
-/** requestsHref: Project requests, for a client with any request, waiting or answered; null otherwise. */
+/** requestsHref: Project requests, for a client or a consultancy with any request, waiting or answered; null otherwise. */
 export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean; requestsHref: string | null }
 
 export function projectsListView(state: AppData, viewer: Viewer): ProjectsListView {
@@ -178,7 +198,7 @@ export function projectsListView(state: AppData, viewer: Viewer): ProjectsListVi
     }
   })
   rows.sort((a, b) => ((a.lastActivityAt ?? '') < (b.lastActivityAt ?? '') ? 1 : (a.lastActivityAt ?? '') > (b.lastActivityAt ?? '') ? -1 : a.name.localeCompare(b.name, 'en-GB')))
-  const requests = clientLinkRequests(state, viewer)
+  const requests = clientLinkRequests(state, viewer) ?? consultantLinkRequests(state, viewer)
   const requestsHref = requests && requests.pending.length + requests.answered.length > 0 ? '/app/projects/requests' : null
   return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
 }
@@ -369,6 +389,8 @@ export type ClientLinkView = {
   /** The client's note on a decline. */
   note: string | null
   canChange: boolean
+  /** For a client nobody uses yet: the contact invited to join and answer, and the link to share; null before one is invited. */
+  invite: { email: string; sentText: string; token: string } | null
 }
 
 /** The architect's view of a client that has not accepted: the organisation's name only, never its people. Null once accepted. */
@@ -385,7 +407,14 @@ export function clientLinkView(state: AppData, viewer: Viewer, projectId: string
     decidedText: link.status === 'declined' && link.decidedOn ? `Declined on ${formatDate(link.decidedOn)}` : null,
     note: link.status === 'declined' && link.decisionNote ? link.decisionNote : null,
     canChange: true,
+    invite: inviteOf(state, p),
   }
+}
+
+function inviteOf(state: AppData, p: Project): ClientLinkView['invite'] {
+  if (usersOfOrg(state, p.clientOrgId).length > 0) return null
+  const inv = pendingClientInvite(state, p)
+  return inv ? { email: inv.email, sentText: `Invite sent to ${inv.email} on ${formatDate(inv.createdAt.slice(0, 10))}`, token: inv.token } : null
 }
 
 export type ChangeClientOptions = {
@@ -485,17 +514,27 @@ export function projectSetup(state: AppData, viewer: Viewer, projectId: string):
     attention: false,
   })
   const consultantName = p.consultantOrgId ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : ''
+  const consultantIn = consultantLinked(p)
+  const consultantDeclined = !!consultantName && p.consultantLink?.status === 'declined'
   drafts.push({
     id: 'consultant',
     title: 'Add a sustainability consultant',
     short: 'Consultant',
-    text: consultantName ? `${consultantName} is on the team.` : 'They can follow carbon and compliance on this project.',
+    text: !consultantName
+      ? 'They can follow carbon and compliance on this project.'
+      : consultantIn
+        ? `${consultantName} is on the team.`
+        : consultantDeclined
+          ? `${consultantName} declined to join.`
+          : linked
+            ? `Waiting for ${consultantName} to accept.`
+            : `${consultantName} is asked once the client accepts.`,
     optional: true,
     action: { label: consultantName ? 'Open team' : 'Add consultant', href: `${base}/team`, intent: null },
     secondary: null,
-    done: !!consultantName,
-    waiting: false,
-    attention: false,
+    done: consultantIn,
+    waiting: !!consultantName && !consultantIn && !consultantDeclined,
+    attention: consultantDeclined,
   })
   drafts.push({
     id: 'shortlist',
@@ -562,6 +601,8 @@ export type LinkRequestRow = {
   status: ClientLinkStatus
   statusText: string
   href: string | null
+  /** For the client: the consultancy the architect proposes, asked to join once the client accepts; '' if none. */
+  proposedConsultant?: string
 }
 
 /**
@@ -594,6 +635,7 @@ export function clientLinkRequests(state: AppData, viewer: Viewer): { pending: L
       status: link.status,
       statusText,
       href: link.status === 'accepted' ? `/app/projects/${p.id}` : null,
+      proposedConsultant: p.consultantOrgId && link.status === 'pending' ? (state.world.orgs[p.consultantOrgId]?.name ?? '') : '',
       sortKey: link.status === 'pending' ? link.requestedOn : (link.decidedOn ?? link.requestedOn),
     })
   }
@@ -646,8 +688,8 @@ export function projectCarbon(state: AppData, viewer: Viewer, projectId: string)
 
 export type TeamMember = { userId: string; name: string; title: string; email: string; initials: string; colour: string; you: boolean }
 
-/** `pending` is true for a client that has not accepted: then members is empty. */
-export type TeamSection = { orgId: string; orgName: string; orgTypeLabel: string; roleLabel: string; members: TeamMember[]; yours: boolean; pending: boolean }
+/** `pending` is true for a client or consultancy that has not accepted: then members is empty and `note` says why. */
+export type TeamSection = { orgId: string; orgName: string; orgTypeLabel: string; roleLabel: string; members: TeamMember[]; yours: boolean; pending: boolean; declined: boolean; note: string | null }
 
 export type ProjectTeam = {
   header: ProjectHeader
@@ -663,7 +705,7 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
   if (!header) return null
   const p = state.world.projects[projectId]
   const myOrg = state.users[viewer.userId].orgId
-  const section = (orgId: string, roleLabel: string, pending = false): TeamSection => ({
+  const section = (orgId: string, roleLabel: string, pending = false, declined = false, note: string | null = null): TeamSection => ({
     orgId,
     orgName: state.world.orgs[orgId]?.name ?? '',
     orgTypeLabel: orgTypeLabel(state.world.orgs[orgId]?.type ?? ''),
@@ -671,10 +713,20 @@ export function projectTeam(state: AppData, viewer: Viewer, projectId: string): 
     members: pending ? [] : usersOfOrg(state, orgId).map((u) => ({ userId: u.id, name: u.name, title: u.title, email: u.email, initials: initials(u.name), colour: u.avatarColour, you: u.id === viewer.userId })),
     yours: orgId === myOrg,
     pending,
+    declined,
+    note,
   })
   const sections = [section(p.clientOrgId, 'Client', !clientLinked(p))]
   if (p.architectOrgId) sections.push(section(p.architectOrgId, 'Architect'))
-  if (p.consultantOrgId) sections.push(section(p.consultantOrgId, 'Sustainability consultant'))
+  if (p.consultantOrgId) {
+    const name = state.world.orgs[p.consultantOrgId]?.name ?? 'The consultancy'
+    const declined = p.consultantLink?.status === 'declined'
+    const link = p.consultantLink
+    const reason = declined && link?.decisionNote ? ` Their note: "${link.decisionNote}"` : ''
+    const when = declined && link?.decidedOn ? ` on ${formatDate(link.decidedOn)}` : ''
+    const note = consultantLinked(p) ? null : declined ? `${name} declined to join this project${when}.${reason} Ask again or choose another consultancy.` : clientLinked(p) ? `${name} has not accepted this project yet. Their people appear here once they do.` : `${name} is asked to join once the client accepts the project.`
+    sections.push(section(p.consultantOrgId, 'Sustainability consultant', !consultantLinked(p), declined, note))
+  }
   return {
     header,
     sections,
