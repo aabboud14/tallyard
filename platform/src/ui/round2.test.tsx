@@ -293,7 +293,7 @@ describe('ProgrammeChart', () => {
   it('describes the whole programme and draws stage bands, milestones and materials', () => {
     render(<ProgrammeChart {...SAMPLE_PROGRAMME} />)
     const chart = byTestId('programme-chart')
-    expect(accessibleName(byRole('img', /Programme for Merrowgate Wharf/))).toBe(SAMPLE_PROGRAMME.description)
+    expect(accessibleName(byRole('group', /Programme for Merrowgate Wharf/))).toBe(SAMPLE_PROGRAMME.description)
     const bands = chart.querySelectorAll('[data-part="stage-band"]')
     expect(bands).toHaveLength(8)
     expect(Array.from(bands).map((b) => b.getAttribute('data-state'))).toEqual(['past', 'past', 'current', 'future', 'future', 'future', 'future', 'future'])
@@ -311,7 +311,7 @@ describe('ProgrammeChart', () => {
     const links = Array.from(chart.querySelectorAll('a[data-part="material-link"]'))
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['/app/marketplace/m1', '/app/marketplace/m2', '/app/marketplace/m3', '/app/marketplace/m4'])
     expect(links[0].textContent).toBe('UB 457x191x67, 7.5 mExpected January to March 2027')
-    expect(links[0].closest('[role="img"]')).toBeNull()
+    expect(links[0].closest('[data-part="plot"]')).toBeNull()
     expect(links[0].getAttribute('title')).toBe('UB 457x191x67, 7.5 m, Expected January to March 2027, in time')
     // The today line sits under the stage names.
     const today = chart.querySelector('[data-part="today"]')!
@@ -376,6 +376,12 @@ describe('ProgrammeChart', () => {
     }
     // A band that is not drawn is not focusable either.
     expect(bands[7].tagName).toBe('DIV')
+    // The bands sit in a labelled group, not an image, so assistive technology reaches each button by its name.
+    const plot = byTestId('programme-chart').querySelector('[data-part="plot"]')!
+    expect(plot.getAttribute('role')).toBe('group')
+    expect(plot.getAttribute('aria-label')).toBe(SAMPLE_PROGRAMME.description)
+    expect(byTestId('programme-chart').querySelector('[role="img"] button, [role="img"] a')).toBeNull()
+    expect(allByRole('button').map(accessibleName)).toContain(stages[2].hoverText)
     click(bands[2])
     const panel = await vi.waitFor(() => byTestId('stage-panel'))
     expect(panel.textContent).toBe('Stage 2, Concept Design1 Jan 2026 to 2 Feb 2026')
@@ -387,7 +393,7 @@ describe('ProgrammeChart', () => {
     const keys = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-key"]'))
     expect(keys).toHaveLength(2)
     expect(keys[0].className).toContain('sm:hidden')
-    expect(keys[0].closest('[role="img"]')).not.toBeNull()
+    expect(keys[0].closest('[data-part="plot"]')).not.toBeNull()
     expect(keys[1].className).toContain('max-sm:hidden')
     for (const key of keys) {
       expect(key.getAttribute('aria-hidden')).toBe('true')
@@ -416,7 +422,7 @@ describe('ProgrammeChart', () => {
       { iso: 'c', at: 0.5, label: 'Apr', major: true, tier: 3 },
     ]
     render(<ProgrammeChart {...SAMPLE_PROGRAMME} axis={{ ticks, startLabel: null }} />)
-    const plot = byRole('img', /Programme for Merrowgate Wharf/)
+    const plot = byRole('group', /Programme for Merrowgate Wharf/)
     expect(plot.className).toContain('@container')
     const labels = Array.from(plot.querySelectorAll('[data-part="tick-label"]'))
     expect(labels.map((l) => [l.textContent, l.getAttribute('data-tier')])).toEqual([
