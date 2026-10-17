@@ -342,7 +342,7 @@ describe('ProgrammeChart', () => {
   })
 
   it("keeps today's stage name inside its narrow band and names it in full above the plot, never over another band", () => {
-    const narrow = SAMPLE_PROGRAMME.stages.map((b) => (b.stage === 2 ? { ...b, from: 0.6, to: 0.605, nameAlign: 'end' as const } : b))
+    const narrow = SAMPLE_PROGRAMME.stages.map((b) => (b.stage === 2 ? { ...b, from: 0.6, to: 0.605 } : b))
     render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={narrow} />)
     const chart = byTestId('programme-chart')
     const band = chart.querySelector<HTMLElement>('[data-part="stage-band"][data-state="current"]')!

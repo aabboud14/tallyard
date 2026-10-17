@@ -1,12 +1,13 @@
 // The last polish before the platform goes back to the partner (feedback/r2f-polish.md), in the built app at 390,
 // 1024 and 1440 px: the consultant's overview leads with his own section; every stage band keeps its words inside
-// itself and the today marker crosses no axis label; the donor building card keeps its drawing in its own column;
-// the testing request sheet keeps its titles readable; Help's topics are all in view on a phone; and a tap leaves no
-// tooltip open in the drawer.
+// itself and the today marker crosses no axis label; the donor building card and the client's project cards keep
+// their drawing clear of the text; the testing request sheet keeps its titles readable; Help's topics are all in view
+// on a phone; and a tap leaves no tooltip open in the drawer.
 import { expect, test, type Page } from '@playwright/test'
 
 const EMAIL = {
   priya: 'priya.nair@studiooriel.example',
+  isla: 'isla.brennan@lanternquay.example',
   tom: 'tom.ashby@ostlea.example',
   marcus: 'marcus.lindqvist@halewick.example',
 } as const
@@ -169,6 +170,38 @@ test("Tom's donor building card keeps its drawing in its own column (note 8)", a
     } else {
       expect(drawing.y + drawing.height, `drawing above the text at ${width}`).toBeLessThanOrEqual(title.y)
     }
+    expect(await horizontalOverflow(page), `${width} px`).toBe(0)
+  }
+  expect(errors).toEqual([])
+})
+
+test("the client's project cards keep their words inside the card, the drawing on top when the card is narrow (review)", async ({ page }) => {
+  const errors = watchErrors(page)
+  await signIn(page, 'isla')
+  for (const width of [1024, 1280, 1440, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/app/home')
+    await expect(page.getByTestId('client-projects')).toBeVisible()
+    const report = await page.getByTestId('client-projects').evaluate((ul) => {
+      const out: string[] = []
+      for (const li of ul.querySelectorAll<HTMLElement>(':scope > li')) {
+        const card = li.getBoundingClientRect()
+        const thumb = li.querySelector('[data-testid^="client-project-thumb"]')!.getBoundingClientRect()
+        const title = li.querySelector('h3 a')!.getBoundingClientRect()
+        // The drawing never runs under the words: beside them or above them.
+        if (!(thumb.right <= title.left + 0.5 || thumb.bottom <= title.top + 0.5)) out.push(`${li.dataset.testid}: drawing under the title`)
+        for (const e of li.querySelectorAll<HTMLElement>('h3, p, dt, dd, [data-testid^="client-project-status"]')) {
+          const r = e.getBoundingClientRect()
+          if (r.width === 0) continue
+          if (r.left < card.left - 0.5 || r.right > card.right + 0.5) out.push(`${li.dataset.testid}: "${e.textContent}" past the card edge`)
+          // No word cut short: the stage, the figures and their labels read in full.
+          if (e.scrollWidth > e.clientWidth + 1) out.push(`${li.dataset.testid}: "${e.textContent}" cut short`)
+        }
+        for (const e of li.querySelectorAll<HTMLElement>('.truncate')) if (e.scrollWidth > e.clientWidth + 1) out.push(`${li.dataset.testid}: "${e.textContent}" truncated`)
+      }
+      return out
+    })
+    expect(report, `${width} px`).toEqual([])
     expect(await horizontalOverflow(page), `${width} px`).toBe(0)
   }
   expect(errors).toEqual([])

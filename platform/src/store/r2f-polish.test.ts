@@ -13,13 +13,13 @@ import { createBuilding, type NewBuildingInput } from './actions/owner'
 import { captureItem } from './actions/surveyor'
 import { signUpState } from './actions/auth'
 import { draftFromText } from './capture'
-import { overviewLeads, projectOverview } from './selectors/project'
+import { overviewLeads, projectOverview, projectsListView } from './selectors/project'
 import { consultantStanding, statementLine, sustainabilityView } from './selectors/sustainability'
 import { consultantDashboard } from './selectors/home-consultant'
 import { surveySteps, type SurveyStep } from './selectors/home-surveyor'
 import { mergeCandidates } from './selectors/claims'
 import { unlinkedBuildings } from './selectors/surveyor'
-import { contractorOnly, DONOR_BUILDINGS, navModel } from './selectors/nav'
+import { contractorOnly, DONOR_BUILDINGS, NEW_PROJECTS, navModel } from './selectors/nav'
 import { pageLocation } from './selectors/arch-breadcrumbs'
 import type { AppData, SurveyStatus } from './types'
 
@@ -145,8 +145,8 @@ const CORBEL: SurveyBuildingInput = {
 
 const TOMS_CORBEL: NewBuildingInput = { ...CORBEL, yearBuilt: null, storeys: null, giaM2: null, surveyorOrgId: ORG_IDS.tarnbrook }
 
-function corbels(items: number): { s: AppData; mine: string; toms: string } {
-  const a = must(createSurveyBuilding(fresh(), actor(U.dana), CORBEL))
+function corbels(items: number, mineName = CORBEL.name): { s: AppData; mine: string; toms: string } {
+  const a = must(createSurveyBuilding(fresh(), actor(U.dana), { ...CORBEL, name: mineName }))
   let s = a.state
   for (let i = 0; i < items; i++) {
     const d = draftFromText('30 no. 203x203x46 UC, 3.2m long, bolted, roof plant room')
@@ -168,8 +168,17 @@ describe('the merge prompt counts what moves, and an empty merge says so (note 1
     const { s, mine, toms } = corbels(0)
     const r = must(mergeSurveyBuilding(s, actor(U.dana), mine, toms))
     expect(r.value.moved).toBe(0)
-    expect(r.state.activity[0]).toMatchObject({ text: 'merged the earlier record of Corbel Yard into Corbel Yard, with no items captured in it', href: `/app/buildings/${toms}` })
+    expect(r.state.activity[0]).toMatchObject({ text: 'merged its earlier record of Corbel Yard, with no items captured in it', href: `/app/buildings/${toms}` })
     expect(r.state.activity.some((e) => /moved 0|0 items/.test(e.text))).toBe(false)
+  })
+
+  it('names both records when an empty merge joins two names at one address, and the prompt names the appointment', () => {
+    const { s, mine, toms } = corbels(0, 'Harrowden Court')
+    const c = mergeCandidates(s, viewer(U.dana)).find((x) => x.fromId === mine && x.intoId === toms)!
+    expect(c.reason).toBe('address')
+    expect(c.prompt).toBe('You added Harrowden Court yourself before Ostlea Estates appointed you. Merge it into Corbel Yard for Ostlea Estates?')
+    const r = must(mergeSurveyBuilding(s, actor(U.dana), mine, toms))
+    expect(r.state.activity[0].text).toBe('merged the earlier record of Harrowden Court into Corbel Yard, with no items captured in it')
   })
 })
 
@@ -193,6 +202,22 @@ describe("the owner's building breadcrumb reads as the sidebar does (note 13)", 
     expect(pageLocation(s, viewer(U.tom), `/app/buildings/${TIVERNE_ID}`).crumbs[0]).toEqual({ label: 'Donor buildings', href: '/app/buildings' })
     expect(navModel(s, viewer(U.tom))!.sections.find((x) => x.id === 'buildings')!.title).toBe(DONOR_BUILDINGS)
     expect(pageLocation(s, viewer(U.dana), `/app/buildings/${TIVERNE_ID}`).crumbs[0].label).toBe('Appointments')
+  })
+
+  it("leads the owner's New project pages with New projects, as its sidebar section reads (review)", () => {
+    const r = must(createOwnerProject(fresh(), actor(U.tom), { name: 'Wexcombe House', projectType: 'office', localAuthority: 'Camden', region: 'Central London', ribaStage: 2, startDate: '2027-09-20', architectOrgId: null }))
+    expect(navModel(r.state, viewer(U.tom))!.sections.find((x) => x.id === 'new-projects')!.title).toBe(NEW_PROJECTS)
+    expect(pageLocation(r.state, viewer(U.tom), `/app/projects/${r.value}`).crumbs).toEqual([
+      { label: 'New projects', href: '/app/projects' },
+      { label: 'Wexcombe House', href: null },
+    ])
+    // The list page it leads to carries the same heading and tab title.
+    expect(projectsListView(r.state, viewer(U.tom)).title).toBe(NEW_PROJECTS)
+    expect(pageLocation(r.state, viewer(U.tom), '/app/projects').title).toBe(NEW_PROJECTS)
+    // The architect and the client keep Projects.
+    expect(projectsListView(fresh(), viewer(U.priya)).title).toBe('Projects')
+    expect(pageLocation(fresh(), viewer(U.priya), `/app/projects/${MERROWGATE_ID}`).crumbs[0].label).toBe('Projects')
+    expect(pageLocation(fresh(), viewer(U.isla), `/app/projects/${MERROWGATE_ID}`).crumbs[0].label).toBe('Projects')
   })
 })
 

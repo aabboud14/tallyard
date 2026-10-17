@@ -91,7 +91,7 @@ describe('pageLocation', () => {
 
   it('never names a project the viewer does not work on', () => {
     const loc = pageLocation(s, viewer(U.tom), `/app/projects/${MERROWGATE_ID}/shortlist`)
-    expect(loc.crumbs).toEqual([{ label: 'Projects', href: null }])
+    expect(loc.crumbs).toEqual([{ label: 'New projects', href: null }])
     expect(JSON.stringify(loc)).not.toContain('Merrowgate')
   })
 

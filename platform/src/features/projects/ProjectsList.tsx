@@ -150,7 +150,7 @@ export function ProjectsList() {
     <Page testId="projects-list">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="m-0 text-2xl font-semibold text-ink">Projects</h1>
+          <h1 className="m-0 text-2xl font-semibold text-ink">{view.title}</h1>
           <p className="m-0 mt-1 text-base text-muted">
             {view.rows.length} {view.rows.length === 1 ? 'project' : 'projects'}
           </p>

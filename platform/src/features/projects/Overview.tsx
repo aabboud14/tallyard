@@ -135,7 +135,7 @@ export function Overview() {
                   </div>
                   <ProgressBar value={view.carbon.securedT} max={view.carbon.shortlistedT} label="Avoided carbon of the approved materials, against everything live on the shortlist" />
                   <p className="m-0 text-xs text-muted">
-                    Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, A1 to A4.
+                    Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, modules A1 to A4.
                   </p>
                 </CardBody>
               </Card>

@@ -175,7 +175,15 @@ export type ProjectListRow = ProjectRef & {
 }
 
 /** requestsHref: Project requests, for a client or a consultancy with any request, waiting or answered; null otherwise. */
-export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean; requestsHref: string | null }
+/** The owner's sidebar section for the projects it builds as client; its list page and their breadcrumbs read the same. */
+export const NEW_PROJECTS = 'New projects'
+
+/** The heading of the projects list, its breadcrumb and its sidebar section: a donor building owner's are its New projects. */
+export function projectsSectionLabel(state: AppData, viewer: Viewer): string {
+  return roleOfUser(state, viewer.userId) === 'owner' ? NEW_PROJECTS : 'Projects'
+}
+
+export type ProjectsListView = { rows: ProjectListRow[]; title: string; canCreate: boolean; empty: boolean; requestsHref: string | null }
 
 export function projectsListView(state: AppData, viewer: Viewer): ProjectsListView {
   const orgId = state.users[viewer.userId]?.orgId
@@ -200,7 +208,7 @@ export function projectsListView(state: AppData, viewer: Viewer): ProjectsListVi
   rows.sort((a, b) => ((a.lastActivityAt ?? '') < (b.lastActivityAt ?? '') ? 1 : (a.lastActivityAt ?? '') > (b.lastActivityAt ?? '') ? -1 : a.name.localeCompare(b.name, 'en-GB')))
   const requests = clientLinkRequests(state, viewer) ?? consultantLinkRequests(state, viewer)
   const requestsHref = requests && requests.pending.length + requests.answered.length > 0 ? '/app/projects/requests' : null
-  return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
+  return { rows, title: projectsSectionLabel(state, viewer), canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
 }
 
 export type NewProjectOptions = {

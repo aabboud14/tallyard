@@ -6,7 +6,7 @@ import { buildingSide, buildingsOfUser, canCaptureIn, canOpenEngagement, isBuild
 import { orgTypeLabel, ROLE_LABELS } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
-import { pendingLinkRequestCount, projectTabs } from './project'
+import { NEW_PROJECTS, pendingLinkRequestCount, projectTabs } from './project'
 import { pendingConsultantRequestCount } from './consultant-requests'
 import { badgedBuildingTabs } from './owner'
 import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
@@ -94,6 +94,8 @@ export const CONTRACTOR_ROLE_LABEL = 'Deconstruction contractor'
 /** The owner's sidebar section for its donor buildings; their pages' breadcrumbs read the same. */
 export const DONOR_BUILDINGS = 'Donor buildings'
 
+export { NEW_PROJECTS }
+
 /**
  * Whether a surveying or deconstruction firm works on buildings only as their contractor (it surveys none and added
  * none): it reads as a deconstruction contractor and has no Capture page to use.
@@ -177,7 +179,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
         item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
       ],
     })
-    if (own.length > 0) sections.push(navSection('new-projects', 'New projects', arranged(own).items))
+    if (own.length > 0) sections.push(navSection('new-projects', NEW_PROJECTS, arranged(own).items))
     // Reservation requests and buildings surveyors ask the owner to confirm both wait on Requests.
     sections.push(navSection('trade', null, [item('requests', 'Requests', '/app/requests', 'Inbox', { badge: badge(pendingRequests(state, org.id) + pendingClaimCount(state, org.id)) })]))
   } else if (role === 'surveyor') {

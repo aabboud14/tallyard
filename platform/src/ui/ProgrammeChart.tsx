@@ -40,8 +40,6 @@ export type ProgrammeStageBandView = {
   datesText?: string
   /** False when the stage lies outside the axis or is too narrow to draw: the band is not drawn. */
   visible?: boolean
-  /** Kept for the selector's callers; the name now always stays inside its band, so the chart no longer reads it. */
-  nameAlign?: 'start' | 'end'
 }
 
 export type ProgrammeMilestoneView = { id: string; label: string; dateText: string; at: number }

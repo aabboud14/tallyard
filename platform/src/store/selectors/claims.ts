@@ -3,7 +3,7 @@
 import type { SourceBuilding } from '../../domain/types'
 import type { AppData, BuildingClaim, BuildingClaimStatus, SurveyStatus, Viewer } from '../types'
 import { buildingSide, roleOfUser } from '../access'
-import { claimAddressedTo, surveySubmitted } from '../actions/claims'
+import { claimAddressedTo, normaliseForMatch, surveySubmitted } from '../actions/claims'
 import { timeAgo } from './common'
 
 export type ClaimState = { status: 'linked' | 'not_linked' | 'pending' | 'declined'; label: string; email: string | null; note: string | null; claimId: string | null }
@@ -145,13 +145,8 @@ export function pendingClaimCount(state: AppData, orgId: string): number {
 
 // ---------- Moving early captures into an appointment (audit 16 October, note 26) ----------
 
-/** Lower case, punctuation dropped, spaces collapsed: 'Corbel Yard, 9 Corbel Lane' and 'corbel yard 9 corbel lane' match. */
-export function normaliseForMatch(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
+// normaliseForMatch lives with the merge action, which names a same-named merge by it, and is re-exported here.
+export { normaliseForMatch }
 
 const STOP_WORDS = new Set(['the', 'house', 'building', 'court', 'yard', 'london', 'street', 'road', 'lane', 'and', 'of'])
 
@@ -194,7 +189,8 @@ function candidate(state: AppData, from: SourceBuilding, into: SourceBuilding, r
   const ownerName = into.ownerOrgId ? (state.world.orgs[into.ownerOrgId]?.name ?? '') : ''
   // Always with the count, one item included ('Move its 1 captured item here?'), so the prompt says what moves.
   const counted = `${itemCount} captured ${itemCount === 1 ? 'item' : 'items'}`
-  const what = itemCount === 0 ? 'Merge it into this appointment?' : `Move its ${counted} here?`
+  // With nothing to move, the prompt names the appointment, as several may be open at one address.
+  const what = itemCount === 0 ? `Merge it into ${into.name} for ${ownerName}?` : `Move its ${counted} here?`
   return {
     fromId: from.id,
     fromName: from.name,

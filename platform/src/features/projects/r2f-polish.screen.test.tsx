@@ -201,5 +201,32 @@ describe('Tooltip on touch (note 15)', () => {
     await waitFor(() => document.querySelector('[role="tooltip"]'))
     expect(document.querySelector('[role="tooltip"]')!.textContent).toBe('Sort and filter projects')
   })
+
+  it('opens again when someone tabs into the trigger after a tap elsewhere, on a device with both (review)', async () => {
+    render(
+      <div>
+        <button type="button">Before</button>
+        <Tooltip content="Sort and filter projects" delay={0}>
+          <button type="button">Sort</button>
+        </Tooltip>
+      </div>,
+    )
+    const [before, button] = Array.from(document.querySelectorAll('button'))
+    act(() => {
+      button.dispatchEvent(pointer('pointerdown', 'touch'))
+      document.dispatchEvent(pointer('pointerup', 'touch'))
+    })
+    act(() => button.focus())
+    await settle()
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+    // The Tab is pressed on the element before it, never on the trigger itself.
+    act(() => before.focus())
+    act(() => {
+      before.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+      button.focus()
+    })
+    await waitFor(() => document.querySelector('[role="tooltip"]'))
+    expect(document.querySelector('[role="tooltip"]')!.textContent).toBe('Sort and filter projects')
+  })
 })
 
