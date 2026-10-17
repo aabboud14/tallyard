@@ -20,3 +20,7 @@ No other assertion changed. The full unit suite (143 files, 1596 tests) and the 
 - Client link banner (programme note 19, market note 6, client_consultant note C3): the programme package's one-sentence inline banner with the market package's neutral envelope icon, and the client_consultant invite row below it.
 - Sign-up (client_consultant note C3, upgrade minor finding): the form takes both the invited-email check and the email typed at sign-in.
 - Sign-in and invites (owner note 28, client_consultant note C3): accepting an invite resolves contractor invites waiting for the email and tells the practice that asked that the new member can accept the project.
+
+## Late commits merged after the usage limit
+
+The first merge took the programme and upgrade branches at ae4297a and 150891b. Their final commits were merged afterwards in the same way: r2f-programme at 961d000 (the plot is a labelled group, so screen readers reach the stage band buttons) and r2f-upgrade at da275bf (date-proof upgrade test, sign-in hints that fit, the 30 day window, a checking link in Help, no notice for accounts made after the update). Both merged without conflicts and needed no integration fix. No assertion changed in the merge; the assertions those commits changed are logged in `r2f-programme.md` and `r2f-upgrade.md`. After them the full unit suite (143 files, 1610 tests) and the 60 end-to-end journeys pass.

@@ -251,7 +251,7 @@ Look and first runs (`feedback/r2f-look.md`)
 
 Programme (`feedback/r2f-programme.md`)
 - The programme card leads every overview, with Keep these dates and Edit programme on the card only; the setup checklist follows as one strip leading with the next required step.
-- Stage bands name themselves when they fit, today's stage always, with a key, keyboard focus and a tap panel; the whole programme ends 120 days after practical completion.
+- Stage bands name themselves when they fit, today's stage always, with a key, keyboard focus and a tap panel; the plot is a labelled group, so screen readers reach each band. The whole programme ends 120 days after practical completion.
 - The axis labels months, never quarters, thinned by width so labels never collide and a year is always named.
 - The client may set the programme of their own new project until an architect is appointed; those dates then read as the client's until the architect confirms them.
 
@@ -259,3 +259,5 @@ Returning visitors (`feedback/r2f-upgrade.md`)
 - The state key is versioned (`tallyard-platform-v2-state`), so a tab of an older build can no longer reseed the new one.
 - A replaced version 1 sandbox, or a version 2 sandbox carried over from the earlier round 2 build, shows a closable notice on every home with "See what changed" (Help, Updated on 16 October).
 - Sign-in after the update explains that earlier accounts need creating again, except for a likely typo, and sign-up starts with the typed email; open tabs offer Reload when a newer build is deployed.
+- A likely typo is an address one edit from a sample domain, or within two edits of an account; the sign-in hints stop 30 days after the browser found the update, and accounts made after it see no notice.
+- Help's checking change links to the Marketplace checking against the viewer's first project; `routeAccess` ignores a query string as it ignores a section.
