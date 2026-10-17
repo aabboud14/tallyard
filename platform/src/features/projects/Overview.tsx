@@ -4,8 +4,10 @@
 // dates'. The architect of a new project then sees a compact setup checklist with the next step and its buttons,
 // and the waiting client folded into it as one line (a decline gets the full client link banner, above the
 // programme, as it needs an answer). Below come the shortlist, avoided carbon and the planning and sustainability
-// requirements, the next steps and details, and the recent activity, collapsed by default.
-import { useState } from 'react'
+// requirements, the next steps and details, and the recent activity, collapsed by default. The order of the leading
+// blocks comes from `overviewLeads`: an owner with no architect yet finds the appoint card under the programme, and
+// the consultant's own section leads his overview, with the programme after it (note 42).
+import { Fragment, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Activity as ActivityIcon, ArrowRight, Leaf, ListChecks, ListTodo, ScrollText } from 'lucide-react'
 import * as f from '../../domain/format'
@@ -71,27 +73,33 @@ export function Overview() {
   return (
     <ProjectPage testId="project-overview">
       <div className="flex flex-col gap-6">
-        {h.canAppointArchitect ? <AppointArchitectCard projectId={projectId} /> : null}
-
         {link && !inlineLink ? <ClientLinkBanner projectId={projectId} onChangeClient={changeClient} /> : null}
 
-        <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} onKeep={keepDates} />
+        {view.leads.map((lead) =>
+          lead === 'consultant' ? (
+            <ConsultantOverview key="consultant" projectId={projectId} />
+          ) : lead === 'appoint' ? (
+            <AppointArchitectCard key="appoint" projectId={projectId} />
+          ) : (
+            <Fragment key="programme">
+              <ProgrammeCard projectId={projectId} side={h.side} onEdit={() => setDialog({ kind: 'programme' })} onKeep={keepDates} />
 
-        {view.setup?.visible ? (
-          <SetupChecklist
-            name={h.name}
-            setup={view.setup}
-            onIntent={(intent) => {
-              if (intent === 'edit_programme') setDialog({ kind: 'programme' })
-              else if (intent === 'keep_programme') keepDates()
-              else if (intent === 'requirements') setDialog({ kind: 'requirements' })
-              else if (intent === 'change_client') setDialog({ kind: 'client', mode: link?.status === 'declined' ? 'ask_again' : 'another' })
-            }}
-            footer={inlineLink && view.setup.focusId !== 'client' ? <ClientLinkBanner projectId={projectId} variant="inline" onChangeClient={changeClient} /> : null}
-          />
-        ) : null}
-
-        {h.side === 'consultant' ? <ConsultantOverview projectId={projectId} /> : null}
+              {view.setup?.visible ? (
+                <SetupChecklist
+                  name={h.name}
+                  setup={view.setup}
+                  onIntent={(intent) => {
+                    if (intent === 'edit_programme') setDialog({ kind: 'programme' })
+                    else if (intent === 'keep_programme') keepDates()
+                    else if (intent === 'requirements') setDialog({ kind: 'requirements' })
+                    else if (intent === 'change_client') setDialog({ kind: 'client', mode: link?.status === 'declined' ? 'ask_again' : 'another' })
+                  }}
+                  footer={inlineLink && view.setup.focusId !== 'client' ? <ClientLinkBanner projectId={projectId} variant="inline" onChangeClient={changeClient} /> : null}
+                />
+              ) : null}
+            </Fragment>
+          ),
+        )}
 
         <div className={h.side === 'consultant' ? 'grid grid-cols-1 gap-6' : 'grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'}>
           {h.side === 'consultant' ? null : (
@@ -127,7 +135,7 @@ export function Overview() {
                   </div>
                   <ProgressBar value={view.carbon.securedT} max={view.carbon.shortlistedT} label="Avoided carbon of the approved materials, against everything live on the shortlist" />
                   <p className="m-0 text-xs text-muted">
-                    Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, A1 to A4.
+                    Of <span className="font-medium tabular-nums text-ink-soft">{f.number(view.carbon.shortlistedT, 1)} tCO2e</span> across shortlisted, sent and approved materials. Against buying the same new, modules A1 to A4.
                   </p>
                 </CardBody>
               </Card>

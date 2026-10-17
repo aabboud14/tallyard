@@ -86,7 +86,7 @@ describe('specSheetRows', () => {
       { section: 'Availability and location', label: 'Storage until the start', value: '7 months' },
       { section: 'Availability and location', label: 'Location', value: 'Central London' },
       { section: 'Availability and location', label: 'Collection point', value: 'From the source site' },
-      { section: 'Sustainability', label: 'Avoided carbon', value: '41.0 tCO2e, 96.8% of new, A1-A4' },
+      { section: 'Sustainability', label: 'Avoided carbon', value: '41.0 tCO2e, 96.8% of new, modules A1 to A4' },
       { section: 'Sustainability', label: 'Sustainability band', value: 'High' },
       { section: 'Price', label: 'Guide price', value: '£715 to £825 per tonne' },
       { section: 'Price', label: 'Market signal', value: 'High demand' },

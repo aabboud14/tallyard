@@ -531,7 +531,17 @@ export type SustainabilityView = {
   goals: GoalRow[]
   schemes: SchemeSummaryView[]
   requirements: TrackerSummary & { atRiskItems: { id: string; title: string }[]; href: string }
-  statement: { status: StatementStatus; label: string; sentText: string | null; canReview: boolean; href: string | null; /** The consultant's text has moved on from the version the client has. */ changedSinceSent: boolean } | null
+  statement: {
+    status: StatementStatus
+    label: string
+    sentText: string | null
+    canReview: boolean
+    href: string | null
+    /** The consultant's text has moved on from the version the client has. */
+    changedSinceSent: boolean
+    /** The card's one line for the viewer (`statementLine`). */
+    line: string
+  } | null
   links: { targets: string | null; certification: string | null; statement: string | null; requirements: string }
   /** "Targets are set by Halewick Sustainability.", or that no consultant is appointed; a sentence with its full stop. */
   targetsNote: string
@@ -544,6 +554,41 @@ export function targetsNote(state: AppData, p: Project): string {
   if (consultantLinked(p)) return `Targets are set by ${name}.`
   if (p.consultantLink?.status === 'declined') return `${name} declined to join. Defaults from the requirements are shown.`
   return clientLinked(p) ? `${name} has not accepted the project yet. Defaults from the requirements are shown.` : `${name} is asked to join once the client accepts. Defaults from the requirements are shown.`
+}
+
+/** Where the project's consultancy stands, for the statement card: none asked, asked and waiting, declined, or on the team. */
+export type ConsultantStanding = { kind: 'none' } | { kind: 'pending'; name: string } | { kind: 'declined'; name: string } | { kind: 'linked'; name: string }
+
+export function consultantStanding(state: AppData, p: Project): ConsultantStanding {
+  if (!p.consultantOrgId) return { kind: 'none' }
+  const name = state.world.orgs[p.consultantOrgId]?.name ?? 'The consultancy'
+  if (consultantLinked(p)) return { kind: 'linked', name }
+  return p.consultantLink?.status === 'declined' ? { kind: 'declined', name } : { kind: 'pending', name }
+}
+
+/**
+ * The statement card's line, for the client or the consultant. A client whose statement is still a draft is told who
+ * is drafting it, and only when someone is: with no consultancy on the team (none asked, or the one asked declined)
+ * it says so instead of promising a review.
+ */
+export function statementLine(
+  side: 'client' | 'consultant',
+  s: { status: StatementStatus; sentText: string | null; canReview: boolean; changedSinceSent: boolean },
+  consultant: ConsultantStanding,
+): string {
+  const sent = s.sentText ?? 'Sent'
+  if (s.canReview) return `${sent}. Read it and mark it reviewed, with any comments for the consultant.`
+  if (side === 'client') {
+    if (s.status === 'reviewed') return 'You reviewed this statement. The consultant sees your comments.'
+    if (s.status !== 'draft') return s.sentText ?? ''
+    if (consultant.kind === 'linked') return `${consultant.name} is drafting it. You will be asked to review it.`
+    if (consultant.kind === 'pending') return `${consultant.name} drafts it once they accept the project. You will be asked to review it.`
+    return 'No sustainability consultant is on this project yet. Once one joins the team, they draft it and you will be asked to review it.'
+  }
+  if (s.changedSinceSent) return `${sent}. It has changed since, so send the updated statement.`
+  if (s.status === 'reviewed') return 'The client has reviewed it. If you change it, send the updated statement for another review.'
+  if (s.status === 'ready_for_review') return `${sent}. Waiting for the client's review.`
+  return 'Drafted from the project records. Edit it, then send it to the client for review.'
 }
 
 /** The shared Sustainability tab, for every side of the project. */
@@ -571,20 +616,23 @@ export function sustainabilityView(state: AppData, viewer: Viewer, projectId: st
     goals: goals.filter((g) => g.target !== null || g.actual !== null),
     schemes: schemeSummaries(state, p),
     requirements: { ...requirementsRollup(state, p), href: `${base(p)}/requirements` },
-    statement:
-      side === 'architect'
-        ? null
-        : {
-            status: doc?.status ?? 'draft',
-            label: statementLabel(side, doc?.status ?? null),
-            sentText: doc?.sentAt ? `Sent on ${dateOf(doc.sentAt)}` : null,
-            canReview: side === 'client' && doc?.status === 'ready_for_review',
-            href: consultant ? `${base(p)}/statement` : doc && doc.status !== 'draft' ? `${base(p)}/sustainability#statement` : null,
-            changedSinceSent: consultant && !!doc && doc.status !== 'draft' && !!doc.sentSections && !sameSections(doc.sentSections, currentStatementSections(state, viewer, projectId) ?? []),
-          },
+    statement: side === 'architect' ? null : statementCardOf(state, viewer, p, side, doc),
     links: { targets: consultant ? `${base(p)}/targets` : null, certification: consultant ? `${base(p)}/certification` : null, statement: consultant ? `${base(p)}/statement` : null, requirements: `${base(p)}/requirements` },
     targetsNote: targetsNote(state, p),
   }
+}
+
+function statementCardOf(state: AppData, viewer: Viewer, p: Project, side: 'client' | 'consultant', doc: ReturnType<typeof sustainabilityOf>['statement']): NonNullable<SustainabilityView['statement']> {
+  const consultant = side === 'consultant'
+  const card = {
+    status: doc?.status ?? 'draft',
+    label: statementLabel(side, doc?.status ?? null),
+    sentText: doc?.sentAt ? `Sent on ${dateOf(doc.sentAt)}` : null,
+    canReview: side === 'client' && doc?.status === 'ready_for_review',
+    href: consultant ? `${base(p)}/statement` : doc && doc.status !== 'draft' ? `${base(p)}/sustainability#statement` : null,
+    changedSinceSent: consultant && !!doc && doc.status !== 'draft' && !!doc.sentSections && !sameSections(doc.sentSections, currentStatementSections(state, viewer, p.id) ?? []),
+  }
+  return { ...card, line: statementLine(side, card, consultantStanding(state, p)) }
 }
 
 // ---------- Tracking across projects ----------

@@ -284,10 +284,11 @@ function SheetDialog({ row, onClose }: { row: TestingRow; onClose: () => void })
             {sh.items.map((i) => (
               <li key={i.tag} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3">
                 <span className="shrink-0 text-xs font-medium tabular-nums text-muted">{i.tag}</span>
-                <span className="min-w-0 flex-1 text-ink">
+                {/* From sm the title and the location share the row as two columns, the title the wider, so a long location wraps in its own column instead of squeezing the title. */}
+                <span className="min-w-0 flex-1 text-ink sm:min-w-48 sm:flex-[3_1_0%]">
                   {i.title}, {i.quantityText}
                 </span>
-                {i.location ? <span className="text-sm text-muted">{i.location}</span> : null}
+                {i.location ? <span className="min-w-0 text-sm text-muted sm:flex-[2_1_0%]">{i.location}</span> : null}
               </li>
             ))}
           </ul>

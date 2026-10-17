@@ -175,7 +175,15 @@ export type ProjectListRow = ProjectRef & {
 }
 
 /** requestsHref: Project requests, for a client or a consultancy with any request, waiting or answered; null otherwise. */
-export type ProjectsListView = { rows: ProjectListRow[]; canCreate: boolean; empty: boolean; requestsHref: string | null }
+/** The owner's sidebar section for the projects it builds as client; its list page and their breadcrumbs read the same. */
+export const NEW_PROJECTS = 'New projects'
+
+/** The heading of the projects list, its breadcrumb and its sidebar section: a donor building owner's are its New projects. */
+export function projectsSectionLabel(state: AppData, viewer: Viewer): string {
+  return roleOfUser(state, viewer.userId) === 'owner' ? NEW_PROJECTS : 'Projects'
+}
+
+export type ProjectsListView = { rows: ProjectListRow[]; title: string; canCreate: boolean; empty: boolean; requestsHref: string | null }
 
 export function projectsListView(state: AppData, viewer: Viewer): ProjectsListView {
   const orgId = state.users[viewer.userId]?.orgId
@@ -200,7 +208,7 @@ export function projectsListView(state: AppData, viewer: Viewer): ProjectsListVi
   rows.sort((a, b) => ((a.lastActivityAt ?? '') < (b.lastActivityAt ?? '') ? 1 : (a.lastActivityAt ?? '') > (b.lastActivityAt ?? '') ? -1 : a.name.localeCompare(b.name, 'en-GB')))
   const requests = clientLinkRequests(state, viewer) ?? consultantLinkRequests(state, viewer)
   const requestsHref = requests && requests.pending.length + requests.answered.length > 0 ? '/app/projects/requests' : null
-  return { rows, canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
+  return { rows, title: projectsSectionLabel(state, viewer), canCreate: roleOfUser(state, viewer.userId) === 'architect', empty: rows.length === 0, requestsHref }
 }
 
 export type NewProjectOptions = {
@@ -358,6 +366,22 @@ export type ProjectOverview = {
   /** Every activity line on the project the viewer may read. */
   activityTotal: number
   empty: boolean
+  /** The blocks that lead the overview, in order (`overviewLeads`). */
+  leads: OverviewLead[]
+}
+
+export type OverviewLead = 'consultant' | 'programme' | 'appoint'
+
+/**
+ * The blocks that lead the project overview, in order. The programme leads for the architect, the client and an owner
+ * on its own New project (note 19); an owner who still has to appoint an architect finds that card straight under the
+ * programme, so the chart starts on the first screen as it does on the architect's new project. The consultant's view
+ * differs (note 42): his own section (targets, certification, requirements and the statement) leads, and the
+ * programme follows it.
+ */
+export function overviewLeads(side: ProjectHeader['side'], canAppointArchitect = false): OverviewLead[] {
+  if (side === 'consultant') return ['consultant', 'programme']
+  return canAppointArchitect ? ['programme', 'appoint'] : ['programme']
 }
 
 /**
@@ -416,6 +440,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     activity: activityFor(state, viewer, { projectId }, 8),
     activityTotal: activityFor(state, viewer, { projectId }, Number.MAX_SAFE_INTEGER).length,
     empty: rows.length === 0,
+    leads: overviewLeads(header.side, header.canAppointArchitect),
   }
 }
 

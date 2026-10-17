@@ -256,7 +256,7 @@ describe('the smaller review findings', () => {
     expect(pageLocation(s, viewer(U.dana), `/app/buildings/${AMBREY_ID}`).crumbs.map((c) => c.label)).toEqual(['Appointments', 'Not yet linked', 'Ambrey House'])
     expect(pageLocation(s, viewer(U.dana), `/app/buildings/${AMBREY_ID}`).crumbs[1].href).toBe('/app/buildings#not-yet-linked')
     expect(pageLocation(s, viewer(U.dana), `/app/buildings/${TIVERNE_ID}`).crumbs.map((c) => c.label)).toEqual(['Appointments', 'Tiverne House'])
-    expect(pageLocation(s, viewer(U.tom), `/app/buildings/${TIVERNE_ID}`).crumbs.map((c) => c.label)).toEqual(['Buildings', 'Tiverne House'])
+    expect(pageLocation(s, viewer(U.tom), `/app/buildings/${TIVERNE_ID}`).crumbs.map((c) => c.label)).toEqual(['Donor buildings', 'Tiverne House'])
   })
 
   it('gives a contractor-only firm dating tiles, not capture and survey counts', () => {
@@ -284,7 +284,7 @@ describe('the smaller review findings', () => {
     expect(routeAccess(s, viewer(U.dana), path)).toBe('ok')
     expect(routeAccess(s, viewer(U.priya), path)).toBe('forbidden')
     expect(routeAccess(s, viewer(U.tom), `${path}/x`)).toBe('not_found')
-    expect(pageLocation(s, viewer(U.tom), path).crumbs.map((c) => c.label)).toEqual(['Buildings', 'Tiverne House', 'Activity'])
+    expect(pageLocation(s, viewer(U.tom), path).crumbs.map((c) => c.label)).toEqual(['Donor buildings', 'Tiverne House', 'Activity'])
     const tom = buildingActivityDays(s, viewer(U.tom), TIVERNE_ID)!
     const tomRows = tom.days.flatMap((d) => d.rows)
     expect(tom.total).toBe(tomRows.length)

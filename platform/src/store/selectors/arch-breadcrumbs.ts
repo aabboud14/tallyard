@@ -3,9 +3,9 @@
 import type { AppData, Viewer } from '../types'
 import { buildingSide, isBuildingContractor, projectSide, roleOfUser } from '../access'
 import { listingOf, lotByPublicId } from '../lots'
-import { projectTabs } from './project'
+import { projectsSectionLabel, projectTabs } from './project'
 import { buildingTabs } from './owner'
-import { routeAccess } from './nav'
+import { DONOR_BUILDINGS, routeAccess } from './nav'
 import { MARKETPLACE_PATH, marketplaceHref } from '../paths'
 import { addressProjectFor } from './arch-discover'
 import { linkPageTitle } from './links'
@@ -55,8 +55,9 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string, a
   const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
   const [, section = 'home', id, tab, sub] = parts
   const access = routeAccess(state, viewer, pathname)
-  // A surveying firm's buildings page is its Appointments, as the page title says.
-  const sectionLabel = section === 'buildings' && roleOfUser(state, viewer.userId) === 'surveyor' ? 'Appointments' : (SECTION_LABELS[section] ?? slugLabel(section))
+  // A surveying firm's buildings page is its Appointments, as the page title says. A donor building owner's projects
+  // are its New projects, as its sidebar section and the list's heading read.
+  const sectionLabel = section === 'buildings' && roleOfUser(state, viewer.userId) === 'surveyor' ? 'Appointments' : section === 'projects' ? projectsSectionLabel(state, viewer) : (SECTION_LABELS[section] ?? slugLabel(section))
   const sectionHref = section === 'engagements' ? null : section === 'discover' ? MARKETPLACE_PATH : `/app/${section}`
   const done = (crumbs: AppCrumb[]): PageLocation => {
     const last = crumbs[crumbs.length - 1]
@@ -90,7 +91,10 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string, a
     if (!b || !side) return done([crumb(sectionLabel, sectionHref)])
     // A building the firm added itself is not an appointment yet: it sits under Not yet linked on that page.
     const group = side === 'surveyor' && b.ownerOrgId === null ? [crumb(NOT_YET_LINKED, `${sectionHref}#not-yet-linked`)] : []
-    const base = [crumb(sectionLabel, sectionHref), ...group, crumb(b.name, `/app/buildings/${id}`)]
+    // The owner's building pages sit under Donor buildings, as the sidebar section reads (the list page itself keeps
+    // its title, Buildings, as it lists New projects too).
+    const parent = side === 'owner' ? crumb(DONOR_BUILDINGS, sectionHref) : crumb(sectionLabel, sectionHref)
+    const base = [parent, ...group, crumb(b.name, `/app/buildings/${id}`)]
     if (tab === undefined) return done(base)
     const t = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).find((x) => x.id === tab)
     const tabCrumb = crumb(t ? t.label : slugLabel(tab), `/app/buildings/${id}/${tab}`)

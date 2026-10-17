@@ -2,7 +2,7 @@
 // are needed, shortlist by status, last activity). Architects create projects here. A new project shows how far
 // its setup has gone and what comes next; one the client has not accepted says so.
 import { Link } from 'react-router'
-import { Clock, FolderPlus, MailQuestion, Inbox, LayoutGrid, List, ListChecks, UserRoundX } from 'lucide-react'
+import { Clock, FolderPlus, Inbox, LayoutGrid, List, ListChecks } from 'lucide-react'
 import { formatDateShort } from '../../domain/dates'
 import { useApp, useNow, useView } from '../../store'
 import { projectsListView, type ProjectListRow } from '../../store/selectors/project'
@@ -11,6 +11,7 @@ import { Button, Card, EmptyState, Pill, ProjectThumbnail, SegmentedControl, Tab
 import { projectVisuals, type ProjectVisual } from '../../store/selectors/project-visuals'
 import { Page } from '../../app/Page'
 import { ProjectProgress } from './ProjectParts'
+import { ClientLinkPill } from './ClientLinkPill'
 import { consultantProjectSummaries, type ConsultantProjectSummary } from '../../store/selectors/consultant-projects'
 import { ConsultantCardSummary, ConsultantProjectsTable } from './ConsultantProjects'
 
@@ -30,15 +31,7 @@ function StatusPills({ p }: { p: ProjectListRow }) {
           Setting up, {p.setup.done} of {p.setup.total}
         </Pill>
       ) : null}
-      {p.linkStatus === 'pending' ? (
-        <Pill tone="neutral" size="sm" icon={MailQuestion} title="The client organisation has not yet accepted the request to add them to this project" data-testid={`link-pill-${p.id}`}>
-          Client to accept
-        </Pill>
-      ) : p.linkStatus === 'declined' ? (
-        <Pill tone="warning" size="sm" icon={UserRoundX} data-testid={`link-pill-${p.id}`}>
-          Client declined
-        </Pill>
-      ) : null}
+      <ClientLinkPill status={p.linkStatus} testId={`link-pill-${p.id}`} />
     </span>
   )
 }
@@ -157,7 +150,7 @@ export function ProjectsList() {
     <Page testId="projects-list">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="m-0 text-2xl font-semibold text-ink">Projects</h1>
+          <h1 className="m-0 text-2xl font-semibold text-ink">{view.title}</h1>
           <p className="m-0 mt-1 text-base text-muted">
             {view.rows.length} {view.rows.length === 1 ? 'project' : 'projects'}
           </p>

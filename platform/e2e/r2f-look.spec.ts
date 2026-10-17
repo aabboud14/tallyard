@@ -74,7 +74,7 @@ test('a new project leads the home with its setup, and its client is told what c
   const first = page.locator('[data-testid^="home-project-"]').first()
   await expect(first).toHaveAttribute('data-testid', `home-project-${id}`)
   await expect(page.getByTestId(`home-setup-pill-${id}`)).toContainText('Setting up')
-  await expect(page.getByTestId(`home-link-pill-${id}`)).toHaveText('Waiting for client')
+  await expect(page.getByTestId(`home-link-pill-${id}`)).toHaveText('Client to accept')
   await expect(page.getByTestId(`home-setup-next-${id}`)).toBeVisible()
   await expect(page.getByTestId('metric-projects')).toContainText('3')
   await expect(page.getByTestId('metric-projects-setup')).toHaveText('1 setting up')

@@ -10,7 +10,7 @@ export const LABELS = {
   L8: 'Sample data only. Do not enter real buildings or photos.',
   L9: 'Illustrative and rule-based. It does not measure how many real buildings fit this description.',
   L10: 'Market signal, updated monthly',
-  L11: 'Comparison with buying new, modules A1-A4, simplified method. Not a whole life carbon assessment.',
+  L11: 'Comparison with buying new, modules A1 to A4, simplified method. Not a whole life carbon assessment.',
   L12: 'A project assessment would use the factor for the steel the project would otherwise buy.',
   L13: "Potential carbon benefit of reuse. Reported outside the building's life cycle (module D). Do not add it to a receiving project's figures.",
   L14: 'No avoided carbon is claimed for unused surplus.',

@@ -199,6 +199,14 @@ test('a deconstruction contractor sets a date and the owner applies it', async (
   await page.locator('input[type=password]').fill('sandbox-pass')
   await page.getByTestId('signin-submit').click()
   await page.waitForURL('**/app/home**')
+  // A firm that only dates buildings is offered neither Capture nor Add building on its home or in its sidebar;
+  // Appointments offers adding a building to survey, and says what it is for (polish, note 12).
+  await expect(page.getByTestId('surveyor-home')).toBeVisible()
+  await expect(page.getByTestId('home-add-building')).toHaveCount(0)
+  await expect(page.getByTestId('home-capture')).toHaveCount(0)
+  await expect(page.getByTestId('sidebar').getByTestId('nav-new-building')).toHaveCount(0)
+  await page.goto('/app/buildings')
+  await expect(page.getByTestId('add-building')).toHaveText('Add a building to survey')
   await page.goto(`/app/buildings/${TIVERNE}/availability`)
   // Audit 16 October, note 28: a new contractor no longer inherits the previous one's months, so TH-07 starts unset.
   await page.getByTestId('avail-TH-07-set').click()

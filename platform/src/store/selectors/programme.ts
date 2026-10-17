@@ -37,7 +37,10 @@ export type ProgrammeStageBand = {
    * than MIN_BAND_SHARE of it (a sliver), unless it is today's stage. The description still lists a sliver.
    */
   visible: boolean
-  /** Where the band's name sits: at its start, or at its end for a band in the right half, so a name wider than its band runs into the chart rather than off its edge. */
+  /**
+   * Which half of the chart the band's middle falls in: 'end' for the right half. The chart no longer reads it, since
+   * every band keeps its name inside itself (r2f-polish, note 17); it stays, with its unit test, under P8.
+   */
   nameAlign: 'start' | 'end'
   /** True when the stage runs on past the right edge (stage 6 on the whole programme, and stage 7): drawn with an open edge. */
   open: boolean

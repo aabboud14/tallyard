@@ -31,6 +31,14 @@ export type ClaimRequestInput = { email: string; name: string; message: string }
 
 export type SurveyBuildingInput = BuildingDetailsInput & { owner: ClaimRequestInput | null }
 
+/** Lower case, punctuation dropped, spaces collapsed: 'Corbel Yard, 9 Corbel Lane' and 'corbel yard 9 corbel lane' match. */
+export function normaliseForMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
 /** Whether a claim is addressed to this organisation: a donor building owner with a member using the email named. */
 export function claimAddressedTo(state: AppData, claim: BuildingClaim, orgId: string): boolean {
   return roleOfOrg(state, orgId) === 'owner' && usersOfOrg(state, orgId).some((u) => normaliseEmail(u.email) === claim.ownerEmail)
@@ -302,7 +310,11 @@ export function mergeSurveyBuilding(state: AppData, actor: Actor, fromBuildingId
   let s = core.state
   const n = plural(core.moved, 'item')
   const href = `/app/buildings/${into.id}`
-  s = log(s, { at: a.now, orgIds: [a.org.id, into.ownerOrgId], buildingId: into.id, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: `moved ${n} captured earlier into ${into.name}`, href: `${href}/inventory` })
+  // With nothing captured yet, the record merges without items, and the line says so instead of 'moved 0 items'. Two
+  // records of the same name read as one building's earlier record, not as one building merged into itself.
+  const earlier = normaliseForMatch(from.name) === normaliseForMatch(into.name) ? `its earlier record of ${into.name}` : `the earlier record of ${from.name} into ${into.name}`
+  const text = core.moved > 0 ? `moved ${n} captured earlier into ${into.name}` : `merged ${earlier}, with no items captured in it`
+  s = log(s, { at: a.now, orgIds: [a.org.id, into.ownerOrgId], buildingId: into.id, projectId: null, actorUserId: a.user.id, actor: a.user.name, text, href: core.moved > 0 ? `${href}/inventory` : href })
   if (core.moved > 0) {
     s = notify(s, { orgIds: [into.ownerOrgId], kind: 'appointed', title: `${a.org.name} added ${n} to ${into.name}`, body: 'Captured before your appointment. Private until you decide.', href: `${href}/inventory`, at: a.now, actorUserId: a.user.id })
   }

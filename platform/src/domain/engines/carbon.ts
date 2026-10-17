@@ -1,4 +1,4 @@
-// F2. Upfront carbon avoided against buying new (A1-A4), simplified method.
+// F2. Upfront carbon avoided against buying new (modules A1 to A4), simplified method.
 import type { FamilyId, InventoryItem, SourceType } from '../types'
 import { FAMILIES } from '../reference/families'
 import type { Assumptions } from '../reference/assumptions'

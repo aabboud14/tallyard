@@ -97,3 +97,36 @@ export function surveyorDashboard(state: AppData, viewer: Viewer): SurveyorDashb
     firstRun: appointed === 0 && home.unlinked.length === 0,
   }
 }
+
+// ---------- Survey steps ----------
+
+/** 'waiting': a step another party has to take, asked for and not answered yet (the owner's confirmation). */
+export type SurveyStepState = 'done' | 'current' | 'waiting' | 'todo'
+export type SurveyStep = { key: 'appointed' | 'added' | 'owner' | 'in_progress' | 'submitted'; label: string; state: SurveyStepState }
+
+const APPOINTED_ORDER = { not_started: 0, in_progress: 1, submitted: 2 } as const
+
+/**
+ * The steps of a survey on the surveyor home, with exactly one current step at most: the firm's own next step.
+ * An appointed building reads Appointed, Capturing, Submitted. A building the firm added itself reads Added, then the
+ * owner's confirmation, then Capturing and Submitted: capturing can start meanwhile and is the current step until the
+ * survey is submitted, while the owner's confirmation reads 'waiting' as long as the request is open (and 'todo'
+ * before one is sent or after a decline). Submitting waits for the link, so it is never done here.
+ */
+export function surveySteps(status: SurveyStatus, claimStatus: 'linked' | 'not_linked' | 'pending' | 'declined' | null): SurveyStep[] {
+  if (claimStatus === null || claimStatus === 'linked') {
+    const order = APPOINTED_ORDER[status]
+    const state = (at: number): SurveyStepState => (at < order || (at === order && status === 'submitted') ? 'done' : at === order ? 'current' : 'todo')
+    return [
+      { key: 'appointed', label: 'Appointed', state: state(0) },
+      { key: 'in_progress', label: 'Capturing', state: state(1) },
+      { key: 'submitted', label: 'Submitted', state: state(2) },
+    ]
+  }
+  return [
+    { key: 'added', label: 'Added', state: 'done' },
+    { key: 'owner', label: 'Owner confirms', state: claimStatus === 'pending' ? 'waiting' : 'todo' },
+    { key: 'in_progress', label: 'Capturing', state: status === 'submitted' ? 'done' : 'current' },
+    { key: 'submitted', label: 'Submitted', state: 'todo' },
+  ]
+}

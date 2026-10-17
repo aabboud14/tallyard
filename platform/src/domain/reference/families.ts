@@ -43,7 +43,7 @@ export const FAMILIES: Record<FamilyId, Family> = {
     factorBasis: 't',
     factorNewSource: 'Published: UK average for new structural sections',
     factorNewStatus: 'published',
-    factorReuseSource: 'Indicative: rounded up from published declarations for reclaimed steel (about 0.045 to 0.047 for modules A1-A3)',
+    factorReuseSource: 'Indicative: rounded up from published declarations for reclaimed steel (about 0.045 to 0.047 for modules A1 to A3)',
     factorReuseStatus: 'indicative',
     newPrice: 1000,
     baseReuseRatio: 0.8,

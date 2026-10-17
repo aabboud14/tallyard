@@ -189,21 +189,7 @@ export function StatementCard({ v, projectId }: { v: SustainabilityView; project
   const s = v.statement
   if (!s) return null
   const isClient = v.side === 'client'
-  const line = s.canReview
-    ? `${s.sentText ?? 'Sent'}. Read it and mark it reviewed, with any comments for the consultant.`
-    : isClient
-      ? s.status === 'reviewed'
-        ? 'You reviewed this statement. The consultant sees your comments.'
-        : s.status === 'draft'
-          ? 'The consultant is drafting it. You will be asked to review it.'
-          : (s.sentText ?? '')
-      : s.changedSinceSent
-        ? `${s.sentText ?? 'Sent'}. It has changed since, so send the updated statement.`
-        : s.status === 'reviewed'
-          ? 'The client has reviewed it. If you change it, send the updated statement for another review.'
-          : s.status === 'ready_for_review'
-            ? `${s.sentText ?? 'Sent'}. Waiting for the client's review.`
-            : 'Drafted from the project records. Edit it, then send it to the client for review.'
+  const line = s.line
   return (
     <section id="statement" aria-labelledby="statement-title" className="scroll-mt-24" data-testid="statement-card">
       <div className={`flex flex-col gap-4 rounded-lg border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${s.canReview ? 'border-info-line bg-info-soft/60' : 'border-line bg-surface'}`}>

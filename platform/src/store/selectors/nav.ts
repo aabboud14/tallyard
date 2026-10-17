@@ -6,7 +6,7 @@ import { buildingSide, buildingsOfUser, canCaptureIn, canOpenEngagement, isBuild
 import { orgTypeLabel, ROLE_LABELS } from '../../sandbox/accounts'
 import { projectWishlist } from '../lots'
 import { initials } from './common'
-import { pendingLinkRequestCount, projectTabs } from './project'
+import { NEW_PROJECTS, pendingLinkRequestCount, projectTabs } from './project'
 import { pendingConsultantRequestCount } from './consultant-requests'
 import { badgedBuildingTabs } from './owner'
 import { appointments, NOT_YET_LINKED, unlinkedBuildings } from './surveyor'
@@ -91,6 +91,11 @@ function lastActivityByProject(state: AppData, orgId: string): Map<string, strin
 /** The role label for a surveying firm whose only buildings are ones it dates as deconstruction contractor. */
 export const CONTRACTOR_ROLE_LABEL = 'Deconstruction contractor'
 
+/** The owner's sidebar section for its donor buildings; their pages' breadcrumbs read the same. */
+export const DONOR_BUILDINGS = 'Donor buildings'
+
+export { NEW_PROJECTS }
+
 /**
  * Whether a surveying or deconstruction firm works on buildings only as their contractor (it surveys none and added
  * none): it reads as a deconstruction contractor and has no Capture page to use.
@@ -167,14 +172,14 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), item('marketplace', 'Marketplace', MARKETPLACE_PATH, 'Store')]))
     sections.push({
       id: 'buildings',
-      title: 'Donor buildings',
+      title: DONOR_BUILDINGS,
       tools: null,
       items: [
         ...buildings.map((b) => item(`building-${b.id}`, b.name, `/app/buildings/${b.id}`, 'Building2', { children: badgedBuildingTabs(state, b, 'owner', { contractor: false }).map((t) => item(`building-${b.id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })),
         item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
       ],
     })
-    if (own.length > 0) sections.push(navSection('new-projects', 'New projects', arranged(own).items))
+    if (own.length > 0) sections.push(navSection('new-projects', NEW_PROJECTS, arranged(own).items))
     // Reservation requests and buildings surveyors ask the owner to confirm both wait on Requests.
     sections.push(navSection('trade', null, [item('requests', 'Requests', '/app/requests', 'Inbox', { badge: badge(pendingRequests(state, org.id) + pendingClaimCount(state, org.id)) })]))
   } else if (role === 'surveyor') {
@@ -185,8 +190,10 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
       return item(`building-${id}`, name, href, 'Building2', { children: tabs.map((t) => item(`building-${id}-${t.id}`, t.label, t.href, null, { badge: t.badge })) })
     }
     const unlinked = unlinkedBuildings(state, viewer)
-    // A firm that only sets dates as a deconstruction contractor has nothing to capture in, so no Capture item.
-    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), ...(contractorOnly(state, viewer) ? [] : [item('capture', 'Capture', '/app/capture', 'Camera')])]))
+    // A firm that only sets dates as a deconstruction contractor has nothing to capture in, so no Capture item, and no
+    // Add building either: adding a building starts a survey of the firm's own. Appointments still offers it, explained.
+    const datesOnly = contractorOnly(state, viewer)
+    sections.push(navSection('main', null, [item('home', 'Home', '/app/home', 'House'), ...(datesOnly ? [] : [item('capture', 'Capture', '/app/capture', 'Camera')])]))
     sections.push({
       id: 'clients',
       title: 'Clients',
@@ -194,7 +201,7 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
       items: [
         ...appointments(state, viewer).map((g) => item(`client-${g.orgId}`, g.clientName, g.buildings[0]?.href ?? '/app/buildings', 'Folder', { children: g.buildings.map((b) => buildingItem(b.id, b.name, b.href)) })),
         ...(unlinked.length > 0 ? [item('client-unlinked', NOT_YET_LINKED, unlinked[0].href, 'Folder', { children: unlinked.map((b) => buildingItem(b.id, b.name, b.href)) })] : []),
-        item('new-building', 'Add building', '/app/buildings?new=1', 'Plus'),
+        ...(datesOnly ? [] : [item('new-building', 'Add building', '/app/buildings?new=1', 'Plus')]),
       ],
     })
   } else {
@@ -209,7 +216,9 @@ export function navModel(state: AppData, viewer: Viewer): NavModel | null {
     org: { id: org.id, name: org.name, typeLabel: orgTypeLabel(org.type), roleLabel: role === 'surveyor' && contractorOnly(state, viewer) ? CONTRACTOR_ROLE_LABEL : ROLE_LABELS[role], initials: initials(org.name) },
     user: { id: user.id, name: user.name, email: user.email, title: user.title, initials: initials(user.name), colour: user.avatarColour, sample: user.sample },
     role,
-    sections,
+    // A section with nothing in it is left out, so a new client or consultancy sees no bare Projects heading with its
+    // sort menu; the home's first run says where projects will appear.
+    sections: sections.filter((x) => x.items.length > 0),
     footer: [item('help', 'Help', '/app/help', 'CircleHelp'), item('settings', 'Settings', '/app/settings', 'Settings')],
     unread: unreadCount(state, viewer),
   }

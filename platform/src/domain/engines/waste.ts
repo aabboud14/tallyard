@@ -77,7 +77,7 @@ export function unresolvedNotice(u: { count: number; tonnes: number }): string |
 
 export type ReuseCarbonRow = { row: number; stream: string; family: string; tonnes: number; quantity: number; basis: 't' | 'm2'; factorNew: number; factorReuse: number; benefit: number }
 
-/** Potential carbon benefit of off-site component reuse, donor side, A1-A3 only (module D). */
+/** Potential carbon benefit of off-site component reuse, donor side, modules A1 to A3 only (module D). */
 export function reuseCarbonBenefit(rows: WasteRow[], _a: Assumptions): { rows: ReuseCarbonRow[]; total: number } {
   const out: ReuseCarbonRow[] = []
   for (const r of rows) {

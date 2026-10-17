@@ -5,10 +5,12 @@
 // band buttons stay reachable by keyboard and screen readers (an image would hide them). From 640 px each
 // material's name in the label column is a link to the material, with its availability window under it. Axis
 // labels come in tiers (programmeAxis) and a container query on the plot shows each tier from the width it was
-// fitted to, so no two labels ever collide. A stage band shows its name whenever the band is wide enough; today's
-// stage always shows its name, running past a narrow band's edge into the chart. Each band names itself and its
-// dates on hover and keyboard focus, and in a small panel on a tap or click. A key under the lane names every
-// stage drawn, so a band too narrow for its name can still be read.
+// fitted to, so no two labels ever collide. Every band keeps its number and name inside itself, truncated where the
+// band is narrow, so no band's words ever cover another band or take the pointer meant for it. Today's stage is
+// named in full in a line above the plot, and the today marker in the plot reads only "Today". The axis labels sit
+// above the today marker, so the today line never runs through one. Each band names itself and its dates on hover
+// and keyboard focus, and in a small panel on a tap or click. A key under the lane names every stage drawn, so a
+// band too narrow for its name can still be read.
 import type { ReactNode } from 'react'
 import { Link, useInRouterContext } from 'react-router'
 import { cx } from './cx'
@@ -38,8 +40,6 @@ export type ProgrammeStageBandView = {
   datesText?: string
   /** False when the stage lies outside the axis or is too narrow to draw: the band is not drawn. */
   visible?: boolean
-  /** Where the name sits: 'end' for a band in the right half, so a name wider than the band runs into the chart. */
-  nameAlign?: 'start' | 'end'
 }
 
 export type ProgrammeMilestoneView = { id: string; label: string; dateText: string; at: number }
@@ -66,7 +66,7 @@ export type ProgrammeChartProps = {
   /** startLabel names the month at the left edge when the first tick has no label, for example "Sep 2025". */
   axis: { ticks: readonly ProgrammeTick[]; startLabel?: string | null }
   today: { at: number }
-  /** For example "Today: stage 2, Concept Design". */
+  /** For example "Today: stage 2, Concept Design": the line above the plot, which never covers a band. */
   todayLabel: string
   stages: readonly ProgrammeStageBandView[]
   milestones: readonly ProgrammeMilestoneView[]
@@ -93,31 +93,20 @@ const BAND: Record<ProgrammeStageBandView['state'], string> = {
 /** The band's own fill behind its number and name. */
 const BAND_TEXT: Record<ProgrammeStageBandView['state'], string> = { past: 'bg-subtle', current: 'bg-brand-600', future: 'bg-surface' }
 
-/** The name shows once the band is wide enough for a few letters of it. Today's stage always shows its name. */
-const BAND_NAME: Record<Exclude<ProgrammeStageBandView['state'], 'current'>, string> = { past: 'hidden @min-[60px]:block', future: 'hidden @min-[60px]:block' }
+/**
+ * The name shows once the band is wide enough for a few letters of it; today's stage, drawn solid, from a little
+ * narrower. Either way it is truncated inside the band, and the line above the plot names today's stage in full.
+ */
+const BAND_NAME: Record<ProgrammeStageBandView['state'], string> = { past: 'hidden @min-[60px]:block', current: 'hidden @min-[44px]:block', future: 'hidden @min-[60px]:block' }
 
 /** A visible focus ring, raised above the neighbouring bands so none of it is hidden. */
 const BAND_FOCUS = 'outline-none focus-visible:z-[4] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
 
 function StageBandBody({ s }: { s: ProgrammeStageBandView }) {
-  if (s.state === 'current') {
-    // Today's stage names itself in full. On a band narrower than its name, the name runs past the band's edge into
-    // the chart, over its neighbours: from its start, or from its end on a band in the right half.
-    return (
-      // On a band narrower than a long name, a surface edge sets the name apart from the bands it runs over.
-      <span data-part="stage-text" className="relative z-[3] flex shrink-0 items-center whitespace-nowrap rounded-[3px] bg-brand-600 px-1 py-0.5 @max-[180px]:shadow-[0_0_0_2px_var(--color-surface)]">
-        <span data-part="stage-number" className="tabular-nums">
-          {s.stage}
-        </span>
-        <span data-part="stage-name" className="ml-1 block" data-always="true">
-          {s.name}
-        </span>
-      </span>
-    )
-  }
   return (
-    // Above the today line, on the band's own colour, so the line never runs through the words.
-    <span data-part="stage-text" className={cx('relative z-[2] flex min-w-0 items-center rounded-[2px] px-0.5', BAND_TEXT[s.state])}>
+    // Above the today line, on the band's own colour, so the line never runs through the words. Inside the band and
+    // clipped by it, and never a target of its own, so the pointer always reaches the band underneath.
+    <span data-part="stage-text" className={cx('pointer-events-none relative z-[2] flex min-w-0 items-center rounded-[2px] px-0.5', BAND_TEXT[s.state])}>
       {/* A band too narrow for its number shows none rather than a clipped one; the key and its hover text name it. */}
       <span data-part="stage-number" className="hidden whitespace-nowrap tabular-nums @min-[10px]:block">
         {s.stage}
@@ -133,10 +122,9 @@ function StageBand({ s }: { s: ProgrammeStageBandView }) {
   const current = s.state === 'current'
   const hidden = s.visible === false
   const className = cx(
-    '@container absolute inset-y-0.5 flex min-w-0 items-center rounded-[3px] px-1 text-left text-2xs font-medium',
+    '@container absolute inset-y-0.5 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1 text-left text-2xs font-medium',
     BAND[s.state],
-    current ? 'min-w-2.5' : 'overflow-hidden',
-    current && s.nameAlign === 'end' && 'justify-end @min-[180px]:justify-start',
+    current && 'min-w-2.5',
     s.open && 'rounded-r-none border-r-2 border-dashed border-line-strong',
     hidden && 'hidden',
   )
@@ -228,6 +216,11 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
   const milestoneRows = Math.max(1, milestones.length)
   return (
     <div data-testid={testId} className={cx('flex min-w-0 flex-col gap-3', className)}>
+      {/* Today's stage in full, above the plot, where it never covers a band (the marker in the plot reads "Today"). */}
+      <p data-part="today-stage" className="m-0 inline-flex items-center gap-2 text-sm font-medium text-ink sm:ml-[200px]">
+        <span aria-hidden="true" className="h-3.5 w-0.5 shrink-0 bg-brand-600" />
+        {todayLabel}
+      </p>
       {axis.startLabel ? (
         <p aria-hidden="true" className="m-0 text-2xs tabular-nums text-muted sm:hidden">
           From {axis.startLabel}
@@ -236,7 +229,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
       <div className="grid min-w-0 gap-x-5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
         {/* Lane names, from 640 px. On phones each lane's name sits above it. */}
         <div className="max-sm:hidden">
-          <div aria-hidden="true" className="flex h-12 items-start justify-end pt-6 text-2xs tabular-nums text-muted" data-part="start-label">
+          <div aria-hidden="true" className="flex h-12 items-start justify-end pt-1 text-2xs tabular-nums text-muted" data-part="start-label">
             {axis.startLabel}
           </div>
           <LaneLabel className="h-12">RIBA stages</LaneLabel>
@@ -257,10 +250,10 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
           {/* Grid lines at the ticks, stronger on major ticks. */}
           <div className="pointer-events-none absolute inset-0">
             {axis.ticks.map((t) => (
-              <div key={t.iso} className={cx('absolute bottom-0 top-5 w-px', t.major ? 'bg-line' : 'bg-line-soft', t.label === null && !t.major && 'max-sm:hidden')} style={{ left: pos(t.at) }} />
+              <div key={t.iso} className={cx('absolute bottom-0 top-0 w-px', t.major ? 'bg-line' : 'bg-line-soft', t.label === null && !t.major && 'max-sm:hidden')} style={{ left: pos(t.at) }} />
             ))}
           </div>
-          <div className="relative h-5" />
+          {/* The axis labels lead the plot; the today marker sits in its own row below them. */}
           <div className="relative h-7 text-2xs tabular-nums text-muted">
             {labelled.map((t) => (
               <span key={t.iso} data-part="tick-label" data-tier={t.tier ?? 0} className={cx('absolute top-1 whitespace-nowrap pl-1', TICK_TIER_CLASS[t.tier ?? 0])} style={{ left: pos(t.at) }}>
@@ -269,6 +262,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               </span>
             ))}
           </div>
+          <div className="relative h-5" data-part="today-row" />
           <div className="relative z-[2] w-fit bg-surface pr-1 pt-1 text-xs text-muted sm:hidden">RIBA stages</div>
           <div className="relative h-12">
             {stages.map((s) => (
@@ -316,11 +310,11 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
               </div>
             )
           })}
-          {/* Today runs through every lane, labelled at the top. */}
+          {/* Today runs through every lane from under the axis labels, marked "Today" at its top. */}
           {/* A thin surface edge keeps the line visible where it crosses today's stage, which is the same colour. */}
-          <div data-part="today" className="pointer-events-none absolute bottom-0 top-4 z-[1] w-0.5 -translate-x-1/2 bg-brand-600 shadow-[0_0_0_1px_var(--color-surface)]" style={{ left: pos(today.at) }} />
-          <div className={cx('pointer-events-none absolute top-0 z-[3] whitespace-nowrap rounded-[3px] bg-brand-600 px-1.5 py-px text-2xs font-medium text-white', today.at > 0.5 ? '-translate-x-full' : null)} style={{ left: pos(today.at) }}>
-            {todayLabel}
+          <div data-part="today" className="pointer-events-none absolute bottom-0 top-7 z-[1] w-0.5 -translate-x-1/2 bg-brand-600 shadow-[0_0_0_1px_var(--color-surface)]" style={{ left: pos(today.at) }} />
+          <div aria-hidden="true" data-part="today-marker" className={cx('pointer-events-none absolute top-7 z-[3] whitespace-nowrap rounded-[3px] bg-brand-600 px-1.5 py-px text-2xs font-medium text-white', today.at > 0.5 ? '-translate-x-full' : null)} style={{ left: pos(today.at) }}>
+            Today
           </div>
         </div>
       </div>
