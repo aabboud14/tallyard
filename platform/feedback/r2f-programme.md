@@ -57,3 +57,18 @@ Checked in a production build at 390, 1024, 1280 and 1440 px: a new Corbel Yard,
 - programme-r2f.test.ts: the appoint-after-set path for the architect, the owner and the checklist, through Priya keeping the dates; slivers hidden but described and the current band always drawn (Corbel Yard and a December 2026 site start, both ranges); nameAlign by band position.
 - round2.test.tsx: today's stage named in full past a narrow band; every drawn band a focusable button with its aria-label and focus ring, and a tap opening the stage panel with its name and dates; the stage key in both places; axis labels above the today line.
 - e2e/r2-projects.spec.ts: the current stage name visible and inside the plot at 1440, 1024 and 390 with the key; Tab to the next band shows its tooltip; a tap at 390 opens the stage panel; Ferrymoor Yard from today at 1024 reads 'Jan 2027', 'Jul', 'Jan 2028', 'Jul' with 'Oct 2026' at the left edge.
+
+## Third pass: the bands are not hidden inside an image
+
+The plot was a role="img", and an image's children are presentational, so the stage band buttons of the second pass were out of reach of screen readers even though they took keyboard focus. The plot is now a role="group" with the same description as its label (data-part="plot"), so each band is announced as a button by its name and dates.
+
+### Existing test assertions changed in the third pass, and why
+
+- src/ui/round2.test.tsx, 'describes the whole programme...' and the tick-label tier test: the plot is found by role 'group' instead of 'img', with the same accessible name.
+- src/ui/round2.test.tsx, 'names the start month and links each material...' and 'keys every stage drawn...': the plot is found by data-part="plot" instead of [role="img"]; the material links are still outside it and the phone key still inside it.
+- src/features/projects/programme.screen.test.tsx, "lets the owner keep or edit...": the description is read from [data-part="plot"] instead of [role="img"]; it still contains 'Stage 2, Concept Design, '.
+- e2e/r2-projects.spec.ts, 'a new project waits for the client to accept': the plot's box is measured from [data-part="plot"] instead of [role="img"].
+
+### Tests added in the third pass
+
+- round2.test.tsx, 'makes each band a button...': the plot is a group labelled with the description, no button or link sits inside an image, and the current band is a button whose accessible name is its name and dates.

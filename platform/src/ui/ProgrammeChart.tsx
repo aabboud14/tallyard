@@ -1,7 +1,8 @@
 // The project programme as the visual anchor of the overview: a tick row, a lane of RIBA stage bands, a lane
 // of milestones and one row per shortlisted material coloured by its fit, with a today line through all lanes.
 // Every position comes in as a fraction from 0 to 1 (the programme selector works them out with axisAt); the
-// browser turns fractions into widths. The plot is one image with a full description in words. From 640 px each
+// browser turns fractions into widths. The plot is a labelled group with a full description in words, so its stage
+// band buttons stay reachable by keyboard and screen readers (an image would hide them). From 640 px each
 // material's name in the label column is a link to the material, with its availability window under it. Axis
 // labels come in tiers (programmeAxis) and a container query on the plot shows each tier from the width it was
 // fitted to, so no two labels ever collide. A stage band shows its name whenever the band is wide enough; today's
@@ -252,7 +253,7 @@ export function ProgrammeChart({ axis, today, todayLabel, stages, milestones, ma
             </ul>
           ) : null}
         </div>
-        <div role="img" aria-label={description} className="@container relative min-w-0 overflow-x-clip">
+        <div role="group" aria-label={description} data-part="plot" className="@container relative min-w-0 overflow-x-clip">
           {/* Grid lines at the ticks, stronger on major ticks. */}
           <div className="pointer-events-none absolute inset-0">
             {axis.ticks.map((t) => (

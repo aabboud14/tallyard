@@ -86,7 +86,7 @@ test('a new project waits for the client to accept', async ({ page }) => {
     const name = page.locator('[data-part="stage-band"][data-state="current"] [data-part="stage-name"]')
     await expect(name, `current stage name at ${width}`).toBeVisible()
     await expect(name).toHaveText('Concept Design')
-    const plot = (await page.getByTestId('programme-chart').locator('[role="img"]').boundingBox())!
+    const plot = (await page.getByTestId('programme-chart').locator('[data-part="plot"]').boundingBox())!
     const box = (await name.boundingBox())!
     expect(box.x, `current stage name at ${width}`).toBeGreaterThanOrEqual(plot.x)
     expect(box.x + box.width, `current stage name at ${width}`).toBeLessThanOrEqual(plot.x + plot.width)

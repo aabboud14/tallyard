@@ -87,7 +87,7 @@ describe('the programme card', () => {
     // Every band names its stage; the chart's description lists the stages with their dates.
     const names = Array.from(byTestId('programme-chart').querySelectorAll('[data-part="stage-name"]')).map((n) => n.textContent)
     expect(names.slice(0, 3)).toEqual(['Strategic Definition', 'Preparation and Briefing', 'Concept Design'])
-    expect(byTestId('programme-chart').querySelector('[role="img"]')!.getAttribute('aria-label')).toContain('Stage 2, Concept Design, ')
+    expect(byTestId('programme-chart').querySelector('[data-part="plot"]')!.getAttribute('aria-label')).toContain('Stage 2, Concept Design, ')
     click(byTestId('keep-programme'))
     await waitFor(() => getData().world.projects[id].programme.source === 'set')
     await waitFor(() => !q('keep-programme'))
