@@ -19,9 +19,24 @@ From the recording audit of 16 October 2026. One line per note, then the existin
 - Minor, a remembered sign-in to a gone account landed on a plain sign-in page (fixed): when the sandbox was updated and the remembered user is not in the data (`staleSessionHint`), the sign-in page shows the same line and link in an information callout before any attempt, and forgets the dead sign-in. The callout gives way to the error once the person tries.
 - Minor, a tab of the live round 2 build left open beside this build (known limit, not changed): its sandbox is carried over once. After that the two tabs diverge, and on its next load this build clears the old key because it already has data, so anything done in the round 2 tab after the copy is dropped, and that tab has no reload prompt. Keeping the newer one by `seq` would only move the loss to the other tab, because both copies changed from the same start, and reading the old key's version 2 writes live would bring back a shared key with the 14 October build. The round 2 tab reloads into this build on its next lazy page or reload.
 
+## After the second review
+
+- Blocker, `src/store/app.upgrade.test.ts` failed from 17 October on (fixed): `vi.resetModules()` gave the dynamically imported store a fresh copy of `src/sandbox/clock.ts`, while the test pinned the copy imported at the top of the file, so the store read the system date. `beforeEach` now imports the clock after `vi.resetModules()` and pins that copy, as does `afterAll`. Expected values unchanged. No other test file combines `vi.resetModules` with the clock.
+- Minor, an address at a sample organisation's own domain was taken for a typo (fixed): `looksLikeAccountTypo` now counts a domain as mistyped only when it is exactly one edit from a sample domain (not the same, not two edits: fernbrook and tarnbrook are two apart and are different organisations). An exact sample domain is a typo only when the whole address is within two edits of an account. `editDistance` now counts a swap of two neighbouring letters as one edit (optimal string alignment), so ostlae and jo.prak still read as typos. So j@ostlea.example (a teammate invited in the older sandbox) and rowan@fernbrook.example now get the update line; priya.nair@studiorial.example still does not.
+- Minor, the sign-in hint never expired (fixed): `updatedOn` reads the earlier recorded day, `upgradeHintOpen(updated, on)` holds for `UPGRADE_HINT_DAYS` (30) days from it, and `signInHintsApply` checks it on the one clock. The sign-in page uses it for both the failed sign-in line and the stale sign-in callout. The home notice and Reset are unchanged.
+- Minor, two identical Marketplace links in Help, Updated on 16 October (fixed): the checking change now links to the Marketplace already checking against the viewer's first project, "Check against Ferrymoor Yard" (`marketplaceHref`), and with no project to "Choose a project to check against". `routeAccess` now ignores a query string as it already ignored a section (`split(/[?#]/)`), so the link is checked by its page.
+- Minor, the notice shown to an account made after the update (fixed): `joinedAfterUpdate(user, updatedOn())` holds for an account of its own (not a sample one) made on or after the recorded day. `upgradeNoticeKind` takes it as an optional fourth argument, `currentUpgradeNotice(user)` passes it, and `UpgradeNotice` reads the signed-in user. A sample account in the same browser still sees the notice.
+
+Checked in the built app on :4517 at 390, 1024 and 1440 px: j@ostlea.example and rowan@fernbrook.example get the hint, tom.ashby@ostlae.example does not; Jo Park, made through Create your account again, gets no notice and Choose a project to check against; Priya in the same browser still gets the notice; her checking link is "Check against Ferrymoor Yard", 44 px tall at 390, and opens the Marketplace with the strip in its checking state. No horizontal overflow on any of these.
+
+Tests added: `src/store/upgrade.test.ts` (swaps, teammate and near domain, whole-address typos, the 30 day window, `updatedOn`, `joinedAfterUpdate`, the notice per person), `src/store/selectors/whatChanged.test.ts` (the checking link for Priya, Isla and Marcus, the fallback, a query in `routeAccess`), `src/features/help/upgrade.screen.test.tsx` (no notice for a new account, teammate hint, hint closed after 30 days), `e2e/r2-upgrade.spec.ts` (the checking link in the first journey; a new journey for an account made again).
+
+Existing assertion changed (the behaviour change the review asks for): in `src/store/upgrade.test.ts`, `looksLikeAccountTypo(state, 'someone@ostlea.example')` was `true` and is now `false`; the near-domain case it covered is kept as `someone@ostlae.example`, `true`.
+
 ## Shared files touched (smallest change)
 
 - `src/store/storage.ts`: `APP_PREFIX`, `STATE_VERSION` (moved here so the key can follow it; `app.ts` re-exports it), `stateKey`, `legacyStateKeys`; `clearAppKeys` matches `APP_PREFIX` so it clears every build's keys.
+- `src/store/selectors/nav.ts`: `routeAccess` ignores a query string.
 - `src/store/app.ts`: calls `upgradeStoredState()` before `create`, `resetSandbox` calls `clearUpgradeState()`, the storage listener is `onStorageEvent` with the version check.
 - `src/features/home/Home.tsx`: renders `UpgradeNotice` above the role's home.
 - `src/features/help/Help.tsx`: one topic entry, one branch, the active topic scrolled into view.
@@ -36,4 +51,4 @@ After the review: more cases in `src/store/upgrade.test.ts` (carried over notice
 
 ## Existing test assertions changed
 
-None, after the review as before. `src/store/app.test.ts` imports `STATE_KEY` and still passes unchanged: its keys now resolve to `tallyard-platform-v2-state`.
+One, after the second review: `looksLikeAccountTypo(state, 'someone@ostlea.example')` in `src/store/upgrade.test.ts`, from `true` to `false` (see above). None before it. `src/store/app.test.ts` imports `STATE_KEY` and still passes unchanged: its keys now resolve to `tallyard-platform-v2-state`.

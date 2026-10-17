@@ -8,7 +8,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { allText, byTestId, cleanup, click, FORBIDDEN, installDomShims, render, submit, typeInto } from '../../ui/testing'
 import { setClockForTests } from '../../sandbox/clock'
 import { useApp } from '../../store/app'
-import { signOut } from '../../store/session'
+import { signOut, signUp } from '../../store/session'
 import { getSessionUserId, setSessionUserId } from '../../store/sessionId'
 import { readKey, removeKey, writeKey } from '../../store/storage'
 import { UPGRADE_DISMISSED_KEY, UPGRADED_KEY, WHATS_NEW_KEY } from '../../store/upgrade'
@@ -87,6 +87,21 @@ describe('the upgrade notice on the home dashboard', () => {
     open('/app/home')
     await waitFor(() => q('architect-home'))
     expect(q('upgrade-notice')).toBeNull()
+  })
+
+  it('is not shown to a person whose account was made after the update, but still to a sample account', async () => {
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    const r = await signUp({ name: 'Jo Park', email: 'jo@parkstudio.example', password: 'drawings1', orgName: 'Park Studio', orgType: 'Architect' })
+    expect(r.error).toBeFalsy()
+    const joId = getSessionUserId()!
+    open('/app/home', joId)
+    await waitFor(() => q('architect-home'))
+    await settle()
+    expect(q('upgrade-notice')).toBeNull()
+    cleanup()
+    open('/app/home', U.priya)
+    await waitFor(() => q('upgrade-notice'))
+    expect(byTestId('upgrade-notice').getAttribute('data-kind')).toBe('replaced')
   })
 
   it('See what changed opens Help, Updated on 16 October', async () => {
@@ -216,6 +231,24 @@ describe('sign-in after an upgrade: typos, a stale sign-in and the way to sign u
     expect(document.querySelector('[role="alert"]')).toBeNull()
     await waitFor(() => getSessionUserId() === null)
     expect(allText()).not.toMatch(FORBIDDEN)
+  })
+
+  it('a teammate invited into a sample organisation before the update is told the account is gone', async () => {
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    await failSignIn('j@ostlea.example')
+    expect(byTestId('signin-error-hint').textContent).toContain('Accounts made before then need to be created again.')
+  })
+
+  it('30 days after this browser found the update, an unknown email gets the plain message only', async () => {
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    setClockForTests('2026-11-15T10:00:00.000Z')
+    await failSignIn('jo@parkstudio.example')
+    expect(document.querySelector('[role="alert"]')!.textContent).toContain('That email and password do not match.')
+    expect(q('signin-error-hint')).toBeNull()
+    cleanup()
+    open('/app/home', 'usr_m4k2p9')
+    await waitFor(() => q('signin-form'))
+    expect(q('signin-notice')).toBeNull()
   })
 
   it('a remembered sign-in that is gone, with no update, gets the plain sign-in page', async () => {

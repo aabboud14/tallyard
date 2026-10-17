@@ -1,18 +1,22 @@
 // The one-time notice on every home for a visitor whose browser held a sandbox from before the 16 October update:
 // replaced by the sample data here, or carried over from the round 2 build deployed before. Help lists what
-// changed. Closing it is remembered in this browser.
+// changed. Closing it is remembered in this browser. A person whose account was made after the update is not shown
+// it: nothing of theirs was replaced.
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { History, X } from 'lucide-react'
 import { IconButton } from '../../ui'
+import { useSession } from '../../store'
 import { currentUpgradeNotice, dismissUpgradeNotice, UPGRADE_HELP_PATH, UPGRADE_TITLE, upgradeNoticeText } from '../../store/upgrade'
 
 export function UpgradeNotice() {
-  const [kind, setKind] = useState(() => currentUpgradeNotice())
+  const { user } = useSession()
+  const [closed, setClosed] = useState(false)
+  const kind = closed ? null : currentUpgradeNotice(user)
   if (!kind) return null
   const close = () => {
     dismissUpgradeNotice()
-    setKind(null)
+    setClosed(true)
   }
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1240px] px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">

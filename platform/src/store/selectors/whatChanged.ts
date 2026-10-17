@@ -3,7 +3,7 @@
 // name, as the sidebar lists them); the other workspaces' changes follow without links.
 import type { AppData, PlatformRole, Viewer } from '../types'
 import { buildingSide, projectSide, roleOfUser } from '../access'
-import { MARKETPLACE_PATH } from '../paths'
+import { MARKETPLACE_PATH, marketplaceHref } from '../paths'
 import { UPGRADE_TITLE } from '../upgrade'
 import { routeAccess } from './nav'
 
@@ -52,7 +52,11 @@ export const ROUND_2_CHANGES: Change[] = [
     title: 'Checking against starts at No project',
     text: 'The strip above the materials shows what you are checking against. Pick a project to see how many arrive in time, and switch on Only show what arrives in time.',
     roles: ['architect', 'client', 'consultant'],
-    places: () => [{ href: MARKETPLACE_PATH, label: 'Open the Marketplace' }],
+    // The Marketplace already checking against the viewer's first project, so the strip shows its fit straight away.
+    places: (p) => [
+      p.project ? { href: marketplaceHref(p.project.id), label: `Check against ${p.project.name}` } : null,
+      { href: MARKETPLACE_PATH, label: 'Choose a project to check against' },
+    ],
   },
   {
     id: 'programme',

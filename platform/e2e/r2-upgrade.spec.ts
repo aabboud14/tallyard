@@ -93,6 +93,13 @@ test('a returning visitor from before round 2 is told the sandbox was updated, a
   await page.getByTestId('change-link-programme').click()
   await page.waitForURL(/\/app\/projects\/prj_[A-Za-z0-9]+$/)
   await expect(page.getByTestId('programme-chart')).toBeVisible()
+  // The checking change has its own link: the Marketplace already checking against the first project.
+  await page.goBack()
+  await page.waitForURL('**/app/help/updated')
+  await expect(page.getByTestId('change-link-checking')).not.toHaveText(await page.getByTestId('change-link-marketplace').innerText())
+  await page.getByTestId('change-link-checking').click()
+  await page.waitForURL(/\/app\/marketplace\?project=prj_[A-Za-z0-9]+$/)
+  await expect(page.getByTestId('checking-bar')).toHaveAttribute('data-state', 'checking')
 
   // Closing the notice is remembered.
   await page.goto('/app/home')
@@ -101,6 +108,46 @@ test('a returning visitor from before round 2 is told the sandbox was updated, a
   await page.reload()
   await expect(page.getByTestId('home-stats')).toBeVisible()
   await expect(notice).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('an account made again after the update is not told its earlier work is gone', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.goto('/signin')
+  await page.evaluate(
+    ([k, v]) => {
+      window.localStorage.clear()
+      window.localStorage.setItem(k, v)
+    },
+    [V1_STATE, V1_RECORD],
+  )
+  await page.reload()
+  await page.getByTestId('signin-email').fill('jo@parkstudio.example')
+  await page.locator('input[autocomplete="current-password"]').fill('drawings1')
+  await page.getByTestId('signin-submit').click()
+  await page.getByTestId('signin-upgrade-signup').click()
+  await page.waitForURL('**/signup')
+  await expect(page.getByTestId('signup-email')).toHaveValue('jo@parkstudio.example')
+  await page.getByTestId('signup-name').fill('Jo Park')
+  await page.locator('input[autocomplete="new-password"]').fill('drawings1')
+  await page.getByTestId('signup-continue').click()
+  await page.getByTestId('signup-org').fill('Park Studio')
+  await page.getByTestId('signup-submit').click()
+  await page.waitForURL('**/app/home**')
+  await expect(page.getByTestId('architect-home')).toBeVisible()
+  await expect(page.getByTestId('upgrade-notice')).toHaveCount(0)
+  // With no project yet, the checking change points at the Marketplace to choose one.
+  await page.goto('/app/help/updated')
+  await expect(page.getByTestId('change-link-checking')).toHaveText('Choose a project to check against')
+  await expect(page.getByTestId('change-link-checking')).toHaveAttribute('href', '/app/marketplace')
+  // A sample account in the same browser still sees the notice.
+  await page.goto('/signin')
+  await page.evaluate(() => window.localStorage.removeItem('tallyard-platform-v1-session'))
+  await page.evaluate(() => window.sessionStorage.clear())
+  await page.goto('/signin')
+  await page.getByTestId(`sample-${PRIYA}`).click()
+  await page.waitForURL('**/app/home')
+  await expect(page.getByTestId('upgrade-notice')).toBeVisible()
   expect(errors).toEqual([])
 })
 
