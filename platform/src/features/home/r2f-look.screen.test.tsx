@@ -91,7 +91,7 @@ describe('a new project on the architect home', () => {
     expect(document.querySelector('[data-testid^="home-project-"]')).toBe(card)
     expect(card.getAttribute('data-setup')).toBe('true')
     expect(byTestId(`home-setup-pill-${id}`).textContent).toMatch(/^Setting up, \d of \d$/)
-    expect(byTestId(`home-link-pill-${id}`).textContent).toBe('Waiting for client')
+    expect(byTestId(`home-link-pill-${id}`).textContent).toBe('Client to accept')
     const next = byTestId(`home-setup-next-${id}`)
     expect(next.getAttribute('href')).toBe(`/app/projects/${id}`)
     expect(next.textContent).toContain('Next')

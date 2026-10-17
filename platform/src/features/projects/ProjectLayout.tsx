@@ -3,11 +3,12 @@
 // consultant). Each tab is its own route. Until the client accepts, the architect sees a link status pill and no
 // client people.
 import { Link, Outlet, useLocation, useParams } from 'react-router'
-import { Building, CalendarCheck, CalendarClock, CalendarRange, Compass, MailQuestion, MapPin, PencilLine, UserRoundX } from 'lucide-react'
+import { Building, CalendarCheck, CalendarClock, CalendarRange, Compass, MapPin, PencilLine } from 'lucide-react'
 import { useView } from '../../store'
 import { projectHeader } from '../../store/selectors/project'
 import { AvatarStack, Button, Pill, ProjectThumb, Tabs, type AvatarColourName } from '../../ui'
 import { projectVisual } from '../../store/selectors/project-visuals'
+import { ClientLinkPill } from './ClientLinkPill'
 import { AppNotFound } from '../../app/NoAccess'
 import { marketplaceHref } from '../discover/links'
 import { EditProjectDialog } from './EditProjectDialog'
@@ -44,17 +45,7 @@ export function ProjectLayout() {
                       {header.kindLabel}
                     </Pill>
                   ) : null}
-                  {pending ? (
-                    header.linkStatus === 'declined' ? (
-                      <Pill tone="warning" size="sm" icon={UserRoundX} data-testid="link-status">
-                        Client declined
-                      </Pill>
-                    ) : (
-                      <Pill tone="neutral" size="sm" icon={MailQuestion} title="The client organisation has not yet accepted the request to add them to this project" data-testid="link-status">
-                        Client to accept
-                      </Pill>
-                    )
-                  ) : null}
+                  {pending ? <ClientLinkPill status={header.linkStatus === 'declined' ? 'declined' : 'pending'} testId="link-status" /> : null}
                 </p>
               </div>
             </div>

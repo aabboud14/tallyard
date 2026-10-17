@@ -192,7 +192,9 @@ export type MergeCandidate = {
 function candidate(state: AppData, from: SourceBuilding, into: SourceBuilding, reason: MergeCandidate['reason']): MergeCandidate {
   const itemCount = Object.values(state.world.items).filter((i) => i.buildingId === from.id).length
   const ownerName = into.ownerOrgId ? (state.world.orgs[into.ownerOrgId]?.name ?? '') : ''
-  const what = itemCount === 0 ? 'Merge it into this appointment?' : `Move its ${itemCount === 1 ? 'captured item' : `${itemCount} captured items`} here?`
+  // Always with the count, one item included ('Move its 1 captured item here?'), so the prompt says what moves.
+  const counted = `${itemCount} captured ${itemCount === 1 ? 'item' : 'items'}`
+  const what = itemCount === 0 ? 'Merge it into this appointment?' : `Move its ${counted} here?`
   return {
     fromId: from.id,
     fromName: from.name,
@@ -206,7 +208,7 @@ function candidate(state: AppData, from: SourceBuilding, into: SourceBuilding, r
     prompt: `You added ${from.name} yourself before ${ownerName} appointed you. ${what}`,
     mergeTitle: `Merge into ${into.name} for ${ownerName}`,
     actionLabel: itemCount === 0 ? 'Merge here' : 'Move items here',
-    unlinkedPrompt: `${ownerName} has since appointed you to ${into.name}. ${itemCount === 0 ? 'Merge this record into it?' : `Move this building's ${itemCount === 1 ? 'captured item' : `${itemCount} captured items`} into it?`}`,
+    unlinkedPrompt: `${ownerName} has since appointed you to ${into.name}. ${itemCount === 0 ? 'Merge this record into it?' : `Move this building's ${counted} into it?`}`,
     unlinkedActionLabel: `Move into their ${into.name}`,
   }
 }

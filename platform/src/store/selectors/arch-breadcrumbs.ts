@@ -5,7 +5,7 @@ import { buildingSide, isBuildingContractor, projectSide, roleOfUser } from '../
 import { listingOf, lotByPublicId } from '../lots'
 import { projectTabs } from './project'
 import { buildingTabs } from './owner'
-import { routeAccess } from './nav'
+import { DONOR_BUILDINGS, routeAccess } from './nav'
 import { MARKETPLACE_PATH, marketplaceHref } from '../paths'
 import { addressProjectFor } from './arch-discover'
 import { linkPageTitle } from './links'
@@ -90,7 +90,10 @@ export function pageLocation(state: AppData, viewer: Viewer, pathname: string, a
     if (!b || !side) return done([crumb(sectionLabel, sectionHref)])
     // A building the firm added itself is not an appointment yet: it sits under Not yet linked on that page.
     const group = side === 'surveyor' && b.ownerOrgId === null ? [crumb(NOT_YET_LINKED, `${sectionHref}#not-yet-linked`)] : []
-    const base = [crumb(sectionLabel, sectionHref), ...group, crumb(b.name, `/app/buildings/${id}`)]
+    // The owner's building pages sit under Donor buildings, as the sidebar section reads (the list page itself keeps
+    // its title, Buildings, as it lists New projects too).
+    const parent = side === 'owner' ? crumb(DONOR_BUILDINGS, sectionHref) : crumb(sectionLabel, sectionHref)
+    const base = [parent, ...group, crumb(b.name, `/app/buildings/${id}`)]
     if (tab === undefined) return done(base)
     const t = buildingTabs(side, id, { contractor: isBuildingContractor(state, viewer.userId, id) }).find((x) => x.id === tab)
     const tabCrumb = crumb(t ? t.label : slugLabel(tab), `/app/buildings/${id}/${tab}`)

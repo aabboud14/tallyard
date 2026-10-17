@@ -76,7 +76,7 @@ test('a surveyor moves what she captured early into the building its owner then 
   // Dana is asked on her home, and moves the items in.
   await switchTo(page, 'dana')
   const callout = page.getByTestId(`merge-callout-${mine}`)
-  await expect(callout).toContainText('You added Corbel Yard yourself before Ostlea Estates appointed you. Move its captured item here?')
+  await expect(callout).toContainText('You added Corbel Yard yourself before Ostlea Estates appointed you. Move its 1 captured item here?')
   await page.getByTestId(`merge-move-${mine}`).click()
   await page.waitForURL(`**/app/buildings/${toms}`)
   await expect(page.getByText('1 item moved to Corbel Yard').first()).toBeVisible()

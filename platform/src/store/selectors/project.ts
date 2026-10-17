@@ -358,6 +358,22 @@ export type ProjectOverview = {
   /** Every activity line on the project the viewer may read. */
   activityTotal: number
   empty: boolean
+  /** The blocks that lead the overview, in order (`overviewLeads`). */
+  leads: OverviewLead[]
+}
+
+export type OverviewLead = 'consultant' | 'programme' | 'appoint'
+
+/**
+ * The blocks that lead the project overview, in order. The programme leads for the architect, the client and an owner
+ * on its own New project (note 19); an owner who still has to appoint an architect finds that card straight under the
+ * programme, so the chart starts on the first screen as it does on the architect's new project. The consultant's view
+ * differs (note 42): his own section (targets, certification, requirements and the statement) leads, and the
+ * programme follows it.
+ */
+export function overviewLeads(side: ProjectHeader['side'], canAppointArchitect = false): OverviewLead[] {
+  if (side === 'consultant') return ['consultant', 'programme']
+  return canAppointArchitect ? ['programme', 'appoint'] : ['programme']
 }
 
 /**
@@ -416,6 +432,7 @@ export function projectOverview(state: AppData, viewer: Viewer, projectId: strin
     activity: activityFor(state, viewer, { projectId }, 8),
     activityTotal: activityFor(state, viewer, { projectId }, Number.MAX_SAFE_INTEGER).length,
     empty: rows.length === 0,
+    leads: overviewLeads(header.side, header.canAppointArchitect),
   }
 }
 

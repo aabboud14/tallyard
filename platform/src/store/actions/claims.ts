@@ -302,7 +302,9 @@ export function mergeSurveyBuilding(state: AppData, actor: Actor, fromBuildingId
   let s = core.state
   const n = plural(core.moved, 'item')
   const href = `/app/buildings/${into.id}`
-  s = log(s, { at: a.now, orgIds: [a.org.id, into.ownerOrgId], buildingId: into.id, projectId: null, actorUserId: a.user.id, actor: a.user.name, text: `moved ${n} captured earlier into ${into.name}`, href: `${href}/inventory` })
+  // With nothing captured yet, the record merges without items, and the line says so instead of 'moved 0 items'.
+  const text = core.moved > 0 ? `moved ${n} captured earlier into ${into.name}` : `merged the earlier record of ${from.name} into ${into.name}, with no items captured in it`
+  s = log(s, { at: a.now, orgIds: [a.org.id, into.ownerOrgId], buildingId: into.id, projectId: null, actorUserId: a.user.id, actor: a.user.name, text, href: core.moved > 0 ? `${href}/inventory` : href })
   if (core.moved > 0) {
     s = notify(s, { orgIds: [into.ownerOrgId], kind: 'appointed', title: `${a.org.name} added ${n} to ${into.name}`, body: 'Captured before your appointment. Private until you decide.', href: `${href}/inventory`, at: a.now, actorUserId: a.user.id })
   }

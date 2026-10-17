@@ -9,6 +9,7 @@ import { selectors, useSession, useView } from '../../store'
 import type { BuildingCard, BuildingsList as BuildingsListView, OwnerProjectRow } from '../../store/selectors/owner'
 import type { ClaimState } from '../../store/selectors/claims'
 import { buildingSketches } from '../../store/selectors/buildings-ui'
+import { contractorOnly } from '../../store/selectors/nav'
 import { formatDate } from '../../domain/dates'
 import { BuildingThumb, Button, Card, EmptyState, PageHeader, Pill, SegmentedBar, Table, TBody, TD, TH, THead, TR } from '../../ui'
 import { Page, SectionTitle } from '../../app/Page'
@@ -22,6 +23,8 @@ export function BuildingsList() {
   const v = useView(selectors.buildingsList)
   const sketches = useView(buildingSketches)
   const { role } = useSession()
+  // A firm that only dates buildings as their contractor: Add building is offered here only, saying what it is for.
+  const datesOnly = useView(contractorOnly)
   const [params, setParams] = useSearchParams()
   // ?new=1 opens Add building on Donor building; ?new=project opens it on New project.
   const mode = params.get('new')
@@ -38,11 +41,11 @@ export function BuildingsList() {
     <Page testId="buildings">
       <PageHeader
         title={owner ? 'Buildings' : 'Appointments'}
-        subtitle={owner ? 'Donor buildings you recover materials from, and new projects you source them for.' : 'Buildings you survey or date for each client, and the ones you added yourself.'}
+        subtitle={owner ? 'Donor buildings you recover materials from, and new projects you source them for.' : datesOnly ? 'Buildings you set availability dates for, as their deconstruction contractor. To survey a building yourself, add it and capture what it holds.' : 'Buildings you survey or date for each client, and the ones you added yourself.'}
         actions={
           v.canAdd ? (
-            <Button variant="primary" icon={Plus} onClick={() => setOpen(true)} data-testid="add-building">
-              Add building
+            <Button variant={datesOnly ? 'secondary' : 'primary'} icon={Plus} onClick={() => setOpen(true)} data-testid="add-building">
+              {datesOnly ? 'Add a building to survey' : 'Add building'}
             </Button>
           ) : null
         }

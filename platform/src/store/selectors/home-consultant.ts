@@ -16,7 +16,7 @@ import { goalState } from '../../domain/engines/goals'
 import type { TrackerSummary } from '../../domain/engines/tracker'
 import { niceMax } from '../../domain/engines/chartScale'
 import { metricState, type MetricState } from '../../domain/engines/metricState'
-import { activitySummary, targetProgress, targetsMetState, targetState, targetStatusText, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
+import { activitySummary, NO_RESULT_TEXT, targetProgress, targetsMetState, targetState, targetStatusText, type ActivitySummary, type TargetProgress, type TileState } from './dashboard'
 
 /** A meter's scale and state: value and target on one scale whose right end is a round figure at least both. */
 export type TargetMeterView = { value: number; max: number; target: number | null; state: MetricState }
@@ -97,7 +97,7 @@ function targetRow(label: string, actual: number | null, target: number, format:
     // No figure yet reads as no state, not as off target.
     state: actual === null ? 'neutral' : metricState(value, target > 0 ? target : null, 'at_least'),
   }
-  return { ...p, label, actualText: actual === null ? 'Not known' : format(actual), targetText: target > 0 ? format(target) : null, statusText: targetStatusText(actual, target), meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
+  return { ...p, label, actualText: actual === null ? NO_RESULT_TEXT : format(actual), targetText: target > 0 ? format(target) : null, statusText: targetStatusText(actual, target), meter, aimText: target > 0 ? `Aim at least ${round(target)}` : null }
 }
 
 /** The Projects tile's line: how many projects carry each kind of target, so it never claims more than the cards show. */

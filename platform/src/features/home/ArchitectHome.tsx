@@ -4,7 +4,7 @@
 // short first-run welcome. Every figure comes from architectHome (P2); this file only lays it out.
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, CalendarDays, ChevronRight, FolderKanban, FolderOpen, FolderPlus, Hourglass, Layers, Leaf, ListChecks, PackagePlus, Send, Store, UserRoundX } from 'lucide-react'
+import { ArrowRight, CalendarDays, ChevronRight, FolderKanban, FolderOpen, FolderPlus, Hourglass, Layers, Leaf, ListChecks, PackagePlus, Send, Store } from 'lucide-react'
 import * as f from '../../domain/format'
 import type { Fit } from '../../domain/v1types'
 import { useView } from '../../store'
@@ -15,6 +15,7 @@ import { BarList, Button, Card, CardHeader, cx, Donut, FIT, IndicativeMarker, Le
 import { Page, SectionTitle } from '../../app/Page'
 import { NewProjectDialog } from '../projects/NewProjectDialog'
 import { ProjectProgress } from '../projects/ProjectParts'
+import { ClientLinkPill } from '../projects/ClientLinkPill'
 import { ActivityPanel } from './ActivityPanel'
 import { TileChart } from './TileChart'
 import { ARCHITECT_TILE_LABELS, carbonStateLabel, FIT_WORDS, projectsSub, STATUS_SEGMENTS, waitingSub } from './architectTiles'
@@ -122,15 +123,7 @@ function SetupPills({ p }: { p: ProjectCardView }) {
           Setting up, {p.setup.done} of {p.setup.total}
         </Pill>
       ) : null}
-      {p.linkStatus === 'pending' ? (
-        <Pill tone="info" size="sm" icon={Hourglass} data-testid={`home-link-pill-${p.id}`}>
-          Waiting for client
-        </Pill>
-      ) : p.linkStatus === 'declined' ? (
-        <Pill tone="warning" size="sm" icon={UserRoundX} data-testid={`home-link-pill-${p.id}`}>
-          Client declined
-        </Pill>
-      ) : null}
+      <ClientLinkPill status={p.linkStatus} testId={`home-link-pill-${p.id}`} />
     </span>
   )
 }

@@ -8,7 +8,7 @@ import type { Typology } from '../../domain/v1types'
 import { formatDate } from '../../domain/dates'
 import { useView } from '../../store'
 import type { SurveyStatus } from '../../store'
-import { surveyorDashboard, type SurveyorDashboard } from '../../store/selectors/home-surveyor'
+import { surveyorDashboard, surveySteps, type SurveyorDashboard } from '../../store/selectors/home-surveyor'
 import type { AppointmentBuilding } from '../../store/selectors/surveyor'
 import type { ClaimState } from '../../store/selectors/claims'
 import { Avatar, BuildingThumb, BuildingThumbnail, Button, Card, cx, Donut, EmptyState, MARK, MetricGrid, MetricTile, PageHeader, Pill, SegmentedBar, TYPOLOGY_FILL, type Tone } from '../../ui'
@@ -19,15 +19,6 @@ import { MergeCallouts } from '../buildings/MergeCallout'
 import { TileChart } from './TileChart'
 import { BuildingRequirementsLine } from './BuildingRequirementsLine'
 import { FirstRunCard } from './FirstRunCard'
-
-const STEPS = [
-  { key: 'appointed', label: 'Appointed' },
-  { key: 'in_progress', label: 'Capturing' },
-  { key: 'submitted', label: 'Submitted' },
-] as const
-
-/** A building the firm added itself starts with the owner's confirmation, not an appointment. */
-const OWNER_STEP_LABEL = 'Owner confirms'
 
 const SURVEYOR_FIRST_STEPS = [
   { title: 'Add a building, or wait for an appointment', text: 'Add a building your firm is surveying now. When an owner appoints your firm, their buildings appear here too.' },
@@ -49,40 +40,23 @@ const TYPOLOGIES: { key: Typology; label: string; word: string }[] = [
 
 const CLAIM_TONE: Record<ClaimState['status'], Tone> = { linked: 'brand', not_linked: 'neutral', pending: 'warning', declined: 'danger' }
 
-type StepState = 'done' | 'current' | 'todo'
-
-function stepState(status: SurveyStatus, key: (typeof STEPS)[number]['key']): StepState {
-  const order = { not_started: 0, in_progress: 1, submitted: 2 }[status]
-  const at = { appointed: 0, in_progress: 1, submitted: 2 }[key]
-  return at < order || (at === order && status === 'submitted') ? 'done' : at === order ? 'current' : 'todo'
-}
-
-/**
- * The steps of a survey. For a building the firm added itself, the first step reads Added (not Appointed), and the
- * owner's confirmation follows it, not yet done: capturing can start meanwhile, and submitting waits for it.
- */
-function stepsFor(status: SurveyStatus, claim: ClaimState | null): { key: string; label: string; state: StepState }[] {
-  if (!claim || claim.status === 'linked') return STEPS.map((s) => ({ key: s.key, label: s.label, state: stepState(status, s.key) }))
-  return [
-    { key: 'added', label: 'Added', state: 'done' },
-    { key: 'owner', label: OWNER_STEP_LABEL, state: claim.status === 'pending' ? 'current' : 'todo' },
-    { key: 'in_progress', label: 'Capturing', state: status === 'not_started' ? 'todo' : 'current' },
-    { key: 'submitted', label: 'Submitted', state: 'todo' },
-  ]
-}
-
 function Steps({ status, claim = null }: { status: SurveyStatus; claim?: ClaimState | null }) {
   return (
     <ol className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0" aria-label="Survey progress">
-      {stepsFor(status, claim).map((s, i) => {
+      {surveySteps(status, claim?.status ?? null).map((s, i) => {
         const st = s.state
         return (
           <li key={s.key} className="flex items-center gap-2" data-step={s.key} data-state={st}>
-            {i > 0 ? <span aria-hidden="true" className={cx('h-px w-4 sm:w-6', st === 'todo' ? 'bg-line' : 'bg-brand-300')} /> : null}
-            <span className={cx('inline-flex items-center gap-1.5 text-xs font-medium', st === 'todo' ? 'text-faint' : st === 'current' ? 'text-ink' : 'text-brand-700')}>
-              <span aria-hidden="true" className={cx('size-2 rounded-full', st === 'todo' && 'border border-line-strong')} style={st === 'todo' ? undefined : { background: st === 'current' ? MARK.warning : MARK.brand }} />
+            {i > 0 ? <span aria-hidden="true" className={cx('h-px w-4 sm:w-6', st === 'todo' || st === 'waiting' ? 'bg-line' : 'bg-brand-300')} /> : null}
+            <span className={cx('inline-flex items-center gap-1.5 text-xs font-medium', st === 'todo' ? 'text-faint' : st === 'waiting' ? 'text-ink-soft' : st === 'current' ? 'text-ink' : 'text-brand-700')}>
+              {st === 'waiting' ? (
+                // Asked and not answered yet: a ring in the warning colour, so it never reads as the current step.
+                <span aria-hidden="true" className="size-2 rounded-full border-[1.5px]" style={{ borderColor: MARK.warning }} />
+              ) : (
+                <span aria-hidden="true" className={cx('size-2 rounded-full', st === 'todo' && 'border border-line-strong')} style={st === 'todo' ? undefined : { background: st === 'current' ? MARK.warning : MARK.brand }} />
+              )}
               {s.label}
-              {st === 'current' ? <span className="sr-only">, current step</span> : st === 'done' ? <span className="sr-only">, done</span> : null}
+              {st === 'current' ? <span className="sr-only">, current step</span> : st === 'done' ? <span className="sr-only">, done</span> : st === 'waiting' ? <span className="sr-only">, waiting for the owner</span> : null}
             </span>
           </li>
         )
@@ -243,18 +217,22 @@ export function SurveyorHome() {
         title={v.greeting}
         subtitle={v.dateText}
         actions={
-          <>
-            <Button asChild icon={Plus}>
-              <Link to="/app/buildings?new=1">Add building</Link>
-            </Button>
-            {v.contractorTiles ? null : (
+          // A firm that only dates buildings as their contractor gets neither: adding a building starts a survey of the
+          // firm's own, and Appointments offers it with a word on what it is for.
+          v.contractorTiles ? null : (
+            <>
+              <Button asChild icon={Plus}>
+                <Link to="/app/buildings?new=1" data-testid="home-add-building">
+                  Add building
+                </Link>
+              </Button>
               <Button asChild variant="primary" icon={Camera}>
                 <Link to={v.quickCapture.href} data-testid="home-capture">
                   Capture
                 </Link>
               </Button>
-            )}
-          </>
+            </>
+          )
         }
       />
       {v.firstRun ? null : v.contractorTiles ? <ContractorMetrics v={v} t={v.contractorTiles} /> : <Metrics v={v} />}

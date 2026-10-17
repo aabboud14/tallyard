@@ -169,8 +169,9 @@ function BuildingCard({ b }: { b: OwnerBuildingCard }) {
   const typology = TYPOLOGIES.map((t) => ({ key: t.key, label: t.label, colour: TYPOLOGY_FILL[t.key], valueText: String(b.byTypology[t.key]) }))
   return (
     <Card interactive as="article" className="flex flex-col overflow-hidden sm:flex-row" data-testid={`home-building-${b.id}`}>
-      <div className="relative shrink-0 border-b border-line-soft sm:w-[42%] sm:border-b-0 sm:border-r">
-        <BuildingThumbnail sketch={b.sketch} aspect="4/3" className="sm:h-full" />
+      {/* From sm the drawing fills its own column at the card's height, never wider than the column, so it never runs under the text. */}
+      <div className="relative shrink-0 overflow-hidden border-b border-line-soft sm:w-[42%] sm:border-b-0 sm:border-r">
+        <BuildingThumbnail sketch={b.sketch} aspect="4/3" className="sm:aspect-auto sm:h-full sm:min-h-48 sm:w-full" />
         <KindPill label={b.kindLabel} />
       </div>
       <div className="flex flex-1 flex-col gap-3.5 p-4 sm:p-5">

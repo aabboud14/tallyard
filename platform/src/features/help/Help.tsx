@@ -23,11 +23,6 @@ const TOPICS = [
   { id: UPGRADE_HELP_TOPIC, label: UPGRADE_TITLE, icon: History },
 ] as const
 
-/** On a phone the topics scroll sideways: bring the open one into view, so a later topic is never hidden. */
-function showActiveTopic(el: HTMLAnchorElement | null) {
-  el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-}
-
 export function Help() {
   const { topic = 'getting-started' } = useParams()
   const current = TOPICS.find((t) => t.id === topic)?.id ?? 'getting-started'
@@ -35,14 +30,15 @@ export function Help() {
     <Page testId="help">
       <h1 className="m-0 text-2xl font-semibold text-ink">Help</h1>
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:gap-10">
-        <nav aria-label="Help topics" className="-mx-4 overflow-x-auto px-4 scrollbar-none lg:mx-0 lg:w-52 lg:shrink-0 lg:overflow-visible lg:px-0">
-          <ul className="m-0 flex w-max list-none gap-1 p-0 lg:sticky lg:top-6 lg:w-auto lg:flex-col">
+        {/* Below lg the topics wrap onto a second line rather than scroll sideways, so every topic, the first and the open one included, is always in view. */}
+        <nav aria-label="Help topics" className="lg:w-52 lg:shrink-0">
+          <ul className="m-0 flex list-none flex-wrap gap-1 p-0 lg:sticky lg:top-6 lg:flex-col lg:flex-nowrap">
             {TOPICS.map((t) => {
               const Icon = t.icon
               const active = t.id === current
               return (
                 <li key={t.id}>
-                  <Link to={`/app/help/${t.id}`} ref={active ? showActiveTopic : undefined} aria-current={active ? 'page' : undefined} className={cx('flex h-9 items-center gap-2.5 whitespace-nowrap rounded-md px-3 text-base transition-colors max-lg:h-11', active ? 'bg-subtle font-medium text-ink ring-1 ring-inset ring-line-soft' : 'text-ink-soft hover:bg-hover hover:text-ink')} data-testid={`help-${t.id}`}>
+                  <Link to={`/app/help/${t.id}`} aria-current={active ? 'page' : undefined} className={cx('flex h-9 items-center gap-2.5 whitespace-nowrap rounded-md px-3 text-base transition-colors max-lg:h-11', active ? 'bg-subtle font-medium text-ink ring-1 ring-inset ring-line-soft' : 'text-ink-soft hover:bg-hover hover:text-ink')} data-testid={`help-${t.id}`}>
                     <Icon aria-hidden="true" className={cx('size-4', active ? 'text-ink' : 'text-faint')} />
                     {t.label}
                   </Link>

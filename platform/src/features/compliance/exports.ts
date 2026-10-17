@@ -107,7 +107,7 @@ export async function buildComplianceWorkbook(m: ComplianceWorkbook): Promise<Ar
     summary.addRow(['Reused and recycled content by value', 'No bill of materials for this project yet'])
   }
   const ir = quote(ITEMS)
-  summary.addRow(['Upfront carbon avoided against buying new, A1-A4, secured (tCO2e)', formula(securedSum(ir, 'H', itemsFirst, itemsLast), m.avoidedT)]).getCell(2).numFmt = FMT.carbon2
+  summary.addRow(['Upfront carbon avoided against buying new, modules A1 to A4, secured (tCO2e)', formula(securedSum(ir, 'H', itemsFirst, itemsLast), m.avoidedT)]).getCell(2).numFmt = FMT.carbon2
   summary.addRow(['Reclaimed material secured (t)', formula(securedSum(ir, 'D', itemsFirst, itemsLast), m.reclaimedMassT)]).getCell(2).numFmt = FMT.mass2
   summary.addRow([])
   for (const t of m.methods) summary.addRow(['Method', t]).getCell(2).alignment = { wrapText: true }
@@ -138,7 +138,7 @@ export async function buildComplianceWorkbook(m: ComplianceWorkbook): Promise<Ar
   caveat(bom, m.methods[0])
 
   const items = wb.addWorksheet(ITEMS)
-  header(items, ['Public ID', 'Description', 'Quantity', 'Mass (t)', 'Status', 'Date', 'Basis', 'Avoided carbon A1-A4 (tCO2e)'], [12, 40, 24, 12, 12, 14, 18, 28])
+  header(items, ['Public ID', 'Description', 'Quantity', 'Mass (t)', 'Status', 'Date', 'Basis', 'Avoided carbon, modules A1 to A4 (tCO2e)'], [12, 40, 24, 12, 12, 14, 18, 28])
   for (const it of m.items) {
     const row = items.addRow([it.publicId, it.description, it.quantityLabel, it.massT, it.status, it.date ?? '', it.source === 'earlier deal' ? 'Earlier deal' : it.source === 'reservation' ? 'Reservation' : 'Client approval', it.avoidedT])
     row.getCell(4).numFmt = FMT.mass2

@@ -67,12 +67,12 @@ export function gradeText(l: PublicListing): string {
   return l.grade && l.grade !== 'unknown' ? l.grade : GRADE_UNKNOWN
 }
 
-/** 41.0 tCO2e, 96.8% of new, A1-A4; or L14 when nothing is claimed. */
+/** 41.0 tCO2e, 96.8% of new, A1 to A4; or L14 when nothing is claimed. */
 export function avoidedCarbonText(l: PublicListing): string {
   if (l.carbon === null) return LABELS.L14
   // A sold listing has no share (0 over 0 in memory, null once stored), so the share is left out.
   const share = typeof l.carbon.percent === 'number' && Number.isFinite(l.carbon.percent) ? `, ${f.percent(l.carbon.percent)} of new` : ''
-  return `${f.carbon(l.carbon.avoidedT)}${share}, A1-A4`
+  return `${f.carbon(l.carbon.avoidedT)}${share}, A1 to A4`
 }
 
 export const SPEC_SECTIONS = ['Identity', 'Material and dimensions', 'Quantity', 'Condition and testing', 'Availability and location', 'Sustainability', 'Price'] as const

@@ -329,37 +329,43 @@ describe('ProgrammeChart', () => {
     expect(bands[7].getAttribute('data-visible')).toBe('false')
     expect(bands[2].className).toContain('bg-brand-600')
     expect(bands[2].className).toContain('text-white')
-    // Every band is its own container; the name shows whenever the band is wide enough, on any screen. Today's
-    // stage always shows its name in full, however narrow the band (recording audit follow-up, note 17).
+    // Every band is its own container; the name shows whenever the band is wide enough, on any screen, and is
+    // truncated inside its band. Today's stage too: its full name is the line above the plot (polish, note 17).
     for (const b of bands) {
       expect(b.className).toContain('@container')
       const name = b.querySelector('[data-part="stage-name"]')!
       expect(name.textContent).toBe(stages[bands.indexOf(b)].name)
       expect(name.className).not.toContain('max-lg:hidden')
-      if (b.getAttribute('data-state') === 'current') {
-        expect(name.className).not.toContain('hidden')
-        expect(name.className).not.toContain('truncate')
-        continue
-      }
       expect(name.className).toMatch(/@min-\[\d+px\]:block/)
       expect(name.className).toContain('truncate')
     }
   })
 
-  it("always names today's stage, running past a narrow band into the chart", () => {
+  it("keeps today's stage name inside its narrow band and names it in full above the plot, never over another band", () => {
     const narrow = SAMPLE_PROGRAMME.stages.map((b) => (b.stage === 2 ? { ...b, from: 0.6, to: 0.605, nameAlign: 'end' as const } : b))
     render(<ProgrammeChart {...SAMPLE_PROGRAMME} stages={narrow} />)
-    const band = byTestId('programme-chart').querySelector<HTMLElement>('[data-part="stage-band"][data-state="current"]')!
-    // Not clipped by the band, a minimum width, and the name above the neighbouring bands' numbers.
-    expect(band.className).not.toContain('overflow-hidden')
+    const chart = byTestId('programme-chart')
+    const band = chart.querySelector<HTMLElement>('[data-part="stage-band"][data-state="current"]')!
+    // Clipped by its own band like every other band, with a minimum width, and its words never take the pointer.
+    expect(band.className).toContain('overflow-hidden')
     expect(band.className).toContain('min-w-2.5')
-    expect(band.className).toContain('justify-end')
+    expect(band.className).not.toContain('justify-end')
     const text = band.querySelector('[data-part="stage-text"]')!
-    expect(text.className).toContain('z-[3]')
-    expect(text.className).toContain('shrink-0')
-    expect(text.className).toContain('whitespace-nowrap')
+    expect(text.className).not.toContain('z-[3]')
+    expect(text.className).not.toContain('shrink-0')
+    expect(text.className).not.toContain('whitespace-nowrap')
+    expect(text.className).toContain('pointer-events-none')
+    expect(text.className).toContain('min-w-0')
     expect(text.textContent).toBe('2Concept Design')
-    for (const other of byTestId('programme-chart').querySelectorAll('[data-part="stage-band"]:not([data-state="current"])')) expect(other.className).toContain('overflow-hidden')
+    for (const other of chart.querySelectorAll('[data-part="stage-band"]:not([data-state="current"])')) expect(other.className).toContain('overflow-hidden')
+    // The full name sits in a line above the plot; the marker in the plot reads only "Today" and takes no pointer.
+    const line = chart.querySelector('[data-part="today-stage"]')!
+    expect(line.textContent).toBe('Today: stage 2, Concept Design')
+    expect(line.closest('[data-part="plot"]')).toBeNull()
+    const marker = chart.querySelector('[data-part="today-marker"]')!
+    expect(marker.textContent).toBe('Today')
+    expect(marker.className).toContain('pointer-events-none')
+    expect(chart.querySelector('[data-part="today"]')!.className).toContain('pointer-events-none')
   })
 
   it('makes each band a button that names it on focus and opens its name and dates on a tap', async () => {
