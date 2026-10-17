@@ -1,7 +1,7 @@
 {
  "key": "01-accounts",
  "title": "Accounts and the sandbox",
- "intro": "This section is about everyone who uses the platform, whatever their organisation. It covers getting in (sign in, sign up, password reset, invites), moving between the sample accounts, resetting the sandbox, and the tools that work on every page: search, undo, and the pages shown when something cannot be opened. Everything runs in the person's own browser as a sandbox, no email is ever sent, and steps anyone can take are drawn in plain white boxes.",
+ "intro": "This section is about everyone who uses the platform, whatever their organisation. It covers getting in (sign in, sign up, password reset, invites), coming back after the 16 October update, moving between the sample accounts, resetting the sandbox, and the tools that work on every page: search, undo, and the pages shown when something cannot be opened. Everything runs in the person's own browser as a sandbox, no email is ever sent, and steps anyone can take are drawn in plain white boxes.",
  "workflows": [
   {
    "id": "sign-in",
@@ -12,7 +12,7 @@
    ],
    "where": "Sign in page (/signin), reached from the landing page or by opening any /app address while signed out",
    "summary": "A person signs in with their email and password, or with one click on a sample account card. If they were sent to sign in from a page inside the app, they land back on that page; otherwise they land on their home page.",
-   "mermaid": "flowchart TD\nA[\"Opens a page inside the app\"] --> B{\"Signed in?\"}:::system\nB -->|\"Yes\"| C([\"Page opens\"])\nB -->|\"No\"| D[\"Sent to Sign in, page remembered\"]:::system\nS[\"Opens Sign in from the landing page\"] --> E\nD --> E{\"Use a sample account?\"}\nE -->|\"Yes\"| F[\"Clicks a sample account card\"]\nE -->|\"No\"| G[\"Enters email and password, presses Sign in\"]\nF --> H{\"Email and password match?\"}:::system\nG --> H\nH -->|\"No\"| I([\"That email and password do not match\"]):::system\nH -->|\"Yes\"| J[\"Signed in\"]:::system\nJ --> K([\"Page asked for opens, or home\"])",
+   "mermaid": "flowchart TD\nA[\"Opens a page inside the app\"] --> B{\"Signed in?\"}:::system\nB -->|\"Yes\"| C([\"Page opens\"])\nB -->|\"No\"| D[\"Sent to Sign in, page remembered\"]:::system\nS[\"Opens Sign in from the landing page\"] --> E\nD --> E{\"Use a sample account?\"}\nE -->|\"Yes\"| F[\"Clicks a sample account card\"]\nE -->|\"No\"| G[\"Enters email and password, presses Sign in\"]\nF --> H{\"Email and password match?\"}:::system\nG --> H\nH -->|\"No\"| I([\"That email and password do not match\"]):::system\nI --> U{\"Sandbox updated, no such account?\"}:::system\nU -->|\"Yes\"| V([\"Line and Create your account again\"]):::system\nH -->|\"Yes\"| J[\"Signed in\"]:::system\nJ --> K([\"Page asked for opens, or home\"])",
    "steps": [
     {
      "actor": "Any person",
@@ -33,11 +33,17 @@
     {
      "actor": "Platform",
      "action": "Opens the page they asked for, or their home page (/app/home) if there was none."
+    },
+    {
+     "actor": "Platform",
+     "action": "In a browser whose sandbox was replaced by the 16 October update, a failed sign-in for an email with no account adds \"The sandbox was updated on 16 October. Accounts made before then need to be created again.\" with Create your account again, which opens sign-up with the typed email filled in."
     }
    ],
    "rules": [
     "An empty field, or an email that does not look like an email address, is flagged under the field before anything is checked.",
     "A wrong email or a wrong password shows the same message, That email and password do not match, so the page never reveals which accounts exist.",
+    "The update line is left out for a known email with a wrong password, for a likely typo (an address one edit from a sample organisation's domain, or within two edits of an account in the sandbox), in a browser that was never updated, and 30 days after the browser found the update.",
+    "A person still remembered from before the update, whose account is gone, sees the same line in a callout before any attempt, and the dead sign-in is forgotten.",
     "Remember me on this device is ticked by default. Unticked, closing the browser signs the person out. The sample account cards always remember.",
     "The five cards are Priya Nair (Architect, Studio Oriel), Isla Brennan (Client (developer), Lantern Quay Developments), Tom Ashby (Donor building owner, Ostlea Estates), Dana Kowalski (Site surveyor, Tarnbrook Deconstruction) and Marcus Lindqvist (Sustainability consultant, Halewick Sustainability). Every sample account uses the password sandbox.",
     "A sample card signs in with the password sandbox. If someone has changed that account's password on Reset your password, the card fails with the mismatch message until the sandbox is reset.",
@@ -58,12 +64,12 @@
     "Platform"
    ],
    "where": "Create your account (/signup), from the Create an account link on Sign in",
-   "summary": "A new person creates their own account and a new organisation in two steps. The organisation type they choose decides which workspace they get: architect, client, donor building owner, surveyor or sustainability consultant.",
-   "mermaid": "flowchart TD\nA[\"Enters full name, work email, password\"] --> B[\"Presses Continue\"]\nB --> C{\"Details filled in correctly?\"}:::system\nC -->|\"No\"| D([\"Field errors shown\"]):::system\nC -->|\"Yes\"| E[\"Enters organisation name\"]\nE --> F[\"Chooses organisation type\"]\nF --> G[\"Presses Create account\"]\nG --> H{\"Email already has an account?\"}:::system\nH -->|\"Yes\"| I([\"Told to sign in instead\"]):::system\nH -->|\"No\"| J[\"Account and organisation created\"]:::system\nJ --> K[\"Signed in\"]:::system\nK --> L([\"Home opens with a welcome message\"])",
+   "summary": "A new person creates their own account and a new organisation in two steps. The organisation type they choose decides which workspace they get: architect, client, donor building owner, surveyor or sustainability consultant. An email that an architect invited to answer a project request joins that client organisation instead.",
+   "mermaid": "flowchart TD\nA[\"Enters full name, work email, password\"] --> B[\"Presses Continue\"]\nB --> C{\"Details filled in correctly?\"}:::system\nC -->|\"No\"| D([\"Field errors shown\"]):::system\nC -->|\"Yes\"| Q{\"Email invited to answer a project request?\"}:::system\nQ -->|\"Yes\"| R[\"Join the organisation that invited you\"]\nR --> S([\"Joins the client, request waits on Home\"]):::system\nQ -->|\"No\"| E[\"Enters organisation name\"]\nE --> F[\"Chooses organisation type\"]\nF --> G[\"Presses Create account\"]\nG --> H{\"Email already has an account?\"}:::system\nH -->|\"Yes\"| I([\"Told to sign in instead\"]):::system\nH -->|\"No\"| J[\"Account and organisation created\"]:::system\nJ --> K[\"Signed in\"]:::system\nK --> L([\"Home opens with a welcome message\"])",
    "steps": [
     {
      "actor": "Any person",
-     "action": "On Step 1 of 2 enters Full name, Work email and Password, then presses Continue."
+     "action": "On Step 1 of 2 enters Full name, Work email and Password, then presses Continue. Coming from the sign-in line Create your account again, the email is already filled in."
     },
     {
      "actor": "Platform",
@@ -79,7 +85,15 @@
     },
     {
      "actor": "Platform",
+     "action": "If a building waits for a deconstruction contractor at that email and the new organisation is a surveying or deconstruction firm, makes it the contractor and tells both sides."
+    },
+    {
+     "actor": "Platform",
      "action": "Opens home and shows the message Welcome to (organisation name), Your workspace is ready."
+    },
+    {
+     "actor": "Any person",
+     "action": "If the email has an invite to answer a project request, step 2 instead reads \"Join the organisation that invited you\" with no organisation fields; pressing Join makes the person the first member of that client organisation, where the request waits on Home."
     }
    ],
    "rules": [
@@ -89,7 +103,8 @@
     "The organisation type cannot be changed later: Settings, Organisation says it sets the workspace and cannot be changed.",
     "A new organisation starts empty; the new person is its only member until they invite colleagues.",
     "Back on step 2 returns to step 1 without losing what was typed.",
-    "The new person stays signed in on this device after closing the browser."
+    "The new person stays signed in on this device after closing the browser.",
+    "The open sign-up page never names the organisation, project or practice behind an invite; those show only through the invite link."
    ],
    "notifications": [
     "None. The welcome is an on-screen message only."
@@ -106,8 +121,8 @@
     "Sustainability consultant"
    ],
    "where": "Home (/app/home), straight after Create account",
-   "summary": "A new organisation has no records, so each home page opens with a first step suited to its type. The architect is walked into creating a first project; the others see an empty home that says what to do or what to wait for.",
-   "mermaid": "flowchart TD\nA[\"New account lands on home\"]:::system --> B{\"Which organisation type?\"}:::system\nB -->|\"Architect\"| C[\"Create your first project dialog opens\"]:::system\nC --> D{\"Creates the project now?\"}:::arch\nD -->|\"Yes\"| E([\"New project page opens\"]):::arch\nD -->|\"No, closes it\"| F([\"Welcome card with three steps\"]):::arch\nB -->|\"Owner\"| G([\"Add your first building\"]):::owner\nB -->|\"Surveyor\"| H([\"No appointments yet, Add building\"]):::surveyor\nB -->|\"Client\"| I([\"Wait for a project request\"]):::client\nB -->|\"Consultant\"| J([\"Wait to be added to a project\"]):::consultant",
+   "summary": "A new organisation has no records, so each home page opens on a first run suited to its type, with its next steps instead of zero tiles. The architect is walked into creating a first project; the others see what to do or what to wait for.",
+   "mermaid": "flowchart TD\nA[\"New account lands on home\"]:::system --> B{\"Which organisation type?\"}:::system\nB -->|\"Architect\"| C[\"Create your first project dialog opens\"]:::system\nC --> D{\"Creates the project now?\"}:::arch\nD -->|\"Yes\"| E([\"New project page opens\"]):::arch\nD -->|\"No, closes it\"| F([\"Welcome card and the Marketplace now\"]):::arch\nB -->|\"Owner\"| G([\"Add your first building, three steps\"]):::owner\nB -->|\"Surveyor\"| H([\"Three steps, Add building\"]):::surveyor\nB -->|\"Client\"| I([\"Welcome with three next steps\"]):::client\nB -->|\"Consultant\"| J([\"No projects yet, three steps\"]):::consultant",
    "steps": [
     {
      "actor": "Platform",
@@ -119,29 +134,30 @@
     },
     {
      "actor": "Architect",
-     "action": "On the Welcome card can press Create a project or Browse the Marketplace, beside three steps: Create your first project, Find materials in the Marketplace, Send your shortlist for approval."
+     "action": "On the Welcome card can press Create a project or Browse the Marketplace, beside three steps: Create your first project, Find materials in the Marketplace, Send your shortlist for approval. Under it, In the Marketplace now shows the categories with stock and links into them."
     },
     {
      "actor": "Donor building owner",
-     "action": "Sees Add your first building and Building something too?, each with a button (Add building, Add new project) that opens the Buildings page with the add dialog."
+     "action": "Sees one card, Add your first building, with three steps (add a building coming down, appoint a surveyor, decide what to recover and who may see it) and Add building. Marketplace is already in the sidebar."
     },
     {
      "actor": "Site surveyor",
-     "action": "Sees No appointments yet with an Add building button to start capturing straight away."
+     "action": "Sees a first-run card with three steps (add a building or wait for an appointment, capture each item on site, submit the survey to the owner) and Add building."
     },
     {
      "actor": "Client (developer)",
-     "action": "Sees No projects yet: a project appears once an architect asks to add the organisation as client and the client accepts under Project requests."
+     "action": "Sees a welcome with three next steps: your architect adds you as the client, accept the project, approve and reserve materials; and recent activity."
     },
     {
      "actor": "Sustainability consultant",
-     "action": "Sees No projects yet and No engagements: a project appears when an architect adds the consultancy to it."
+     "action": "Sees No projects yet with three steps: an architect adds your consultancy and you accept, set the goals and targets, write the circular economy statement. Any waiting project requests sit above it."
     }
    ],
    "rules": [
     "The dialog opens by itself only for an architect, and only on the visit straight after Create account. A person who joins through an invite does not get it.",
-    "The architect's Welcome card stays until the organisation has a project; then the normal dashboard takes its place.",
-    "Client and consultant workspaces cannot start a project themselves; they are brought in by an architect."
+    "The architect's Welcome card stays until the organisation has a project; then the normal dashboard takes its place. The other first runs give way once the organisation has buildings, projects or requests.",
+    "No first run shows empty tiles, an empty programme or an empty tracking table.",
+    "Client and consultant workspaces cannot start a project themselves; they are brought in by an architect, and the consultancy only once the client has accepted."
    ],
    "notifications": [
     "None. The on-screen message reads Welcome to (organisation name), Your workspace is ready."
@@ -249,7 +265,7 @@
    "steps": [
     {
      "actor": "Invited person",
-     "action": "Opens the link and sees Join (organisation name), who invited them, and the organisation type."
+     "action": "Opens the link and sees Join (organisation name), who invited them, and the organisation type. An invite to answer a project request instead names the practice, the client and the project, for example \"Studio Oriel asked Harrowgate Homes to accept Pellow Row, and invited this email to answer.\""
     },
     {
      "actor": "Invited person",
@@ -261,12 +277,16 @@
     },
     {
      "actor": "Platform",
-     "action": "Notifies the organisation that the person joined, opens home and shows Welcome to (organisation name), You have joined the team."
+     "action": "If a building waits for a deconstruction contractor at that email and the organisation is a surveying or deconstruction firm, makes the firm its contractor and tells both sides."
+    },
+    {
+     "actor": "Platform",
+     "action": "Notifies the organisation that the person joined, opens home and shows Welcome to (organisation name), You have joined the team. For a project invite, the request to accept the project waits on their Home."
     }
    ],
    "rules": [
     "The email is fixed to the address the invite was sent to.",
-    "A link that was never issued in this browser, already used or revoked shows This invite link is not valid, with Go to sign in.",
+    "A link that was never issued in this browser, already used or revoked shows This invite link is not valid, which adds that sandbox invites open only in the browser where they were made, with Go to sign in.",
     "If an account with that email was created meanwhile, joining is refused with An account with this email already exists. Sign in instead.",
     "The name cannot be empty and the password needs at least 8 characters.",
     "Someone already signed in who opens the link is warned that joining creates a new account for the invited email and signs them in with it.",
@@ -274,7 +294,8 @@
     "Already have an account? Sign in leads to Sign in instead."
    ],
    "notifications": [
-    "The organisation gets one notification for its members: (name) joined (organisation name), They accepted the invite sent to (email). It links to Settings, Team. The person who joined sees it already read. A member who has turned off Team and projects in Settings, Notifications does not see it."
+    "The organisation gets one notification for its members: (name) joined (organisation name), They accepted the invite sent to (email). It links to Settings, Team. The person who joined sees it already read. A member who has turned off Team and projects in Settings, Notifications does not see it.",
+    "For a project invite, the architect's practice: '[name] joined [client]. They can now accept [project].'"
    ]
   },
   {
@@ -345,10 +366,55 @@
     "Sample account passwords go back to sandbox.",
     "The sample story is dated again from the day of the reset, so its dates move with it.",
     "It affects only this browser; there is no server and nothing is sent anywhere.",
-    "There is no undo for a reset."
+    "There is no undo for a reset.",
+    "Reset also forgets that this browser was updated on 16 October, so the update notice and the sign-in line no longer show."
    ],
    "notifications": [
     "Notifications go back to the sample set; nobody is told of the reset."
+   ]
+  },
+  {
+   "id": "returning-visitor",
+   "title": "Come back after the 16 October update",
+   "who": [
+    "Any person",
+    "Platform"
+   ],
+   "where": "Every Home (/app/home), the notice at the top; Help, Updated on 16 October (/app/help/updated); Sign in (/signin); a bar at the foot of any open tab",
+   "summary": "The sandbox lives in each visitor's browser, so the 16 October update had to replace or carry over what an earlier build stored. A returning visitor is told what happened and what changed, an earlier account that is gone is explained at sign-in, and an open tab offers to reload when a newer build is deployed.",
+   "mermaid": "flowchart TD\nA[\"Opens the app after the update\"] --> B{\"What did this browser hold?\"}:::system\nB -->|\"A version 1 sandbox\"| C[\"Replaced, recorded as updated\"]:::system\nB -->|\"A round 2 sandbox, old key\"| D[\"Carried over as it was\"]:::system\nB -->|\"Nothing\"| E([\"Fresh sample data, no notice\"]):::system\nC --> F[\"Home notice: earlier work is back to the sample\"]:::system\nD --> G[\"Home notice: updated with the review changes\"]:::system\nF --> H{\"See what changed?\"}\nG --> H\nH -->|\"Yes\"| I([\"Help, Updated on 16 October\"])\nH -->|\"Close\"| J([\"Notice stays closed in this browser\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Before anything reads the data, finds what an earlier build stored. A version 1 sandbox is removed and the update recorded; a version 2 sandbox from the earlier round 2 build is carried over to the new key with nothing lost; leftovers beside data this build already has are cleared without a notice."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows a closable notice on every Home: \"The sandbox was updated on 16 October with the changes from the 14 October review.\", adding \"Anything you changed before then is back to the sample data.\" when the sandbox was replaced."
+    },
+    {
+     "actor": "Any person",
+     "action": "Presses See what changed to open Help, Updated on 16 October, which lists the round 2 changes: the person's own first, each with a link to a page they can open, such as their first project or the Marketplace checking against it, then the other workspaces' changes without links. Or closes the notice."
+    },
+    {
+     "actor": "Any person",
+     "action": "If they try to sign in with an account made in the old sandbox, reads the update line with Create your account again (see Sign in)."
+    },
+    {
+     "actor": "Platform",
+     "action": "In a tab left open, checks the served page when the person comes back to the tab and every ten minutes while it is in view; when a newer build is deployed, shows \"A new version of Tallyard is available.\" with Reload and Not now."
+    }
+   ],
+   "rules": [
+    "The data is stored under a key named after its version, so a tab of an older build never reseeds the new one, and the new build never writes the old key.",
+    "The notice shows for sample accounts and accounts made before the update; an account made after it sees none. Closing it is remembered in this browser.",
+    "The sign-in line stops 30 days after this browser found the update.",
+    "Every link in Help, Updated on 16 October is checked against what the person may open.",
+    "The check for a newer build runs in production builds only, and at most every 30 seconds.",
+    "Reset the sandbox forgets the update and its notice."
+   ],
+   "notifications": [
+    "None. The notice, the Help topic and the reload bar are on screen only."
    ]
   },
   {
@@ -360,7 +426,7 @@
    ],
    "where": "Any address; inside the app the page shows within the sidebar and top bar",
    "summary": "Every address inside the app is checked against the person's workspace and records before the page appears. A page they may not open shows a calm no-access page, and an address that does not exist shows Page not found; neither reveals anything about the record behind it.",
-   "mermaid": "flowchart TD\nA[\"Opens an address\"] --> B{\"Inside the app?\"}:::system\nB -->|\"No\"| C{\"Known public page?\"}:::system\nC -->|\"Yes\"| D([\"Page opens\"])\nC -->|\"No\"| E([\"Error 404, Page not found\"]):::system\nB -->|\"Yes\"| F{\"Signed in?\"}:::system\nF -->|\"No\"| G[\"Signs in first\"]\nG --> H\nF -->|\"Yes\"| H{\"Is it a known page?\"}:::system\nH -->|\"No\"| I([\"Page not found, Go to home\"]):::system\nH -->|\"Yes\"| J{\"Allowed for this person?\"}:::system\nJ -->|\"Yes\"| K([\"Page opens\"])\nJ -->|\"No\"| L([\"You do not have access to this\"]):::system",
+   "mermaid": "flowchart TD\nA[\"Opens an address\"] --> B{\"Inside the app?\"}:::system\nB -->|\"No\"| C{\"Known public page?\"}:::system\nC -->|\"Yes\"| D([\"Page opens\"])\nC -->|\"No\"| E([\"Error 404, Page not found\"]):::system\nB -->|\"Yes\"| F{\"Signed in?\"}:::system\nF -->|\"No\"| G[\"Signs in first\"]\nG --> H\nF -->|\"Yes\"| H{\"Is it a known page?\"}:::system\nH -->|\"No\"| I([\"Page not found, Go to home\"]):::system\nH -->|\"Yes\"| J{\"Allowed for this person?\"}:::system\nJ -->|\"Yes\"| K([\"Page opens\"])\nJ -->|\"No\"| W{\"A project request waits for you?\"}:::system\nW -->|\"Yes\"| X([\"Accept the project to open it\"]):::system\nW -->|\"No\"| L([\"You do not have access to this\"]):::system",
    "steps": [
     {
      "actor": "Any person",
@@ -372,20 +438,24 @@
     },
     {
      "actor": "Platform",
-     "action": "Checks that the page exists and that this person's workspace, organisation and records allow it."
+     "action": "Checks that the page exists and that this person's workspace, organisation and records allow it; a query such as ?project= or a section such as #statement does not change the page checked."
     },
     {
      "actor": "Platform",
      "action": "Shows the page, or You do not have access to this, or Page not found, each with Go to home."
+    },
+    {
+     "actor": "Platform",
+     "action": "For a project the person's organisation has been asked to join, as client or as consultancy, and has not yet answered, shows \"Accept [project] to open it\" with a button to Project requests instead."
     }
    ],
    "rules": [
     "Home, Notifications, Settings and Help open for everyone signed in.",
-    "Workspace pages are tied to the organisation type: Saved and New project are for architects; Buildings and Capture for owners and surveyors; Requests for owners; Project requests for clients; Engagements for consultants.",
-    "The Projects list and the Marketplace open for architects, clients and consultants, and for a donor building owner who is the client of a new project. A single material opens only if that person may see its listing.",
-    "A project opens only for organisations on it. A building opens only for its owner, its surveyor or its deconstruction contractor. Inside a building, Inventory, Capture and Testing are for the owner and the surveyor; Priorities, Listings and Sharing for the owner; Availability for the contractor.",
+    "Workspace pages are tied to the organisation type: Saved and New project are for architects; Buildings and Capture for owners and surveyors; Requests for owners; Project requests for clients and consultancies; Engagements for consultants.",
+    "The Projects list opens for architects, clients and consultants, and for a donor building owner who is the client of a New project. The Marketplace opens for architects, clients, consultants and every donor building owner. A single material opens only if that person may see its listing; an owner never opens its own.",
+    "A project opens only for organisations on it, and for a client or consultancy only once it has accepted. A building opens only for its owner, its surveyor or its deconstruction contractor. Inside a building, Inventory, Capture, Testing and Requirements are for the owner and the surveyor; Recovery plan, Listings and Sharing for the owner; Availability for the contractor; Activity for every side, showing what its organisation may read.",
     "An address for a project or building that does not exist shows the no-access page, the same as one the person may not open, so nobody can tell which records exist.",
-    "The no-access page says the page belongs to another workspace or organisation and to ask the person who sent the link. It never shows the record's name or any figure.",
+    "The no-access page says the page belongs to another workspace or organisation and to ask the person who sent the link. It never shows the record's name or any figure, except the project's name to an organisation asked to accept it.",
     "Old addresses still work: /app/discover goes to the Marketplace and a project's carbon tab goes to Sustainability.",
     "If a page fails to load, the app shows Something went wrong inside the sidebar and top bar, suggesting a sandbox reset if it keeps happening.",
     "Outside the app, an unknown address shows Error 404 with Go to home, back to the landing page."
@@ -411,7 +481,7 @@
     },
     {
      "actor": "Platform",
-     "action": "Opens the box Search materials, projects and pages; before typing it lists the person's pages, projects and buildings."
+     "action": "Opens the box Search materials, projects and pages; before typing it lists the person's pages, projects and buildings. A search also finds the tabs inside project and building folders, named with their folder, for example Recovery plan, Wexcombe House."
     },
     {
      "actor": "Any signed-in person",
@@ -425,7 +495,7 @@
    "rules": [
     "Results come only from what the person may open: their workspace's pages and Notifications, the projects their organisation is on, and the buildings their organisation owns, surveys or dates as contractor, with those buildings' inventory items.",
     "A deconstruction contractor's inventory results open the no-access page, because a contractor alone may not open a building's inventory.",
-    "Materials are searched only by architects, clients, consultants, and donor building owners who are the client of a new project. They come from public listings, listings shared with them, and materials already reserved for their projects.",
+    "Materials are searched only by architects, clients, consultants and donor building owners; an owner never finds its own lots. They come from public listings, listings shared with them, and materials already reserved for their projects.",
     "A material result shows its picture, family and location; nothing private about the seller is searchable.",
     "Every word typed must match. Results whose name starts with what was typed come first. At most 24 results show.",
     "The shortcut works even while typing in a field, but only inside the app, not on the sign-in pages."

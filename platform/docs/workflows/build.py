@@ -55,7 +55,7 @@ parts = []
 parts.append(f'''<section class="cover">
 <div class="mark"><span></span><span></span><span></span></div>
 <h1>Tallyard platform<br>workflows</h1>
-<p class="lede">Every workflow in the platform, drawn as a simple diagram with the steps, the rules and who is told what. As built on 15 October 2026, after the round 2 changes from the partner review of 14 October.</p>
+<p class="lede">Every workflow in the platform, drawn as a simple diagram with the steps, the rules and who is told what. As built on 16 October 2026, after the round 2 changes from the partner review of 14 October and the follow-up to the recording audit of 16 October.</p>
 <dl class="facts">
 <div><dt>Sections</dt><dd>{len(areas)}</dd></div>
 <div><dt>Workflows</dt><dd>{total_workflows}</dd></div>

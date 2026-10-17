@@ -1,6 +1,6 @@
 # Platform workflows document
 
-`../Tallyard-platform-workflows.pdf` documents every workflow in the platform as a simple diagram with steps, rules and notifications, as built on 15 October 2026 after round 2. Each section was written from the code and then checked against it.
+`../Tallyard-platform-workflows.pdf` documents every workflow in the platform as a simple diagram with steps, rules and notifications, as built on 16 October 2026, after round 2 and the follow-up to the recording audit (BRIEF section 14.5). Each section was written from the code and then checked against it.
 
 Sources: one JSON file per section in `areas/` (diagrams in Mermaid) and `appendix.json` (gaps found while documenting).
 

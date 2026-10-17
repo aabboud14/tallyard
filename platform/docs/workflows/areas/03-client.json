@@ -1,7 +1,7 @@
 {
  "key": "03-client",
  "title": "Client (developer)",
- "intro": "This section is about the client: the developer organisation a project is built for. The client accepts the architect's request to join a project, approves or declines the materials the architect proposes, asks sellers to reserve approved materials and, with the sustainability consultant, keeps requirements and the circular economy statement on track. Its Home is a dashboard of indicative figures and a to do list across all its projects.",
+ "intro": "This section is about the client: the developer organisation a project is built for. The client accepts the architect's request to join a project, joining Tallyard from an invite if nobody there uses it yet, approves or declines the materials the architect proposes, asks sellers to reserve approved materials and, with the sustainability consultant, keeps requirements and the circular economy statement on track. Its Home is a dashboard of indicative figures and a to do list across all its projects; a client with no projects yet sees its first steps instead.",
  "workflows": [
   {
    "id": "answer-project-request",
@@ -12,7 +12,7 @@
    ],
    "where": "Home, request cards at the top (/app/home), and Projects, Project requests in the sidebar (/app/projects/requests)",
    "summary": "An architect must ask before adding a client organisation to a project. The client reads the request and accepts it to see the project and approve materials, or declines it with an optional note.",
-   "mermaid": "flowchart TD\n  A[\"Architect asks to add you as client\"]:::arch\n  B[\"Platform notifies the client\"]:::system\n  C[\"Open the request card\"]:::client\n  D[\"Read project, practice, stage and dates\"]:::client\n  E{\"Accept the project?\"}:::client\n  F[\"Choose Accept\"]:::client\n  G[\"Project opens in your workspace\"]:::system\n  H[\"Architect told you accepted\"]:::system\n  I([\"Linked, materials can be sent\"]):::client\n  J[\"Choose Decline, add optional note\"]:::client\n  K[\"Architect told your organisation declined\"]:::system\n  L([\"Project stays out of your workspace\"]):::client\n  M[\"Architect may ask again or another client\"]:::arch\n  A --> B --> C --> D --> E\n  E -->|\"Yes\"| F --> G --> H --> I\n  E -->|\"No\"| J --> K --> L\n  K --> M",
+   "mermaid": "flowchart TD\n  A[\"Architect asks to add you as client\"]:::arch\n  B[\"Platform notifies the client\"]:::system\n  C[\"Open the request card\"]:::client\n  D[\"Read project, practice, stage, dates, consultancy\"]:::client\n  E{\"Accept the project?\"}:::client\n  F[\"Choose Accept\"]:::client\n  G[\"Project opens in your workspace\"]:::system\n  H[\"Architect told, consultancy asked to join\"]:::system\n  I([\"Linked, materials can be sent\"]):::client\n  J[\"Choose Decline, add optional note\"]:::client\n  K[\"Architect told your organisation declined\"]:::system\n  L([\"Project stays out of your workspace\"]):::client\n  M[\"Architect may ask again or another client\"]:::arch\n  A --> B --> C --> D --> E\n  E -->|\"Yes\"| F --> G --> H --> I\n  E -->|\"No\"| J --> K --> L\n  K --> M",
    "steps": [
     {
      "actor": "Architect",
@@ -24,7 +24,7 @@
     },
     {
      "actor": "Client (developer)",
-     "action": "Reads the card: project name, architect practice, who asked and when, type, location, stage, site start, practical completion and the message."
+     "action": "Reads the card: project name, architect practice, who asked and when, type, location, stage, site start, practical completion, the sustainability consultancy the architect proposes ('asked once you accept') and the message."
     },
     {
      "actor": "Client (developer)",
@@ -32,7 +32,7 @@
     },
     {
      "actor": "Platform",
-     "action": "On accept, links the project: a message 'You joined [project]' offers Open project, the project appears under Projects in the sidebar with its tabs, and the architect can now send materials for approval."
+     "action": "On accept, links the project: a message 'You joined [project]' offers Open project, the project appears under Projects in the sidebar with its tabs, the architect can now send materials for approval, and the proposed consultancy is asked to join."
     },
     {
      "actor": "Platform",
@@ -47,7 +47,8 @@
     "Only a person in a developer (client) organisation can answer, and only for a project that names their organisation as client.",
     "Only a request still waiting can be answered. A second answer is refused with 'This request has already been answered.'",
     "Before accepting, the client never sees the shortlist, any listing or any figure; only the project facts and the message.",
-    "Until the client accepts, the project is not in the client's workspace and the architect cannot send anything for approval.",
+    "Until the client accepts, the project is not in the client's workspace and the architect cannot send anything for approval. Opening the project's address shows 'Accept [project] to open it' with a button to Project requests.",
+    "Until the client accepts, no consultancy sees the project or is asked about it.",
     "A decline reaches the architect under the organisation's name, never the name of the person who declined.",
     "Project requests appears in the sidebar, with a count, only while at least one request is waiting. The page itself (/app/projects/requests) also lists answered requests as Accepted or Declined with the date.",
     "A donor building owner never receives project requests: it becomes a client only of its own New projects.",
@@ -55,8 +56,53 @@
    ],
    "notifications": [
     "Client organisation: '[practice] asked to add you as client on [project]', with the architect's message, or 'Accept to see the project and approve materials for it.' when there is none.",
-    "Architect on accept: '[client] accepted [project]. They can now see the project and approve materials you send.' The project activity, which the consultant also sees, records that the client accepted.",
+    "Architect on accept: '[client] accepted [project]. They can now see the project and approve materials you send.' The project activity records that the client accepted.",
+    "Consultancy, on accept, when the architect named one: '[practice] asked to add you as sustainability consultant on [project]', '[client] has accepted the project. Accept to see it and set its targets.'",
     "Architect on decline: '[client] declined [project]', with the client's note, or 'Ask again or choose another client from the project overview.' when there is none. Only the architect is told."
+   ]
+  },
+  {
+   "id": "join-from-invite",
+   "title": "Join a new client organisation from an invite",
+   "who": [
+    "Client (developer)",
+    "Architect",
+    "Platform"
+   ],
+   "where": "The invite link (/invite/:token), or Create your account (/signup) with the invited email; then Home (/app/home) and Project requests (/app/projects/requests)",
+   "summary": "When an architect names a client nobody uses Tallyard from yet, nobody can accept the project. The architect invites a contact by email; that person joins the client organisation, from the link or by signing up with the same email, and the request to accept the project waits on their Home.",
+   "mermaid": "flowchart TD\n  A[\"Architect adds a client contact email\"]:::arch\n  B[\"Invite tied to the project\"]:::system\n  C{\"How does the contact arrive?\"}:::client\n  D[\"Opens the invite link\"]:::client\n  E[\"Reads who asked, for which project\"]:::client\n  F[\"Signs up with the invited email\"]:::client\n  G[\"Step 2: Join the organisation that invited you\"]:::system\n  H[\"Enters name and password, presses Join\"]:::client\n  I[\"Joins the client organisation\"]:::system\n  J[\"Practice told they can now accept\"]:::system\n  K([\"Request waits on Home, Accept or Decline\"]):::client\n  A --> B --> C\n  C -->|\"Link\"| D --> E --> H\n  C -->|\"Sign up\"| F --> G --> H\n  H --> I --> J --> K",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Gives a Client contact email on New project or Change client, or later in the field on the waiting banner, and passes on the link with Copy invite link; no email is sent from the sandbox."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Opens the link and reads, for example, 'Studio Oriel asked Harrowgate Homes to accept Pellow Row, and invited this email to answer', then enters a full name and password and presses Join."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Or opens Create your account and types the invited email: step 2 becomes 'Join the organisation that invited you', with no organisation fields and a Join button."
+    },
+    {
+     "actor": "Platform",
+     "action": "Creates the person as the first member of the client organisation, signs them in and shows the request at the top of their Home and under Project requests."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Accepts or declines the project as any client does."
+    }
+   ],
+   "rules": [
+    "The open sign-up page names no organisation, project or practice: it says only 'This email has an invite to answer a project request. Open the link you were sent to see who invited you, or join now.' The names show only through the invite link.",
+    "Only the newest invite for a project works; Resend or Use another email replaces it. Accepting the project unlocks sending for approval.",
+    "An invite is refused once someone from the client organisation uses Tallyard, for an email another organisation uses, or once the client has accepted.",
+    "Sandbox invites open only in the browser where they were made."
+   ],
+   "notifications": [
+    "The architect's practice, when the contact joins: '[name] joined [client]. They can now accept [project].'",
+    "The client organisation: the usual '[practice] asked to add you as client on [project]' request, already waiting."
    ]
   },
   {
@@ -113,7 +159,7 @@
    ],
    "notifications": [
     "Client when sent: '[n] materials to approve on [project]', with the architect's message, or 'Sent by [name], [practice].'",
-    "Architect and consultant (if one is appointed) on a decision: '[client] approved [material]' or '[client] declined [material]', with the note.",
+    "Architect and consultancy (once it has joined the project) on a decision: '[client] approved [material]' or '[client] declined [material]', with the note.",
     "Project activity for the whole team: '[person] approved [material]' or '[person] declined [material]'."
    ],
    "states_mermaid": "stateDiagram-v2\n  state \"Shortlisted\" as Shortlisted\n  state \"Sent to the client\" as Sent\n  state \"Approved\" as Approved\n  state \"Declined\" as Declined\n  [*] --> Shortlisted: architect saves it\n  Shortlisted --> Sent: architect sends\n  Sent --> Approved: client approves\n  Sent --> Declined: client declines\n  Sent --> [*]: architect removes it\n  Declined --> Shortlisted: architect reopens\n  Approved --> [*]",
@@ -346,7 +392,7 @@
     },
     {
      "actor": "Platform",
-     "action": "Adds 'Review the circular economy statement' when the consultant sends it, due 14 days later; it clears when the client marks it reviewed."
+     "action": "Adds 'Review the circular economy statement' when the consultant sends it, due 14 days later; it clears when the client marks it reviewed, and stays if the consultant edits the statement meanwhile."
     },
     {
      "actor": "Platform",
@@ -378,16 +424,16 @@
     "Sustainability consultant"
    ],
    "where": "Project, Sustainability tab, Circular economy statement card (/app/projects/:id/sustainability#statement)",
-   "summary": "The consultant drafts the circular economy statement and sends it to the client. The client reads it and marks it reviewed, with optional comments the consultant then sees.",
-   "mermaid": "flowchart TD\n  A[\"Consultant sends the statement for review\"]:::consultant\n  B[\"Client notified, item on To do\"]:::system\n  C[\"Open the Sustainability tab\"]:::client\n  D[\"Choose Read and review\"]:::client\n  E[\"Read each section and the caveat\"]:::client\n  F[\"Add optional comments\"]:::client\n  G[\"Choose Mark as reviewed\"]:::client\n  H[\"Statement marked reviewed\"]:::system\n  I[\"Consultant told, with the comments\"]:::system\n  J([\"Reviewed by the client\"]):::client\n  A --> B --> C --> D --> E --> F --> G --> H --> I --> J",
+   "summary": "The consultant drafts the circular economy statement and sends it to the client. Sending freezes the text: the client reads and reviews the version sent, dated when it was sent, while the records move on. The client marks it reviewed, with optional comments the consultant then sees.",
+   "mermaid": "flowchart TD\n  A[\"Consultant sends the statement for review\"]:::consultant\n  S[\"Text frozen as sent\"]:::system\n  B[\"Client notified, item on To do\"]:::system\n  C[\"Open the Sustainability tab\"]:::client\n  D[\"Choose Read and review\"]:::client\n  E[\"Read the version sent and the caveat\"]:::client\n  F[\"Add optional comments\"]:::client\n  G[\"Choose Mark as reviewed\"]:::client\n  H[\"Statement marked reviewed\"]:::system\n  I[\"Consultant told, with the comments\"]:::system\n  J([\"Reviewed by the client\"]):::client\n  U[\"Consultant sends the updated statement\"]:::consultant\n  A --> S --> B --> C --> D --> E --> F --> G --> H --> I --> J\n  U --> S",
    "steps": [
     {
      "actor": "Sustainability consultant",
-     "action": "Edits the statement drafted from the project records and sends it to the client; this needs the client to have accepted the project."
+     "action": "Edits the statement drafted from the project records and sends it to the client; this needs the client and the consultancy to have accepted the project."
     },
     {
      "actor": "Platform",
-     "action": "Notifies the client, puts a badge on the Sustainability tab and adds a review item due in 14 days to the To do list."
+     "action": "Freezes the text as sent, notifies the client, puts a badge on the Sustainability tab and adds a review item due in 14 days to the To do list."
     },
     {
      "actor": "Client (developer)",
@@ -395,26 +441,31 @@
     },
     {
      "actor": "Client (developer)",
-     "action": "Reads every section under the warning caveat, writes optional comments for the consultant and chooses Mark as reviewed."
+     "action": "Reads every section of the version sent, with its bulleted lists, under the warning caveat; writes optional comments for the consultant and chooses Mark as reviewed."
     },
     {
      "actor": "Platform",
      "action": "Records the review with the date and comments, logs it for the project team and tells the consultant."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "If the statement changes after sending, presses Send the updated statement, which replaces the frozen version and asks for review again."
     }
    ],
    "rules": [
     "Only the project's client can mark the statement reviewed, and only while it is with the client for review: 'The statement has not been sent for review.'",
     "Only the consultant can edit or send the statement. The client reads it; the architect does not see the statement card.",
-    "While the consultant is drafting, the client sees 'Being drafted' and no button. After review the client can still open it with Read the statement.",
-    "If the consultant edits the statement after review, it returns to draft, and must be sent again for a new review.",
+    "A statement never sent reads 'Not sent yet' to the client and the architect, on the Sustainability card, the scheme card and the tracking table, or 'Being drafted' once the consultant has started editing it; the client cannot open it until it is sent. After review the client can still open it with Read the statement.",
+    "An edit after sending does not pull the statement back: the client keeps reading, and can still review, the version sent, and sees 'This is the version sent on [date]. [Consultancy] has updated the statement since, so ask them for the latest if you need it.'",
     "The statement is indicative and carries the caveat in the dialog. A toast offers Undo after marking it reviewed."
    ],
    "notifications": [
     "Client when sent: 'Circular economy statement ready for review. [project]. Sent by [name], [consultancy].'",
+    "Client when the updated statement is sent: 'Updated circular economy statement ready for review'.",
     "Consultant when reviewed: '[client] reviewed the circular economy statement', with the comments or 'No comments.'"
    ],
-   "states_mermaid": "stateDiagram-v2\n  state \"Draft, being drafted\" as Draft\n  state \"Ready for your review\" as Ready\n  state \"Reviewed\" as Reviewed\n  [*] --> Draft\n  Draft --> Ready: consultant sends\n  Ready --> Reviewed: client marks reviewed\n  Ready --> Draft: consultant edits\n  Reviewed --> Draft: consultant edits\n  Reviewed --> Ready: consultant sends again",
-   "states_note": "The consultant moves the statement between draft and ready; only the client moves it from ready to reviewed."
+   "states_mermaid": "stateDiagram-v2\n  state \"Not sent yet, or being drafted\" as Draft\n  state \"Ready for your review\" as Ready\n  state \"Reviewed\" as Reviewed\n  [*] --> Draft\n  Draft --> Ready: consultant sends\n  Ready --> Reviewed: client marks reviewed\n  Ready --> Ready: consultant sends the updated statement\n  Reviewed --> Ready: consultant sends again",
+   "states_note": "Only the consultant sends, and each send freezes the text the client reads. Editing never moves the statement back; only the client moves it from ready to reviewed."
   },
   {
    "id": "track-requirements",
@@ -430,11 +481,11 @@
    "steps": [
     {
      "actor": "Architect",
-     "action": "Chooses which requirements apply from the project's local authority and region in the project settings."
+     "action": "Chooses which requirements apply from the project's local authority and region, on the project overview or the Requirements tab. Until then the requirements suggested for the place are tracked, and the tab says so."
     },
     {
      "actor": "Client (developer)",
-     "action": "Opens Requirements, sees the bar of requirements by status and 'n of m ready', and filters with All, At risk, Open, Evidence ready or Not applicable."
+     "action": "Opens Requirements, from the tab or Track requirements on the overview card, sees the bar of requirements by status and 'n of m ready', and filters with All, At risk, Open, Evidence ready or Not applicable."
     },
     {
      "actor": "Client (developer)",
@@ -450,7 +501,7 @@
     },
     {
      "actor": "Platform",
-     "action": "When the status becomes At risk or Evidence ready, notifies the other of the two (the consultant when the client changed it)."
+     "action": "When the status becomes At risk or Evidence ready, notifies the other of the two (the consultancy when the client changed it, once it has joined)."
     }
    ],
    "rules": [
@@ -463,7 +514,7 @@
     "Requirements are indicative planning aids, not certification or planning advice."
    ],
    "notifications": [
-    "Consultant, when the client marks a requirement at risk or evidence ready: '[requirement] is [status] on [project]. Marked by [name], [organisation].'",
+    "Consultancy (once it has joined the project), when the client marks a requirement at risk or evidence ready: '[requirement] is [status] on [project]. Marked by [name], [organisation].'",
     "Client, when the consultant does the same, once the client has accepted the project.",
     "Other status changes and evidence are logged in the project activity only."
    ],
@@ -508,7 +559,7 @@
     "With no carbon target set the carbon tile reads 'No carbon target set'. With no bill of materials the reuse tile reads 'No bill yet'.",
     "Only secured materials (earlier deals and reservations the seller accepted) count as secured carbon and reuse; approved materials are shown separately as what more they would add.",
     "Only projects the client organisation has accepted are counted.",
-    "The dashboard is for developer clients. A donor building owner acting as client on its own New project uses the owner Home instead."
+    "A client with no projects sees no figures: Home opens on a welcome with three next steps (your architect adds you as the client, accept the project, approve and reserve materials) and recent activity. A donor building owner that is the client of a New project sees the same four figures on its own Home, under Your new projects as developer."
    ],
    "notifications": [
     "None."
@@ -531,11 +582,11 @@
     },
     {
      "actor": "Platform",
-     "action": "Sustainability tracking: per project, the BREEAM, LEED and WELL target rating with credits ready and at risk, content by value against target with the statement status, and requirements ready, in progress and at risk."
+     "action": "Sustainability tracking: per project, the BREEAM, LEED and WELL cells, each with the target rating, credits ready and at risk, and a pill with an icon and a word for its state against target (On target, Near target, Off target); content by value against target with the statement status; and requirements ready, in progress and at risk, with the place they are for, for example 'For Newham, Inner London East'."
     },
     {
      "actor": "Platform",
-     "action": "Your projects: a card per project with its stage, materials needed date, counts To decide, Approved and Reserved, and the indicative cost so far."
+     "action": "Your projects: a card per project with its drawing and swatches, stage, materials needed date, counts To decide, Approved and Reserved, and the indicative cost so far. A project still setting up reads 'Being set up', then 'Nothing shortlisted yet' or 'Shortlisting under way'."
     },
     {
      "actor": "Client (developer)",
@@ -544,8 +595,8 @@
    ],
    "rules": [
     "Certification tracking is read from the consultant's records. It is indicative and not certification advice; the table carries that caveat.",
-    "A project with no consultant shows 'No consultant appointed. Defaults from the requirements are shown.' in place of the scheme columns.",
-    "The programme dates come from the architect's project programme; the client cannot edit them here.",
+    "A project with no consultancy reads 'No consultant appointed yet' under its name and still shows its three scheme cells, with the defaults from its requirements where they apply and 'Not targeted' otherwise. A consultancy that has not joined is named as waiting to accept or declined, never as setting targets.",
+    "The programme dates come from the project programme; the client cannot edit them here. Every rating state comes from one rule shared with the Sustainability tab and the consultant's Home.",
     "Recent activity lists decisions and reservations on the client's projects; seller names appear only for the client's own accepted reservations.",
     "Each project row links into that project; nothing on this part of Home can be changed here."
    ],

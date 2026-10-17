@@ -1,7 +1,7 @@
 {
  "key": "04-owner",
  "title": "Donor building owner",
- "intro": "The donor building owner holds buildings that are coming down or being stripped out, and decides what in them is recovered, who may see it and who may reserve it. They appoint the surveyor and the deconstruction contractor, ask testing companies for tests, list lots privately, in confidence or publicly, and answer reservation requests. An owner can also be the client of its own New project, sourcing reclaimed materials with an architect.",
+ "intro": "The donor building owner holds buildings that are coming down or being stripped out, and decides what in them is recovered, who may see it and who may reserve it. They appoint the surveyor and the deconstruction contractor, ask testing companies for tests, track the requirements that apply before demolition, list lots privately, in confidence or publicly, and answer reservation requests. Every owner can also read the Marketplace, and can be the client of its own New project, sourcing reclaimed materials with an architect.",
  "workflows": [
   {
    "id": "add-donor-building",
@@ -12,7 +12,7 @@
    ],
    "where": "Buildings (/app/buildings), button Add building, or Add building in the sidebar under Donor buildings (/app/buildings?new=1)",
    "summary": "The owner records a building that is coming down or being stripped out, so it can be surveyed and what it holds offered for reuse. The record is private to the owner organisation; nothing is listed until the owner decides.",
-   "mermaid": "flowchart TD\nA[\"Open Buildings, press Add building\"]:::owner --> B[\"Choose Donor building\"]:::owner\nB --> C[\"Enter name, address and region\"]:::owner\nC --> D[\"Add optional facts, structure, programme\"]:::owner\nD --> E{\"Details valid?\"}:::system\nE -->|\"No\"| F([\"Error shown, fix and retry\"]):::system\nE -->|\"Yes\"| G[\"Building saved as private\"]:::system\nG --> H{\"Surveyor chosen?\"}:::owner\nH -->|\"Yes\"| I[\"Surveyor told they are appointed\"]:::system\nH -->|\"No\"| J([\"Appoint a surveyor later\"]):::owner\nI --> K([\"Building ready for capture\"]):::surveyor",
+   "mermaid": "flowchart TD\nA[\"Open Buildings, press Add building\"]:::owner --> B[\"Choose Donor building\"]:::owner\nB --> C[\"Enter name, address, region and local authority\"]:::owner\nC --> D[\"Add optional facts, structure, programme\"]:::owner\nD --> E{\"Details valid?\"}:::system\nE -->|\"No\"| F([\"Error shown, fix and retry\"]):::system\nE -->|\"Yes\"| G[\"Building saved as private\"]:::system\nG --> R[\"Requirements before demolition tracked\"]:::system\nR --> H{\"Surveyor chosen?\"}:::owner\nH -->|\"Yes\"| I[\"Surveyor told they are appointed\"]:::system\nH -->|\"No\"| J([\"Appoint a surveyor later\"]):::owner\nI --> K([\"Building ready for capture\"]):::surveyor",
    "steps": [
     {
      "actor": "Donor building owner",
@@ -20,7 +20,7 @@
     },
     {
      "actor": "Donor building owner",
-     "action": "Enters the building name, address and region (required), and optionally the postcode district and local authority."
+     "action": "Enters the building name and address and chooses the Region (required), and optionally the postcode district and the Local authority. The local authority list holds every listed authority grouped by region, so choosing one also sets the region; outside London, Another local authority takes a typed name."
     },
     {
      "actor": "Donor building owner",
@@ -32,7 +32,7 @@
     },
     {
      "actor": "Platform",
-     "action": "Checks the details, saves the building as private with location shown by region and timing by three-month window, and opens its Overview."
+     "action": "Checks the details, saves the building as private with location shown by region and timing by three-month window, starts tracking the requirements that apply before demolition at that place, and opens its Overview."
     },
     {
      "actor": "Platform",
@@ -40,12 +40,13 @@
     },
     {
      "actor": "Donor building owner",
-     "action": "Can later change the name, address and programme with Edit details on the building, and the structure on the Overview."
+     "action": "Can later change the name, address, postcode district, region, local authority and programme with Edit details on the building, and the structure on the Overview. A move says how many requirements before demolition stop applying and how many more are tracked."
     }
    ],
    "rules": [
     "Only a donor building owner can add a donor building this way.",
     "Name, address and region are required. The year built must be between 1800 and this year.",
+    "A listed local authority is accepted only under its own region: \"Choose a local authority in this region.\" A typed name that is in fact listed says where it is listed. A typed name is accepted only outside London. Names are stored in their listed spelling, so \"westminster\" or \"Westminster City Council\" both read Westminster.",
     "The programme dates must run in order: strip-out, then dismantling, then clear by. Otherwise the save is refused.",
     "The surveyor, if chosen, must be a surveying or deconstruction firm.",
     "The building and everything captured in it stay private to the owner and the firms working on it until the owner lists something."
@@ -62,17 +63,17 @@
     "Donor building owner (as client)",
     "Architect"
    ],
-   "where": "Buildings (/app/buildings), Add building, then New project; or Add new project in the New projects section. The project opens at /app/projects/:id",
+   "where": "Add new project on Buildings (/app/buildings?new=project), in the New projects section of the owner Home, or on the Marketplace strip Building something too?; or Add building, then New project. The project opens at /app/projects/:id",
    "summary": "A New project is a building the owner is putting up or refurbishing. The owner organisation becomes its client and developer, and appoints an architecture practice who shortlists reclaimed materials; the owner then approves and reserves them, as any client would.",
-   "mermaid": "flowchart TD\nA[\"Open Buildings, press Add building\"]:::owner --> B[\"Choose New project\"]:::owner\nB --> C[\"Enter name, type, region, RIBA stage\"]:::owner\nC --> D[\"Set date materials needed on site\"]:::owner\nD --> E{\"Details valid?\"}:::system\nE -->|\"No\"| F([\"Error shown, fix and retry\"]):::system\nE -->|\"Yes\"| G[\"Project created, owner is client\"]:::system\nG --> H{\"Architect chosen?\"}:::owner\nH -->|\"No\"| J[\"Appoint an architect later\"]:::owner\nH -->|\"Yes\"| I[\"Architect told, shortlist ready\"]:::system\nJ --> I\nI --> K[\"Architect shortlists materials\"]:::arch\nK --> L([\"Owner approves and reserves\"]):::owner",
+   "mermaid": "flowchart TD\nA[\"Press Add new project\"]:::owner --> B[\"Dialog opens on New project\"]:::system\nB --> C[\"Enter name, type, region, RIBA stage\"]:::owner\nC --> D[\"Set date materials needed on site\"]:::owner\nD --> E{\"Details valid?\"}:::system\nE -->|\"No\"| F([\"Error shown, fix and retry\"]):::system\nE -->|\"Yes\"| G[\"Project created, owner is client\"]:::system\nG --> H{\"Architect chosen?\"}:::owner\nH -->|\"No\"| J[\"Owner may keep or edit the dates\"]:::owner\nJ --> P[\"Appoint an architect later\"]:::owner\nH -->|\"Yes\"| I[\"Architect told, shortlist ready\"]:::system\nP --> I\nI --> K[\"Architect shortlists materials\"]:::arch\nK --> L([\"Owner approves and reserves\"]):::owner",
    "steps": [
     {
      "actor": "Donor building owner",
-     "action": "Presses Add building and, under What kind of building?, picks New project."
+     "action": "Presses Add new project on Buildings or on the owner Home, which opens the dialog on New project with Project name; or presses Add building and picks New project."
     },
     {
      "actor": "Donor building owner",
-     "action": "Enters the project name, region, project type and RIBA stage, and optionally the local authority. If the type is Other, a short description for the team only."
+     "action": "Enters the project name, region, project type and RIBA stage, and optionally the local authority from the grouped list. If the type is Other, a short description for the team only."
     },
     {
      "actor": "Donor building owner",
@@ -84,7 +85,7 @@
     },
     {
      "actor": "Platform",
-     "action": "Creates the project with the owner organisation as client, already linked, and adds Marketplace and a New projects section to the owner sidebar."
+     "action": "Creates the project with the owner organisation as client, already linked, adds a New projects section to the owner sidebar and shows a quiet New project pill in the project header for the owner."
     },
     {
      "actor": "Platform",
@@ -92,7 +93,15 @@
     },
     {
      "actor": "Donor building owner",
+     "action": "While no architect is appointed, may press Keep these dates or Edit programme on the project's programme card to set the dates itself."
+    },
+    {
+     "actor": "Donor building owner",
      "action": "If no architect was chosen, uses the card Appoint an architect to start sourcing on the project Overview or Team tab, or Appoint on the Buildings list, and presses Appoint."
+    },
+    {
+     "actor": "Platform",
+     "action": "On appointment, dates the owner set read \"Client's dates\" for the architect, who keeps or edits them; the owner then reads \"Your dates until the architect confirms them.\""
     },
     {
      "actor": "Architect",
@@ -100,21 +109,71 @@
     },
     {
      "actor": "Donor building owner",
-     "action": "Approves materials and requests reservations from the project Approvals and Reservations tabs."
+     "action": "Approves materials and requests reservations from the project Approvals and Reservations tabs, and follows them under Your new projects as developer on its Home."
     }
    ],
    "rules": [
-    "Only a donor building owner can add a New project from Buildings; it is a project, not a building.",
+    "Only a donor building owner can add a New project from Buildings; it is a project, not a building. Add building on its own still opens on Donor building.",
     "The project name must be unique among the owner organisation's projects.",
     "The materials date must be today or later, and site start must leave room for the remaining design stages.",
     "The architect must be an architecture practice. A project has one architect: appointing a second is refused with \"This project already has an architect.\"",
+    "The owner may set the programme only while no architect is appointed; after that only the architect can, and keeping or editing makes the dates the architect's plan.",
     "No sustainability consultant is set when the owner creates the project.",
     "On its own projects the owner gets the client workspace: approvals and reservations, not the architect's shortlist tools.",
+    "With a New project, the owner Home adds Your new projects as developer: the client dashboard's indicative cost, saving, carbon and reuse tiles, the to do list and the programme, worked out by the same rules.",
     "The owner cannot reserve lots from its own buildings for its own project (see the guard on reserving your own lots)."
    ],
    "notifications": [
     "The appointed architect: \"[owner] added you as architect on [project]. Your client is [owner].\"",
     "The project activity log records that the project was created and, later, that the architect was appointed."
+   ]
+  },
+  {
+   "id": "owner-marketplace",
+   "title": "Browse the Marketplace as an owner",
+   "who": [
+    "Donor building owner",
+    "Platform"
+   ],
+   "where": "Marketplace in the owner sidebar (/app/marketplace) and material pages (/app/marketplace/:publicId); also search with Ctrl K or Cmd K",
+   "summary": "Every donor building owner may build too, so every owner reads the Marketplace, as a client would: guide prices and the price sort, but nothing to save to. Its own lots never appear there; it manages them in its buildings. A New project is how it checks materials against a start on site.",
+   "mermaid": "flowchart TD\nA[\"Open Marketplace from the sidebar\"]:::owner --> B[\"Own lots left out\"]:::system\nB --> C{\"Has a New project?\"}:::system\nC -->|\"No\"| D[\"Strip offers Add new project\"]:::system\nD --> E([\"New project dialog opens\"]):::owner\nC -->|\"Yes\"| F[\"Check against the New project\"]:::owner\nF --> G[\"Cards show fit and guide prices\"]:::system\nD --> H[\"Browse, filter, sort by guide price\"]:::owner\nG --> I([\"Open a material page, no Save\"]):::owner\nH --> I",
+   "steps": [
+    {
+     "actor": "Donor building owner",
+     "action": "Opens Marketplace, which sits under Home in every owner's sidebar."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the Marketplace in the client view: guide price ranges and the Lowest guide price sort, with no Save to project."
+    },
+    {
+     "actor": "Platform",
+     "action": "Leaves the owner's own lots out of the grid, the folders, search and material pages."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Without a New project, reads the strip \"Building something too? Add a new project to save materials to it and check them against its start on site.\" and presses Add new project, which opens Buildings on New project."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "With a New project, chooses it in the checking strip, so each card shows its fit against that project's materials date."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Opens a material page and reads its facts, availability and guide price, and downloads its drawing, 3D model or BIM model."
+    }
+   ],
+   "rules": [
+    "Only other sellers' lots show: openly listed ones, lots reserved for the owner's own New projects, and lots shared with them or reached through a share link the owner opened.",
+    "An owner never sees its own lots as listings. Opening one of its own material pages shows the no-access page; it manages those lots in its buildings.",
+    "Nothing names another seller or building: every card and page is built from the public listing.",
+    "Only architects save materials. The architect of the owner's New project shortlists for it; the owner approves and reserves.",
+    "New for your projects is for architects only.",
+    "Search (Ctrl K or Cmd K) finds other sellers' materials for every owner, never its own."
+   ],
+   "notifications": [
+    "None."
    ]
   },
   {
@@ -138,7 +197,11 @@
     },
     {
      "actor": "Platform",
-     "action": "Records the appointment and tells the firm, which gets the building with Overview, Capture, Inventory and Testing tabs."
+     "action": "Records the appointment and tells the firm, which gets the building with Overview, Capture, Inventory, Testing and Requirements tabs."
+    },
+    {
+     "actor": "Platform",
+     "action": "If the firm had already added the same building itself and captured in it, offers the firm to move those items into this appointment (see Move early captures into an appointment in the surveyor section)."
     },
     {
      "actor": "Surveyor",
@@ -158,6 +221,7 @@
    "notifications": [
     "The surveying firm: \"[owner] appointed you to survey [building]\", linking to Capture.",
     "The owner: captures are folded into one note, \"[person] captured N items at [building]\".",
+    "The owner, if the firm moves items it captured earlier: \"[firm] added N items to [building]\", \"Captured before your appointment. Private until you decide.\"",
     "The owner: \"[firm] submitted the survey of [building]\", linking to the Recovery plan.",
     "Removing the surveyor tells nobody; the building activity log records it."
    ]
@@ -170,8 +234,8 @@
     "Donor building owner"
    ],
    "where": "Requests, Buildings tab (/app/requests?tab=buildings)",
-   "summary": "A surveying firm can add a building before any appointment and ask its owner, by email, to confirm it. The owner either confirms it, which brings the building and everything captured into the owner portfolio, or says it is not theirs.",
-   "mermaid": "flowchart TD\nA[\"Surveyor adds building, names owner email\"]:::surveyor --> B[\"Request waits for that email\"]:::system\nB --> C[\"Owner sees it in Requests, Buildings\"]:::owner\nC --> D{\"Is it our building?\"}:::owner\nD -->|\"Yes\"| E[\"Press Confirm it is ours\"]:::owner\nE --> F[\"Building joins donor buildings\"]:::system\nF --> G([\"Surveyor told, stays appointed\"]):::system\nD -->|\"No\"| H[\"Press Not ours, add optional note\"]:::owner\nH --> I([\"Surveyor told without owner name\"]):::system",
+   "summary": "A surveying firm can add a building before any appointment and ask its owner, by email, to confirm it. The owner either confirms it, which brings the building and everything captured into the owner portfolio, confirms it into a building the owner already has with the same surveyor, or says it is not theirs.",
+   "mermaid": "flowchart TD\nA[\"Surveyor adds building, names owner email\"]:::surveyor --> B[\"Request waits for that email\"]:::system\nB --> C[\"Owner sees it in Requests, Buildings\"]:::owner\nC --> D{\"Is it our building?\"}:::owner\nD -->|\"Yes\"| M{\"Already ours with this surveyor?\"}:::system\nM -->|\"No\"| E[\"Press Confirm it is ours\"]:::owner\nE --> F[\"Building joins donor buildings\"]:::system\nF --> G([\"Surveyor told, stays appointed\"]):::system\nM -->|\"Yes\"| N[\"Press Confirm as your building\"]:::owner\nN --> O[\"Items move into the owner record\"]:::system\nO --> G\nD -->|\"No\"| H[\"Press Not ours, add optional note\"]:::owner\nH --> I([\"Surveyor told without owner name\"]):::system",
    "steps": [
     {
      "actor": "Surveyor",
@@ -186,12 +250,16 @@
      "action": "Opens Requests, Buildings and sees the building name, address, region, local authority, the firm that added it, how much is captured and the message."
     },
     {
+     "actor": "Platform",
+     "action": "If the owner already has a building that looks like the same place (the same name or address, or the same postcode district with a similar name) with the same surveying firm, warns \"You already have [building] with [firm] as surveyor. Confirming adds the surveyor's N items to it, so you keep one record.\""
+    },
+    {
      "actor": "Donor building owner",
-     "action": "Presses Confirm it is ours, or presses Not ours and, in Not your building?, adds an optional Note for the surveyor and confirms with Not ours."
+     "action": "Presses Confirm it is ours; or, on a match, Confirm as your [building] or Add as a separate building; or presses Not ours and, in Not your building?, adds an optional Note for the surveyor and confirms with Not ours."
     },
     {
      "actor": "Platform",
-     "action": "On confirm, makes the owner organisation the building owner and keeps the firm appointed as its surveyor. On decline, leaves the building with the firm, unlinked."
+     "action": "On confirm, makes the owner organisation the building owner and keeps the firm appointed as its surveyor. On Confirm as your [building], moves every item, lot, photo and testing request into the owner's record, fills its gaps (structure, programme and facts), removes the surveyor's copy and lists the request under Answered. On decline, leaves the building with the firm, unlinked."
     }
    ],
    "rules": [
@@ -199,12 +267,17 @@
     "A request can be answered once. A building already linked to an owner cannot be claimed again.",
     "Until confirmed, the building is private to the firm, nothing in it can be shared or published, and the survey cannot be submitted.",
     "Confirming adds the building with what was captured; nothing is shared or listed until the owner decides.",
+    "Confirm as your [building] is offered only when the owner's matching record has the same surveyor and its survey is not submitted. With a submitted survey the card says the items cannot join it and offers Add as a separate building or Not ours.",
+    "Moved items keep their tags unless the owner's building already has items or uses another prefix; then they continue its numbering.",
+    "The match is worked out on the owner's side only; the surveyor never learns which buildings the owner has.",
     "On decline the surveyor never learns which organisation answered; the owner's note, if any, is passed on.",
-    "Only one request can wait per building. The firm can withdraw it, or ask again after a decline."
+    "Only one request can wait per building. The firm can withdraw it, or ask again after a decline.",
+    "Answering marks the owner's notice read for the person who answered. A request that is withdrawn, merged away or deleted takes its notice off the owner's bell."
    ],
    "notifications": [
     "Owners using the email, when the request is made: \"[firm] surveyed a building for you\".",
     "The surveyor on confirm: \"[owner] confirmed [building]. You stay appointed as its surveyor.\"",
+    "The surveyor on Confirm as your [building]: \"[owner] confirmed [building]. They already had it as [name], so your N items moved there. You stay appointed as its surveyor.\"",
     "The surveyor on decline: \"[building] was not confirmed\", with the owner's note or a prompt to check the email, never the owner name.",
     "The Requests item in the owner sidebar shows a count of waiting buildings and reservation requests."
    ],
@@ -454,7 +527,7 @@
    ],
    "where": "Link page (/app/links/:linkId)",
    "summary": "Whoever receives a share link opens it while signed in, accepts the confidentiality terms, and then sees the lots as anonymous listings. Their projects can then shortlist and reserve those lots like any other.",
-   "mermaid": "flowchart TD\nA[\"Person opens the link, signed in\"]:::arch --> B{\"Link still active?\"}:::system\nB -->|\"No\"| C([\"This link is no longer active\"]):::system\nB -->|\"Yes\"| D{\"Owner organisation itself?\"}:::system\nD -->|\"Yes\"| E([\"Preview of how others see it\"]):::owner\nD -->|\"No\"| F[\"Shared in confidence terms shown\"]:::system\nF --> G{\"Accept and view?\"}:::arch\nG -->|\"Not now\"| H([\"Back to home\"]):::system\nG -->|\"Yes\"| I[\"Owner told the organisation type\"]:::system\nI --> J[\"Lots shown as anonymous listings\"]:::system\nJ --> K([\"Their projects can shortlist and reserve\"]):::arch",
+   "mermaid": "flowchart TD\nA[\"Person opens the link, signed in\"]:::arch --> Z{\"Link made in this sandbox?\"}:::system\nZ -->|\"No\"| Y([\"This link is not in this sandbox\"]):::system\nZ -->|\"Yes\"| B{\"Link still active?\"}:::system\nB -->|\"No\"| C([\"This link is no longer active\"]):::system\nB -->|\"Yes\"| D{\"Owner organisation itself?\"}:::system\nD -->|\"Yes\"| E([\"Preview of how others see it\"]):::owner\nD -->|\"No\"| F[\"Shared in confidence terms shown\"]:::system\nF --> G{\"Accept and view?\"}:::arch\nG -->|\"Not now\"| H([\"Back to home\"]):::system\nG -->|\"Yes\"| I[\"Owner told the organisation type\"]:::system\nI --> J[\"Lots shown as anonymous listings\"]:::system\nJ --> K([\"Their projects can shortlist and reserve\"]):::arch",
    "steps": [
     {
      "actor": "Opener",
@@ -481,7 +554,7 @@
     "Openers never see the building name, address, owner, item tag, private photos, ask or reserve.",
     "Terms are accepted once per organisation. The owner organisation itself sees a preview and is never counted as an opener.",
     "Lots made private, and lots reserved by any project, drop out; lots later published stay. With none left the page says \"No lots to show\".",
-    "A revoked or unknown link reads \"This link is no longer active\", and anything saved from it shows as no longer shared.",
+    "A revoked link reads \"This link is no longer active\", and anything saved from it shows as no longer shared. A link this browser has never seen reads \"This link is not in this sandbox\" and explains that sandbox links open only in the browser where they were made.",
     "Projects where the opener's organisation is architect or client can see the linked lots, without the owner allowing them in Sharing and without the project's own confidentiality terms."
    ],
    "notifications": [
@@ -554,8 +627,8 @@
     "Surveyor"
    ],
    "where": "Building, Testing tab (/app/buildings/:id/testing), button Request testing",
-   "summary": "The owner, or the surveyor, asks one of the listed testing companies to inspect or test chosen items, then records the visit and the results. Results update each item's test status, and steel grade, which buyers see on listings.",
-   "mermaid": "flowchart TD\nA[\"Open Testing, press Request testing\"]:::owner --> B[\"Choose the items\"]:::owner\nB --> C[\"Choose tests that suit them\"]:::owner\nC --> D[\"Choose a company for the region\"]:::owner\nD --> E[\"Press Send request\"]:::owner\nE --> F[\"Recorded, surveyor told\"]:::system\nF --> G{\"Visit going ahead?\"}:::owner\nG -->|\"No\"| H([\"Press Cancel\"]):::owner\nG -->|\"Yes\"| I[\"Record booking with visit date\"]:::owner\nI --> J[\"Record results, one per item\"]:::owner\nJ --> K([\"Test status shows on listings\"]):::system",
+   "summary": "The owner, or the surveyor, asks one of the listed testing companies to inspect or test chosen items, with a preferred date and a message, then records the visit and the results. Either side can view, copy or download the request sheet the company would receive. Results update each item's test status, and steel grade, which buyers see on listings.",
+   "mermaid": "flowchart TD\nA[\"Open Testing, press Request testing\"]:::owner --> B[\"Choose the items\"]:::owner\nB --> C[\"Choose tests that suit them\"]:::owner\nC --> D[\"Choose a company, date and message\"]:::owner\nD --> E[\"Press Send request\"]:::owner\nE --> F[\"Recorded, other side told\"]:::system\nF --> V[\"View request: copy or download\"]:::owner\nV --> G{\"Visit going ahead?\"}:::owner\nG -->|\"No\"| H([\"Press Cancel\"]):::owner\nG -->|\"Yes\"| I[\"Record booking with visit date\"]:::owner\nI --> J[\"Record results, one per item\"]:::owner\nJ --> K([\"Test status shows on listings\"]):::system",
    "steps": [
     {
      "actor": "Donor building owner",
@@ -567,7 +640,11 @@
     },
     {
      "actor": "Platform",
-     "action": "Records the request as Sent and tells the surveyor. Nothing is sent to the company in the sandbox."
+     "action": "Records the request as Sent and tells the surveyor. The card shows Preferred from [date] and the message. Nothing is sent to the company in the sandbox; the confirmation names who was told, points to View request and offers Undo."
+    },
+    {
+     "actor": "Owner or surveyor",
+     "action": "Presses View request to open \"Request to [company]\": the sheet the company would receive, with who it is to and from, the building, each item with its size, quantity and location, the tests, the preferred date and the message; presses Copy text or Download .txt."
     },
     {
      "actor": "Owner or surveyor",
@@ -589,7 +666,8 @@
    "rules": [
     "Only the owner or the appointed surveyor can request, book, record or cancel; a contractor alone cannot.",
     "At least one item and one test are needed; the company must offer every chosen test in the region.",
-    "The preferred date and the visit date must be today or later.",
+    "The preferred date and the visit date must be today or later. With no preferred date the sheet reads \"Preferred from: no preference\".",
+    "The request sheet is marked Simulated: \"A sample request. No testing company receives it.\" Both sides can view it on every request, whatever its status.",
     "Results need one line per item. Items whose lots are reserved cannot change.",
     "Only the owner records results for items that are shared or published, as only the owner changes what a listing says.",
     "A request can be cancelled only before results are recorded."
@@ -606,15 +684,29 @@
    "title": "Appoint a contractor and apply their dates",
    "who": [
     "Donor building owner",
-    "Deconstruction contractor"
+    "Surveyor",
+    "Deconstruction contractor",
+    "Platform"
    ],
    "where": "Building, Overview (/app/buildings/:id), Deconstruction contractor card; then Inventory (/app/buildings/:id/inventory)",
-   "summary": "The owner invites a deconstruction contractor to say when each item is expected to come out. The contractor's dates stay apart from what buyers see until the owner applies them to private lots.",
-   "mermaid": "flowchart TD\nA[\"Open Overview, contractor card\"]:::owner --> B[\"Choose a firm, press Save\"]:::owner\nB --> C[\"Contractor told to set dates\"]:::system\nC --> D[\"Contractor sets a month per item\"]:::contractor\nD --> E[\"Owner told dates were set\"]:::system\nE --> F[\"Owner compares dates in Inventory\"]:::owner\nF --> G[\"Press Use contractor dates\"]:::owner\nG --> H{\"Lot private and not reserved?\"}:::system\nH -->|\"Yes\"| I([\"Lot date updated\"]):::system\nH -->|\"No\"| J([\"Skipped, make private to change\"]):::system",
+   "summary": "The owner invites a deconstruction contractor to say when each item is expected to come out, choosing a firm already on Tallyard or inviting one by email. A new contractor never inherits the previous one's dates. The contractor's dates stay apart from what buyers see until the owner applies them to private lots.",
+   "mermaid": "flowchart TD\nA[\"Open Overview, contractor card\"]:::owner --> B{\"Firm in the list?\"}:::owner\nB -->|\"Yes\"| C[\"Choose the firm, press Save\"]:::owner\nB -->|\"No\"| D[\"Invite by email, Send invite\"]:::owner\nD --> E{\"Firm on Tallyard with that email?\"}:::system\nE -->|\"Yes\"| C2[\"Firm appointed at once\"]:::system\nE -->|\"No\"| W[\"Invite waits on the building\"]:::system\nW --> J[\"Firm joins with that email\"]:::contractor\nC --> X[\"Previous contractor's dates cleared\"]:::system\nC2 --> X\nJ --> X\nX --> T[\"Contractor told to set dates\"]:::system\nT --> S[\"Contractor sets a month per item\"]:::contractor\nS --> U[\"Owner compares, Use contractor dates\"]:::owner\nU --> V{\"Lot private and not reserved?\"}:::system\nV -->|\"Yes\"| Y([\"Lot date updated\"]):::system\nV -->|\"No\"| Z([\"Skipped, make private to change\"]):::system",
    "steps": [
     {
      "actor": "Donor building owner",
      "action": "In the Deconstruction contractor card, picks a firm under Invite a contractor (or Change contractor) and presses Save. Choosing None removes it."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "For a firm not in the list, presses Invite by email, enters the Contractor's email and presses Send invite."
+    },
+    {
+     "actor": "Platform",
+     "action": "If a surveying or deconstruction firm on Tallyard uses that email, appoints it at once and names it. Otherwise the card shows Invited, Waiting for [email], with Withdraw, and the firm becomes the contractor when it signs up as a surveying or deconstruction firm, or joins one by invite, with that email."
+    },
+    {
+     "actor": "Platform",
+     "action": "When the contractor changes or is removed, clears every date the previous contractor set and says so, for example \"Fennick Dismantling's 5 dates were cleared.\"; Undo restores them. A waiting invite says the dates are cleared when the new firm joins."
     },
     {
      "actor": "Platform",
@@ -638,16 +730,70 @@
     }
    ],
    "rules": [
-    "The owner or the surveyor can invite or remove a contractor. The firm must be a surveying or deconstruction firm.",
-    "Only the appointed contractor can set these dates. A contractor never sees lots, prices or buyers, and cannot capture or test.",
+    "The owner or the surveyor can invite, change or remove a contractor. A firm chosen from the list must be a surveying or deconstruction firm.",
+    "An invite by email never reveals who is on Tallyard: an email at an organisation of another kind is treated like an unknown one and simply waits. Only a surveying or deconstruction firm joining with that email takes it up.",
+    "One invite waits per building. Choosing a firm from the list replaces it, and Withdraw cancels it. Nothing is emailed from the sandbox.",
+    "A new contractor never inherits the previous contractor's dates.",
+    "Only the appointed contractor can set these dates. A contractor never sees lots, prices or buyers, and cannot capture, test or open the building's requirements.",
     "Contractor dates never reach buyers directly; only the owner changes a lot's date, and only while the lot is private.",
     "A firm that is also the surveyor gets the Availability tab beside its other tabs."
    ],
    "notifications": [
-    "The contractor: \"[owner] invited you to set availability dates at [building]\".",
+    "The contractor: \"[owner] invited you to set availability dates at [building]\", also when it joins from an email invite.",
+    "When a firm joins from an email invite, the side that invited it and the owner: \"[firm] joined and can set dates at [building]\", with \"They accepted your invitation.\" and any dates that were cleared.",
     "The owner: \"[contractor] set dates for N items at [building]. Review them in the inventory and apply the ones you agree with\", folded per day.",
     "The owner, if the surveyor invited the contractor: \"[surveyor] invited [contractor] to [building]\".",
-    "Removing the contractor tells nobody; the building activity log records it."
+    "Removing the contractor, or recording or withdrawing an invite by email, tells nobody; the building activity log records it."
+   ]
+  },
+  {
+   "id": "building-requirements",
+   "title": "Track requirements before demolition",
+   "who": [
+    "Donor building owner",
+    "Surveyor",
+    "Platform"
+   ],
+   "where": "Building, Requirements tab (/app/buildings/:id/requirements); the Requirements line on the owner Home building card and on the surveyor Home building row",
+   "summary": "Each donor building tracks the planning requirements that apply before it comes down at its location: a national demolition notice, in London the pre-demolition audit and diversion target, and the local authority's own policy. The owner and the surveyor keep each one's status and evidence current.",
+   "mermaid": "flowchart TD\nA[\"Open the building's Requirements tab\"]:::owner --> B[\"What applies at this place listed\"]:::system\nB --> C{\"What needs updating?\"}:::owner\nC -->|\"Status\"| D[\"Choose a status\"]:::owner\nC -->|\"Evidence\"| E[\"Add a note of evidence\"]:::owner\nE --> F[\"Not started becomes In progress\"]:::system\nD --> G{\"Surveyor marked at risk or ready?\"}:::system\nG -->|\"Yes\"| H[\"Owner is notified\"]:::system\nG -->|\"No\"| I([\"Saved and logged\"]):::system\nH --> I\nF --> I\nI --> J([\"At risk counted on homes and the tab\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Picks the requirements from the building's region and local authority: National (England, Wales or Scotland, before demolition), the London Plan 2021 and GLA guidance for a London region, and the local authority's plan when one is set. An authority with no written summary gets a placeholder marked Not yet summarised."
+    },
+    {
+     "actor": "Owner or surveyor",
+     "action": "Opens the Requirements tab from the building or the sidebar, or follows the line on the owner's building card or the surveyor's building row, for example \"Requirements 1 of 4 ready, 1 at risk\"."
+    },
+    {
+     "actor": "Owner or surveyor",
+     "action": "Sets a status: Not started, In progress, At risk, Evidence ready or Not applicable."
+    },
+    {
+     "actor": "Owner or surveyor",
+     "action": "Adds evidence as a note; the first evidence moves a Not started requirement to In progress."
+    },
+    {
+     "actor": "Platform",
+     "action": "Logs each change in the building activity for the owner and the surveyor, and counts the requirements at risk as a badge on the tab and its sidebar item."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "When moving the building to another region or local authority in Edit details, reads how many requirements stop applying and how many more are tracked; statuses and evidence stay with the ones that still apply."
+    }
+   ],
+   "rules": [
+    "Only the owner and the surveyor of the building can open the tab and change it. A firm that is only the deconstruction contractor cannot open it, nor can any buyer.",
+    "Requirement activity reaches the owner and the surveyor only, never the contractor. A firm that both surveys and dismantles hears as the surveyor.",
+    "Only the person who added a piece of evidence can remove it. Each change offers Undo.",
+    "Not applicable requirements are left out of the total and the ready share.",
+    "Every entry is an indicative summary to check against the published documents; a placeholder summarises nothing yet.",
+    "Nothing on this tab reaches a listing or a buyer."
+   ],
+   "notifications": [
+    "The owner, when the surveyor marks a requirement At risk or Evidence ready: \"[requirement] is [status] on [building]\", \"Marked by [name], [firm].\"",
+    "Every other change, and every change the owner makes: no notification, an entry in the building activity only."
    ]
   },
   {
@@ -681,7 +827,7 @@
    "rules": [
     "A New project cannot reserve a lot from a building its own client owns.",
     "Nothing stops the architect shortlisting, or the owner approving, its own lots; the refusal comes only at Send request.",
-    "The owner cannot allow its own projects in Sharing, and opening its own share link does not count. Its shared lots still reach its New project if that project's architect opens one of the owner's share links; published lots always do.",
+    "The owner never sees its own lots in the Marketplace, search or as material pages, but its architect can. The owner cannot allow its own projects in Sharing, and opening its own share link does not count. Its shared lots still reach its New project if that project's architect opens one of the owner's share links; published lots always do.",
     "Allocating your own materials directly is not in this version."
    ],
    "notifications": [

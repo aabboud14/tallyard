@@ -1,7 +1,7 @@
 {
  "key": "05-surveyor",
  "title": "Surveyor and deconstruction contractor",
- "intro": "Surveyors and deconstruction contractors sign up with the same kind of workspace, a surveying or deconstruction firm. As surveyor, the firm walks a donor building and records what it holds, item by item, then hands the survey to the owner; it can start before any appointment and ask the owner to confirm the building, and it or the owner can ask a testing company to test items. As deconstruction contractor, invited per building, the firm says when each item is expected to come out, and the owner decides whether to use those dates.",
+ "intro": "Surveyors and deconstruction contractors sign up with the same kind of workspace, a surveying or deconstruction firm. As surveyor, the firm walks a donor building and records what it holds, item by item, then hands the survey to the owner; it can start before any appointment, ask the owner to confirm the building, and move what it captured early into the building once the owner appoints it. It or the owner can ask a testing company to test items, and both keep the requirements that apply before demolition. As deconstruction contractor, invited per building from a list or by email, the firm says when each item is expected to come out, and the owner decides whether to use those dates.",
  "workflows": [
   {
    "id": "standalone-capture",
@@ -57,7 +57,7 @@
     }
    ],
    "rules": [
-    "Only people on the owner or surveyor side of a building can capture in it. A firm that is only the deconstruction contractor cannot, and those buildings are not offered in the list.",
+    "Only people on the owner or surveyor side of a building can capture in it. A firm that is only the deconstruction contractor cannot, and those buildings are not offered in the list. A firm that works only as a contractor has no Capture item in its sidebar and reads Deconstruction contractor in its organisation menu.",
     "Architects, clients and consultants cannot open the Capture page.",
     "An owner may also use this page, but only the surveyor has a link to it in the sidebar. For an owner, Add building on this page adds one of its own donor buildings.",
     "Family, size, quantity, condition, recoverability and the expected month are required. A steel section must be in the section table, and every size and quantity must be a number above zero.",
@@ -107,8 +107,8 @@
     }
    ],
    "rules": [
-    "A surveyor's building has the tabs Overview, Capture, Inventory and Testing, plus Availability when the same firm is also its deconstruction contractor.",
-    "The Capture, Inventory and Testing tabs are refused to a firm that is only the deconstruction contractor.",
+    "A surveyor's building has the tabs Overview, Capture, Inventory, Testing and Requirements, plus Availability when the same firm is also its deconstruction contractor. Every side on the building can open its Activity page from the Overview.",
+    "The Capture, Inventory, Testing and Requirements tabs are refused to a firm that is only the deconstruction contractor.",
     "The owner has no Capture tab, but can capture in its own building from Capture the first item on an empty Inventory, or Capture on the Overview while nothing is captured.",
     "Condition, recoverability and the expected month can be corrected only while the item's lot is private. Once it is shared or published they are fixed.",
     "Location, notes and photos can be corrected at any time by the owner or the surveyor. The family, size and quantity cannot be changed after saving."
@@ -131,7 +131,7 @@
    "steps": [
     {
      "actor": "Surveyor",
-     "action": "Presses Add building in the sidebar, on Home or on the Capture page, and fills in Add a building to survey: name, address and region are required; the building facts, structure and programme dates are optional."
+     "action": "Presses Add building in the sidebar, on Home or on the Capture page, and fills in Add a building to survey: name, address and region are required; the local authority (from one list grouped by region, which sets the region), the building facts, structure and programme dates are optional."
     },
     {
      "actor": "Surveyor",
@@ -139,7 +139,7 @@
     },
     {
      "actor": "Platform",
-     "action": "Creates the building, private to the firm, and lists it in the sidebar under Not yet linked."
+     "action": "Creates the building, private to the firm, lists it in the sidebar under Not yet linked and on Home with the steps Added, Owner confirms, Capturing and Submitted."
     },
     {
      "actor": "Surveyor",
@@ -151,29 +151,34 @@
     },
     {
      "actor": "Surveyor",
-     "action": "Captures items as normal while the request waits; a waiting request can be withdrawn with Withdraw."
+     "action": "Captures items as normal while the request waits, and can correct the building's details with Edit details; a waiting request can be withdrawn with Withdraw."
     },
     {
      "actor": "Surveyor",
      "action": "If the owner says Not ours, sees Not confirmed with the owner's note, and can press Ask again or Delete building."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "If the owner instead appoints the firm to its own record of the same building, moves the items there (see Move early captures into an appointment)."
     }
    ],
    "rules": [
-    "Only a surveying or deconstruction firm can add a building this way, and only the firm that added it can ask its owner, withdraw the request or delete the building.",
+    "Only a surveying or deconstruction firm can add a building this way, and only the firm that added it can ask its owner, withdraw the request, edit its details or delete the building.",
     "Only one request can wait at a time; withdraw it before asking a different email.",
     "Until the owner confirms, the building is private to the firm: nothing in it can be shared or published, because only an owner has the Recovery plan, Listings and Sharing tabs.",
     "Until the owner confirms, the survey cannot be submitted. The Submit survey button is disabled with 'Link the building to its owner first.'",
-    "Capture, testing requests and inviting a deconstruction contractor still work while the building waits.",
+    "Capture, testing requests, requirement tracking and inviting a deconstruction contractor still work while the building waits.",
     "If no owner account uses the email yet, the request waits and appears once someone signs up with that email as a donor building owner.",
     "Delete building is on the Owner card whenever the building is not linked. It removes the building with its items, photos, lots and testing requests, withdraws any waiting request, and cannot be undone. A building linked to its owner cannot be deleted.",
+    "The breadcrumb reads Appointments, then Not yet linked, then the building.",
     "Nothing is emailed in the sandbox; the owner sees the request when they sign in."
    ],
    "notifications": [
     "The owner organisation is told '[firm] surveyed a building for you', which opens Requests, Buildings tab. Each Ask again sends a new notice.",
-    "Withdrawing a request or deleting the building notifies nobody; it is recorded in the firm's activity log."
+    "Withdrawing a request, deleting the building or moving it into an appointment notifies nobody about the request, and takes the owner's notice of it off their bell; it is recorded in the firm's activity log."
    ],
-   "states_mermaid": "stateDiagram-v2\nstate \"Not linked yet\" as NotLinked\nstate \"Waiting for the owner\" as Pending\nstate \"Linked to its owner\" as Linked\nstate \"Not confirmed\" as Declined\nstate \"Deleted\" as Deleted\n[*] --> NotLinked\n[*] --> Pending : email given when adding\nNotLinked --> Pending : ask the owner\nPending --> NotLinked : withdraw\nPending --> Linked : owner confirms\nPending --> Declined : owner says not ours\nDeclined --> Pending : ask again\nNotLinked --> Deleted : delete building\nPending --> Deleted : delete building\nDeclined --> Deleted : delete building\nLinked --> [*]\nDeleted --> [*]",
-   "states_note": "Where a surveyor's own building stands with its owner, as the Owner card's label shows it. Once linked it cannot go back, and it can no longer be deleted."
+   "states_mermaid": "stateDiagram-v2\nstate \"Not linked yet\" as NotLinked\nstate \"Waiting for the owner\" as Pending\nstate \"Linked to its owner\" as Linked\nstate \"Not confirmed\" as Declined\nstate \"Moved into an appointment\" as Merged\nstate \"Deleted\" as Deleted\n[*] --> NotLinked\n[*] --> Pending : email given when adding\nNotLinked --> Pending : ask the owner\nPending --> NotLinked : withdraw\nPending --> Linked : owner confirms\nPending --> Merged : owner confirms into its own record\nPending --> Declined : owner says not ours\nDeclined --> Pending : ask again\nNotLinked --> Merged : firm moves the items\nPending --> Merged : firm moves the items\nDeclined --> Merged : firm moves the items\nNotLinked --> Deleted : delete building\nPending --> Deleted : delete building\nDeclined --> Deleted : delete building\nLinked --> [*]\nMerged --> [*]\nDeleted --> [*]",
+   "states_note": "Where a surveyor's own building stands with its owner, as the Owner card's label shows it. Once linked or moved into an appointment it cannot go back, and it can no longer be deleted."
   },
   {
    "id": "owner-confirms-building",
@@ -184,8 +189,8 @@
     "Platform"
    ],
    "where": "Requests, Buildings tab (/app/requests?tab=buildings)",
-   "summary": "The owner's side of the building request. The owner sees which firm surveyed which building and how many items were captured, and either confirms it is theirs or says it is not.",
-   "mermaid": "flowchart TD\nA[\"Owner opens Requests, Buildings\"]:::owner --> B[\"Reads building, firm and item count\"]:::owner\nB --> C{\"Is it ours?\"}:::owner\nC -->|\"Confirm it is ours\"| D[\"Building joins the owner's donor buildings\"]:::system\nD --> E[\"Surveyor is told it is confirmed\"]:::system\nE --> F([\"Survey can now be submitted\"])\nC -->|\"Not ours\"| G[\"Owner adds an optional note\"]:::owner\nG --> H[\"Surveyor told, without the owner's name\"]:::system\nH --> I([\"Building stays private to the firm\"])",
+   "summary": "The owner's side of the building request. The owner sees which firm surveyed which building and how many items were captured, and either confirms it is theirs, confirms it into a building they already have with the same surveyor, or says it is not.",
+   "mermaid": "flowchart TD\nA[\"Owner opens Requests, Buildings\"]:::owner --> B[\"Reads building, firm and item count\"]:::owner\nB --> C{\"Is it ours?\"}:::owner\nC -->|\"Yes\"| M{\"Already ours with this surveyor?\"}:::system\nM -->|\"No\"| D[\"Building joins the owner's donor buildings\"]:::system\nM -->|\"Yes, Confirm as your building\"| N[\"Items move into the owner's record\"]:::system\nD --> E[\"Surveyor is told it is confirmed\"]:::system\nN --> E\nE --> F([\"Survey can now be submitted\"])\nC -->|\"Not ours\"| G[\"Owner adds an optional note\"]:::owner\nG --> H[\"Surveyor told, without the owner's name\"]:::system\nH --> I([\"Building stays private to the firm\"])",
    "steps": [
     {
      "actor": "Donor building owner",
@@ -196,12 +201,16 @@
      "action": "Reads the building, its address, the firm that added it, the message, and how many items were captured so far."
     },
     {
+     "actor": "Platform",
+     "action": "If the owner already has a building that looks like the same place with the same surveying firm, warns \"You may already have [building]\" and shows the owner's record."
+    },
+    {
      "actor": "Donor building owner",
-     "action": "Presses Confirm it is ours, or Not ours and adds an optional note for the surveyor before pressing Not ours again."
+     "action": "Presses Confirm it is ours; on a match, Confirm as your [building] or Add as a separate building; or Not ours, adding an optional note for the surveyor before pressing Not ours again."
     },
     {
      "actor": "Platform",
-     "action": "On confirm, links the building to the owner, adds it to their donor buildings with everything captured, keeps the firm appointed as surveyor, and opens the building."
+     "action": "On confirm, links the building to the owner, adds it to their donor buildings with everything captured, keeps the firm appointed as surveyor, and opens the building. On Confirm as your [building], moves the surveyor's items, lots, photos and testing requests into the owner's record and removes the surveyor's copy."
     },
     {
      "actor": "Platform",
@@ -212,11 +221,64 @@
     "Only a donor building owner organisation with a member using the email named in the request can answer it.",
     "A request that was withdrawn or already answered cannot be answered again.",
     "Confirming shares or lists nothing; every item stays private until the owner decides.",
-    "The surveyor never learns which organisation declined."
+    "Confirm as your [building] needs the owner's record to have the same surveyor and a survey not yet submitted.",
+    "The surveyor never learns which organisation declined, nor which buildings the owner already has."
    ],
    "notifications": [
     "On confirm the surveyor is told '[owner] confirmed [building]. It is in their portfolio now. You stay appointed as its surveyor.'",
+    "On Confirm as your [building] the surveyor is told '[owner] confirmed [building]. They already had it as [name], so your N items moved there. You stay appointed as its surveyor.'",
     "On decline the surveyor is told '[building] was not confirmed', with the owner's note, or else a prompt to check the email address and ask again."
+   ]
+  },
+  {
+   "id": "merge-into-appointment",
+   "title": "Move early captures into an appointment",
+   "who": [
+    "Surveyor",
+    "Donor building owner",
+    "Platform"
+   ],
+   "where": "Surveyor Home and Appointments (/app/buildings), under the appointed building; the top of the unlinked building's Overview (/app/buildings/:id); Move into an appointment on its Owner card",
+   "summary": "A surveyor who added a building herself and captured in it may later be appointed by its owner to the owner's own record of the same building. Rather than keep two records, she moves what she captured into the appointment. The owner is told, and the items stay private until the owner decides.",
+   "mermaid": "flowchart TD\nA[\"Owner appoints the firm to a building\"]:::owner --> B{\"Firm added the same building itself?\"}:::system\nB -->|\"Yes\"| C[\"Prompt: this building is here twice\"]:::system\nB -->|\"Not matched\"| D[\"Move into an appointment, choose a building\"]:::surveyor\nC --> E{\"Move the items?\"}:::surveyor\nE -->|\"Keep separate\"| F([\"Prompt hidden for this person\"]):::system\nE -->|\"Move items here\"| G{\"Appointment survey submitted?\"}:::system\nD --> G\nG -->|\"Yes\"| H([\"Refused, nothing more can join\"]):::system\nG -->|\"No\"| I[\"Items, lots, photos and tests move\"]:::system\nI --> J[\"Firm's own record removed\"]:::system\nJ --> K([\"Owner told, items stay private\"]):::system",
+   "steps": [
+    {
+     "actor": "Donor building owner",
+     "action": "Appoints the surveying firm to one of its buildings."
+    },
+    {
+     "actor": "Platform",
+     "action": "Pairs each building the firm added itself, not yet linked to an owner, with an appointed building that looks like the same place: the same name or address once spaces and punctuation are ignored, or the same postcode district with a similar name."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Sees \"[building] is here twice\" under the appointment on Home and on Appointments, with \"You added [building] yourself before [owner] appointed you. Move its N captured items here?\", and on the unlinked building's Overview \"Merge into [building] for [owner]\"."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Presses Move items here (Move into their [building] on the unlinked Overview), or Keep separate to hide the prompt."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Where nothing was matched, presses Move into an appointment on the unlinked building's Owner card, picks the Appointed building and presses Move items."
+    },
+    {
+     "actor": "Platform",
+     "action": "Moves every item with its lot, photos and testing requests into the appointed building, fills the appointed record's gaps (structure, programme dates, year built, storeys, floor area), keeps the further survey status, withdraws any waiting request to confirm the building, moves activity and notification links, removes the firm's own record and opens the appointed building."
+    }
+   ],
+   "rules": [
+    "Only the firm that added the unlinked building can move it, and only into a building an owner appointed that firm to survey.",
+    "An appointment whose survey is already submitted is never offered and is refused: \"The survey of that building is already submitted, so nothing more can be added to it.\"",
+    "Items keep their tags unless the appointed building already has items or uses another prefix; then they continue its numbering, so no tag repeats.",
+    "The matching is done for the surveyor only; nothing about it reaches the owner until items are moved.",
+    "Keep separate is remembered for that person in this browser. The confirmation offers Undo.",
+    "Moved items stay private, with private lots, until the owner decides."
+   ],
+   "notifications": [
+    "The owner, when items move: \"[firm] added N items to [building]\", \"Captured before your appointment. Private until you decide.\" It links to the Inventory.",
+    "A waiting request to confirm the moved building is withdrawn and its notice is taken off the owner's bell.",
+    "Both organisations' activity records that the firm moved N items captured earlier into the building."
    ]
   },
   {
@@ -273,8 +335,8 @@
     "Platform"
    ],
    "where": "Building, Testing tab (/app/buildings/:id/testing); also Request testing on the Overview's Testing card and on an item in the Inventory",
-   "summary": "The surveyor or the owner asks one of the listed testing companies to inspect or test chosen items, then records the visit date and the results the company reports. Results update each item's test status, and its steel grade where tested, which buyers see on listings.",
-   "mermaid": "flowchart TD\nA[\"Surveyor or owner presses Request testing\"]:::surveyor --> B[\"Choose items, then tests\"]:::surveyor\nB --> C{\"One company offers every test?\"}:::system\nC -->|\"No\"| D([\"Send two separate requests\"])\nC -->|\"Yes\"| E[\"Recorded as Sent, other side told\"]:::system\nE --> F[\"Record booking with the visit date\"]:::surveyor\nF --> G[\"Record results, one per item\"]:::surveyor\nG --> H{\"Any item's lot reserved?\"}:::system\nH -->|\"Yes\"| I([\"Refused: a reserved lot cannot change\"])\nH -->|\"No\"| J{\"Surveyor, and a lot shared or published?\"}:::system\nJ -->|\"Yes\"| K([\"Only the owner can record these\"])\nJ -->|\"No\"| L[\"Test status and grade updated\"]:::system\nL --> M([\"Results recorded, other side told\"])\nE -->|\"Cancel\"| N([\"Request cancelled\"])\nF -->|\"Cancel\"| N",
+   "summary": "The surveyor or the owner asks one of the listed testing companies to inspect or test chosen items, with a preferred date and a message, then records the visit date and the results the company reports. Either side can view, copy or download the request sheet the company would receive. Results update each item's test status, and its steel grade where tested, which buyers see on listings.",
+   "mermaid": "flowchart TD\nA[\"Surveyor or owner presses Request testing\"]:::surveyor --> B[\"Choose items, then tests\"]:::surveyor\nB --> C{\"One company offers every test?\"}:::system\nC -->|\"No\"| D([\"Send two separate requests\"])\nC -->|\"Yes\"| E[\"Recorded as Sent, other side told\"]:::system\nE --> V[\"View request, copy or download\"]:::surveyor\nV --> F[\"Record booking with the visit date\"]:::surveyor\nF --> G[\"Record results, one per item\"]:::surveyor\nG --> H{\"Any item's lot reserved?\"}:::system\nH -->|\"Yes\"| I([\"Refused: a reserved lot cannot change\"])\nH -->|\"No\"| J{\"Surveyor, and a lot shared or published?\"}:::system\nJ -->|\"Yes\"| K([\"Only the owner can record these\"])\nJ -->|\"No\"| L[\"Test status and grade updated\"]:::system\nL --> M([\"Results recorded, other side told\"])\nE -->|\"Cancel\"| N([\"Request cancelled\"])\nF -->|\"Cancel\"| N",
    "steps": [
     {
      "actor": "Surveyor",
@@ -286,7 +348,11 @@
     },
     {
      "actor": "Platform",
-     "action": "Records the request as Sent and tells the other side of the building. Nothing is sent to the company in the sandbox."
+     "action": "Records the request as Sent and tells the other side of the building. The card shows Preferred from [date] and the message. Nothing is sent to the company in the sandbox: the dialog footnote and the confirmation say who is told, or that the request is recorded here only, and the confirmation offers Undo."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Presses View request to open \"Request to [company]\", the sheet the company would receive: to and from, the building, each item with its size, quantity and location, the tests, the preferred date and the message; presses Copy text or Download .txt to send it by email herself."
     },
     {
      "actor": "Surveyor",
@@ -309,6 +375,7 @@
     "Only the owner or the surveyor of the building can request, book, record or cancel. A firm that is only the deconstruction contractor cannot open Testing.",
     "At least one item and one test are required. Tests offered follow the families of the chosen items, and the company must offer every chosen test in the building's region. If no one company does, the dialog says 'No one company offers all of these tests. Send two requests.'",
     "The preferred date and the visit date must be today or later.",
+    "The request sheet is marked Simulated: 'A sample request. No testing company receives it.' The preferred date reads the same on screen and in the text, or 'Preferred from: no preference'.",
     "Results can be recorded only once a visit is booked, and every item in the request needs a result. A visual and dimensional survey alone gives Inspected only; a grade can be given only for steel sections with a coupon or hardness test.",
     "Results cannot be recorded when any item's lot is reserved by a buyer.",
     "If any item's lot is shared or published, only the owner can record the results, because only the owner changes what a listing says. The surveyor sees 'The owner records this one.' and Save results is disabled.",
@@ -332,21 +399,25 @@
     "Deconstruction contractor",
     "Platform"
    ],
-   "where": "Owner or surveyor: building Overview, Deconstruction contractor card (/app/buildings/:id). Contractor: Availability tab (/app/buildings/:id/availability), also Set dates in the building header",
-   "summary": "The owner or the surveyor invites a deconstruction contractor to a building. The contractor then says, item by item, the month it expects each item to come out. These dates stay apart from the surveyor's estimate and go to the owner, never to buyers.",
-   "mermaid": "flowchart TD\nA[\"Owner or surveyor invites a contractor\"]:::owner --> B[\"Contractor is told\"]:::system\nB --> C[\"Contractor opens the Availability tab\"]:::contractor\nC --> D[\"Reads surveyor estimate per item\"]:::contractor\nD --> E[\"Sets months, or fills blanks from programme\"]:::contractor\nE --> F[\"Presses Save dates\"]:::contractor\nF --> G[\"Owner told dates were set\"]:::system\nG --> H([\"Owner reviews them in the inventory\"])",
+   "where": "Owner or surveyor: building Overview, Deconstruction contractor card (/app/buildings/:id). Contractor: Availability tab (/app/buildings/:id/availability), also Set dates in the building header, on the surveyor Home row and on Appointments",
+   "summary": "The owner or the surveyor invites a deconstruction contractor to a building, from the list or by email. The contractor then says, item by item, the month it expects each item to come out. These dates stay apart from the surveyor's estimate and go to the owner, never to buyers. A new contractor starts with no dates.",
+   "mermaid": "flowchart TD\nA[\"Owner or surveyor invites a contractor\"]:::owner --> Q{\"Chosen from the list?\"}:::system\nQ -->|\"Yes\"| B[\"Contractor is told\"]:::system\nQ -->|\"By email\"| W[\"Invite waits until the firm joins\"]:::system\nW --> B\nB --> C[\"Contractor opens the Availability tab\"]:::contractor\nC --> D[\"Reads surveyor estimate per item\"]:::contractor\nD --> E[\"Sets months, or fills blanks from programme\"]:::contractor\nE --> F[\"Presses Save dates\"]:::contractor\nF --> G[\"Owner told dates were set\"]:::system\nG --> H([\"Owner reviews them in the inventory\"])",
    "steps": [
     {
      "actor": "Donor building owner",
-     "action": "On the building's Overview, in the Deconstruction contractor card, chooses a firm under Invite a contractor and presses Save. The surveyor can do the same, and either can change or remove the contractor there."
+     "action": "On the building's Overview, in the Deconstruction contractor card, chooses a firm under Invite a contractor and presses Save, or presses Invite by email for a firm not in the list. The surveyor can do the same, and either can change or remove the contractor there."
     },
     {
      "actor": "Platform",
-     "action": "Appoints the contractor and tells them; the building appears in their sidebar under its owner with the Overview and Availability tabs."
+     "action": "Appoints the contractor and tells them; the building appears in their sidebar under its owner with the Overview and Availability tabs. An email that no surveying or deconstruction firm uses yet waits on the building until such a firm joins with it."
+    },
+    {
+     "actor": "Platform",
+     "action": "When the contractor changes or is removed, clears the previous contractor's dates and says how many, for example \"Fennick Dismantling's 5 dates were cleared.\""
     },
     {
      "actor": "Deconstruction contractor",
-     "action": "Opens Availability, from the notice, the Set dates button or the Overview's Your dates card, and sees the owner's programme and each item with its quantity, location and what the surveyor expects."
+     "action": "Opens Availability, from the notice, the Set dates button in the building header, on Home or on Appointments, or the Overview's Your dates card, and sees the owner's programme and each item with its quantity, location and what the surveyor expects."
     },
     {
      "actor": "Deconstruction contractor",
@@ -362,17 +433,20 @@
     }
    ],
    "rules": [
-    "Only the owner or the surveyor of the building can invite, change or remove the contractor, and only a surveying or deconstruction firm can be chosen. The building's own surveying firm can be chosen too; it then gets the Availability tab beside its other tabs.",
-    "Only the appointed contractor can set dates.",
-    "A firm that is only the contractor sees just Overview and Availability. Capture, Inventory and Testing are refused, and it never sees lots, prices, visibility or buyers.",
+    "Only the owner or the surveyor of the building can invite, change or remove the contractor, and only a surveying or deconstruction firm can be chosen. The building's own surveying firm can be chosen too; it then gets the Availability tab beside its other tabs, and its Home row reads Surveyor and contractor with Dates set for N of M and Set dates.",
+    "An invite by email reveals nothing about who is on Tallyard: an email at an organisation of another kind simply waits.",
+    "Only the appointed contractor can set dates, and a new contractor never inherits another's dates.",
+    "A firm that is only the contractor sees just Overview and Availability. Capture, Inventory, Testing and Requirements are refused, and it never sees lots, prices, visibility or buyers. Its Home shows Clients, Buildings to date, Dates set and Still to date, and it has no Capture item.",
     "The contractor's dates never reach buyers directly; only the owner changes a lot's date.",
-    "A month that holds the dismantling start is saved as that exact start date; any other month is saved as its first day."
+    "A month that holds the dismantling start is saved as that exact start date; any other month is saved as its first day.",
+    "In the sample data, Tarnbrook Deconstruction is both surveyor and contractor at Harrowden Court, with no dates set yet."
    ],
    "notifications": [
-    "The contractor is told '[firm] invited you to set availability dates at [building]'.",
+    "The contractor is told '[firm] invited you to set availability dates at [building]', also when it joins from an invite by email.",
     "When the surveyor invites the contractor, the owner is also told '[firm] invited [contractor] to [building]'. When the owner invites, the surveyor is not told.",
+    "When a firm joins from an invite by email, the side that invited it and the owner are told '[firm] joined and can set dates at [building]', with any dates cleared.",
     "When dates are saved, the owner is told '[contractor] set dates for N items at [building]', kept to one notice per building, contractor and day.",
-    "Removing the contractor notifies nobody; it is recorded in the activity log."
+    "Removing the contractor, or recording or withdrawing an invite by email, notifies nobody; it is recorded in the activity log."
    ]
   },
   {
