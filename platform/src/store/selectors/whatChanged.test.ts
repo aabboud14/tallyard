@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { fresh, U, NOW } from '../../test/fixtures'
 import { FORBIDDEN } from '../../ui/testing'
 import { routeAccess } from './nav'
+import { DEFAULT_DISCOVER_QUERY, discoverView } from './discover'
 import { ROUND_2_CHANGES, whatChangedView } from './whatChanged'
 import { HELP_TOPIC_LABELS } from './arch-breadcrumbs'
 import { signUpState } from '../actions/auth'
@@ -47,6 +48,25 @@ describe('whatChangedView', () => {
     expect(dana.others.map((c) => c.id)).toContain('marketplace')
   })
 
+  it('the checking change has its own link, the Marketplace already checking against the first project', () => {
+    for (const who of [U.priya, U.isla, U.marcus]) {
+      const v = whatChangedView(state, viewer(who))
+      const market = v.yours.find((c) => c.id === 'marketplace')!.link!
+      const checking = v.yours.find((c) => c.id === 'checking')!.link!
+      expect(checking.label, who).not.toBe(market.label)
+      expect(checking.href, who).not.toBe(market.href)
+      const projectId = new URL(checking.href, 'http://x').searchParams.get('project')
+      expect(projectId, who).toMatch(/^prj_/)
+      expect(checking.label).toBe(`Check against ${state.world.projects[projectId!].name}`)
+      expect(discoverView(state, viewer(who), { ...DEFAULT_DISCOVER_QUERY, projectId }).project?.id, who).toBe(projectId)
+    }
+  })
+
+  it('a link with a query is checked by its page', () => {
+    expect(routeAccess(state, viewer(U.priya), '/app/marketplace?project=prj_x')).toBe('ok')
+    expect(routeAccess(state, viewer(U.tom), '/app/marketplace?project=prj_x')).toBe(routeAccess(state, viewer(U.tom), '/app/marketplace'))
+  })
+
   it('names who each change is for, in plain words', () => {
     const v = whatChangedView(state, viewer(U.priya))
     const all = [...v.yours, ...v.others]
@@ -66,6 +86,8 @@ describe('whatChangedView', () => {
         expect(c.link, `${orgType} ${c.id}`).not.toBeNull()
         expect(routeAccess(r.state, viewer(userId), c.link!.href)).toBe('ok')
       }
+      const checking = v.yours.find((c) => c.id === 'checking')
+      if (checking) expect(checking.link).toEqual({ href: '/app/marketplace', label: 'Choose a project to check against' })
     }
   })
 

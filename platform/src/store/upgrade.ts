@@ -4,7 +4,8 @@
 // under one key) is carried over instead, so no work done on it is lost; that browser is still told what changed,
 // without the line about earlier work. Every read and write goes through the storage helpers, which never throw.
 import { today } from '../sandbox/clock'
-import type { AppData } from './types'
+import { daysBetween, isOnOrBefore } from '../domain/dates'
+import type { AppData, User } from './types'
 import { findUserByEmail } from './actions/auth'
 import { isEmail, normaliseEmail, SAMPLE_ACCOUNTS } from '../sandbox/accounts'
 import { APP_PREFIX, legacyStateKeys, readKey, removeKey, STATE_KEY, STATE_VERSION, writeKey } from './storage'
@@ -84,14 +85,50 @@ export function sandboxWasUpdated(): boolean {
   return wasUpgraded() || readKey('local', WHATS_NEW_KEY) !== null
 }
 
+/** The day this browser first found a sandbox from before the update (replaced or carried over), or null. */
+export function updatedOn(): string | null {
+  const days = [readKey('local', UPGRADED_KEY), readKey('local', WHATS_NEW_KEY)].filter((d): d is string => d !== null && /^\d{4}-\d{2}-\d{2}$/.test(d))
+  if (days.length === 0) return null
+  return days.reduce((a, b) => (isOnOrBefore(a, b) ? a : b))
+}
+
+/** For how many days after this browser found the update the sign-in page still explains it. */
+export const UPGRADE_HINT_DAYS = 30
+
+/**
+ * Whether the sign-in page still explains the update: from the day this browser found it, for UPGRADE_HINT_DAYS
+ * days. After that an unknown address is far more likely a new visitor's than a lost account's.
+ */
+export function upgradeHintOpen(updated: string | null, on: string): boolean {
+  if (updated === null) return false
+  const days = daysBetween(updated, on)
+  return days >= 0 && days < UPGRADE_HINT_DAYS
+}
+
+/** Whether the sign-in hints apply in this browser today. */
+export function signInHintsApply(): boolean {
+  return upgradeHintOpen(updatedOn(), today())
+}
+
+/**
+ * Whether the signed-in person made their account on or after the day this browser found the update. Nothing of
+ * theirs was replaced and they never saw the earlier sandbox, so the notice has nothing to tell them. Sample
+ * accounts were there before, so they always see it.
+ */
+export function joinedAfterUpdate(user: Pick<User, 'sample' | 'createdAt'> | null, updated: string | null): boolean {
+  if (!user || user.sample || updated === null) return false
+  return isOnOrBefore(updated, user.createdAt.slice(0, 10))
+}
+
 export type UpgradeNoticeKind = 'replaced' | 'carried_over'
 
 /**
  * Which notice the home shows, if any. A replaced sandbox says the earlier changes are back to the sample data; a
- * carried over one only says what was updated, because its work was kept. Closed for good once closed.
+ * carried over one only says what was updated, because its work was kept. Closed for good once closed, and never
+ * shown to a person whose account was made after the update.
  */
-export function upgradeNoticeKind(replaced: boolean, carried: boolean, dismissed: boolean): UpgradeNoticeKind | null {
-  if (dismissed) return null
+export function upgradeNoticeKind(replaced: boolean, carried: boolean, dismissed: boolean, joinedAfter = false): UpgradeNoticeKind | null {
+  if (dismissed || joinedAfter) return null
   if (replaced) return 'replaced'
   return carried ? 'carried_over' : null
 }
@@ -101,9 +138,9 @@ export function upgradeNoticeText(kind: UpgradeNoticeKind): string {
   return kind === 'replaced' ? UPGRADE_NOTICE : UPGRADE_NOTICE_CARRIED
 }
 
-/** The notice this browser's home shows now, read from storage. */
-export function currentUpgradeNotice(): UpgradeNoticeKind | null {
-  return upgradeNoticeKind(wasUpgraded(), readKey('local', WHATS_NEW_KEY) !== null, readKey('local', UPGRADE_DISMISSED_KEY) !== null)
+/** The notice this browser's home shows now to the signed-in person, read from storage. */
+export function currentUpgradeNotice(user: Pick<User, 'sample' | 'createdAt'> | null = null): UpgradeNoticeKind | null {
+  return upgradeNoticeKind(wasUpgraded(), readKey('local', WHATS_NEW_KEY) !== null, readKey('local', UPGRADE_DISMISSED_KEY) !== null, joinedAfterUpdate(user, updatedOn()))
 }
 
 /** Whether the home dashboard shows the upgrade notice: the sandbox was updated and the viewer has not closed it. */
@@ -123,19 +160,28 @@ export function clearUpgradeState(): void {
   for (const key of legacyStateKeys()) removeKey('local', key)
 }
 
-/** How many single-letter edits apart two strings are (Levenshtein distance). */
+/**
+ * How many single-letter edits apart two strings are: a letter added, dropped or changed, or two neighbouring
+ * letters swapped, each counting one (optimal string alignment distance).
+ */
 export function editDistance(a: string, b: string): number {
-  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)))
   for (let i = 1; i <= a.length; i++) {
-    const row = [i]
-    for (let j = 1; j <= b.length; j++) row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
-    prev = row
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+    }
   }
-  return prev[b.length]
+  return d[a.length][b.length]
 }
 
-/** Up to this many letters wrong still reads as a mistyped address rather than another one. */
+/** Up to this many edits still reads as a mistyped address rather than another one. */
 const TYPO_EDITS = 2
+/**
+ * A domain one edit from a sample organisation's reads as a slip of the finger. Two edits apart is already another
+ * name (fernbrook and tarnbrook), and the sample domain itself is a real place for invited teammates.
+ */
+const DOMAIN_TYPO_EDITS = 1
 
 function domainOf(email: string): string {
   const e = normaliseEmail(email)
@@ -143,14 +189,21 @@ function domainOf(email: string): string {
 }
 
 /**
- * Whether an email that matches no account looks like a mistyped one that does: its domain is a sample
- * organisation's, or nearly, or the whole address is nearly an account's. Such a person has made a typo, and
- * must not be told their account is gone.
+ * Whether an email that matches no account looks like a mistyped one that does: its domain is one letter off a
+ * sample organisation's, or the whole address is nearly an account's. Such a person has made a typo, and must not
+ * be told their account is gone. An address at a sample organisation's own domain that is not near any account
+ * is someone else there, such as a teammate invited in the older sandbox, so it is not a typo.
  */
 export function looksLikeAccountTypo(state: AppData, email: string): boolean {
   const e = normaliseEmail(email)
   const domain = domainOf(e)
-  if (SAMPLE_ACCOUNTS.some((a) => editDistance(domainOf(a.email), domain) <= TYPO_EDITS)) return true
+  if (
+    SAMPLE_ACCOUNTS.some((a) => {
+      const d = editDistance(domainOf(a.email), domain)
+      return d > 0 && d <= DOMAIN_TYPO_EDITS
+    })
+  )
+    return true
   return Object.values(state.users).some((u) => editDistance(normaliseEmail(u.email), e) <= TYPO_EDITS)
 }
 

@@ -4,7 +4,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { setClockForTests } from '../sandbox/clock'
 import { APP_PREFIX, clearAppKeys, legacyStateKeys, readKey, removeKey, SESSION_KEY, STATE_KEY, STATE_VERSION, stateKey, writeKey } from './storage'
-import { clearUpgradeState, currentUpgradeNotice, dismissUpgradeNotice, editDistance, isCurrentStoredState, looksLikeAccountTypo, sandboxWasUpdated, signInUpgradeHint, signUpEmailFrom, staleSessionHint, UPGRADE_DISMISSED_KEY, UPGRADE_NOTICE, UPGRADE_NOTICE_CARRIED, UPGRADE_SIGN_IN_HINT, UPGRADE_TITLE, UPGRADED_KEY, upgradeNoticeKind, upgradeNoticeShown, upgradeNoticeText, upgradeStoredState, wasUpgraded, WHATS_NEW_KEY } from './upgrade'
+import { clearUpgradeState, currentUpgradeNotice, dismissUpgradeNotice, editDistance, isCurrentStoredState, joinedAfterUpdate, looksLikeAccountTypo, sandboxWasUpdated, signInHintsApply, signInUpgradeHint, signUpEmailFrom, staleSessionHint, UPGRADE_DISMISSED_KEY, UPGRADE_NOTICE, UPGRADE_NOTICE_CARRIED, UPGRADE_SIGN_IN_HINT, UPGRADE_TITLE, UPGRADED_KEY, UPGRADE_HINT_DAYS, upgradeHintOpen, upgradeNoticeKind, upgradeNoticeShown, upgradeNoticeText, upgradeStoredState, updatedOn, wasUpgraded, WHATS_NEW_KEY } from './upgrade'
 import { FORBIDDEN } from '../ui/testing'
 import type { AppData } from './types'
 
@@ -201,12 +201,17 @@ describe('a mistyped email is not told its account is gone', () => {
     expect(editDistance('studiooriel.example', 'studiooriel.exampl')).toBe(1)
     expect(editDistance('kitten', 'sitting')).toBe(3)
     expect(editDistance('', 'abc')).toBe(3)
+    // Two neighbouring letters swapped is one slip, not two.
+    expect(editDistance('ostlea', 'ostlae')).toBe(1)
+    expect(editDistance('jo.park', 'jo.prak')).toBe(1)
+    expect(editDistance('fernbrook.example', 'tarnbrook.example')).toBe(2)
   })
 
   it('a sample domain, or nearly one, or nearly an account address, reads as a typo', () => {
     expect(looksLikeAccountTypo(state, 'priya.nair@studiooriel.exampl')).toBe(true)
     expect(looksLikeAccountTypo(state, 'priya.nar@studiooriel.example')).toBe(true)
-    expect(looksLikeAccountTypo(state, 'someone@ostlea.example')).toBe(true)
+    expect(looksLikeAccountTypo(state, 'someone@ostlae.example')).toBe(true)
+    expect(looksLikeAccountTypo(state, 'someone@ostlea.example')).toBe(false)
     expect(looksLikeAccountTypo(state, 'jo.prak@parkstudio.example')).toBe(true)
     expect(looksLikeAccountTypo(state, 'jo@parkstudio.example')).toBe(false)
   })
@@ -215,6 +220,89 @@ describe('a mistyped email is not told its account is gone', () => {
     expect(signInUpgradeHint(state, 'priya.nair@studiooriel.exampl', true)).toBe(false)
     expect(signInUpgradeHint(state, 'PRIYA.NAIR@STUDIOORIEL.EXAMPL', true)).toBe(false)
     expect(signInUpgradeHint(state, 'jo@parkstudio.example', true)).toBe(true)
+  })
+
+  it('a teammate invited into a sample organisation in the older sandbox is told the account is gone', () => {
+    expect(looksLikeAccountTypo(state, 'j@ostlea.example')).toBe(false)
+    expect(signInUpgradeHint(state, 'j@ostlea.example', true)).toBe(true)
+    expect(signInUpgradeHint(state, 'J@OSTLEA.EXAMPLE', true)).toBe(true)
+  })
+
+  it('an organisation whose domain is two letters from a sample one is another organisation, not a typo', () => {
+    expect(looksLikeAccountTypo(state, 'rowan@fernbrook.example')).toBe(false)
+    expect(signInUpgradeHint(state, 'rowan@fernbrook.example', true)).toBe(true)
+  })
+
+  it('a near miss of a whole account address is still a typo, even at a sample domain', () => {
+    expect(signInUpgradeHint(state, 'priya.nar@studiooriel.example', true)).toBe(false)
+    expect(signInUpgradeHint(state, 'priya.nair@studiorial.example', true)).toBe(false)
+  })
+})
+
+describe('how long the sign-in page explains the update', () => {
+  it('from the day this browser found it, for 30 days', () => {
+    expect(UPGRADE_HINT_DAYS).toBe(30)
+    expect(upgradeHintOpen(null, '2026-10-16')).toBe(false)
+    expect(upgradeHintOpen('2026-10-16', '2026-10-16')).toBe(true)
+    expect(upgradeHintOpen('2026-10-16', '2026-11-14')).toBe(true)
+    expect(upgradeHintOpen('2026-10-16', '2026-11-15')).toBe(false)
+    expect(upgradeHintOpen('2026-10-16', '2027-03-01')).toBe(false)
+    // A date after today (a clock moved back) is not taken as open.
+    expect(upgradeHintOpen('2026-10-18', '2026-10-16')).toBe(false)
+  })
+
+  it('reads the earlier of the recorded days, and ignores a damaged one', () => {
+    expect(updatedOn()).toBeNull()
+    writeKey('local', WHATS_NEW_KEY, '2026-10-17')
+    expect(updatedOn()).toBe('2026-10-17')
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    expect(updatedOn()).toBe('2026-10-16')
+    writeKey('local', UPGRADED_KEY, 'not a date')
+    expect(updatedOn()).toBe('2026-10-17')
+  })
+
+  it('closes on the one clock, while the notice record stays', () => {
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    expect(signInHintsApply()).toBe(true)
+    setClockForTests('2026-11-14T23:00:00.000Z')
+    expect(signInHintsApply()).toBe(true)
+    setClockForTests('2026-11-15T08:00:00.000Z')
+    expect(signInHintsApply()).toBe(false)
+    expect(sandboxWasUpdated()).toBe(true)
+  })
+})
+
+describe('the notice and people who joined after the update', () => {
+  const sample = { sample: true, createdAt: '2026-08-08T09:00:00.000Z' }
+  const madeBefore = { sample: false, createdAt: '2026-10-15T09:00:00.000Z' }
+  const madeThatDay = { sample: false, createdAt: '2026-10-16T11:00:00.000Z' }
+  const madeAfter = { sample: false, createdAt: '2026-10-20T09:00:00.000Z' }
+
+  it('joinedAfterUpdate holds only for an account of its own made on or after the recorded day', () => {
+    expect(joinedAfterUpdate(madeThatDay, '2026-10-16')).toBe(true)
+    expect(joinedAfterUpdate(madeAfter, '2026-10-16')).toBe(true)
+    expect(joinedAfterUpdate(madeBefore, '2026-10-16')).toBe(false)
+    expect(joinedAfterUpdate(sample, '2026-10-16')).toBe(false)
+    expect(joinedAfterUpdate({ ...sample, createdAt: '2026-10-16T08:00:00.000Z' }, '2026-10-16')).toBe(false)
+    expect(joinedAfterUpdate(madeAfter, null)).toBe(false)
+    expect(joinedAfterUpdate(null, '2026-10-16')).toBe(false)
+  })
+
+  it('upgradeNoticeKind shows nothing to such a person', () => {
+    expect(upgradeNoticeKind(true, false, false, true)).toBeNull()
+    expect(upgradeNoticeKind(false, true, false, true)).toBeNull()
+    expect(upgradeNoticeKind(true, false, false, false)).toBe('replaced')
+  })
+
+  it('currentUpgradeNotice reads it for the signed-in person', () => {
+    writeKey('local', UPGRADED_KEY, '2026-10-16')
+    expect(currentUpgradeNotice()).toBe('replaced')
+    expect(currentUpgradeNotice(sample)).toBe('replaced')
+    expect(currentUpgradeNotice(madeThatDay)).toBeNull()
+    clean()
+    writeKey('local', WHATS_NEW_KEY, '2026-10-16')
+    expect(currentUpgradeNotice(madeBefore)).toBe('carried_over')
+    expect(currentUpgradeNotice(madeAfter)).toBeNull()
   })
 })
 

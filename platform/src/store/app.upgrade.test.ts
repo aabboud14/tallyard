@@ -3,19 +3,24 @@
 // recorded for the notice; a storage event from another tab is read only when it carries this version, so a tab
 // of the old build open beside the new one never reseeds it or throws away its work.
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setClockForTests } from '../sandbox/clock'
 
 const V1 = 'tallyard-platform-v1-state'
 const V2 = 'tallyard-platform-v2-state'
 const v1Record = JSON.stringify({ state: { version: 1, seededOn: '2026-10-14', world: { projects: {} }, users: {} }, version: 1 })
 
-beforeEach(() => {
+// vi.resetModules gives every test a fresh copy of the store and of the one clock it reads, so the clock is pinned
+// on the copy the test's own imports load, never on one imported once at the top of the file.
+beforeEach(async () => {
   window.localStorage.clear()
   window.sessionStorage.clear()
   vi.resetModules()
-  setClockForTests('2026-10-16T08:00:00.000Z')
+  const clock = await import('../sandbox/clock')
+  clock.setClockForTests('2026-10-16T08:00:00.000Z')
 })
-afterAll(() => setClockForTests(null))
+afterAll(async () => {
+  const clock = await import('../sandbox/clock')
+  clock.setClockForTests(null)
+})
 
 describe('loading the app over an older sandbox', () => {
   it('replaces a version 1 sandbox, removes the old key and records the upgrade for the notice', async () => {

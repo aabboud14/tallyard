@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { getData, sampleAccounts, signIn } from '../../store'
-import { sandboxWasUpdated, signInUpgradeHint, staleSessionHint, UPGRADE_SIGN_IN_HINT } from '../../store/upgrade'
+import { signInHintsApply, signInUpgradeHint, staleSessionHint, UPGRADE_SIGN_IN_HINT } from '../../store/upgrade'
 import { getSessionUserId, setSessionUserId } from '../../store/sessionId'
 import { SAMPLE_PASSWORD } from '../../sandbox/accounts'
 import { safeNext } from '../../app/next'
@@ -36,7 +36,7 @@ export function SignInPage() {
   const [upgradeHint, setUpgradeHint] = useState(false)
   const [typedEmail, setTypedEmail] = useState('')
   // A remembered sign-in to an account the updated sandbox no longer holds: say why before any attempt.
-  const [staleSession] = useState(() => staleSessionHint(getData(), getSessionUserId(), sandboxWasUpdated()))
+  const [staleSession] = useState(() => staleSessionHint(getData(), getSessionUserId(), signInHintsApply()))
   const [pending, setPending] = useState(false)
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
   useEffect(() => {
@@ -54,7 +54,7 @@ export function SignInPage() {
     if (r.error) {
       setError(r.error)
       // An account made in the sandbox before it was upgraded is gone: say so, rather than only "do not match".
-      setUpgradeHint(signInUpgradeHint(getData(), v.email, sandboxWasUpdated()))
+      setUpgradeHint(signInUpgradeHint(getData(), v.email, signInHintsApply()))
       setTypedEmail(v.email)
     } else navigate(next, { replace: true })
   }

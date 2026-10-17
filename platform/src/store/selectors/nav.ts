@@ -223,8 +223,8 @@ const ID = /^[A-Za-z0-9_-]+$/
 export function routeAccess(state: AppData, viewer: Viewer, pathname: string): RouteAccess {
   const role = roleOfUser(state, viewer.userId)
   if (!role) return 'forbidden'
-  // A link may carry a section of the page (#statement); the page is the same.
-  const parts = pathname.split('#')[0].replace(/\/+$/, '').split('/').filter(Boolean)
+  // A link may carry a query (?project=) or a section of the page (#statement); the page is the same.
+  const parts = pathname.split(/[?#]/)[0].replace(/\/+$/, '').split('/').filter(Boolean)
   if (parts[0] !== 'app') return 'not_found'
   const [, section, id, tab, sub, ...rest] = parts
   const roles = (...rs: PlatformRole[]): RouteAccess => (rs.includes(role) ? 'ok' : 'forbidden')
