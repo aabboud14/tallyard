@@ -1,0 +1,351 @@
+{
+ "key": "00-overview",
+ "title": "How it fits together",
+ "intro": "Tallyard connects five kinds of organisation around one reclaimed material: the surveyor records it in a building coming down, the donor building owner decides who may see it, the architect shortlists it, the client approves and reserves it, and the sustainability consultant reports its carbon. Each organisation works in its own workspace and sees only what its role allows. This section shows the whole journey first, then who sees what, how people are told, and how a new organisation starts.",
+ "overview_mermaid": "flowchart TD\n  S[\"Surveyor captures items on site\"]:::surveyor\n  SS[\"Surveyor submits the survey\"]:::surveyor\n  O{\"Owner decides who may see each lot\"}:::owner\n  P([\"Stays private\"]):::owner\n  PUB[\"Published to the Marketplace\"]:::owner\n  SH[\"Shared in confidence with chosen projects\"]:::owner\n  A[\"Architect finds and shortlists\"]:::arch\n  SEND[\"Architect sends for approval\"]:::arch\n  C{\"Client approves?\"}:::client\n  R[\"Client requests a reservation\"]:::client\n  OD{\"Owner accepts the request?\"}:::owner\n  X([\"Contacts shown to client and owner\"]):::system\n  K([\"Consultant reads carbon and prepares reports\"]):::consultant\n  S --> SS --> O\n  O -->|\"Not yet\"| P\n  O -->|\"Publish\"| PUB\n  O -->|\"Share\"| SH\n  PUB --> A\n  SH --> A\n  A --> SEND --> C\n  C -->|\"No, architect may reopen\"| A\n  C -->|\"Yes\"| R --> OD\n  OD -->|\"No, client may ask again\"| R\n  OD -->|\"Yes\"| X --> K",
+ "workflows": [
+  {
+   "id": "survey-to-listing",
+   "title": "Take a material from site survey to a listing",
+   "who": [
+    "Surveyor",
+    "Donor building owner",
+    "Platform"
+   ],
+   "where": "Building, Capture (/app/buildings/:id/capture or /app/capture), Inventory (/app/buildings/:id/inventory), Recovery plan (/app/buildings/:id/priorities), Listings (/app/buildings/:id/listings) and Sharing (/app/buildings/:id/sharing)",
+   "summary": "This is the supply half of the journey. The surveyor records what a building holds, the owner reviews it and then chooses, lot by lot, whether it stays private, is shared in confidence with chosen projects, or is published to the Marketplace.",
+   "mermaid": "flowchart TD\n  A[\"Surveyor captures an item\"]:::surveyor\n  B[\"Item saved as a private lot\"]:::system\n  C[\"Owner told, when a surveyor captured it\"]:::system\n  D[\"Surveyor submits the survey\"]:::surveyor\n  E[\"Owner told the survey is in\"]:::system\n  F[\"Owner reviews inventory and recovery plan\"]:::owner\n  G{\"Who should see this lot?\"}:::owner\n  H([\"Stays private\"]):::owner\n  I[\"Owner sets an ask and a reserve\"]:::owner\n  J{\"Publish or share?\"}:::owner\n  K{\"Disclosure score would be high?\"}:::system\n  L([\"Refused until less is disclosed\"]):::system\n  M([\"Live on the Marketplace\"]):::system\n  N([\"Shared in confidence with allowed projects\"]):::system\n  A --> B\n  B --> C\n  B --> D --> E --> F --> G\n  G -->|\"Nobody yet\"| H\n  G -->|\"Buyers\"| I --> J\n  J -->|\"Publish\"| K\n  K -->|\"Yes\"| L\n  K -->|\"No\"| M\n  J -->|\"Share\"| N",
+   "steps": [
+    {
+     "actor": "Surveyor",
+     "action": "Captures an item on the building's Capture tab or the standalone Capture page, with its material, size, quantity, condition, photos and expected date."
+    },
+    {
+     "actor": "Platform",
+     "action": "Saves the item with its own lot, private by default, and starts the survey if it had not started."
+    },
+    {
+     "actor": "Platform",
+     "action": "Tells the owner that new items were captured, but only when the surveyor captured them; repeat captures by the same surveyor at the same building on the same day fold into one notification."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Presses Submit survey when the walk round is done."
+    },
+    {
+     "actor": "Platform",
+     "action": "Records who surveyed the building and tells the owner the survey is in, linking to the Recovery plan."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Reviews the Inventory and the Recovery plan to decide what to recover."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "On Listings, sets each lot to Private, Shared or Published, entering an ask and a reserve per unit for Shared or Published."
+    },
+    {
+     "actor": "Platform",
+     "action": "Checks the building's disclosure score before publishing and refuses if it would be high."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "On Sharing, switches on the projects allowed to see shared lots; each project shows only as a blind line, and the choice covers every shared lot the owner has, in all its buildings."
+    }
+   ],
+   "rules": [
+    "Only the owner and the appointed surveyor can capture or edit items. A deconstruction contractor on its own sees only the Overview and Availability tabs and sets expected dates.",
+    "A building that a surveying firm added itself stays private to that firm until its owner confirms it on Requests, or until the firm, once appointed to the owner's own record of it, moves its captures there. Until then nothing in it can be shared or published and the survey cannot be submitted.",
+    "Only the surveyor can submit a survey. It is refused until the building is linked to its owner and at least one item is captured, and it cannot be submitted twice. Items captured after submitting still reach the owner; Reopen survey only marks it as in progress again.",
+    "Sharing or publishing needs an ask and a reserve, both above zero, in whole price steps, and the reserve cannot be above the ask.",
+    "Publishing is refused when the disclosure score would be high: Publishing at this disclosure level lets an outsider narrow down the building. Reduce what is disclosed first.",
+    "Material, size and quantity are fixed when the item is captured. Once a lot is shared or published its condition and expected date are locked too, and the availability date can be changed only while the lot is private.",
+    "A lot held by an accepted reservation cannot change visibility: This lot is reserved. Its visibility cannot change.",
+    "The owner chooses how much a listing discloses: location as region or local authority, timing as a three-month window or a month, and which photos are public.",
+    "The owner and the surveyor also track the requirements that apply before demolition on the building's Requirements tab; nothing there reaches a buyer."
+   ],
+   "notifications": [
+    "Owner: each capture by a surveyor, folded per day (New items captured).",
+    "Owner: items a surveyor captured before the appointment and moved into the building, \"Captured before your appointment. Private until you decide.\"",
+    "Owner: the survey was submitted, with the item count (Surveys submitted).",
+    "Architects: when a lot is published, any architecture practice with a project the lot is available in time for hears of it, without the owner or building being named (New materials for your projects).",
+    "Architect and accepted client of each project the owner allows: New lot shared with the project when a lot is shared, or N lots shared when the owner allows a project and already has shared lots; if the project has not accepted the confidentiality terms, it is told to accept them first (Lots shared with a project)."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Shared in confidence\" as Shared\n  state \"Held for a project\" as Held\n  [*] --> Private : Item captured\n  Private --> Shared : Owner shares\n  Private --> Published : Owner publishes\n  Shared --> Published : Owner publishes\n  Published --> Shared : Owner shares instead\n  Shared --> Private : Owner makes private\n  Published --> Private : Owner makes private\n  Shared --> Held : Owner accepts a reservation\n  Published --> Held : Owner accepts a reservation\n  Held --> [*]",
+   "states_note": "Every captured lot starts private. The owner moves it between private, shared and published until a reservation is accepted, which holds it for one project and fixes its visibility."
+  },
+  {
+   "id": "shortlist-to-reservation",
+   "title": "Take a material from shortlist to reservation",
+   "who": [
+    "Architect",
+    "Client or developer",
+    "Donor building owner",
+    "Sustainability consultant",
+    "Platform"
+   ],
+   "where": "Marketplace (/app/marketplace and /app/marketplace/:publicId), project Shortlist (/app/projects/:id/shortlist), Approvals (/app/projects/:id/approvals), Reservations (/app/projects/:id/reservations), the owner's Requests (/app/requests), and the consultant's Sustainability tab (/app/projects/:id/sustainability)",
+   "summary": "This is the demand half of the journey. The architect shortlists a material for a project and sends it to the client, the client approves it and asks the owner to reserve it, and the owner accepts or declines a request that does not say who the buyer is.",
+   "mermaid": "flowchart TD\n  A[\"Architect finds a material in the Marketplace\"]:::arch\n  B[\"Architect saves it to a project shortlist\"]:::arch\n  C{\"Client has accepted the project?\"}:::system\n  D([\"Cannot send for approval yet\"]):::system\n  E[\"Architect sends it for approval\"]:::arch\n  F{\"Client approves?\"}:::client\n  G[\"Architect may reopen it with a new note\"]:::arch\n  H[\"Client requests a reservation\"]:::client\n  I[\"Owner sees a blind request\"]:::owner\n  J{\"Owner accepts?\"}:::owner\n  K([\"Declined, client may ask again\"]):::client\n  L[\"Other waiting requests for the lot declined\"]:::system\n  M([\"Contacts shown to client and owner\"]):::system\n  N([\"Consultant reads carbon from reserved materials\"]):::consultant\n  A --> B --> C\n  C -->|\"No\"| D\n  C -->|\"Yes\"| E --> F\n  F -->|\"No\"| G --> E\n  F -->|\"Yes\"| H --> I --> J\n  J -->|\"No\"| K\n  J -->|\"Yes\"| L --> M --> N",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Finds a material in the Marketplace, or under Shared with you for lots shared in confidence, and presses Save to project."
+    },
+    {
+     "actor": "Architect",
+     "action": "On the project's Shortlist, presses Send for approval, or Send to client for the chosen items, with an optional message."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "On Approvals, opens each material and presses Approve or Decline, with an optional note."
+    },
+    {
+     "actor": "Architect",
+     "action": "Presses Reopen on a declined material, with a new note, so it can be sent again."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "On Reservations, presses Request reservation on an approved material and then Send request; the screen says the seller does not see who you are until they accept."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "On Requests, reads the request as a blind buyer line and presses Accept, then Accept and reserve, or Decline."
+    },
+    {
+     "actor": "Platform",
+     "action": "On acceptance, holds the lot for that project, declines any other waiting requests for it with the note Reserved for another buyer, and takes it off the Marketplace."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "Sees the seller's organisation, contact name and email on Reservations, with Contact the seller to agree terms."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Sees the buyer's organisation, contact name, email and message, with Agree the terms directly with the buyer."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Reads the carbon saved by reserved materials on the Sustainability tab, writes the statement on Circular economy and presses Send to the client for review, which freezes the text the client reads, and presses Export workbook on Compliance."
+    }
+   ],
+   "rules": [
+    "Only the project's architect can save, move, note, send or reopen shortlist items. A lot shared in confidence can be saved only to a project it is shared with, never to Saved, and cannot be moved.",
+    "Nothing can be sent for approval until the client has accepted the project: The client has not accepted this project yet, so nothing can be sent for approval.",
+    "Only the client can approve or decline, and only items that were sent. A decision is refused if the lot is no longer shared with the project or no longer available. An approved item cannot be removed from the shortlist.",
+    "Only the client can request a reservation, and only for an approved material that is still shared with the project and available. One waiting request per material per project.",
+    "A donor building owner acting as client of its own New project cannot reserve its own lot: This lot is yours. Allocate it directly; reserving is for other sellers.",
+    "The client can withdraw a request while the owner has not decided it, and can ask again after a decline or withdrawal.",
+    "Only the owner of the building can decide a request, only once, and cannot accept when the lot is already held for another project. Straight after deciding, the owner can press Undo on the confirmation message, as long as nothing else has changed since.",
+    "The architect and the consultant never see the seller's name: their activity says The seller.",
+    "The sustainability consultancy reaches the project, and hears of its decisions and reservations, only once the client has accepted the project and the consultancy has accepted the architect's request too."
+   ],
+   "notifications": [
+    "Client: N materials to approve on the project, with the architect's message (Materials sent for approval).",
+    "Architect, and the consultancy once it has joined: the client approved or declined a material (Client decisions).",
+    "Owner: Reservation request for the item, with the blind buyer line, and Request withdrawn if the client withdraws (Reservation requests).",
+    "Client: the seller's organisation accepted the reservation, with the contact name and email, or Reservation declined with the seller's note (Reservation decisions).",
+    "Architect: the material is reserved, without naming the seller (Reservation decisions). The architect gets no notification for a decline; it shows in project activity.",
+    "Consultant: no notification about reservations; requests and decisions show only in project activity.",
+    "Clients of other projects with a waiting request for the same lot: Reservation declined, Reserved for another buyer."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Waiting for the seller\" as Pending\n  state \"Accepted and reserved\" as Accepted\n  [*] --> Pending : Client sends request\n  Pending --> Accepted : Owner accepts\n  Pending --> Declined : Owner declines\n  Pending --> Declined : Owner accepts another buyer\n  Pending --> Withdrawn : Client withdraws\n  Declined --> [*]\n  Withdrawn --> [*]\n  Accepted --> [*]",
+   "states_note": "A reservation request waits until the owner accepts or declines it, the client withdraws it, or the owner accepts another buyer's request for the same lot."
+  },
+  {
+   "id": "who-sees-what",
+   "title": "Understand who sees what",
+   "who": [
+    "Donor building owner",
+    "Architect",
+    "Client or developer",
+    "Sustainability consultant",
+    "Surveyor",
+    "Platform"
+   ],
+   "where": "Marketplace (/app/marketplace), Shared with you and Review terms in the Marketplace, the owner's Sharing tab (/app/buildings/:id/sharing), share links (/app/links/:linkId), Requests (/app/requests) and project Reservations (/app/projects/:id/reservations)",
+   "summary": "Buyers and sellers stay anonymous to each other until a reservation is accepted. Buyers read a lot only as a public listing, and the owner reads each project only as a blind buyer line.",
+   "mermaid": "flowchart TD\n  B{\"Owner sets the lot to?\"}:::owner\n  C([\"Private, building team only\"]):::system\n  D[\"Public listing made from the lot\"]:::system\n  E[\"Architects see it in the Marketplace\"]:::arch\n  F{\"Project allowed and terms accepted, or link?\"}:::system\n  G[\"Shown under Shared with you\"]:::arch\n  H([\"Hidden from that project\"]):::system\n  I[\"Architect shortlists, client approves\"]:::arch\n  J[\"Client requests a reservation\"]:::client\n  K[\"Owner sees only the blind buyer line\"]:::owner\n  L{\"Owner accepts?\"}:::owner\n  M([\"Client and owner see names and emails\"]):::system\n  N([\"Architect and consultant still read The seller\"]):::system\n  O([\"Both sides stay anonymous\"]):::system\n  B -->|\"Private\"| C\n  B -->|\"Shared or published\"| D\n  D -->|\"Published\"| E\n  D -->|\"Shared\"| F\n  F -->|\"Yes\"| G\n  F -->|\"No\"| H\n  E --> I\n  G --> I\n  I --> J --> K --> L\n  L -->|\"Yes\"| M\n  L -->|\"Yes\"| N\n  L -->|\"No\"| O",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Keeps a private lot visible only to the building's owner and its surveyor; a deconstruction contractor sees the items only to set expected dates."
+    },
+    {
+     "actor": "Platform",
+     "action": "Turns a shared or published lot into a public listing, the only form any buyer reads."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Allows chosen projects on the Sharing tab, each shown as organisation type, project type, region and the three-month window it is needed. One choice covers every shared lot the owner has."
+    },
+    {
+     "actor": "Architect",
+     "action": "Presses Review terms and accepts the confidentiality terms for the project, once, so shared lots appear under Shared with you; the client can accept them too."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Can instead send a share link to chosen shared lots; anyone signed in who opens it and accepts the terms sees those lots."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "Requests a reservation of an approved material; the owner sees only the blind buyer line, and the buyer's organisation, contact and message stay hidden until the owner accepts."
+    },
+    {
+     "actor": "Platform",
+     "action": "When the owner accepts, gives the client the seller's organisation, contact and email, and the owner the buyer's organisation, contact, email and message."
+    }
+   ],
+   "rules": [
+    "A public listing shows the title, specification, quantity, condition, test status, grade, source type, seller type, era band, location as region or local authority, availability as a window, a guide price range, avoided carbon and only photos the owner made public.",
+    "A public listing never shows the building name, street, postcode, the owner or its people, tenants, the surveyor, the contractor, the item tag, exact dates, or the owner's ask and reserve.",
+    "The owner never sees a project's name, client or architect before accepting a reservation: only the blind line, such as Design team, commercial project, region, needed April to June 2028.",
+    "Shared lots reach a project only when the owner has allowed it and the architect or the client has accepted the confidentiality terms for that project, or through an active share link.",
+    "If the owner declines, or the client withdraws, neither side learns who the other is.",
+    "The owner learns only the type of organisation that opened a share link, never who. Revoking a link removes its lots from every opener at once.",
+    "After acceptance the client and the owner see each other. The architect and the consultant never see the seller; their activity reads The seller.",
+    "The consultant has no Shortlist, Approvals or Reservations tab, and the Sustainability tab shows no money figures to anyone.",
+    "A donor building owner reads the Marketplace as a client would, but never its own lots; it manages those in its buildings.",
+    "No third party learns of a project before its client accepts: the consultancy is asked only then, and sees the project only once it accepts too.",
+    "A deconstruction contractor sees only the Overview and Availability of a building: no lots, prices, buyers, inventory, testing or requirements, and no requirement activity.",
+    "Inviting a contractor by email, or a client contact, reveals nothing about who is on Tallyard; the sign-up page names no organisation or project behind an invite.",
+    "A surveyor never learns which organisation declined a building, nor which buildings an owner already has.",
+    "A page for a record you are not part of reads You do not have access to this."
+   ],
+   "notifications": [
+    "Owner: Your share link was opened, naming only the type of organisation, folded per day into a count (Share links).",
+    "Openers of a revoked link: A shared link was withdrawn.",
+    "Architect and accepted client: lots shared with their project, asking them to accept the terms first when they have not."
+   ]
+  },
+  {
+   "id": "notifications-and-activity",
+   "title": "How notifications and activity reach people",
+   "who": [
+    "Every role",
+    "Platform"
+   ],
+   "where": "The bell in the top bar, Notifications (/app/notifications), Recent activity on each Home (/app/home), the project Activity tab (/app/projects/:id/activity), the building Activity page (/app/buildings/:id/activity) and Settings, Notifications (/app/settings/notifications)",
+   "summary": "Every action writes an activity line and may send notifications. Both are addressed to organisations and written in words each reader may see, and each reader is taken to the right page in their own workspace. The diagram follows one example: the architect sends materials and the client is told.",
+   "mermaid": "flowchart TD\n  A[\"Architect sends materials for approval\"]:::arch\n  B[\"Activity line written for each audience\"]:::system\n  C[\"Notification addressed to each organisation told\"]:::system\n  D{\"Reader has this kind switched on?\"}:::system\n  E([\"Left out of that reader's inbox\"]):::system\n  F[\"Shows in the bell and Notifications\"]:::system\n  G[\"Client opens the line\"]:::client\n  H{\"Can the reader open that page?\"}:::system\n  I([\"Opens the same thing in their workspace\"]):::system\n  J([\"Goes home, or shows no link\"]):::system\n  K([\"Marked read for that reader only\"]):::system\n  A --> B\n  A --> C --> D\n  D -->|\"No\"| E\n  D -->|\"Yes\"| F --> G\n  G --> K\n  G --> H\n  H -->|\"Yes\"| I\n  H -->|\"No\"| J",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Writes an activity line for each audience, so the client may read the seller's name while the architect reads The seller and the owner reads A buyer."
+    },
+    {
+     "actor": "Platform",
+     "action": "Sends a notification to each organisation that should be told; everyone in that organisation receives it."
+    },
+    {
+     "actor": "Platform",
+     "action": "Leaves out of a person's inbox any kind they have switched off in Settings, Notifications."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the rest in the bell, with an unread count, and on the Notifications page, grouped by day with All, Unread and per kind filters."
+    },
+    {
+     "actor": "Any reader",
+     "action": "Opens a line and is taken to the same thing in their own workspace."
+    },
+    {
+     "actor": "Any reader",
+     "action": "Opening a line marks it read; a reader can also mark one line read, or press Mark all as read."
+    }
+   ],
+   "rules": [
+    "Notifications stay in the app; nothing is emailed.",
+    "Read state is per person. The person who acted has their own organisation's copy already marked read.",
+    "Each person chooses which kinds reach them. Only kinds that fit their role are offered, and all start switched on.",
+    "Only two kinds of event fold into one line with a count: captures by one surveyor at one building on the same day, and opens of one share link on the same day.",
+    "Per reader links: a line that points at another side's page leads to the matching page in the reader's workspace. The architect goes to Shortlist instead of Approvals or Reservations, the client goes to Approvals instead of Shortlist, the architect and client go to the Sustainability tab instead of the consultant's own pages, and anything else leads to the project or building overview.",
+    "When the reader cannot open the page, an activity line shows no link and a notification leads to Home.",
+    "Sidebar badges count what waits: the owner's Requests counts reservation requests and buildings to confirm, a client's project counts materials waiting for approval, a building's Requirements tab counts requirements at risk for the owner and the surveyor, and Project requests appears for a client or a consultancy while an architect waits for an answer.",
+    "Each building has an Activity page, linked from its Overview as projects have, open to every side on the building and filtered to what that organisation may read.",
+    "A notice that invites an action that has gone is taken away: when a request to confirm a building is withdrawn, merged or deleted its notice leaves the owner's bell, and answering marks it read for the person who answered.",
+    "Activity and notifications about a project reach a consultancy only once it has joined the project."
+   ],
+   "notifications": [
+    "Kinds each role can switch on or off. Architect: lots shared with a project, client decisions, reservation decisions, new materials for your projects, team and projects.",
+    "Client or developer: lots shared with a project, materials sent for approval, reservation decisions, team and projects, sustainability and compliance.",
+    "Donor building owner: materials sent for approval on its New projects, reservation requests and decisions, surveys submitted, new items captured, team and projects, building confirmations, testing, availability dates, share links, sustainability and compliance.",
+    "Surveyor: appointments, team and projects, building confirmations, testing.",
+    "Sustainability consultant: client decisions, team and projects, sustainability and compliance."
+   ]
+  },
+  {
+   "id": "new-organisation",
+   "title": "Start a new organisation",
+   "who": [
+    "New person",
+    "Architect",
+    "Client or developer",
+    "Donor building owner",
+    "Surveyor",
+    "Sustainability consultant",
+    "Platform"
+   ],
+   "where": "Create your account (/signup), then Home (/app/home); colleagues join through Settings, Team (/app/settings/team) and an invite link (/invite/:token)",
+   "summary": "A person creates an account in two steps and chooses the organisation type, which sets up the workspace. A new organisation starts empty, and its home page leads with the first steps for its type. Someone invited to a client organisation, or to be a building's contractor, joins straight into that role.",
+   "mermaid": "flowchart TD\n  A[\"Person enters name, work email and password\"]:::system\n  Q{\"Email invited to answer a project request?\"}:::system\n  R([\"Joins that client, request waits on Home\"]):::client\n  B[\"Person enters organisation name and type\"]:::system\n  C{\"Details valid and email unused?\"}:::system\n  D([\"Shown what to fix\"]):::system\n  W[\"Empty workspace made for the organisation\"]:::system\n  E{\"Which organisation type?\"}:::system\n  F([\"Architect home opens Create your first project\"]):::arch\n  G([\"Client home shows three next steps\"]):::client\n  H([\"Owner home: Add your first building\"]):::owner\n  I([\"Surveyor home: three steps, Add building\"]):::surveyor\n  J([\"Consultant home waits to be asked\"]):::consultant\n  K[\"Members invite colleagues by link\"]:::system\n  A --> Q\n  Q -->|\"Yes\"| R\n  Q -->|\"No\"| B --> C\n  C -->|\"No\"| D\n  C -->|\"Yes\"| W --> E\n  E -->|\"Architecture practice\"| F\n  E -->|\"Developer or client\"| G\n  E -->|\"Donor building owner\"| H\n  E -->|\"Surveying or deconstruction firm\"| I\n  E -->|\"Sustainability consultancy\"| J\n  W --> K",
+   "steps": [
+    {
+     "actor": "New person",
+     "action": "On Create your account, enters full name, work email and a password, then presses Continue."
+    },
+    {
+     "actor": "New person",
+     "action": "Enters the organisation name, picks one of five organisation types and presses Create account. An email invited to answer a project request skips this: it joins the client organisation that invited it."
+    },
+    {
+     "actor": "Platform",
+     "action": "Creates the organisation and the person, signs them in and opens Home with a welcome message."
+    },
+    {
+     "actor": "Architect",
+     "action": "Sees Welcome to your workspace and the Create your first project dialog, with In the Marketplace now below; the sidebar has Home, Marketplace, Saved, Projects and New project."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "Sees a welcome with three next steps; a project appears once an architect asks to add the organisation as client and a member presses Accept under Project requests."
+    },
+    {
+     "actor": "Donor building owner",
+     "action": "Sees Add your first building with three steps and Add building; the sidebar has Home, Marketplace, Donor buildings and Requests, and New projects once it adds one."
+    },
+    {
+     "actor": "Surveyor",
+     "action": "Sees a first run with three steps and Add building, to start capturing before any owner appoints the firm; the sidebar has Home, Capture and Clients. A firm invited by email to be a building's contractor becomes it on joining."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Sees No projects yet with three steps until an architect asks the consultancy to join a project whose client has accepted, and it accepts; waste engagements come only with the sample data and cannot be started in the platform. The sidebar has Home, Projects and Engagements, with Project requests while one waits."
+    },
+    {
+     "actor": "Any member",
+     "action": "Invites colleagues from Settings, Team with Invite a colleague and Copy link; the invitee opens the link, enters a name and password and joins."
+    }
+   ],
+   "rules": [
+    "The five types are Architecture practice, Developer or client, Donor building owner, Surveying or deconstruction firm, and Sustainability consultancy.",
+    "The type is fixed once chosen: members can rename the organisation and set its address, but not change its type.",
+    "Sign up is refused for an email already in use: An account with this email already exists. Sign in instead. Passwords need at least 8 characters.",
+    "A deconstruction contractor signs up as a Surveying or deconstruction firm and acts as contractor only when a building's owner or surveyor invites it, from the list or by email, to set dates on that building. A firm that only dates buildings reads Deconstruction contractor and has no Capture page.",
+    "A client reaches a project only after accepting the architect's request; the architect finds a new client organisation by typing its exact name and may invite a contact there by email. Every donor building owner has the Marketplace.",
+    "An invite is refused for someone already in the organisation, for an email another account uses, or when a pending invite exists. A used or revoked invite link no longer works.",
+    "In the sandbox no email is sent: the invite is a link the member copies and passes on. Five sample accounts use the password sandbox."
+   ],
+   "notifications": [
+    "Organisation: someone joined, after an invite is accepted (Team and projects).",
+    "Client: an architect asks to add them to a project (Team and projects); the architect hears whether the client accepted or declined, and when an invited contact joins.",
+    "Consultant: an architect asks to add the consultancy to a project, once its client has accepted (Team and projects); the architect hears its answer, and the client hears when it joins.",
+    "Architect: appointed by a donor building owner to a New project (Team and projects).",
+    "Surveyor: a donor building owner appointed the firm to survey a building, or the firm was invited to set dates (Appointments).",
+    "Owner: a surveying firm that added a building asks the owner, by email, to confirm it is theirs (Building confirmations)."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  [*] --> Pending : Member creates an invite\n  Pending --> Accepted : Invitee sets name and password\n  Pending --> Revoked : Member revokes it\n  Accepted --> [*]\n  Revoked --> [*]",
+   "states_note": "An invite waits until the invitee joins through the link or a member revokes it."
+  }
+ ]
+}

@@ -1,0 +1,317 @@
+// Shared pieces for every view model: time words, listing cards, project references and labels.
+// Anything the other side owns is read through toPublicListing (via listingOf) or toBlindBuyer only.
+import type { FamilyId, Project, PublicListing } from '../../domain/types'
+import type { Band, TimelineFit, Typology, WishStatus } from '../../domain/v1types'
+import { FAMILIES } from '../../domain/reference/families'
+import { facilityById } from '../../domain/reference/assumptions'
+import { TIMELINE_TEXT, TYPOLOGY_LABELS } from '../../domain/reference/labels'
+import { projectTypeLabel } from '../../domain/reference/projectTypes'
+import { RIBA_STAGES } from '../../domain/reference/policy'
+import { daysBetween, formatDate, formatDateShort } from '../../domain/dates'
+import { typologyOf } from '../../domain/engines/typology'
+import { sustainabilityBand } from '../../domain/engines/band'
+import { timelineFit } from '../../domain/engines/timeline'
+import { availabilityText, priceRangeText, quantityText } from '../../domain/engines/specSheet'
+import { availabilityPhrase } from '../../domain/engines/availability'
+import * as f from '../../domain/format'
+import type { ActivityEntry, AppData, ReservationStatus, Viewer } from '../types'
+import { roleForOrgType, orgTypeLabel } from '../../sandbox/accounts'
+import { generalWishlist, projectWishlist } from '../lots'
+import { buildingSide, canOpenEngagement, isBuildingContractor, projectSide, roleOfUser, type BuildingSide, type ProjectSide } from '../access'
+
+// ---------- Time ----------
+
+export function todayOf(v: Viewer): string {
+  return v.now.slice(0, 10)
+}
+
+/** "just now", "5 minutes ago", "2 hours ago", "Yesterday", "3 days ago", then the date. */
+export function timeAgo(at: string, now: string): string {
+  const ms = Date.parse(now) - Date.parse(at)
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+  const hours = Math.floor(minutes / 60)
+  const days = daysBetween(at.slice(0, 10), now.slice(0, 10))
+  if (days === 0 || hours < 6) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return formatDateShort(at.slice(0, 10))
+}
+
+/** A phrase as the start of a sentence: the first letter capitalised, the rest as written. */
+export function sentenceStart(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** timeAgo where it starts a line or a cell: "Just now", "5 minutes ago", "Yesterday". */
+export function timeAgoStart(at: string, now: string): string {
+  return sentenceStart(timeAgo(at, now))
+}
+
+/** "Today", "Yesterday", or the date, for grouping by day. */
+export function dayLabel(at: string, now: string): string {
+  const days = daysBetween(at.slice(0, 10), now.slice(0, 10))
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return formatDate(at.slice(0, 10))
+}
+
+/** "Good morning", "Good afternoon" or "Good evening", from the hour in UTC. */
+export function greeting(now: string, firstName: string): string {
+  const h = Number(now.slice(11, 13))
+  const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  return firstName ? `${part}, ${firstName}` : part
+}
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** "Thursday 8 October 2026". */
+export function longDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${formatDate(iso)}`
+}
+
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? ''
+}
+
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
+}
+
+// ---------- Labels ----------
+
+export const SHORTLIST_STATUS_LABELS: Record<WishStatus, string> = { pending: 'Shortlisted', sent: 'Waiting for approval', approved: 'Approved', declined: 'Declined' }
+
+export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = { pending: 'Awaiting the seller', accepted: 'Reserved', declined: 'Declined', withdrawn: 'Withdrawn' }
+
+export const FIT_LABELS = { now: 'Available now', in_time: 'In time', tight: 'Tight', late: 'Too late' } as const
+
+export const ROLE_TITLES = { architect: 'Architect', client: 'Client', consultant: 'Sustainability consultant', owner: 'Donor building owner', surveyor: 'Site surveyor' } as const
+
+export function stageLabel(stage: number): string {
+  return `RIBA Stage ${stage}, ${RIBA_STAGES[stage] ?? ''}`.replace(/, $/, '')
+}
+
+export function familyLabel(family: FamilyId): string {
+  return FAMILIES[family].label
+}
+
+/** How a stored seller type reads in a sentence. The data value stays 'Asset owner'; the product calls it a donor building owner. */
+export const SELLER_TYPE_LABELS: Record<string, string> = { 'Asset owner': 'donor building owner' }
+
+/** "a donor building owner", "a deconstruction contractor". */
+export function sellerPhrase(sellerType: string): string {
+  const label = SELLER_TYPE_LABELS[sellerType] ?? sellerType
+  const lower = label.charAt(0).toLowerCase() + label.slice(1)
+  return /^[aeiou]/i.test(lower) ? `an ${lower}` : `a ${lower}`
+}
+
+export function orgTypeText(state: AppData, orgId: string): string {
+  const org = state.world.orgs[orgId]
+  return org ? orgTypeLabel(org.type) : ''
+}
+
+export function roleOfOrgId(state: AppData, orgId: string) {
+  const org = state.world.orgs[orgId]
+  return org ? roleForOrgType(org.type) : null
+}
+
+// ---------- Listings ----------
+
+export type SavedIn = { projectId: string | null; label: string; status: WishStatus }
+
+/** Everything a card shows about a listing, from the public projection only. */
+export type ListingCard = {
+  listing: PublicListing
+  publicId: string
+  title: string
+  family: FamilyId
+  familyLabel: string
+  typology: Typology
+  typologyLabel: string
+  quantityText: string
+  massT: number
+  availabilityText: string
+  /** The short phrase for cards: "Expected Jan to Mar 2027", "Available now". */
+  availabilityShort: string
+  locationLabel: string
+  collectionPoint: string
+  /** The first public photo, or null for the generated illustration. */
+  photo: { id: string; src: string | null } | null
+  band: Band
+  /** The fit against the project being checked, or null with no project. */
+  fit: TimelineFit | null
+  fitLabel: string | null
+  avoidedT: number | null
+  priceRange: string
+  sharedInConfidence: boolean
+  savedIn: SavedIn[]
+}
+
+export function collectionPointText(l: PublicListing): string {
+  return l.collectionHubId ? facilityById(l.collectionHubId).name : 'From the source site'
+}
+
+/** The practice's lists that hold this public ID. */
+export function savedInFor(state: AppData, orgId: string | null, publicId: string): SavedIn[] {
+  if (!orgId) return []
+  const out: SavedIn[] = []
+  for (const list of Object.values(state.world.wishlists)) {
+    if (list.orgId !== orgId) continue
+    const it = list.items.find((x) => x.publicId === publicId)
+    if (!it) continue
+    out.push({ projectId: list.projectId, label: list.projectId ? (state.world.projects[list.projectId]?.name ?? '') : 'Saved', status: it.status })
+  }
+  return out
+}
+
+export function listingCard(state: AppData, listing: PublicListing, project: Project | null, today: string, savedOrgId: string | null = null): ListingCard {
+  const fit = project ? timelineFit(listing.availability, project.startDate, today) : null
+  const firstPhoto = listing.photos[0] ?? null
+  return {
+    listing,
+    publicId: listing.publicId,
+    title: listing.title,
+    family: listing.family,
+    familyLabel: familyLabel(listing.family),
+    typology: typologyOf(listing.family),
+    typologyLabel: TYPOLOGY_LABELS[typologyOf(listing.family)],
+    quantityText: quantityText(listing),
+    massT: listing.massT,
+    availabilityText: availabilityText(listing),
+    availabilityShort: availabilityPhrase(listing.availability).short,
+    locationLabel: listing.location.label,
+    collectionPoint: collectionPointText(listing),
+    photo: firstPhoto ? { id: firstPhoto.id, src: firstPhoto.src } : null,
+    band: sustainabilityBand(listing.carbon),
+    fit,
+    fitLabel: fit ? FIT_LABELS[fit.fit] : null,
+    avoidedT: listing.carbon ? listing.carbon.avoidedT : null,
+    priceRange: priceRangeText(listing),
+    sharedInConfidence: listing.sharing === 'in_confidence',
+    savedIn: savedInFor(state, savedOrgId, listing.publicId),
+  }
+}
+
+export function fitText(fit: TimelineFit | null): string | null {
+  return fit ? TIMELINE_TEXT[fit.fit] : null
+}
+
+/** "About 7 months in storage before the start", or nothing for a late lot. */
+export function storageText(fit: TimelineFit | null): string | null {
+  if (!fit || fit.storageMonths === null) return null
+  if (fit.storageMonths === 0) return 'No storage before the start'
+  return `About ${f.months(fit.storageMonths)} in storage before the start`
+}
+
+// ---------- Projects ----------
+
+export type ProjectRef = {
+  id: string
+  name: string
+  clientName: string
+  typeLabel: string
+  stage: number
+  stageLabel: string
+  region: string
+  localAuthority: string
+  startDate: string
+  startText: string
+}
+
+export function projectRef(state: AppData, p: Project): ProjectRef {
+  return {
+    id: p.id,
+    name: p.name,
+    clientName: state.world.orgs[p.clientOrgId]?.name ?? '',
+    typeLabel: projectTypeLabel(p),
+    stage: p.ribaStage,
+    stageLabel: stageLabel(p.ribaStage),
+    region: p.region,
+    localAuthority: p.localAuthority,
+    startDate: p.startDate,
+    startText: formatDate(p.startDate),
+  }
+}
+
+export function shortlistOf(state: AppData, projectId: string) {
+  return projectWishlist(state.world, projectId)
+}
+
+export function savedListOf(state: AppData, orgId: string) {
+  return generalWishlist(state.world, orgId)
+}
+
+// ---------- Activity ----------
+
+export type ActivityRow = { id: string; at: string; timeAgo: string; actor: string; text: string; href: string | null; initials: string; projectId: string | null; buildingId: string | null }
+
+export function activityRow(e: ActivityEntry, now: string): ActivityRow {
+  return { id: e.id, at: e.at, timeAgo: timeAgo(e.at, now), actor: e.actor, text: e.text, href: e.href, initials: initials(e.actor), projectId: e.projectId, buildingId: e.buildingId }
+}
+
+/** The project tabs each side may open (the same tabs the project header shows). */
+const PROJECT_TABS_OF: Record<ProjectSide, string[]> = {
+  architect: ['shortlist', 'specification', 'sustainability', 'requirements', 'team', 'activity', 'matching'],
+  client: ['approvals', 'reservations', 'specification', 'sustainability', 'requirements', 'team', 'activity'],
+  consultant: ['sustainability', 'targets', 'certification', 'requirements', 'statement', 'compliance', 'team', 'activity'],
+}
+/** The consultant's own sustainability pages: other sides read the same records on the Sustainability tab. */
+const CONSULTANT_SUSTAINABILITY_TABS = ['targets', 'certification', 'compliance', 'statement']
+const BUILDING_TABS_OF: Record<BuildingSide, string[]> = {
+  owner: ['inventory', 'capture', 'priorities', 'listings', 'sharing', 'testing', 'requirements'],
+  surveyor: ['inventory', 'capture', 'testing', 'requirements', 'availability'],
+  contractor: ['availability'],
+}
+
+/**
+ * Where an activity line or a notification leads for this person. One line is shared by every organisation on a
+ * project, so its address may be another side's page: then it leads to the same thing in their own workspace (the
+ * shortlist for the architect, approvals for the client, otherwise the project or building), or nowhere when they
+ * cannot open it.
+ */
+export function hrefForReader(state: AppData, userId: string, href: string | null): string | null {
+  if (!href) return null
+  const [, section, id, rawTab, ...rest] = href.split('?')[0].split('#')[0].split('/').filter(Boolean)
+  // The Carbon tab became Sustainability (round 2); older lines still say carbon.
+  const tab = rawTab === 'carbon' ? 'sustainability' : rawTab
+  if (section === 'projects' && id === 'requests') return ['client', 'consultant'].includes(roleOfUser(state, userId) ?? '') ? href : null
+  if (section === 'projects' && id) {
+    const side = projectSide(state, userId, id)
+    if (!side) return null
+    const base = `/app/projects/${id}`
+    if (tab === undefined) return href
+    if (rest.length === 0 && PROJECT_TABS_OF[side].includes(tab)) return rawTab === tab ? href : `${base}/${tab}${href.includes('?') ? href.slice(href.indexOf('?')) : ''}`
+    if (rest.length === 0 && CONSULTANT_SUSTAINABILITY_TABS.includes(tab)) return tab === 'statement' && side === 'client' ? `${base}/sustainability#statement` : `${base}/sustainability`
+    if (side === 'architect' && (tab === 'approvals' || tab === 'reservations')) return `${base}/shortlist`
+    if (side === 'client' && tab === 'shortlist') return `${base}/approvals`
+    return base
+  }
+  if (section === 'buildings' && id) {
+    const side = buildingSide(state, userId, id)
+    if (!side) return null
+    if (tab === 'availability' && !isBuildingContractor(state, userId, id)) return `/app/buildings/${id}`
+    if (tab === undefined || BUILDING_TABS_OF[side].includes(tab)) return href
+    return `/app/buildings/${id}`
+  }
+  if (section === 'requests') return roleOfUser(state, userId) === 'owner' ? href : null
+  // Round 2: share links open for anyone signed in; standalone capture for owners and surveyors.
+  if (section === 'links') return href
+  if (section === 'capture') return roleOfUser(state, userId) === 'owner' || roleOfUser(state, userId) === 'surveyor' ? href : null
+  if (section === 'engagements' && id) return roleOfUser(state, userId) === 'consultant' && canOpenEngagement(state, userId, id) ? href : null
+  return href
+}
+
+/** Activity the viewer's organisation may read, newest first, optionally for one project or building. */
+export function activityFor(state: AppData, viewer: Viewer, scope: { projectId?: string; buildingId?: string } = {}, limit = 50): ActivityRow[] {
+  const orgId = state.users[viewer.userId]?.orgId
+  if (!orgId) return []
+  return state.activity
+    .filter((e) => e.orgIds.includes(orgId))
+    .filter((e) => (scope.projectId === undefined || e.projectId === scope.projectId) && (scope.buildingId === undefined || e.buildingId === scope.buildingId))
+    .slice(0, limit)
+    .map((e) => ({ ...activityRow(e, viewer.now), href: hrefForReader(state, viewer.userId, e.href) }))
+}

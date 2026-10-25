@@ -7,13 +7,13 @@ import { LABELS } from '../domain/reference/labels'
 export type CalcLine = { label: string; value: string; note?: string }
 export type CalcSection = { title: string; lines: CalcLine[] }
 
-export function HowCalculated({ title, sections, labels = [], trigger, testId }: { title: string; sections: CalcSection[]; labels?: string[]; trigger?: ReactNode; testId?: string }) {
+export function HowCalculated({ title, sections, labels = [], trigger, triggerLabel = 'How this is calculated', testId }: { title: string; sections: CalcSection[]; labels?: string[]; trigger?: ReactNode; triggerLabel?: string; testId?: string }) {
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
         {trigger ?? (
           <Button variant="quiet" className="text-sm" data-testid={testId}>
-            How this is calculated
+            {triggerLabel}
           </Button>
         )}
       </Dialog.Trigger>

@@ -48,6 +48,8 @@ export type CaptureInput = {
   notes: string
   capturedBy: string
   photos: Photo[]
+  /** The surveyor's expected availability (ISO date). Defaults to the building's dismantling start. */
+  expectedAvailableFrom?: string | null
 }
 
 /** 02 section 4, rule 1: a new item and its private lot. */
@@ -58,6 +60,7 @@ export function captureItem(world: World, input: CaptureInput): { world: World; 
   const publicId = w.publicIdPool.shift()
   if (!itemId || !publicId) throw new Error('The pool of IDs for new items is used up')
   const tag = nextTag(w, input.buildingId)
+  const expectedAvailableFrom = input.expectedAvailableFrom ?? building.programme.dismantlingStart
   const item: InventoryItem = {
     id: itemId,
     buildingId: input.buildingId,
@@ -74,6 +77,7 @@ export function captureItem(world: World, input: CaptureInput): { world: World; 
     notes: input.notes,
     capturedBy: input.capturedBy,
     capturedOn: DEMO_TODAY,
+    expectedAvailableFrom,
   }
   w.items[itemId] = item
   const lotId = 'lot_' + itemId.slice(4)
@@ -84,7 +88,7 @@ export function captureItem(world: World, input: CaptureInput): { world: World; 
     visibility: 'private',
     piecesOnOffer: input.quantity.kind === 'pieces' ? input.quantity.pieces : null,
     shareOnOffer: 1,
-    availableFrom: building.programme.dismantlingStart,
+    availableFrom: expectedAvailableFrom,
     inStock: null,
     listedMonth: null,
     askPerUnit: null,
@@ -326,7 +330,9 @@ export function sellerApprove(world: World, projectId: string, planItemId: strin
   const dealId = `deal_${Object.keys(w.deals).length + 1}_${item.lotPublicId}`
   const ownerOrg = building.ownerOrgId ? w.orgs[building.ownerOrgId] : null
   const ownerPersona = Object.values(w.personas).find((x) => x.orgId === building.ownerOrgId)
-  const buyerPersona = w.personas[p.teamPersonaIds[0]]
+  // Brief 09 section 13.2: the buyer contact is the client, never the architect.
+  const clientOrg = w.orgs[p.clientOrgId]
+  const clientPersona = [...p.teamPersonaIds.map((id) => w.personas[id]), ...Object.values(w.personas)].find((x) => x?.orgId === p.clientOrgId)
   const deal: Deal = {
     id: dealId,
     projectId,
@@ -361,8 +367,8 @@ export function sellerApprove(world: World, projectId: string, planItemId: strin
     baselineMassT,
     requirementRef: item.requirementRef,
     exchanged: {
-      buyerOrg: w.orgs[p.developerOrgId].name,
-      buyerContact: `${buyerPersona.name}, ${w.orgs[buyerPersona.orgId].name}`,
+      buyerOrg: clientOrg.name,
+      buyerContact: clientPersona ? `${clientPersona.name}, ${clientOrg.name}` : clientOrg.name,
       sellerOrg: ownerOrg?.name ?? '',
       sellerContact: ownerPersona?.name ?? '',
     },

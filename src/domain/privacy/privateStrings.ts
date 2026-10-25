@@ -19,16 +19,21 @@ export function lotPrivateStrings(lot: Lot, item: InventoryItem, building: Sourc
   }
   out.push(item.tag)
   if (lot.availableFrom) out.push(...dateFormats(lot.availableFrom))
-  return out.filter((s) => s.length > 0)
+  // Version 1.0: the surveyor's expected date is private on every lot. Month strings are left out on purpose:
+  // they are substrings of public quarter windows and rendered dates.
+  if (item.expectedAvailableFrom) out.push(...dateFormats(item.expectedAvailableFrom))
+  return [...new Set(out.filter((s) => s.length > 0))]
 }
 
 export function projectPrivateStrings(project: Project, world: World): string[] {
-  const out = [project.name, world.orgs[project.developerOrgId].name]
+  const out = [project.name, world.orgs[project.developerOrgId].name, world.orgs[project.clientOrgId].name, world.orgs[project.architectOrgId].name]
   for (const id of project.teamOrgIds) out.push(world.orgs[id].name)
   for (const id of project.teamPersonaIds) out.push(world.personas[id].name)
   out.push(project.postcodeDistrict, project.localAuthority)
   out.push(...dateFormats(project.keyDates.steelNeedBy))
-  return out
+  // Version 1.0: the construction start is private; a seller sees at most the need-by quarter from toBlindBuyer.
+  out.push(...dateFormats(project.startDate))
+  return [...new Set(out.filter((s) => s.length > 0))]
 }
 
 export const INTERNAL_ID = /\b(bld|itm)_[A-Za-z0-9]{6}\b/

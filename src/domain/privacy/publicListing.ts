@@ -70,7 +70,7 @@ export function toPublicListing(lot: Lot, item: InventoryItem, building: SourceB
     testStatus: item.testStatus,
     grade: isSteel ? (item.grade ?? 'unknown') : null,
     sourceType: building.sourceType,
-    sellerType: building.sellerType,
+    sellerType: building.arisingsTitle === 'contractor' && building.ownerOrgId ? 'Deconstruction contractor' : building.sellerType,
     eraBand: isSteel && building.sourceType === 'deconstruction' ? building.eraBand : null,
     location,
     availability: availabilityFor(lot, building),

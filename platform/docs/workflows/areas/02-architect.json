@@ -1,0 +1,676 @@
+{
+  "key": "02-architect",
+  "title": "Architect",
+  "intro": "This section follows the architect, who creates projects, sets their programme and requirements, and finds reclaimed materials for them in the Marketplace. The architect shortlists materials against a project's dates, sends them to the client for approval, and turns what is approved into a specification. Every workflow here is what the platform does today.",
+  "workflows": [
+    {
+      "id": "create-project",
+      "title": "Create a project",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Sustainability consultant",
+        "Platform"
+      ],
+      "where": "New project in the sidebar under Projects (/app/projects/new), the New project button on Projects (/app/projects), and Create your first project on Home for a practice with no projects",
+      "summary": "The architect sets up a project in one form: name and type, the client with a note and, for a client new to Tallyard, a contact email, the programme, the location with its planning and sustainability requirements, and the team. The platform suggests RIBA stage dates, creates an empty shortlist and asks the client organisation to accept the project. A consultancy named here is asked only once the client accepts.",
+      "mermaid": "flowchart TD\nA[\"Open New project\"]:::arch --> B[\"Name the project and choose a type\"]:::arch\nB --> C{\"Type is Other?\"}:::arch\nC -->|\"Yes\"| D[\"Describe the type, optional\"]:::arch\nC -->|\"No\"| E[\"Choose the client and add a message\"]:::arch\nD --> E\nE --> N{\"A new client?\"}:::arch\nN -->|\"Yes\"| O[\"Add a client contact email, optional\"]:::arch\nN -->|\"No\"| F[\"Set stage, site start and completion\"]:::arch\nO --> F\nF --> G[\"Choose region and local authority\"]:::arch\nG --> H[\"Tick requirements, or leave suggested\"]:::arch\nH --> I{\"Every field valid?\"}:::system\nI -->|\"No\"| J[\"Errors show beside each field\"]:::system\nJ --> B\nI -->|\"Yes\"| K[\"Project made with suggested stage dates\"]:::system\nK --> L[\"Client asked to accept, contact invited\"]:::system\nL --> M([\"Project overview opens\"]):::arch",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Opens New project and types a Project name, which must be new within the practice."
+        },
+        {
+          "actor": "Architect",
+          "action": "Chooses a Project type from twelve kinds of building or Other (the form starts on Office); with Other, Describe the type is offered and is optional."
+        },
+        {
+          "actor": "Architect",
+          "action": "Chooses the Client from the practice's clients, or A new client and types its name (a practice with no clients yet just types the name), and may write a Message to the client."
+        },
+        {
+          "actor": "Architect",
+          "action": "For a new client, may add a Client contact email: if nobody from that organisation uses Tallyard yet, that person is invited to join it and accept the project."
+        },
+        {
+          "actor": "Architect",
+          "action": "Under Programme sets the Current RIBA stage and Site start, and optionally Practical completion and Materials needed on site from."
+        },
+        {
+          "actor": "Architect",
+          "action": "Under Location and requirements chooses the Region and, optionally, the Local authority from one list of every authority grouped by region; choosing an authority sets the region."
+        },
+        {
+          "actor": "Architect",
+          "action": "Optionally opens Planning and sustainability requirements, where the suggested ones for that place are already ticked, and changes the ticks. Left closed, the suggested ones are tracked until the architect chooses."
+        },
+        {
+          "actor": "Architect",
+          "action": "Optionally chooses a Sustainability consultant and writes a Description, then selects Create project."
+        },
+        {
+          "actor": "Platform",
+          "action": "Checks every field and shows each problem beside its field; nothing is saved until all pass."
+        },
+        {
+          "actor": "Platform",
+          "action": "Creates the project with an empty shortlist, suggested stage dates marked Suggested dates, the client link set to waiting and, when a consultancy was chosen, a request to it that waits for the client."
+        },
+        {
+          "actor": "Platform",
+          "action": "Asks the client organisation to accept, issues the invite when a contact email was given, and opens the project overview with its programme card and setup checklist."
+        }
+      ],
+      "rules": [
+        "Only an architect can use this form. Clients, consultants and surveyors cannot create projects; a donor building owner has its own New project, on which it is the client (see the owner section).",
+        "The project name is required and must not repeat another project name in the same practice: 'A project with this name already exists.'",
+        "The type list is Office, Residential, Hotel, Mixed use, Retail, Education, Healthcare, Laboratory, Industrial and logistics, Cultural and civic, Sport and leisure, Student housing and Other. The Other description is up to 60 characters and is seen by the project team only; a seller only ever reads the plain type, for example 'other project'.",
+        "The client list holds the practice's existing client organisations that have not declined. A typed name that matches a developer, or one of the practice's clients, reuses that organisation; any other name creates a new client organisation, so the form never reveals who sells materials. The practice cannot name itself as the client.",
+        "The client contact email must look like an email address. It is refused when someone from the client organisation already uses Tallyard ('Someone from this organisation already uses Tallyard and can accept the request on Project requests.') or when the email belongs to another organisation ('This email belongs to someone in another organisation. Choose that organisation as the client instead.').",
+        "Current RIBA stage runs from 0 to 7 and starts at stage 2. Site start is needed; if it is left blank, the Materials needed on site from date is used as site start. The date materials are needed must be today or later and must fall between site start and practical completion; left blank, it is the site start. Practical completion, left blank, is 18 months (540 days) after site start.",
+        "Stage dates are suggested: for a project at stage 0 to 4, the current stage starts today and the remaining design stages share the time up to site start in proportion to their typical lengths (4, 8, 12, 16 and 20 weeks); earlier stages are placed before today. For a project at stage 5 or later, the design stages are placed back from site start at their typical lengths. If site start is too close the form says 'Site start is too soon for the remaining design stages.'",
+        "Region is required and starts on Central London. The region list is grouped London (inner and outer regions as the ONS defines them), England outside London, then Wales and Scotland. A listed local authority is valid only in its own region; outside London Another local authority accepts a typed name. Changing the region clears the local authority.",
+        "Requirements are optional. The closed panel reads, for example, '12 apply to Camden, Central London, 10 suggested. Choose now or later.' Left closed, the suggested requirements are tracked on the project, and every screen says so, until the architect reviews them; the checklist step stays open. A choice made in the panel, even an empty one, counts as reviewed.",
+        "The consultancy is never told about the project at creation; it is asked once the client accepts.",
+        "The first-run version of the form (Create your first project on Home) asks only for name, client, type, site start and region; everything else takes its default."
+      ],
+      "notifications": [
+        "The client organisation is told 'Practice asked to add you as client on Project', with the architect's message if there is one (otherwise 'Accept to see the project and approve materials for it.'), linking to Project requests. It also appears in their activity.",
+        "With a contact email, no email is sent: the overview offers Copy invite link for the architect to pass on, and the practice activity records that the email was invited to join the client and answer the request.",
+        "The architect sees a confirmation, for example 'Riverside Works created. Waiting for Client to accept. Set up the programme while you wait.'",
+        "The project activity records 'created the project', for the practice only."
+      ]
+    },
+    {
+      "id": "client-acceptance",
+      "title": "Wait for the client to accept, or ask again",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Platform"
+      ],
+      "where": "Project Overview (/app/projects/:id) and Shortlist (/app/projects/:id/shortlist) for the architect; Project requests (/app/projects/requests) and the top of Home for the client",
+      "summary": "A new project is not visible to its client until the client organisation accepts it. While the architect waits they can keep working, change the client, or invite a contact at a client nobody uses Tallyard from yet. If the client declines, the architect can ask the same client again or choose another one. Acceptance also asks the consultancy the architect named.",
+      "mermaid": "flowchart TD\nA[\"Client is asked to accept\"]:::system --> P{\"Anyone at the client on Tallyard?\"}:::system\nP -->|\"No\"| Q[\"Invite a contact by email, copy the link\"]:::arch\nQ --> R[\"Contact joins the client organisation\"]:::client\nR --> B\nP -->|\"Yes\"| B{\"Client answers?\"}:::client\nB -->|\"Accept\"| C[\"Architect told, consultancy asked\"]:::system\nC --> D([\"Client sees the project\"]):::client\nB -->|\"Not yet\"| E[\"Waiting line on overview and shortlist\"]:::system\nE --> F{\"Change client?\"}:::arch\nF -->|\"Yes\"| G[\"Choose another client and send request\"]:::arch\nG --> A\nF -->|\"No\"| W([\"Keep working, sending stays off\"]):::arch\nB -->|\"Decline\"| H[\"Architect is told they declined\"]:::system\nH --> I{\"Ask again or another?\"}:::arch\nI -->|\"Ask again\"| J[\"Send request to the same client\"]:::arch\nJ --> A\nI -->|\"Choose another client\"| G",
+      "steps": [
+        {
+          "actor": "Platform",
+          "action": "Shows the architect 'Waiting for Client to accept.' as one sentence in the setup checklist with Change client beside it, as a banner on the shortlist with the date it was asked, and a neutral Client to accept pill with an envelope in the project header and on the Projects list."
+        },
+        {
+          "actor": "Platform",
+          "action": "If nobody from the client organisation uses Tallyard yet, says so instead and offers a field for a contact at the client; shortlisting can carry on."
+        },
+        {
+          "actor": "Architect",
+          "action": "Enters the contact's email and sends the invite; the banner then names the email with Copy invite link, Resend and Use another email."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "The contact opens the link, or signs up with that email, and joins the client organisation; the request then waits on their Home (see the client section)."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "Opens Project requests, or sees the waiting request at the top of Home, reads the project's name, practice, who asked, type, place, stage, site start, practical completion, the consultancy the architect proposes and the message, then selects Accept or Decline."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "When declining, may write a note under 'Tell Practice why' and confirms Decline."
+        },
+        {
+          "actor": "Architect",
+          "action": "While waiting, may select Change client, pick one of the practice's other clients or A new client, add a Client contact email for a new one and a Message to the client, and select Send request."
+        },
+        {
+          "actor": "Architect",
+          "action": "After a decline, sees 'Client declined this project' with the date and their note, and selects Ask again or Choose another client."
+        },
+        {
+          "actor": "Platform",
+          "action": "On acceptance, the project appears in the client's workspace, sending materials for approval opens, and the named consultancy is asked to join."
+        }
+      ],
+      "rules": [
+        "Until the client accepts, the client organisation cannot open the project or see it in its lists, and nothing can be sent for approval: 'The client has not accepted this project yet, so nothing can be sent for approval.' The architect can still edit the programme, choose requirements and shortlist.",
+        "Until the client accepts, no consultancy sees the project or hears of it.",
+        "The architect only ever sees the client organisation's name, never its people. A decline reaches the architect under the organisation's name.",
+        "The project header and the Projects list show a Client to accept or Client declined pill, and Details shows the client as 'waiting to accept' or 'declined'.",
+        "Only a waiting request can be answered: 'This request has already been answered.' Only the client organisation named on the project can answer it.",
+        "Asking the same client again while its request is still waiting is refused: 'A request is already waiting for this client.' After a decline the same client can be asked again.",
+        "Once the client has accepted, the client cannot be changed: 'The client has already accepted this project.'",
+        "Only the newest invite link for a project works; Resend or Use another email replaces it. An invite is refused once someone from the client uses Tallyard, or for an email that belongs to another organisation.",
+        "Before accepting, the client sees no shortlist, no listing and no figure from the project.",
+        "A request sent from Change client or Ask again, and an invite, can be undone from its confirmation.",
+        "Change client offers the practice's other clients and A new client; the client already waiting is not offered again. Ask again opens on the client that declined."
+      ],
+      "notifications": [
+        "Every request: the client organisation is told 'Practice asked to add you as client on Project', with the message, linking to Project requests. The project activity records 'asked Client to join as client'.",
+        "When an invited contact joins: the practice is told '[name] joined [client]. They can now accept [project].'",
+        "Accept: the architect's practice is told 'Client accepted Project. They can now see the project and approve materials you send.' The project activity records 'accepted the project as client'. The named consultancy is asked to join (see Answer a request to join a project in the consultant section).",
+        "Decline: the architect's practice is told 'Client declined Project', with 'Their note: ...' or else 'Ask again or choose another client from the project overview.' The decline is recorded in the architect's activity only, under the organisation's name."
+      ],
+      "states_mermaid": "stateDiagram-v2\nstate \"Waiting for the client\" as Pending\nstate \"Accepted\" as Accepted\nstate \"Declined\" as Declined\n[*] --> Pending : project created\nPending --> Accepted : client accepts\nPending --> Declined : client declines\nPending --> Pending : architect changes client\nDeclined --> Pending : ask again or another client\nAccepted --> [*]",
+      "states_note": "The client link starts waiting; only acceptance lets the client see the project and receive materials, and an accepted client can no longer be changed."
+    },
+    {
+      "id": "edit-programme",
+      "title": "Edit the programme",
+      "who": [
+        "Architect",
+        "Donor building owner (as client, no architect yet)",
+        "Platform"
+      ],
+      "where": "Project Overview (/app/projects/:id), Programme card at the top, with Edit programme and, while the dates are not yet kept, Keep these dates",
+      "summary": "The programme sets the RIBA stage dates, site start, practical completion and when materials are needed on site. It leads every project overview. Every timeline check on the project uses the materials date, so the architect keeps or corrects the suggested dates early.",
+      "mermaid": "flowchart TD\nA[\"Open Edit programme on the programme card\"]:::arch --> B[\"Set the current RIBA stage\"]:::arch\nB --> C{\"Use suggested stage dates?\"}:::arch\nC -->|\"Yes\"| D[\"Suggest stage dates fills stages 0 to 4\"]:::system\nC -->|\"No\"| E[\"Type each stage start\"]:::arch\nD --> F[\"Set site start, completion and materials date\"]:::arch\nE --> F\nF --> G{\"Dates in order?\"}:::system\nG -->|\"No\"| H[\"Errors show beside each date\"]:::system\nH --> E\nG -->|\"Yes\"| I[\"Select Save programme\"]:::arch\nI --> J[\"Programme saved as set\"]:::system\nJ --> K([\"Chart and timeline checks update\"]):::system\nL[\"Keep these dates on the card\"]:::arch --> J",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "On the Programme card, which leads the overview, selects Edit programme."
+        },
+        {
+          "actor": "Architect",
+          "action": "Chooses the Current RIBA stage, the stage the project is at now."
+        },
+        {
+          "actor": "Architect",
+          "action": "Types the start of stages 0 to 4, or selects Suggest stage dates to fill them from typical stage lengths; each row shows its length."
+        },
+        {
+          "actor": "Architect",
+          "action": "Sets Site start (stage 5 starts here), Practical completion (stage 6 starts here) and Materials needed on site from."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Save programme."
+        },
+        {
+          "actor": "Platform",
+          "action": "Checks the dates, saves the programme as set, and removes the Suggested dates or Client's dates pill."
+        },
+        {
+          "actor": "Platform",
+          "action": "Redraws the chart and the programme check pill, and rechecks every shortlisted material against the materials date."
+        },
+        {
+          "actor": "Architect",
+          "action": "Alternatively selects Keep these dates on the card to keep the suggested dates, or the client's dates, as they are; the confirmation offers Undo."
+        }
+      ],
+      "rules": [
+        "Only the project's architect can edit the programme. The client and the consultant see the same Programme card without its buttons.",
+        "On a donor building owner's New project with no architect yet, the owner may keep or edit the dates. Once an architect is appointed, those dates read \"Client's dates\" until the architect keeps or edits them, and the owner reads \"Your dates until the architect confirms them.\"",
+        "Each stage must start after the one before; site start must be after the start of stage 4; practical completion must be after site start; materials must be needed between site start and practical completion. Each failure shows beside its date.",
+        "Only stages 0 to 4 are typed. Stage 5 starts at site start and stage 6 (Handover) at practical completion; stage 7 follows a year after practical completion. The whole programme chart ends 120 days after practical completion, so Handover runs off the right edge.",
+        "Suggest stage dates refuses when site start is too close: 'Site start is too soon for the remaining design stages.'",
+        "The programme check pill compares the stage planned for today with the stage declared: On programme, Behind programme, Ahead of programme or Not started. It carries an Indicative marker.",
+        "The chart can show the Whole programme or From today, with each shortlisted material's availability coloured by its fit, and Stage dates opens a table of every stage. Stages come from the RIBA Plan of Work 2020.",
+        "Each stage band names itself when it fits, and today's stage always does; a key under the stage lane names every stage drawn. Each band is a button that shows its name and dates on hover, keyboard focus or a tap. The axis labels months, never quarters, and always names the year.",
+        "Saving without any change does nothing. A saved programme can be undone from its confirmation.",
+        "Edit (in the project header) changes name, type, region, local authority and description only; the stage and every date live in Edit programme."
+      ],
+      "notifications": [
+        "None. The project activity records 'updated the programme'."
+      ]
+    },
+    {
+      "id": "choose-requirements",
+      "title": "Choose planning and sustainability requirements",
+      "who": [
+        "Architect",
+        "Platform"
+      ],
+      "where": "Project Overview (/app/projects/:id), Planning and sustainability card, Review requirements, Choose requirements or Edit; the same on the Requirements tab (/app/projects/:id/requirements); also the setup checklist and the New project form",
+      "summary": "The architect picks which planning policies and sustainability standards the project tracks, from those that apply to its region and local authority. Until the architect reviews them, the requirements suggested for the place are tracked. The chosen ones are then tracked by the team on the Requirements tab.",
+      "mermaid": "flowchart TD\nA[\"Project made, suggestions tracked\"]:::system --> R[\"Select Review requirements\"]:::arch\nR --> B[\"List of what applies at this place\"]:::system\nB --> C[\"Tick or untick requirements\"]:::arch\nC --> D[\"Select Save\"]:::arch\nD --> E{\"Any ticked?\"}:::system\nE -->|\"Yes\"| F[\"Card lists the chosen requirements\"]:::system\nF --> G([\"Tracked on the Requirements tab\"]):::arch\nE -->|\"No\"| H([\"Empty choice kept, step done\"]):::system\nI[\"Edit moves the project elsewhere\"]:::arch --> J[\"Ones that still apply kept, new suggestions added\"]:::system\nJ --> K[\"Review opens on saving\"]:::system\nK --> B",
+      "steps": [
+        {
+          "actor": "Platform",
+          "action": "While the architect has not chosen, tracks the requirements suggested for the place: the overview card reads, for example, '10 suggested for Camden, Central London', explains that they are tracked until the architect chooses, and offers Review requirements."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Review requirements, Choose requirements or Edit requirements on the Planning and sustainability card, on the Requirements tab or in the setup checklist."
+        },
+        {
+          "actor": "Platform",
+          "action": "Opens 'Planning and sustainability requirements', starting from the tracked set, grouped as National, London Plan 2021 and GLA guidance (London regions only) and the local authority's own plan when one is set."
+        },
+        {
+          "actor": "Architect",
+          "action": "Ticks the requirements to track; each shows its code, source, summary, trigger and what it asks for. An entry not yet summarised carries a Not yet summarised pill."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Save."
+        },
+        {
+          "actor": "Platform",
+          "action": "Saves the choice; the card lists the first four with 'N more' and a link, View requirements for the architect and Track requirements for the client and consultant."
+        },
+        {
+          "actor": "Architect",
+          "action": "If they later change the region or local authority through Edit, the dialog says how many chosen requirements no longer apply, how many new ones are suggested and that they are added on saving."
+        },
+        {
+          "actor": "Platform",
+          "action": "On save keeps what still applies, adds the suggestions new to the place and opens the review at once, so it only confirms the set."
+        }
+      ],
+      "rules": [
+        "Only the project's architect can choose requirements. The client and consultant see the card; with nothing chosen and nothing suggested it tells them the architect has not chosen any yet.",
+        "Only requirements that apply to the project's region and local authority can be chosen: 'Choose requirements that apply to this location.'",
+        "A project nobody has reviewed keeps tracking the suggestions for its place, and the checklist step stays open with Review requirements. Saving, even with nothing ticked, counts as reviewed; an empty choice is kept as chosen.",
+        "Every entry is an indicative summary as at October 2026, with the note 'Check the current published documents before you rely on them.' and an Indicative marker. Entries for authorities without a written summary, and the national entries for Wales and Scotland, are labelled placeholders.",
+        "In the New project form the suggested requirements for the chosen place are ticked as soon as the panel is opened, and a change of place re-ticks the new suggestions.",
+        "Cancelling the review after a move leaves what the dialog described.",
+        "Saving the same choice again does nothing. A save from the dialog can be undone from its confirmation."
+      ],
+      "notifications": [
+        "None. The project activity records 'chose N planning and sustainability requirements' or 'cleared the planning and sustainability requirements'."
+      ]
+    },
+    {
+      "id": "setup-checklist",
+      "title": "Follow the setup checklist on a new project",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Platform"
+      ],
+      "where": "Project Overview (/app/projects/:id), directly under the programme card; progress also shows on Projects (/app/projects) and on the architect Home",
+      "summary": "A new project shows a compact strip of six setup steps under its programme card: check the programme, the client accepts, choose requirements, add a consultant, shortlist and send. It leads with the next required step and its button, and hides once the essentials are done.",
+      "mermaid": "flowchart TD\nA[\"New project overview opens\"]:::system --> P[\"Programme card leads, Keep these dates\"]:::arch\nP --> B[\"Checklist strip: progress and Next step\"]:::system\nB --> G[\"Client accepts the project\"]:::client\nG --> I[\"Shortlist materials\"]:::arch\nI --> J[\"Send materials for approval\"]:::arch\nB --> H[\"Optional requirements and consultant\"]:::arch\nJ --> K{\"Programme, client and shortlist done?\"}:::system\nK -->|\"No\"| B\nK -->|\"Yes\"| L([\"Checklist hides\"]):::system",
+      "steps": [
+        {
+          "actor": "Platform",
+          "action": "Shows 'Set up Project' with progress ('N of 6 done'), then 'Next:' with the step's title and its button, then the waiting client in one sentence with Change client beside it."
+        },
+        {
+          "actor": "Architect",
+          "action": "Check the programme: selects Keep these dates or Edit programme on the programme card above, the only place those buttons sit."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "Client accepts the project: the step waits for the client; the architect can select Change client, or Ask again after a decline, which gets its own banner."
+        },
+        {
+          "actor": "Architect",
+          "action": "Choose planning and sustainability requirements (optional): selects Review requirements while the suggestions are tracked, Choose requirements, or Edit requirements once some are chosen."
+        },
+        {
+          "actor": "Architect",
+          "action": "Add a sustainability consultant (optional): selects Add consultant, which opens the Team tab (Open team once one is named). The step reads 'asked once the client accepts', 'Waiting for [consultancy] to accept', 'declined to join' or 'on the team'."
+        },
+        {
+          "actor": "Architect",
+          "action": "Shortlist materials: selects Find materials, which opens the Marketplace checking against this project."
+        },
+        {
+          "actor": "Architect",
+          "action": "Send materials for approval: selects Open shortlist; this step waits until the client has accepted."
+        },
+        {
+          "actor": "Architect",
+          "action": "May select Show all steps to see every step as a tile, or Show fewer to return to the strip."
+        }
+      ],
+      "rules": [
+        "Only the project's architect sees the checklist.",
+        "Each step is Done, Next, To do, Waiting or Needs you. A declined client or consultancy marks its step Needs you.",
+        "The next step shown is a required one before an optional one, so a new project leads with Shortlist materials, Find materials rather than the optional requirements.",
+        "The checklist hides once the programme is confirmed (Keep these dates or Save programme), the client has accepted and at least one material is shortlisted, even if the optional steps are not done.",
+        "The send step is done as soon as any material has gone to the client. The consultant step is done only once the consultancy has accepted.",
+        "Show all steps is remembered in this browser. Until it is opened the six steps are listed for screen readers only.",
+        "The Projects list shows the same progress as a pill, for example 'Setting up, 2 of 6', with the next step. On the architect Home, projects still setting up lead, with their pills and next step."
+      ],
+      "notifications": [
+        "None from the checklist itself; each step's own action notifies as described in its workflow."
+      ]
+    },
+    {
+      "id": "find-materials",
+      "title": "Find materials in the Marketplace",
+      "who": [
+        "Architect",
+        "Platform"
+      ],
+      "where": "Marketplace in the sidebar (/app/marketplace), All listings tab; Find materials on a project opens it checking that project (?project=)",
+      "summary": "The architect browses reclaimed structure, envelope and finishes, usually checking every card against one project's materials date. Category folders, search, filters and the availability slider narrow the list; New for your projects picks out recent materials that arrive in time.",
+      "mermaid": "flowchart TD\nA[\"Open the Marketplace\"]:::arch --> B{\"Check against a project?\"}:::arch\nB -->|\"Yes\"| C[\"Choose a project in the checking strip\"]:::arch\nC --> D[\"Cards show fit and counts\"]:::system\nB -->|\"No\"| E[\"See New for your projects\"]:::system\nD --> E\nE --> F[\"Open a category folder\"]:::arch\nF --> G[\"Narrow with search, family and Filters\"]:::arch\nG --> H[\"Set Available by on the slider\"]:::arch\nH --> I{\"Anything matches?\"}:::system\nI -->|\"No\"| J[\"Clear search and filters\"]:::arch\nJ --> G\nI -->|\"Yes\"| K([\"Open a material\"]):::arch",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Opens Marketplace, or selects Find materials on a project, or follows a project card's \"N new materials fit\" link on Home, each of which names the project to check against in the address."
+        },
+        {
+          "actor": "Architect",
+          "action": "In the checking strip selects Choose a project (or Change project); the strip reads 'Checking against Project' with the date materials are needed. The cross beside it stops checking."
+        },
+        {
+          "actor": "Platform",
+          "action": "Marks each card with its fit and counts them, for example '10 available now, 1 in time', with a chip 'N new for Project' (or 'N new for your projects' with no project checked) that jumps to the New for row."
+        },
+        {
+          "actor": "Architect",
+          "action": "Optionally turns on Only show what arrives in time."
+        },
+        {
+          "actor": "Platform",
+          "action": "On the landing view shows Browse by category (Structure, Envelope, Finishes) and New for your projects, then All materials. A link from Home lands on the New for Project row, even when the address is pasted or reloaded."
+        },
+        {
+          "actor": "Architect",
+          "action": "Opens a folder, then narrows by family chips, the search box, or the typology tabs All, Structure, Envelope and Finishes."
+        },
+        {
+          "actor": "Architect",
+          "action": "Opens Filters and sets Available by on the month slider, Family, Condition, Location and Sustainability band, then selects Done."
+        },
+        {
+          "actor": "Architect",
+          "action": "Removes a filter from its chip or selects Clear all; with no results, selects Clear search and filters."
+        },
+        {
+          "actor": "Architect",
+          "action": "Sorts by Newest listed or Most carbon avoided, and opens a material; Back returns to the same place on the page."
+        }
+      ],
+      "rules": [
+        "All listings holds only openly listed materials that are available and not reserved for any buyer. Lots shared privately are under Shared with you.",
+        "Fit words are Available now, In time, Tight and Too late, worked out against the project's Materials needed on site from date; the strip carries an Indicative marker.",
+        "Only a project chosen in the checking strip or on a material page is remembered for the person. A project named in a link applies to that visit only, so the sidebar Marketplace opens on no project afterwards. Search, folder, filters and sort live in the address, so Back and shared links restore them.",
+        "With no projects the strip says 'Create a project to check materials against its start on site.' and offers New project instead of Choose a project.",
+        "A category folder with no materials cannot be opened. With a project checked, each folder shows its own fit counts. A folder opened because the page was inside it closes again when the person moves on.",
+        "New for your projects is for architects only: materials listed in the last 30 days, not already on any of the practice's lists, and not too late for at least one of the architect's projects (Tight still counts). With a project checked it reads 'New for Project' and shows only what is in time for that project. It shows four, with Show all for the rest, and hides when there is nothing new.",
+        "The Available by slider runs from Available now through the end of each month to Any time, over a bar chart of when materials arrive, with a dashed line marked 'Materials needed for Project'.",
+        "Lowest guide price sorting is offered to clients and donor building owners only; architects get Newest listed and Most carbon avoided.",
+        "Cards give availability in short form, for example Expected Jan to Mar 2027; the material page gives it in full.",
+        "Pressing / jumps to the search box."
+      ],
+      "notifications": [
+        "When a donor building owner publishes a material that is not too late for one of the practice's projects, the architect's practice is told 'New material for Project', for example 'Material is available in time for Project.', linking to the material. The owner and the building are never named."
+      ]
+    },
+    {
+      "id": "shared-with-you",
+      "title": "See lots shared with your project",
+      "who": [
+        "Donor building owner",
+        "Architect",
+        "Client or developer",
+        "Platform"
+      ],
+      "where": "Marketplace, Shared with you tab (/app/marketplace?tab=shared)",
+      "summary": "A donor building owner can share lots privately with a project instead of listing them openly. The architect or client accepts confidentiality terms once for that project; the lots then appear under the project and can be shortlisted for it alone.",
+      "mermaid": "flowchart TD\nA[\"Owner shares lots with a project\"]:::owner --> N[\"Architect and client are told\"]:::system\nN --> B[\"Shared with you shows a count\"]:::system\nB --> C{\"Terms accepted for this project?\"}:::system\nC -->|\"No\"| D[\"Select Review terms\"]:::arch\nD --> E[\"Tick to accept the terms\"]:::arch\nE --> F[\"Select Accept and show lots\"]:::arch\nF --> G[\"Lots appear under the project\"]:::system\nC -->|\"Yes\"| G\nG --> H[\"Save a lot to that project\"]:::arch\nH --> I([\"Lot stays with this project only\"]):::system",
+      "steps": [
+        {
+          "actor": "Donor building owner",
+          "action": "Marks lots as shared with selected projects and approves the project on their Sharing tab (described in the owner section). The owner sees the project only as a blind description."
+        },
+        {
+          "actor": "Platform",
+          "action": "Shows the Shared with you tab with a dot when lots wait behind the terms, and a group per project reading 'N lots are shared privately with Project'."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Review terms, reads the confidentiality terms and ticks 'I accept these terms for Project'."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Accept and show lots."
+        },
+        {
+          "actor": "Platform",
+          "action": "Lists the lots under the project with Terms accepted, and records it in the project activity."
+        },
+        {
+          "actor": "Architect",
+          "action": "Opens a lot or saves it to that project's shortlist."
+        }
+      ],
+      "rules": [
+        "Before the terms are accepted only the number of shared lots shows, never their details.",
+        "Terms are accepted once per project, by its architect or its client; then both see the lots. The terms are labelled as simulated.",
+        "The sustainability consultant never sees lots shared in confidence; Shared with you tells them so.",
+        "A shared lot can only be saved to the project it is shared with. It cannot go to Saved ('Shared in confidence with a project. It can be saved only to a project it is shared with.') and cannot be moved to another project ('Shared in confidence with this project. It cannot be moved.').",
+        "Shared lots stay out of the open marketplace. The material page tags them Shared in confidence.",
+        "If the owner stops sharing, the shortlist row reads 'No longer shared with this project' and it can no longer be sent or decided.",
+        "Lots reached through an owner's share link, whose own terms were accepted when the link was opened, show under the project before the project's terms."
+      ],
+      "notifications": [
+        "When an owner approves a project with lots to share, the architect's practice and the client (once it has accepted the project) are told 'N lots shared with Project', with 'Accept the confidentiality terms to see them.' before the terms, linking to Shared with you.",
+        "When an owner shares one more lot with an approved project, the same people are told 'New lot shared with Project'.",
+        "Accepting the terms sends no message; the project activity records 'accepted the confidentiality terms for shared lots'."
+      ]
+    },
+    {
+      "id": "material-page",
+      "title": "Look at a material, save it and download its geometry",
+      "who": [
+        "Architect",
+        "Platform"
+      ],
+      "where": "Material page (/app/marketplace/:publicId), opened from any card; Saved in the sidebar (/app/saved)",
+      "summary": "The material page shows a listing in the order an architect decides: pictures and a 3D view, availability against their projects, sustainability, key facts and the full specification. From here the architect saves it to a project or to Saved, and downloads its drawing, 3D model or BIM model.",
+      "mermaid": "flowchart TD\nA[\"Open a material\"]:::arch --> B[\"Look at photos and the 3D view\"]:::arch\nB --> C[\"Availability checked against projects\"]:::system\nC --> D{\"Save or download?\"}:::arch\nD -->|\"Save\"| E[\"Choose a project or Saved\"]:::arch\nE --> F{\"Can that place take it?\"}:::system\nF -->|\"No\"| G([\"Reason shown, nothing saved\"]):::system\nF -->|\"Yes\"| H([\"Saved, with Undo\"]):::system\nD -->|\"Download\"| I[\"Choose DXF, OBJ or IFC\"]:::arch\nI --> J{\"Dimensions recorded?\"}:::system\nJ -->|\"Yes\"| K([\"File downloads\"]):::system\nJ -->|\"No\"| L([\"Reason shown, nothing downloads\"]):::system",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Opens a material from a card, the programme chart or search."
+        },
+        {
+          "actor": "Architect",
+          "action": "Steps through the pictures: public photos, the 3D view (drag or use the arrow keys to turn it; on a phone, drag sideways), the illustration and the dimensioned drawing on plain white. A steel column stands upright, as in the BIM model."
+        },
+        {
+          "actor": "Platform",
+          "action": "Under Availability shows the fit against the project being checked, with a marker 'Materials needed from [date]', or 'Against your projects' for up to five projects."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Save to project and ticks a project or Saved in the menu; selecting a ticked place removes it again."
+        },
+        {
+          "actor": "Platform",
+          "action": "Saves it as Shortlisted on that project, or into Saved, and confirms with Undo."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Download and chooses 2D drawing (DXF), 3D model (OBJ) or BIM model (IFC), or uses the Geometry files section lower down."
+        },
+        {
+          "actor": "Platform",
+          "action": "Builds the file from the recorded dimensions and downloads it, or says why it cannot."
+        },
+        {
+          "actor": "Architect",
+          "action": "Once the client has approved the material on a project, selects Specification to open that project's specification."
+        },
+        {
+          "actor": "Architect",
+          "action": "Returns with the Marketplace crumb or Browse the Marketplace, which keep the project the visit was checking against."
+        },
+        {
+          "actor": "Architect",
+          "action": "Later, on Saved, selects Move to project when a project comes along, or removes the material."
+        }
+      ],
+      "rules": [
+        "The page is built only from the public listing. The architect never sees who sells it; a client sees only the seller's type, and the seller and the exact site are shared with the client once a reservation is accepted. The guide price section is for clients and donor building owners only.",
+        "The 3D view and every download are generated from the recorded dimensions and labelled so. Long members open in close-up with a full length toggle; the download is the full length.",
+        "Save to project lists every project the architect works on, then Saved, then New project. A place that cannot take it explains why: 'Not shared with this project.', 'No longer available.', 'Reserved by another buyer.', or for a shared lot going to Saved 'Shared in confidence with a project. It can be saved only to a project it is shared with.'",
+        "Saving the same material to the same place twice does nothing. An item the client has approved cannot be removed: 'Approved by the client. It cannot be removed.'",
+        "Only architects get Save to project. Clients and consultants who can open the page can still download.",
+        "DXF is the 2D profile in millimetres, OBJ the 3D model extruded to the recorded length, IFC4 a BIM model that opens in Revit and other BIM tools. BIM family is shown locked as Coming in version 2. Where the section is not recorded the download is greyed out with the reason.",
+        "Saved takes only openly listed materials. Moving from Saved follows the same rules as moving a shortlist item."
+      ],
+      "notifications": [
+        "None. Saving to a project records 'shortlisted Material' in the project activity."
+      ]
+    },
+    {
+      "id": "manage-shortlist",
+      "title": "Work through the shortlist",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Platform"
+      ],
+      "where": "Project, Shortlist tab (/app/projects/:id/shortlist)",
+      "summary": "The shortlist is the project's working list of materials, shown as a board with four columns or as a list. The architect adds notes, moves or removes items, sends them to the client and reopens any the client declines.",
+      "mermaid": "flowchart TD\nA[\"Open the Shortlist tab\"]:::arch --> B[\"Choose Board or List\"]:::arch\nB --> C{\"What status is the item?\"}:::system\nC -->|\"Shortlisted\"| D[\"Add a note, move or remove\"]:::arch\nD --> E([\"Send for approval when ready\"]):::arch\nC -->|\"Waiting for approval\"| F([\"Wait for the client, or remove\"]):::arch\nC -->|\"Approved\"| G([\"Locked on this project\"]):::system\nC -->|\"Declined\"| H[\"Read the client's note\"]:::arch\nH --> I{\"Try it again?\"}:::arch\nI -->|\"Yes\"| J[\"Reopen with a new note\"]:::arch\nJ --> K([\"Back to Shortlisted\"]):::system\nI -->|\"No\"| L([\"Move it elsewhere or remove it\"]):::arch",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Opens the Shortlist tab and sees totals (materials, mass, avoided carbon) and the columns Shortlisted, Waiting for approval, Approved and Declined."
+        },
+        {
+          "actor": "Architect",
+          "action": "Switches between Board and List; Add materials opens the Marketplace for this project."
+        },
+        {
+          "actor": "Architect",
+          "action": "From a card's actions menu chooses Open material, Add a note or Edit note, Move to, or Remove from shortlist."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects shortlisted cards and sends them to the client (see Send materials for approval)."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "Approves or declines each sent item on their Approvals tab."
+        },
+        {
+          "actor": "Architect",
+          "action": "On a declined card reads the client's note, then from its actions menu selects Reopen, writes a new note under Your note and selects Reopen to put it back on the shortlist."
+        }
+      ],
+      "rules": [
+        "Only the practice's own architects on the project get controls; a client never sees the architect's shortlist board.",
+        "A note, up to 1,000 characters, can be added or edited while the item is Shortlisted or Declined; the client sees it with the material. Otherwise: 'The note can be edited while the item is shortlisted or declined.'",
+        "Move to takes a Shortlisted or Declined item to another of the architect's projects or to Saved, where it arrives as Shortlisted: the client's earlier decision and the sent date do not travel. An item waiting for approval stays 'until the client decides'; an approved item 'stays on this project'; a shared lot cannot be moved; a place that already holds the material says 'Already on this list.'",
+        "Any item except an approved one can be removed. An approved card is locked and shows its approval date and any reservation.",
+        "Only a declined item can be reopened: 'Only a declined item can be reopened.'",
+        "A row whose lot is no longer shared or available reads 'No longer shared with this project' or 'No longer available' and cannot be selected to send.",
+        "Every note, move, removal and reopen can be undone from its confirmation. Board or List is remembered."
+      ],
+      "notifications": [
+        "Moves, removals and reopens add a line to the project activity, for example 'reopened Material'. Notifications go out only when items are sent or decided (see Send materials for approval)."
+      ],
+      "states_mermaid": "stateDiagram-v2\nstate \"Shortlisted\" as Shortlisted\nstate \"Waiting for approval\" as Sent\nstate \"Approved\" as Approved\nstate \"Declined\" as Declined\n[*] --> Shortlisted : saved to the project\nShortlisted --> Sent : architect sends\nSent --> Approved : client approves\nSent --> Declined : client declines\nDeclined --> Shortlisted : architect reopens\nShortlisted --> [*] : removed or moved\nSent --> [*] : removed\nDeclined --> [*] : removed or moved",
+      "states_note": "Sent items wait for the client; approved items are locked on the project; declined items can be reopened, moved or removed."
+    },
+    {
+      "id": "send-for-approval",
+      "title": "Send materials for approval",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Sustainability consultant",
+        "Platform"
+      ],
+      "where": "Project, Shortlist tab (/app/projects/:id/shortlist), Send to client; the client decides on Approvals (/app/projects/:id/approvals)",
+      "summary": "The architect sends chosen shortlisted materials to the client with a message. The client approves or declines each one; the architect hears back and can reopen a declined material with a new note.",
+      "mermaid": "flowchart TD\nA[\"Open the Shortlist tab\"]:::arch --> B{\"Client has accepted the project?\"}:::system\nB -->|\"No\"| C([\"Send to client is off, banner says why\"]):::system\nB -->|\"Yes\"| D[\"Tick materials, or none to send all\"]:::arch\nD --> E[\"Select Send to client\"]:::arch\nE --> F[\"Add an optional message\"]:::arch\nF --> G[\"Select Send for approval\"]:::arch\nG --> H[\"Items wait for approval, client told\"]:::system\nH --> I{\"Client approves?\"}:::client\nI -->|\"Approve\"| J[\"Architect and consultant are told\"]:::system\nJ --> K([\"Approved and locked\"]):::system\nI -->|\"Decline with a note\"| L[\"Architect and consultant are told\"]:::system\nL --> M[\"Reopen with a new note\"]:::arch\nM --> D",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Ticks the shortlisted cards to send; a bar shows 'N selected' with Select all and Send to client."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Send to client; with nothing ticked, every material that can be sent is included."
+        },
+        {
+          "actor": "Platform",
+          "action": "Opens 'Send to Client', listing each material with its fit, and warns that they cannot be changed while the client decides."
+        },
+        {
+          "actor": "Architect",
+          "action": "Adds an optional Message and selects Send for approval."
+        },
+        {
+          "actor": "Platform",
+          "action": "Moves the items to Waiting for approval with the sent date, and notifies the client."
+        },
+        {
+          "actor": "Client or developer",
+          "action": "On the Approvals tab selects Approve or Decline for each material, with an optional note."
+        },
+        {
+          "actor": "Platform",
+          "action": "Moves each item to Approved or Declined and notifies the architect's practice and the consultancy, once it has joined the project."
+        },
+        {
+          "actor": "Architect",
+          "action": "Reopens a declined material with a new note to send it again, or leaves it."
+        }
+      ],
+      "rules": [
+        "Only the project's architect can send, and only once the client has accepted the project; until then the Send to client button is off and the banner explains why.",
+        "Only Shortlisted items still shared with the project and still available can go. If none qualify: 'Nothing selected can go to the client.'",
+        "The message is up to 1,000 characters and is shown to the client with the materials.",
+        "Only the project's client decides, and only on items sent to them: 'Only an item sent to the client can be decided.' A decision is refused if the lot is no longer shared ('No longer shared with this project.') or no longer available ('No longer available.').",
+        "Approved materials are locked on the project, feed the Approved specification, and can then be reserved by the client.",
+        "A send can be undone from its confirmation."
+      ],
+      "notifications": [
+        "On send: the client organisation is told 'N materials to approve on Project', with the architect's message or 'Sent by Name, Practice.', linking to Approvals. The project activity records 'sent Material to the client for approval'.",
+        "On each decision: the architect's practice and the project's consultancy (once it has joined) are told 'Client approved Material' or 'Client declined Material', with the client's note or 'On Project.', linking to the shortlist.",
+        "Each decision also adds a line to the project activity."
+      ]
+    },
+    {
+      "id": "specification",
+      "title": "Prepare and export the specification",
+      "who": [
+        "Architect",
+        "Client or developer",
+        "Platform"
+      ],
+      "where": "Project, Specification tab (/app/projects/:id/specification), with ?mode=approved or ?mode=draft",
+      "summary": "The specification is a schedule with one clause per material, every public field grouped by section, and the architect's notes. It has an Approved mode for what the client approved and a Draft mode that adds what is still shortlisted or waiting, and it exports as a spreadsheet or prints on A4.",
+      "mermaid": "flowchart TD\nA[\"Open the Specification tab\"]:::arch --> B{\"Which materials?\"}:::arch\nB -->|\"Approved\"| C[\"Clauses for approved materials\"]:::system\nB -->|\"Draft\"| D[\"Clauses for all not declined\"]:::system\nC --> E[\"Write notes for this schedule\"]:::arch\nD --> E\nE --> F[\"Write a note on each clause\"]:::arch\nF --> G[\"Notes save when you leave the field\"]:::system\nG --> H{\"How to share it?\"}:::arch\nH -->|\"Spreadsheet\"| I([\"Export spreadsheet downloads a file\"]):::system\nH -->|\"Paper\"| J([\"Print an A4 schedule\"]):::system",
+      "steps": [
+        {
+          "actor": "Architect",
+          "action": "Opens the Specification tab and chooses Approved or Draft under Which materials, each with its count."
+        },
+        {
+          "actor": "Platform",
+          "action": "Shows 'Specification schedule' or 'Draft specification schedule', one clause per material with its status, every public field by section, and the caveats. The architect's schedule leaves out the Price section (guide price and market signal) and its caveat; the client's keeps them."
+        },
+        {
+          "actor": "Architect",
+          "action": "Writes Notes for this schedule at the top."
+        },
+        {
+          "actor": "Architect",
+          "action": "Writes an Architect's note on any clause, for example fixing, testing, finish or tolerances."
+        },
+        {
+          "actor": "Platform",
+          "action": "Saves each note when the field loses focus, or on Cmd or Ctrl Enter."
+        },
+        {
+          "actor": "Architect",
+          "action": "Selects Export spreadsheet to download the schedule, or Print for an A4 copy."
+        }
+      ],
+      "rules": [
+        "The architect and the client can open the specification; only the architect can write notes, and the client reads them. A donor building owner that is the client of its own New project reads it as the client does. The consultant has no Specification tab.",
+        "Approved shows approved materials only. Draft shows Shortlisted, Waiting for approval and Approved; declined materials are left out. Materials no longer shared or available are left out of both.",
+        "The tab opens on Approved, unless nothing is approved yet and the draft has materials, when it opens on Draft.",
+        "The schedule note is up to 4,000 characters and each clause note up to 2,000; clearing a clause note removes it.",
+        "The spreadsheet has the schedule title, project line, schedule note and caveats, then one row per clause with every public field and the note. It carries only public listing fields and the practice's own words; the architect's screen, print and spreadsheet all leave out the guide price and market signal. The file is named after the project and today's date.",
+        "Print and Export spreadsheet are off while the schedule is empty. An empty Approved schedule offers See the draft when the draft has materials; an empty draft offers the architect Open the shortlist.",
+        "A clause for a material reserved for this project is marked reserved."
+      ],
+      "notifications": [
+        "None."
+      ]
+    }
+  ]
+}

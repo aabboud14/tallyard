@@ -1,0 +1,82 @@
+/* A4 print layout for the architect's spec sheet (brief/09-V1-PRODUCT.md section 3.3). The shell hides its header, rail and footer. */
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  html {
+    font-size: 10pt;
+    background: #ffffff;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .spec-sheet {
+    display: block;
+    max-width: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .spec-sheet .print-hide {
+    display: none !important;
+  }
+
+  .spec-sheet .spec-paper {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .spec-sheet .spec-head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 3mm;
+  }
+
+  .spec-sheet .spec-head > div:last-child {
+    align-items: flex-end;
+  }
+
+  .spec-sheet .spec-caveats li {
+    background: #ffffff;
+    padding: 1mm 0 1mm 3mm;
+    font-size: 8.5pt;
+  }
+
+  .spec-sheet .spec-group {
+    margin-top: 6mm;
+  }
+
+  .spec-sheet .spec-group > header {
+    break-after: avoid;
+  }
+
+  .spec-sheet .spec-block {
+    break-inside: avoid;
+    padding: 3mm 0 0.5mm;
+  }
+
+  .spec-sheet .spec-sections {
+    column-count: 3;
+    column-gap: 6mm;
+  }
+
+  .spec-sheet .spec-sections > div {
+    margin-bottom: 2.5mm;
+  }
+
+  .spec-sheet .spec-sections dl {
+    font-size: 8.5pt;
+    grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr);
+  }
+
+  .spec-sheet .spec-foot {
+    margin-top: 6mm;
+  }
+}

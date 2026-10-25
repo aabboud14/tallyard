@@ -1,0 +1,21 @@
+/* The compliance report on A4: the shell's chrome is hidden by the shell itself; this keeps cards and tables whole. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  .compliance-report {
+    font-size: 10pt;
+  }
+  .compliance-report .avoid-break,
+  .compliance-report table tr {
+    break-inside: avoid;
+  }
+  .compliance-report .report-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .compliance-report [data-testid='content-chart'] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

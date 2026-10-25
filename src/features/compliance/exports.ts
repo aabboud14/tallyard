@@ -31,12 +31,12 @@ function fileName(name: string, kind: string): string {
   return `${slug}-${kind}-${DEMO_TODAY}.xlsx`
 }
 
-export function complianceFileName(world: World): string {
-  return fileName(world.projects[MERROWGATE_ID].name, 'compliance')
+export function complianceFileName(world: World, projectId: string = MERROWGATE_ID): string {
+  return fileName(world.projects[projectId].name, 'compliance')
 }
 
-export function wasteFileName(world: World): string {
-  return fileName(world.engagements[DURNLEY_ID].name, 'waste-and-reuse')
+export function wasteFileName(world: World, engagementId: string = DURNLEY_ID): string {
+  return fileName(world.engagements[engagementId].name, 'waste-and-reuse')
 }
 
 function demoDate(): Date {
@@ -91,8 +91,8 @@ function sum(values: number[]): number {
 }
 
 /** Buyer side: public projection data and the project's own records. No lot private strings. */
-export async function buildComplianceWorkbook(world: World): Promise<ArrayBuffer> {
-  const c = complianceView(world, MERROWGATE_ID)
+export async function buildComplianceWorkbook(world: World, projectId: string = MERROWGATE_ID): Promise<ArrayBuffer> {
+  const c = complianceView(world, projectId)
   const p = c.project
   const wb = newWorkbook(`${p.name} compliance`)
   const SUMMARY = 'Summary'
@@ -106,7 +106,7 @@ export async function buildComplianceWorkbook(world: World): Promise<ArrayBuffer
   const bomTotal = bomLast + 1
   const giaCell = `${quote(SUMMARY)}!$B$4`
   const items = c.reusedItems
-  const deals = buyerDeals(world, MERROWGATE_ID)
+  const deals = buyerDeals(world, projectId)
   const itemsFirst = 2
   const itemsLast = itemsFirst + Math.max(items.length, 1) - 1
   const carbonRows = items.filter((i) => i.carbon !== null)
@@ -243,9 +243,9 @@ const REPORTED: { id: Destination; column: string }[] = [
 ]
 
 /** Donor side: the engagement's own bill. Nothing from the Merrowgate Wharf project. */
-export async function buildWasteWorkbook(world: World): Promise<ArrayBuffer> {
-  const e = world.engagements[DURNLEY_ID]
-  const v = wasteView(world, DURNLEY_ID)
+export async function buildWasteWorkbook(world: World, engagementId: string = DURNLEY_ID): Promise<ArrayBuffer> {
+  const e = world.engagements[engagementId]
+  const v = wasteView(world, engagementId)
   const wb = newWorkbook(`${e.name} waste and reuse`)
   const SUMMARY = 'Summary'
   const ARISINGS = 'Arisings'

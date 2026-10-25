@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { closeTo } from '../../test/helpers'
 import { DEFAULT_ASSUMPTIONS as A } from '../reference/assumptions'
 import { DEMO_TODAY } from '../constants'
-import { createSeed, itemByTag, lotForItem, MERROWGATE_ID, TIVERNE_ID } from '../seed/world'
+import { createSeed, itemByTag, lotForItem, MERROWGATE_ID, TIVERNE_ID, HARROWDEN_ID, SALLOW_ID, FERRYMOOR_ID } from '../seed/world'
+import { REGIONS } from '../reference/assumptions'
+import { dateFormats, addDays } from '../dates'
 import { createTwinSeed, TWIN_RESERVE } from '../../test/twin'
 import { toPublicListing, PUBLIC_LISTING_KEYS } from './publicListing'
 import { toBlindBuyer, blindBuyerText } from './blindBuyer'
 import { lotPrivateStrings, projectPrivateStrings, INTERNAL_ID } from './privateStrings'
-import { listingsVisibleToProject, listingFor } from '../visibility'
+import { listingsVisibleToProject, listingFor, lotsVisibleToProject, browseListings } from '../visibility'
 import { matchSchedule } from '../engines/matcher'
 import { buyerPackage, sellerPackage, confirmedStorageMonths } from '../engines/package'
 import { negotiate } from '../engines/negotiation'
@@ -159,5 +161,84 @@ describe('P8: a negotiation without agreement displays no limit', () => {
       if (!offers.includes(c.reserve)) expect(shown).not.toContain(c.reserve)
       if (!offers.includes(c.max)) expect(shown).not.toContain(c.max)
     }
+  })
+})
+
+describe('version 1.0 seed: private by construction', () => {
+  const w = createSeed()
+  const hcLots = Object.values(w.lots).filter((l) => w.items[l.itemId].buildingId === HARROWDEN_ID)
+
+  it('Harrowden Court has three private lots that no project and no browse can see', () => {
+    expect(hcLots.map((l) => w.items[l.itemId].tag).sort()).toEqual(['HC-01', 'HC-02', 'HC-03'])
+    for (const l of hcLots) expect(l.visibility).toBe('private')
+    const browse = browseListings(w, A).map((l) => l.publicId)
+    for (const p of Object.values(w.projects)) {
+      const open = { ...p, termsAccepted: true, approvedByOwnerOrgIds: Object.keys(w.orgs) }
+      const visible = lotsVisibleToProject(w, open)
+      for (const l of hcLots) {
+        expect(visible).not.toContain(l.id)
+        expect(browse).not.toContain(l.publicId)
+      }
+    }
+  })
+
+  it("the new private strings are in the lot and project lists", () => {
+    const hc01 = itemByTag(w, 'HC-01')
+    const hcStrings = lotPrivateStrings(lotForItem(w, hc01.id), hc01, w.buildings[HARROWDEN_ID], w)
+    for (const s of ['Harrowden Court', 'Brindle Road', 'W13', 'Ealing', 'Brackwater Estates', 'Dana Kowalski', 'Tarnbrook Deconstruction', 'HC-01', ...dateFormats('2027-07-05')]) expect(hcStrings).toContain(s)
+    const th07 = itemByTag(w, 'TH-07')
+    expect(lotPrivateStrings(lotForItem(w, th07.id), th07, w.buildings[TIVERNE_ID], w)).toEqual(expect.arrayContaining(dateFormats(th07.expectedAvailableFrom!)))
+    const sallow = projectPrivateStrings(w.projects[SALLOW_ID], w)
+    for (const s of ['Sallow Court', 'Pellory Estates', 'Studio Oriel', 'Camden', ...dateFormats('2028-01-10')]) expect(sallow).toContain(s)
+    const ferry = projectPrivateStrings(w.projects[FERRYMOOR_ID], w)
+    for (const s of ['Ferrymoor Yard', 'Quillon Homes', 'Hackney', ...dateFormats('2027-06-07')]) expect(ferry).toContain(s)
+    expect(projectPrivateStrings(w.projects[MERROWGATE_ID], w)).toContain('Isla Brennan')
+  })
+
+  it("no project's client, team organisation or team member is a lot private string", () => {
+    const lotStrings = new Set<string>()
+    for (const lot of Object.values(w.lots)) {
+      const item = w.items[lot.itemId]
+      for (const s of lotPrivateStrings(lot, item, w.buildings[item.buildingId], w)) lotStrings.add(s)
+    }
+    for (const p of Object.values(w.projects)) {
+      const names = [p.developerOrgId, p.clientOrgId, p.architectOrgId, ...p.teamOrgIds].map((id) => w.orgs[id].name)
+      names.push(...p.teamPersonaIds.map((id) => w.personas[id].name))
+      for (const n of names) expect(lotStrings.has(n), `${p.name}: ${n}`).toBe(false)
+    }
+  })
+
+  it('every blind buyer holds none of its project private strings, and every region is a seed region', () => {
+    for (const p of Object.values(w.projects)) {
+      expect(REGIONS as readonly string[]).toContain(p.region)
+      const text = JSON.stringify(toBlindBuyer(p))
+      for (const s of projectPrivateStrings(p, w)) expect(text, `${p.name} leaks "${s}"`).not.toContain(s)
+    }
+  })
+
+  it('seeded wish lists point at open lots only', () => {
+    for (const list of Object.values(w.wishlists)) {
+      for (const it of list.items) {
+        const lot = Object.values(w.lots).find((l) => l.publicId === it.publicId)!
+        expect(lot.visibility).toBe('open')
+        expect(it.addedOn < DEMO_TODAY).toBe(true)
+      }
+    }
+  })
+})
+
+describe('P1b: the expected availability and the start date never reach a projection', () => {
+  const o = createSeed()
+  const t = createSeed()
+  for (const item of Object.values(t.items)) if (item.expectedAvailableFrom) item.expectedAvailableFrom = addDays(item.expectedAvailableFrom, 122)
+  for (const p of Object.values(t.projects)) p.startDate = addDays(p.startDate, 122)
+  it('every toPublicListing result is the same and has no expectedAvailableFrom key', () => {
+    const po = allProjections(o).map((p) => p.listing)
+    const pt = allProjections(t).map((p) => p.listing)
+    expect(pt).toEqual(po)
+    for (const l of po) expect(Object.keys(l)).not.toContain('expectedAvailableFrom')
+  })
+  it('every toBlindBuyer result is the same', () => {
+    for (const id of Object.keys(o.projects)) expect(toBlindBuyer(t.projects[id])).toEqual(toBlindBuyer(o.projects[id]))
   })
 })

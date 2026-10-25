@@ -1,0 +1,216 @@
+// Projects: every project the person works on, as cards or a table (name, client, type, RIBA stage, when materials
+// are needed, shortlist by status, last activity). Architects create projects here. A new project shows how far
+// its setup has gone and what comes next; one the client has not accepted says so.
+import { Link } from 'react-router'
+import { Clock, FolderPlus, Inbox, LayoutGrid, List, ListChecks } from 'lucide-react'
+import { formatDateShort } from '../../domain/dates'
+import { useApp, useNow, useView } from '../../store'
+import { projectsListView, type ProjectListRow } from '../../store/selectors/project'
+import { timeAgoStart } from '../../store/selectors/common'
+import { Button, Card, EmptyState, Pill, ProjectThumbnail, SegmentedControl, Table, TBody, TD, TH, THead, TR } from '../../ui'
+import { projectVisuals, type ProjectVisual } from '../../store/selectors/project-visuals'
+import { Page } from '../../app/Page'
+import { ProjectProgress } from './ProjectParts'
+import { ClientLinkPill } from './ClientLinkPill'
+import { consultantProjectSummaries, type ConsultantProjectSummary } from '../../store/selectors/consultant-projects'
+import { ConsultantCardSummary, ConsultantProjectsTable } from './ConsultantProjects'
+
+const SIDE_EMPTY = {
+  architect: 'Create a project to start shortlisting materials against its programme.',
+  client: 'Projects appear here once you accept an architect\'s request to add you as the client.',
+  consultant: 'Projects appear here when an architect adds you as the sustainability consultant.',
+} as const
+
+/** 'Setting up, 2 of 6' and 'Client to accept' (the client has not accepted the project link yet) or 'Client declined', where they apply. */
+function StatusPills({ p }: { p: ProjectListRow }) {
+  if (!p.setup && p.linkStatus === 'accepted') return null
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {p.setup ? (
+        <Pill tone="brand" size="sm" icon={ListChecks} data-testid={`setup-pill-${p.id}`}>
+          Setting up, {p.setup.done} of {p.setup.total}
+        </Pill>
+      ) : null}
+      <ClientLinkPill status={p.linkStatus} testId={`link-pill-${p.id}`} />
+    </span>
+  )
+}
+
+function ProjectCardLarge({ p, now, visual, summary }: { p: ProjectListRow; now: string; visual: ProjectVisual | undefined; summary?: ConsultantProjectSummary }) {
+  return (
+    <Card interactive as="article" className="flex flex-col overflow-hidden" data-testid={`project-card-${p.id}`}>
+      {visual ? <ProjectThumbnail sketch={visual.sketch} materials={visual.materials} aspect="16/10" decorative className="border-b border-line-soft" /> : null}
+      <div className="flex flex-1 flex-col gap-4 p-5">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 truncate text-md font-semibold text-ink">
+              <Link to={p.href} className="outline-none after:absolute after:inset-0 after:rounded-lg">
+                {p.name}
+              </Link>
+            </h2>
+            <p className="m-0 truncate text-sm text-muted">{p.clientName}</p>
+          </div>
+        </div>
+        <StatusPills p={p} />
+        <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div>
+            <dt className="text-muted">Type</dt>
+            <dd className="m-0 font-medium text-ink">{p.typeLabel}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">RIBA stage</dt>
+            <dd className="m-0 font-medium text-ink">Stage {p.stage}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Needed from</dt>
+            <dd className="m-0 font-medium tabular-nums text-ink">{p.startText}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Region</dt>
+            <dd className="m-0 truncate font-medium text-ink">{p.region}</dd>
+          </div>
+        </dl>
+        <div className="mt-auto flex flex-col gap-3 border-t border-line-soft pt-4">
+          {summary ? (
+            <ConsultantCardSummary s={summary} projectId={p.id} />
+          ) : p.setup?.nextText ? (
+            <p className="m-0 text-sm font-medium text-brand-700" data-testid={`setup-next-${p.id}`}>
+              {p.setup.nextText}
+            </p>
+          ) : (
+            <ProjectProgress counts={p.counts} total={p.total} size="sm" />
+          )}
+          {p.lastActivityAt ? (
+            <p className="m-0 flex items-center gap-1.5 truncate text-xs text-muted">
+              <Clock aria-hidden="true" className="size-3 shrink-0" />
+              <span className="truncate">
+                {timeAgoStart(p.lastActivityAt, now)}: {p.lastActivity}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function ProjectsTable({ rows, now }: { rows: ProjectListRow[]; now: string }) {
+  return (
+    <Table caption="Projects" data-testid="projects-table">
+      <THead>
+        <tr>
+          <TH>Project</TH>
+          <TH>Type</TH>
+          <TH>Stage</TH>
+          <TH>Needed from</TH>
+          <TH align="right">Shortlisted</TH>
+          <TH align="right">Waiting for approval</TH>
+          <TH align="right">Approved</TH>
+          <TH>Last activity</TH>
+        </tr>
+      </THead>
+      <TBody>
+        {rows.map((p) => (
+          <TR key={p.id} className="relative hover:bg-page">
+            <TD>
+              <Link to={p.href} className="font-medium text-ink outline-none after:absolute after:inset-0 hover:underline focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-brand-600">
+                {p.name}
+              </Link>
+              <div className="text-sm text-muted">{p.clientName}</div>
+              <div className="mt-1 empty:hidden">
+                <StatusPills p={p} />
+              </div>
+            </TD>
+            <TD muted>{p.typeLabel}</TD>
+            <TD muted>Stage {p.stage}</TD>
+            <TD className="whitespace-nowrap">{formatDateShort(p.startDate)}</TD>
+            <TD align="right">{p.counts.pending}</TD>
+            <TD align="right">{p.counts.sent}</TD>
+            <TD align="right">{p.counts.approved}</TD>
+            <TD muted className="whitespace-nowrap">
+              {p.lastActivityAt ? timeAgoStart(p.lastActivityAt, now) : 'No activity'}
+            </TD>
+          </TR>
+        ))}
+      </TBody>
+    </Table>
+  )
+}
+
+export function ProjectsList() {
+  const view = useView(projectsListView)
+  const visuals = useView(projectVisuals)
+  const summaries = useView(consultantProjectSummaries)
+  const layout = useApp((s) => s.ui.projectsLayout)
+  const setUi = useApp((s) => s.setUi)
+  const now = useNow()
+  if (!view) return null
+  const side = view.canCreate ? 'architect' : (view.rows[0]?.side ?? 'client')
+  return (
+    <Page testId="projects-list">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="m-0 text-2xl font-semibold text-ink">{view.title}</h1>
+          <p className="m-0 mt-1 text-base text-muted">
+            {view.rows.length} {view.rows.length === 1 ? 'project' : 'projects'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {view.rows.length > 0 ? (
+            <SegmentedControl
+              label="Layout"
+              value={layout}
+              onValueChange={(v) => setUi({ projectsLayout: v as 'cards' | 'table' })}
+              items={[
+                { value: 'cards', label: 'Cards', icon: LayoutGrid, iconOnly: true },
+                { value: 'table', label: 'Table', icon: List, iconOnly: true },
+              ]}
+              className="max-md:hidden"
+            />
+          ) : null}
+          {view.requestsHref ? (
+            <Button asChild icon={Inbox}>
+              <Link to={view.requestsHref} data-testid="projects-requests-link">
+                Project requests
+              </Link>
+            </Button>
+          ) : null}
+          {view.canCreate ? (
+            <Button asChild variant="primary" icon={FolderPlus}>
+              <Link to="/app/projects/new" data-testid="new-project">
+                New project
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      </header>
+      {view.empty ? (
+        <EmptyState
+          variant="page"
+          illustration="project"
+          title="No projects yet"
+          text={SIDE_EMPTY[side]}
+          action={
+            view.canCreate ? (
+              <Button asChild variant="primary" icon={FolderPlus}>
+                <Link to="/app/projects/new">New project</Link>
+              </Button>
+            ) : undefined
+          }
+          className="mt-6"
+        />
+      ) : layout === 'table' ? (
+        <div className="mt-8 max-md:hidden">
+          {summaries ? <ConsultantProjectsTable rows={view.rows} summaries={summaries} lastActivity={(p) => (p.lastActivityAt ? timeAgoStart(p.lastActivityAt, now) : 'No activity')} /> : <ProjectsTable rows={view.rows} now={now} />}
+        </div>
+      ) : null}
+      {!view.empty ? (
+        <div className={layout === 'table' ? 'mt-8 grid grid-cols-1 gap-4 md:hidden' : 'mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'} data-testid="projects-cards">
+          {view.rows.map((p) => (
+            <ProjectCardLarge key={p.id} p={p} now={now} visual={visuals?.[p.id]} summary={summaries?.[p.id]} />
+          ))}
+        </div>
+      ) : null}
+    </Page>
+  )
+}

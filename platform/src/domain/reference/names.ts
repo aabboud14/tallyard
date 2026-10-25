@@ -1,0 +1,135 @@
+// Allowed names (06-DATA.md section A11, with brief/09-V1-PRODUCT.md section 13.1). The scan script reads this module.
+// Group 1: the fictional world.
+export const ALLOWED_ORGANISATIONS = [
+  'Tallyard',
+  'Ostlea Estates',
+  'Tarnbrook Deconstruction',
+  'Studio Oriel',
+  'Lantern Quay Developments',
+  'Halewick Sustainability',
+  'Pellory Estates',
+  'Quillon Homes',
+  'Brackwater Estates',
+  'Corvane Insurance',
+  'Meridale Partners',
+  // Round 2: the deconstruction contractor on Tiverne House.
+  'Fennick Dismantling',
+  // Round 2: the architect of Lantern Quay's second project.
+  'Tessaly Architects',
+] as const
+
+export const ALLOWED_PEOPLE = ['Tom Ashby', 'Dana Kowalski', 'Priya Nair', 'Isla Brennan', 'Marcus Lindqvist'] as const
+
+export const ALLOWED_PLACES = ['Tiverne House', '14 Garnet Row', 'Harrowden Court', '31 Brindle Road', 'Merrowgate Wharf', 'Sallow Court', 'Ferrymoor Yard', 'Durnley House', 'Ambrey House', '6 Quarrel Lane', 'Kilnworth Place'] as const
+
+export const ALLOWED_PARTNERS = [
+  'Open yard, Barking',
+  'Covered store, Park Royal',
+  'Open yard, Tilbury',
+  'Haulier A',
+  'Haulier B',
+  'Haulier C',
+  'the testing partner',
+  // Round 2: testing companies held as reference data (src/domain/reference/testing.ts).
+  'Brindmoor Testing',
+  'Quenby Materials Lab',
+  'Calverd Inspection',
+] as const
+
+// Group 2: standards bodies and publications that may be named as sources.
+export const ALLOWED_SOURCES = [
+  'SCI',
+  'BCSA',
+  'RICS',
+  'BREEAM',
+  'BRE',
+  'LEED',
+  'ICE database',
+  'IStructE',
+  'London Plan',
+  'Greater London Authority',
+  'European Waste Catalogue',
+  'RIBA',
+  'NRM',
+  'WELL',
+  'UK Net Zero Carbon Buildings Standard',
+  'RIBA 2030 Climate Challenge',
+  'National Planning Policy Framework',
+  'Approved Document L',
+  'BS EN 15978',
+] as const
+
+// Group 3: the generic facility names in the sample bill (C1).
+export const ALLOWED_FACILITIES = [
+  'Aggregate recycler, Essex',
+  'Retained on site',
+  'Reclamation yard, Kent',
+  'Steel stockholder, East London',
+  'Metal recycler, Thames Estuary',
+  'Facade contractor, Midlands',
+  'Glass recycler, Yorkshire',
+  'Stone merchant, Dorset',
+  'Biomass plant, Kent',
+  'Gypsum recycler, Midlands',
+  'Flooring reseller, London',
+  'Energy from waste plant, South London',
+  'Landfill, Essex',
+  'Hazardous waste landfill, Northamptonshire',
+] as const
+
+// Group 4: fictional names that appear only in the platform's tests (sign-ups, invites, a new project and building).
+export const TEST_ONLY_NAMES = ['Corbel Yard', 'Wexcombe House', '9 Lantry Street', 'Park Studio', 'Reed Holdings', 'Shaw Surveys', 'Jo Park', 'Ash Reed', 'Lee Shaw', 'Alex Moore', 'Ruth Calder', '2 Wharf Lane'] as const
+
+// Group 4, continued (16 October 2026): the consultancy's consent and a new client's invite in the platform's tests.
+export const TEST_ONLY_NAMES_R2F = ['Tamsin Wharf', 'Pellow Row', 'Harrowgate Homes', 'Ada Quist'] as const
+
+// Group 5: real places, named only as references for location and policy, never as actors.
+export { ALL_REFERENCE_PLACES as REFERENCE_PLACES } from './places'
+
+// Real company names that must never be introduced. The scan script fails on any of these.
+export const DENIED_NAMES = [
+  'Cleveland Steel',
+  'British Steel',
+  'Tata Steel',
+  'Arup',
+  'Mace',
+  'Skanska',
+  'Balfour Beatty',
+  'Laing O',
+  'Multiplex',
+  'Lendlease',
+  'Land Securities',
+  'British Land',
+  'Great Portland',
+  'Derwent',
+  'Grosvenor',
+  'Canary Wharf Group',
+  'Foster + Partners',
+  'Rogers Stirk',
+  'Zaha Hadid',
+  'Buro Happold',
+  'AECOM',
+  'WSP',
+  'Atkins',
+  'Jacobs',
+  'Mott MacDonald',
+  'Keltbray',
+  'McGee',
+  'Erith',
+  'Cantillon',
+  'Squibb',
+  'Globechain',
+  'Enviromate',
+  'Material Index',
+  'Excess Materials Exchange',
+  'Salvo',
+  'Rotor',
+  'Concular',
+  'Madaster',
+  'Qflow',
+  'Biffa',
+  'Veolia',
+  'Suez',
+  'Powerday',
+  'Bywaters',
+] as const

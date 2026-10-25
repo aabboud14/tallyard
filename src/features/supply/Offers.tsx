@@ -2,8 +2,9 @@
 import { useStore } from '../../store/store'
 import { useWorld } from '../shared/hooks'
 import { offerViews, sellerDeals } from '../../store/selectors'
-import { ORG_IDS } from '../../domain/seed/world'
-import { PageTitle, Panel, Table, Num, Tag, Button, Note, Dl, EmptyState, Private } from '../../components/ui'
+import { dealFamily, sellerOrgId } from '../../store/views/supply'
+import { NotAvailable } from '../../app/params'
+import { Panel, Table, Num, Tag, Button, Note, Dl, EmptyState, Private } from '../../components/ui'
 import { LABELS } from '../../domain/reference/labels'
 import { blindBuyerText } from '../../domain/privacy/blindBuyer'
 import { facilityById } from '../../domain/reference/assumptions'
@@ -12,11 +13,19 @@ import * as f from '../../domain/format'
 export function Offers() {
   const world = useWorld()
   const s = useStore()
-  const offers = offerViews(world, ORG_IDS.ostlea)
-  const deals = sellerDeals(world, ORG_IDS.ostlea)
+  const ownerOrgId = sellerOrgId(world, s.personaId)
+  if (!ownerOrgId) return <NotAvailable />
+  const offers = offerViews(world, ownerOrgId)
+  const deals = sellerDeals(world, ownerOrgId)
   return (
     <>
-      <PageTitle title="Offers and deals" sub="Buyers stay blind until a deal is confirmed. Then organisation names, one contact each and the handover are exchanged." />
+      <header className="mb-5 min-w-0">
+        <p className="text-xs font-medium uppercase tracking-[0.08em] text-mill-text">Offers and deals</p>
+        <h1 className="mt-1 text-2xl font-semibold leading-tight" data-testid="offers-owner">
+          {world.orgs[ownerOrgId]?.name}
+        </h1>
+        <p className="mt-1 text-sm text-ink-soft">Buyers stay blind until a deal is confirmed. Then organisation names, one contact each and the handover are exchanged.</p>
+      </header>
       <Panel title="Offers awaiting approval" className="mb-4">
         {offers.length === 0 ? (
           <EmptyState hint="An offer appears here when a buyer's agent agrees a price and the buyer approves it." />
@@ -57,7 +66,7 @@ export function Offers() {
                 </Table>
               </Private>
               <div>
-                <Button variant="primary" size="lg" onClick={() => s.sellerApprove(o.projectId, o.planItem.id)} data-testid="seller-approve">
+                <Button variant="primary" size="lg" className="text-panel" onClick={() => s.sellerApprove(o.projectId, o.planItem.id)} data-testid="seller-approve">
                   Approve
                 </Button>
               </div>
@@ -84,7 +93,7 @@ export function Offers() {
                 rows={[
                   { label: 'Buyer', value: d.exchanged.buyerOrg, testId: 'seller-deal-buyer' },
                   { label: 'Contact', value: d.exchanged.buyerContact, testId: 'seller-deal-contact' },
-                  { label: 'Price', value: `${f.unitPrice(d.agreedPricePerUnit, 'steel_section')} for ${d.pieces} pieces (${f.massT(d.massT)})` },
+                  { label: 'Price', value: `${f.unitPrice(d.agreedPricePerUnit, dealFamily(world, d))} for ${d.pieces} pieces (${f.massT(d.massT)})` },
                   { label: 'Handover', value: `Handover ${f.date(d.handoverDate)} at ${facilityById(d.hubId).name}`, testId: 'seller-deal-handover' },
                   { label: 'Inbound haulage', value: `Inbound haulage ${f.money(d.inbound)}, booked`, testId: 'seller-deal-inbound' },
                 ]}

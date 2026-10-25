@@ -19,7 +19,7 @@ const singleFile = 'file://' + path.resolve('dist-single/index.html')
 
 export default defineConfig({
   testDir: 'e2e',
-  testMatch: /demo\.spec\.ts/,
+  testMatch: /(demo|journeys)\.spec\.ts/,
   retries: 0,
   workers: 1,
   timeout: 120_000,
@@ -29,6 +29,7 @@ export default defineConfig({
     timezoneId: 'Europe/London',
     contextOptions: { reducedMotion: 'reduce' },
     trace: 'retain-on-failure',
+    actionTimeout: 15_000,
     launchOptions: executablePath ? { executablePath } : {},
     viewport: { width: 1440, height: 900 },
   },

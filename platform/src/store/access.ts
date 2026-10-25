@@ -1,0 +1,159 @@
+// Who the signed-in person is in the world, and what they may open. Built on src/domain/access.ts.
+import type { Org, Persona, Project, SourceBuilding } from '../domain/types'
+import { canAccess, clientLinked, consultantLinked } from '../domain/access'
+import { roleForOrgType } from '../sandbox/accounts'
+import type { AppData, PlatformRole, User } from './types'
+
+export const ERRORS = {
+  signedOut: 'Sign in to continue.',
+  role: 'Your workspace cannot do this.',
+  noAccess: 'You do not have access to this.',
+  noProject: 'That project could not be found.',
+  noBuilding: 'That building could not be found.',
+  noItem: 'That item could not be found.',
+  noLot: 'This listing is not available.',
+} as const
+
+export function userOf(state: AppData, userId: string): User | null {
+  return state.users[userId] ?? null
+}
+
+export function personaOfUser(state: AppData, userId: string): Persona | null {
+  const u = userOf(state, userId)
+  return u ? (state.world.personas[u.personaId] ?? null) : null
+}
+
+export function orgOfUser(state: AppData, userId: string): Org | null {
+  const u = userOf(state, userId)
+  return u ? (state.world.orgs[u.orgId] ?? null) : null
+}
+
+export function roleOfUser(state: AppData, userId: string): PlatformRole | null {
+  const org = orgOfUser(state, userId)
+  return org ? roleForOrgType(org.type) : null
+}
+
+export function roleOfOrg(state: AppData, orgId: string): PlatformRole | null {
+  const org = state.world.orgs[orgId]
+  return org ? roleForOrgType(org.type) : null
+}
+
+/** The people in an organisation, oldest first. */
+export function usersOfOrg(state: AppData, orgId: string): User[] {
+  return Object.values(state.users)
+    .filter((u) => u.orgId === orgId)
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : a.name.localeCompare(b.name, 'en-GB')))
+}
+
+function personaOpens(state: AppData, userId: string, target: { projectId: string } | { buildingId: string } | { engagementId: string }): boolean {
+  const u = userOf(state, userId)
+  if (!u || !state.world.personas[u.personaId]) return false
+  return canAccess(state.world, u.personaId, target)
+}
+
+export type ProjectSide = 'architect' | 'client' | 'consultant'
+
+/**
+ * How the person sits on a project: its architect practice, its client or its consultant; null otherwise. A donor
+ * building owner is the client of its own New projects (round 2), so it gets the client's workspace there.
+ */
+export function projectSide(state: AppData, userId: string, projectId: string): ProjectSide | null {
+  const p = state.world.projects[projectId]
+  const u = userOf(state, userId)
+  if (!p || !u || !personaOpens(state, userId, { projectId })) return null
+  const role = roleOfUser(state, userId)
+  if (role === 'architect' && p.architectOrgId === u.orgId) return 'architect'
+  if ((role === 'client' || role === 'owner') && p.clientOrgId === u.orgId) return 'client'
+  if (role === 'consultant' && p.consultantOrgId === u.orgId) return 'consultant'
+  return null
+}
+
+export function isProjectArchitect(state: AppData, userId: string, projectId: string): boolean {
+  return projectSide(state, userId, projectId) === 'architect'
+}
+
+export function isProjectClient(state: AppData, userId: string, projectId: string): boolean {
+  return projectSide(state, userId, projectId) === 'client'
+}
+
+export function isProjectConsultant(state: AppData, userId: string, projectId: string): boolean {
+  return projectSide(state, userId, projectId) === 'consultant'
+}
+
+/**
+ * Who sets the project programme: its architect, or its client while no architect is appointed (a donor building
+ * owner's own New project), so the dates never stay suggested with nobody able to change them.
+ */
+export function canEditProgramme(state: AppData, userId: string, projectId: string): boolean {
+  const side = projectSide(state, userId, projectId)
+  return side === 'architect' || (side === 'client' && !state.world.projects[projectId]?.architectOrgId)
+}
+
+/** The projects the person works on, in their own role, in seed order. */
+export function projectsOfUser(state: AppData, userId: string): Project[] {
+  return Object.values(state.world.projects).filter((p) => projectSide(state, userId, p.id) !== null)
+}
+
+export type BuildingSide = 'owner' | 'surveyor' | 'contractor'
+
+/**
+ * How the person sits on a building: its owner, its appointed surveyor, or the deconstruction contractor invited to
+ * set availability dates (when the firm is not also the surveyor); null otherwise.
+ */
+export function buildingSide(state: AppData, userId: string, buildingId: string): BuildingSide | null {
+  const b = state.world.buildings[buildingId]
+  const u = userOf(state, userId)
+  if (!b || !u || !personaOpens(state, userId, { buildingId })) return null
+  const role = roleOfUser(state, userId)
+  if (role === 'owner' && b.ownerOrgId === u.orgId) return 'owner'
+  if (role === 'surveyor' && b.surveyorOrgId === u.orgId) return 'surveyor'
+  if (role === 'surveyor' && b.contractorOrgId === u.orgId) return 'contractor'
+  return null
+}
+
+export function isBuildingOwner(state: AppData, userId: string, buildingId: string): boolean {
+  return buildingSide(state, userId, buildingId) === 'owner'
+}
+
+/** Whether the person's firm is the building's deconstruction contractor, whichever side it otherwise holds. */
+export function isBuildingContractor(state: AppData, userId: string, buildingId: string): boolean {
+  const b = state.world.buildings[buildingId]
+  const u = userOf(state, userId)
+  if (!b || !u || !b.contractorOrgId || roleOfUser(state, userId) !== 'surveyor') return false
+  return b.contractorOrgId === u.orgId && personaOpens(state, userId, { buildingId })
+}
+
+/** Whether the person may capture and edit the building's records: its owner or its surveyor, never a contractor alone. */
+export function canCaptureIn(state: AppData, userId: string, buildingId: string): boolean {
+  const side = buildingSide(state, userId, buildingId)
+  return side === 'owner' || side === 'surveyor'
+}
+
+/** The buildings the person owns, surveys or dates as contractor, in seed order. */
+export function buildingsOfUser(state: AppData, userId: string): SourceBuilding[] {
+  return Object.values(state.world.buildings).filter((b) => buildingSide(state, userId, b.id) !== null)
+}
+
+export function canOpenEngagement(state: AppData, userId: string, engagementId: string): boolean {
+  return roleOfUser(state, userId) === 'consultant' && personaOpens(state, userId, { engagementId })
+}
+
+/** The consultancy once it reaches the project (it and the client have accepted), else ''. */
+export function linkedConsultantOrgId(project: Project): string {
+  return consultantLinked(project) ? project.consultantOrgId : ''
+}
+
+/** The organisations working on a project: architect, client once linked, and consultant once linked, without blanks or repeats. */
+export function projectOrgIds(project: Project): string[] {
+  return [...new Set([project.architectOrgId, clientLinked(project) ? project.clientOrgId : '', linkedConsultantOrgId(project)].filter((x) => x))]
+}
+
+/** The buying side of a project: the architect, plus the client once it has accepted the project. */
+export function buyerSideOrgIds(p: Project): string[] {
+  return [...new Set([p.architectOrgId, clientLinked(p) ? p.clientOrgId : ''].filter((x) => x))]
+}
+
+/** The organisations working on a building: its owner, its surveyor and its contractor, without blanks or repeats. */
+export function buildingOrgIds(building: SourceBuilding): string[] {
+  return [...new Set([building.ownerOrgId, building.surveyorOrgId, building.contractorOrgId].filter((x): x is string => !!x))]
+}

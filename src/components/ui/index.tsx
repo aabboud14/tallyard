@@ -9,7 +9,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primar
 
 export function Button({ variant = 'secondary', size = 'md', className, ...rest }: ButtonProps) {
   const base = 'inline-flex items-center justify-center rounded-sm border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
-  const sizes = size === 'lg' ? 'min-h-[44px] px-4 text-base' : 'min-h-9 px-3 text-sm'
+  // Every control is at least 44 px tall at phone width; dense tables keep the compact height from 640 px up.
+  // A caller that sets its own min-h-* keeps it.
+  const ownHeight = !!className && /(^|\s)min-h-/.test(className)
+  const sizes = size === 'lg' ? cx(!ownHeight && 'min-h-[44px]', 'px-4 text-base') : cx(!ownHeight && 'min-h-[44px] sm:min-h-9', 'px-3 text-sm')
   const look =
     variant === 'primary'
       ? 'border-steel bg-steel text-white hover:bg-steel-deep'
@@ -99,20 +102,21 @@ export function Note({ children, tone = 'grey', className, testId }: { children:
   )
 }
 
-/** The fixed label for every rule-based step (L2). */
-export function RuleBased({ testId }: { testId?: string }) {
+/** The fixed label for every rule-based step (L2): a quiet footnote, never a banner (09 section 1, principle 1). */
+export function RuleBased({ testId, className }: { testId?: string; className?: string }) {
   return (
-    <Note tone="survey" testId={testId}>
+    <p className={cx('m-0 text-xs text-mill-text', className)} data-testid={testId}>
       {LABELS.L2}
-    </Note>
+    </p>
   )
 }
 
-export function SimulatedAgent({ testId }: { testId?: string }) {
+/** The fixed label for a simulated agent (L3), as a quiet footnote. */
+export function SimulatedAgent({ testId, className }: { testId?: string; className?: string }) {
   return (
-    <Note tone="survey" testId={testId}>
+    <p className={cx('m-0 text-xs text-mill-text', className)} data-testid={testId}>
       {LABELS.L3}
-    </Note>
+    </p>
   )
 }
 

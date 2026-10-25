@@ -3,7 +3,7 @@ import type { AssistResult } from '../domain/engines/assist'
 import type { Condition, Recoverability, Spec, Quantity } from '../domain/types'
 import type { CaptureInput } from './actions'
 
-export type CaptureChoices = { buildingId: string; condition: Condition; recoverability?: Recoverability; capturedBy: string; notes: string; location?: string }
+export type CaptureChoices = { buildingId: string; condition: Condition; recoverability?: Recoverability; capturedBy: string; notes: string; location?: string; expectedAvailableFrom?: string | null }
 
 export function specFromAssist(r: AssistResult): Spec | null {
   switch (r.family) {
@@ -56,5 +56,6 @@ export function captureInputFromAssist(r: AssistResult, c: CaptureChoices): Omit
     location: c.location ?? r.location ?? '',
     notes: c.notes,
     capturedBy: c.capturedBy,
+    ...(c.expectedAvailableFrom !== undefined ? { expectedAvailableFrom: c.expectedAvailableFrom } : {}),
   }
 }

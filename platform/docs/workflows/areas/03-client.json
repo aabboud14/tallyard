@@ -1,0 +1,608 @@
+{
+ "key": "03-client",
+ "title": "Client (developer)",
+ "intro": "This section is about the client: the developer organisation a project is built for. The client accepts the architect's request to join a project, joining Tallyard from an invite if nobody there uses it yet, approves or declines the materials the architect proposes, asks sellers to reserve approved materials and, with the sustainability consultant, keeps requirements and the circular economy statement on track. Its Home is a dashboard of indicative figures and a to do list across all its projects; a client with no projects yet sees its first steps instead.",
+ "workflows": [
+  {
+   "id": "answer-project-request",
+   "title": "Accept or decline a project request",
+   "who": [
+    "Client (developer)",
+    "Architect"
+   ],
+   "where": "Home, request cards at the top (/app/home), and Projects, Project requests in the sidebar (/app/projects/requests)",
+   "summary": "An architect must ask before adding a client organisation to a project. The client reads the request and accepts it to see the project and approve materials, or declines it with an optional note.",
+   "mermaid": "flowchart TD\n  A[\"Architect asks to add you as client\"]:::arch\n  B[\"Platform notifies the client\"]:::system\n  C[\"Open the request card\"]:::client\n  D[\"Read project, practice, stage, dates, consultancy\"]:::client\n  E{\"Accept the project?\"}:::client\n  F[\"Choose Accept\"]:::client\n  G[\"Project opens in your workspace\"]:::system\n  H[\"Architect told, consultancy asked to join\"]:::system\n  I([\"Linked, materials can be sent\"]):::client\n  J[\"Choose Decline, add optional note\"]:::client\n  K[\"Architect told your organisation declined\"]:::system\n  L([\"Project stays out of your workspace\"]):::client\n  M[\"Architect may ask again or another client\"]:::arch\n  A --> B --> C --> D --> E\n  E -->|\"Yes\"| F --> G --> H --> I\n  E -->|\"No\"| J --> K --> L\n  K --> M",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Creates a project naming your organisation as client, or asks you again later, with an optional message."
+    },
+    {
+     "actor": "Platform",
+     "action": "Sends your organisation a notification and shows the request as a card at the top of Home and under Project requests in the sidebar, with a count badge."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Reads the card: project name, architect practice, who asked and when, type, location, stage, site start, practical completion, the sustainability consultancy the architect proposes ('asked once you accept') and the message."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses Accept, or chooses Decline and writes an optional note in the dialog titled 'Decline [project]?', then confirms with Decline."
+    },
+    {
+     "actor": "Platform",
+     "action": "On accept, links the project: a message 'You joined [project]' offers Open project, the project appears under Projects in the sidebar with its tabs, the architect can now send materials for approval, and the proposed consultancy is asked to join."
+    },
+    {
+     "actor": "Platform",
+     "action": "On decline, records the decision under the organisation's name and tells the architect, with the note if one was given. The project stays out of the client's workspace."
+    },
+    {
+     "actor": "Architect",
+     "action": "After a decline, can ask the same client again or choose another client from the project overview."
+    }
+   ],
+   "rules": [
+    "Only a person in a developer (client) organisation can answer, and only for a project that names their organisation as client.",
+    "Only a request still waiting can be answered. A second answer is refused with 'This request has already been answered.'",
+    "Before accepting, the client never sees the shortlist, any listing or any figure; only the project facts and the message.",
+    "Until the client accepts, the project is not in the client's workspace and the architect cannot send anything for approval. Opening the project's address shows 'Accept [project] to open it' with a button to Project requests.",
+    "Until the client accepts, no consultancy sees the project or is asked about it.",
+    "A decline reaches the architect under the organisation's name, never the name of the person who declined.",
+    "Project requests appears in the sidebar, with a count, only while at least one request is waiting. The page itself (/app/projects/requests) also lists answered requests as Accepted or Declined with the date.",
+    "A donor building owner never receives project requests: it becomes a client only of its own New projects.",
+    "There is no undo for accepting or declining a project request."
+   ],
+   "notifications": [
+    "Client organisation: '[practice] asked to add you as client on [project]', with the architect's message, or 'Accept to see the project and approve materials for it.' when there is none.",
+    "Architect on accept: '[client] accepted [project]. They can now see the project and approve materials you send.' The project activity records that the client accepted.",
+    "Consultancy, on accept, when the architect named one: '[practice] asked to add you as sustainability consultant on [project]', '[client] has accepted the project. Accept to see it and set its targets.'",
+    "Architect on decline: '[client] declined [project]', with the client's note, or 'Ask again or choose another client from the project overview.' when there is none. Only the architect is told."
+   ]
+  },
+  {
+   "id": "join-from-invite",
+   "title": "Join a new client organisation from an invite",
+   "who": [
+    "Client (developer)",
+    "Architect",
+    "Platform"
+   ],
+   "where": "The invite link (/invite/:token), or Create your account (/signup) with the invited email; then Home (/app/home) and Project requests (/app/projects/requests)",
+   "summary": "When an architect names a client nobody uses Tallyard from yet, nobody can accept the project. The architect invites a contact by email; that person joins the client organisation, from the link or by signing up with the same email, and the request to accept the project waits on their Home.",
+   "mermaid": "flowchart TD\n  A[\"Architect adds a client contact email\"]:::arch\n  B[\"Invite tied to the project\"]:::system\n  C{\"How does the contact arrive?\"}:::client\n  D[\"Opens the invite link\"]:::client\n  E[\"Reads who asked, for which project\"]:::client\n  F[\"Signs up with the invited email\"]:::client\n  G[\"Step 2: Join the organisation that invited you\"]:::system\n  H[\"Enters name and password, presses Join\"]:::client\n  I[\"Joins the client organisation\"]:::system\n  J[\"Practice told they can now accept\"]:::system\n  K([\"Request waits on Home, Accept or Decline\"]):::client\n  A --> B --> C\n  C -->|\"Link\"| D --> E --> H\n  C -->|\"Sign up\"| F --> G --> H\n  H --> I --> J --> K",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Gives a Client contact email on New project or Change client, or later in the field on the waiting banner, and passes on the link with Copy invite link; no email is sent from the sandbox."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Opens the link and reads, for example, 'Studio Oriel asked Harrowgate Homes to accept Pellow Row, and invited this email to answer', then enters a full name and password and presses Join."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Or opens Create your account and types the invited email: step 2 becomes 'Join the organisation that invited you', with no organisation fields and a Join button."
+    },
+    {
+     "actor": "Platform",
+     "action": "Creates the person as the first member of the client organisation, signs them in and shows the request at the top of their Home and under Project requests."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Accepts or declines the project as any client does."
+    }
+   ],
+   "rules": [
+    "The open sign-up page names no organisation, project or practice: it says only 'This email has an invite to answer a project request. Open the link you were sent to see who invited you, or join now.' The names show only through the invite link.",
+    "Only the newest invite for a project works; Resend or Use another email replaces it. Accepting the project unlocks sending for approval.",
+    "An invite is refused once someone from the client organisation uses Tallyard, for an email another organisation uses, or once the client has accepted.",
+    "Sandbox invites open only in the browser where they were made."
+   ],
+   "notifications": [
+    "The architect's practice, when the contact joins: '[name] joined [client]. They can now accept [project].'",
+    "The client organisation: the usual '[practice] asked to add you as client on [project]' request, already waiting."
+   ]
+  },
+  {
+   "id": "approve-material",
+   "title": "Approve or decline a material",
+   "who": [
+    "Client (developer)",
+    "Architect",
+    "Sustainability consultant"
+   ],
+   "where": "Project, Approvals tab (/app/projects/:id/approvals); also the To do list on Home",
+   "summary": "The architect sends shortlisted materials to the client for a decision. The client reads the facts and the indicative cost against buying new, then approves or declines each one with an optional note. Approving buys nothing; it makes the material ready to reserve.",
+   "mermaid": "flowchart TD\n  A[\"Architect sends materials for approval\"]:::arch\n  B[\"Client notified, badge on Approvals\"]:::system\n  C[\"Open the Approvals tab\"]:::client\n  D[\"Read facts, cost and carbon\"]:::client\n  E{\"Approve this material?\"}:::client\n  F[\"Choose Approve, optional note\"]:::client\n  G[\"Choose Decline, optional reason\"]:::client\n  H{\"Still shared and available?\"}:::system\n  I([\"Refused with a reason\"]):::system\n  J[\"Decision saved, team notified\"]:::system\n  K([\"Approved, ready to reserve\"]):::client\n  L([\"Declined, architect may propose again\"]):::arch\n  A --> B --> C --> D --> E\n  E -->|\"Yes\"| F --> H\n  E -->|\"No\"| G --> H\n  H -->|\"No\"| I\n  H -->|\"Yes\"| J\n  J -->|\"Approved\"| K\n  J -->|\"Declined\"| L",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Sends one or more shortlisted materials to the client with a message; this is possible only once the client has accepted the project."
+    },
+    {
+     "actor": "Platform",
+     "action": "Notifies the client, adds a badge to the project folder and the Approvals tab, and adds an 'Approve or decline' item to the To do list on Home."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Opens Approvals and reads each card under 'Waiting for your decision': the material facts, the indicative package cost against the same new, and the architect's message."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses Approve or Decline, adds an optional note in the dialog, and confirms."
+    },
+    {
+     "actor": "Platform",
+     "action": "Checks the material is still shared with the project and still available, then saves the decision and logs it in the project activity."
+    },
+    {
+     "actor": "Platform",
+     "action": "Tells the architect and the consultant; the card moves to the Decided list with its decision and note."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "For an approved material, follows Reserve on the Decided list to the Reservations tab."
+    }
+   ],
+   "rules": [
+    "Only the project's client can decide, and only on an item the architect has sent. Anything else is refused with 'Only an item sent to the client can be decided.'",
+    "A material that stops being shared with the project, or is reserved for another buyer, drops off the Approvals tab and the To do list. If that happens while the dialog is open, the decision is refused with 'No longer shared with this project.' or 'No longer available.'",
+    "Approving does not buy or reserve anything. The dialog says: 'Approving tells the architect they can specify it. Nothing is bought: you can then ask the seller to reserve it.'",
+    "While a material waits for the client, the architect can still remove it from the shortlist; it then leaves the Approvals tab.",
+    "A declined material goes back to the architect, who can reopen it with a new note and send it again. An approved material cannot be removed or moved by the architect.",
+    "The three figures at the top (Waiting for your decision, Approved, Avoided carbon if you approve) and every cost are labelled Indicative. Costs are the indicative package: guide price plus testing, storage and delivery, against the same new.",
+    "A message after each decision offers Undo.",
+    "The client never sees the seller's name or the donor building at this stage.",
+    "An approval is due 7 days after it was sent; after that it reads as overdue on the To do list."
+   ],
+   "notifications": [
+    "Client when sent: '[n] materials to approve on [project]', with the architect's message, or 'Sent by [name], [practice].'",
+    "Architect and consultancy (once it has joined the project) on a decision: '[client] approved [material]' or '[client] declined [material]', with the note.",
+    "Project activity for the whole team: '[person] approved [material]' or '[person] declined [material]'."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Shortlisted\" as Shortlisted\n  state \"Sent to the client\" as Sent\n  state \"Approved\" as Approved\n  state \"Declined\" as Declined\n  [*] --> Shortlisted: architect saves it\n  Shortlisted --> Sent: architect sends\n  Sent --> Approved: client approves\n  Sent --> Declined: client declines\n  Sent --> [*]: architect removes it\n  Declined --> Shortlisted: architect reopens\n  Approved --> [*]",
+   "states_note": "A material is shortlisted, sent, then approved or declined by the client. Only the architect can reopen a declined one or remove one that is waiting; an approved one stays on the project."
+  },
+  {
+   "id": "request-reservation",
+   "title": "Request a reservation",
+   "who": [
+    "Client (developer)",
+    "Donor building owner (seller)"
+   ],
+   "where": "Project, Reservations tab (/app/projects/:id/reservations), button Request reservation",
+   "summary": "For each approved material the client sees an indicative package and asks the seller to hold the material for the project. The seller receives a blind request that says only what kind of buyer it is, never who.",
+   "mermaid": "flowchart TD\n  A[\"Open the Reservations tab\"]:::client\n  B[\"Read the indicative package and carbon\"]:::client\n  C[\"Choose Request reservation\"]:::client\n  D[\"Read the line the seller will see\"]:::client\n  E[\"Add optional message, Send request\"]:::client\n  F{\"Platform checks the request\"}:::system\n  G([\"Refused with a reason\"]):::system\n  H[\"Request saved with its package\"]:::system\n  I[\"Seller notified with the blind line\"]:::system\n  J([\"Awaiting the seller\"]):::client\n  A --> B --> C --> D --> E --> F\n  F -->|\"Not allowed\"| G\n  F -->|\"Allowed\"| H --> I --> J",
+   "steps": [
+    {
+     "actor": "Client (developer)",
+     "action": "Opens Reservations, which lists every approved material. Pills at the top count To request, With the seller and Reserved, above a Cost card and a Carbon card for the project."
+    },
+    {
+     "actor": "Platform",
+     "action": "Works out an indicative package for each material: material at the guide price, testing, storage for the months until materials are needed, handling out and delivery to site, against the same quantity new."
+    },
+    {
+     "actor": "Platform",
+     "action": "Picks the hub for the package itself: the listing's collection hub if it has one, otherwise the cheapest suitable hub. The client does not choose a hub."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses Request reservation (Request again after a decline or withdrawal), reads the panel 'The seller sees your request as', and writes an optional message to the seller."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses Send request."
+    },
+    {
+     "actor": "Platform",
+     "action": "Checks the request is allowed, saves it with the package fixed as at today, and logs it for the project team."
+    },
+    {
+     "actor": "Platform",
+     "action": "Sends the seller a notification that carries only the blind line, in the form '[buyer type], [project type], [region], needed [three month window]', for example 'Design team, commercial project, London, needed April to June 2027'."
+    }
+   ],
+   "rules": [
+    "Only the project's client can request, and only for a material it has approved: 'Only an approved material can be reserved.'",
+    "Refused when the material is no longer shared with the project ('No longer shared with this project.'), no longer available ('No longer available.'), already with the seller ('A request for this material is already with the seller.') or already reserved for this project ('Already reserved for this project.').",
+    "A donor building owner working as client on its own New project cannot reserve its own lot: 'This lot is yours. Allocate it directly; reserving is for other sellers.'",
+    "The seller sees only the blind line: buyer type, project type, region and the three month window when materials are needed. Never the client's name, the project name or any figure.",
+    "The message hint asks for quantity, timing or testing only, with no names or contact details; these are shared only if the seller accepts.",
+    "Testing is costed only for steel sections that are not already tested or certified. Covered only materials are never stored at an open yard.",
+    "While a request is open or accepted the package stays as it was on the day of the request ('As at your request'); otherwise it is 'Worked out today'.",
+    "All prices and package costs are labelled Indicative until terms are agreed with the seller. A message after sending offers Undo."
+   ],
+   "notifications": [
+    "Seller (donor building owner): 'Reservation request for [item tag]', with the listing title and the blind line.",
+    "Project activity for the client, architect and consultant: '[person] requested a reservation of [material]'."
+   ]
+  },
+  {
+   "id": "withdraw-reservation",
+   "title": "Withdraw a reservation request",
+   "who": [
+    "Client (developer)",
+    "Donor building owner (seller)"
+   ],
+   "where": "Project, Reservations tab (/app/projects/:id/reservations), button Withdraw on a request awaiting the seller",
+   "summary": "While the seller has not answered, the client can take a reservation request back. The material stays approved and can be requested again later.",
+   "mermaid": "flowchart TD\n  A[\"Open the Reservations tab\"]:::client\n  B[\"Find a request awaiting the seller\"]:::client\n  C[\"Choose Withdraw\"]:::client\n  D{\"Still awaiting the seller?\"}:::system\n  E([\"Refused, already decided\"]):::system\n  F[\"Request marked withdrawn\"]:::system\n  G[\"Seller told the buyer withdrew\"]:::system\n  H[\"Choose again item on To do\"]:::system\n  I([\"Ready to request again\"]):::client\n  A --> B --> C --> D\n  D -->|\"No\"| E\n  D -->|\"Yes\"| F --> G --> H --> I",
+   "steps": [
+    {
+     "actor": "Client (developer)",
+     "action": "Finds a card that reads 'Requested ... Waiting for the seller.' and chooses Withdraw."
+    },
+    {
+     "actor": "Platform",
+     "action": "Checks the seller has not decided, then marks the request withdrawn and logs it for the project team."
+    },
+    {
+     "actor": "Platform",
+     "action": "Tells the seller the buyer withdrew, still without naming the buyer."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows 'You withdrew this request' on the card with a Request again button, and the To do list shows 'Choose again for [material]' until the client requests again."
+    }
+   ],
+   "rules": [
+    "Only the project's client can withdraw, and only a request still awaiting the seller: 'This request has already been decided.'",
+    "An accepted reservation cannot be withdrawn here; the parties agree any change directly once contacts are exchanged.",
+    "The seller is told only that 'the buyer' withdrew.",
+    "A message after withdrawing offers Undo."
+   ],
+   "notifications": [
+    "Seller: 'Request withdrawn for [item tag]. The buyer withdrew their request for [material].'",
+    "Project activity for the client, architect and consultant: '[person] withdrew the reservation request for [material]'."
+   ]
+  },
+  {
+   "id": "seller-decision",
+   "title": "When the seller accepts or declines",
+   "who": [
+    "Donor building owner (seller)",
+    "Client (developer)",
+    "Architect",
+    "Sustainability consultant"
+   ],
+   "where": "Seller: Requests (/app/requests). Client: Project, Reservations tab (/app/projects/:id/reservations)",
+   "summary": "The seller answers a blind request. Accepting holds the lot for that project, declines every other waiting request for the same lot, and exchanges contacts between the client and the seller only. Declining returns the material to the client to request again.",
+   "mermaid": "flowchart TD\n  A[\"Seller opens the blind request\"]:::owner\n  B{\"Accept the request?\"}:::owner\n  C{\"Lot already held for someone?\"}:::system\n  D([\"Refused, reserved for another buyer\"]):::system\n  E[\"Lot held for this project\"]:::system\n  F[\"Other waiting requests declined\"]:::system\n  G[\"Client and seller contacts exchanged\"]:::system\n  H[\"Client told, architect told it is reserved\"]:::system\n  I([\"Reserved, contact the seller\"]):::client\n  J[\"Decline with optional note\"]:::owner\n  K[\"Client told the seller declined\"]:::system\n  L([\"Client can request again\"]):::client\n  A --> B\n  B -->|\"Yes\"| C\n  C -->|\"Yes\"| D\n  C -->|\"No\"| E --> F --> G --> H --> I\n  B -->|\"No\"| J --> K --> L",
+   "steps": [
+    {
+     "actor": "Donor building owner (seller)",
+     "action": "Opens Requests and reads the blind line and the message, then chooses Accept or Decline and confirms ('Accept and reserve' or 'Decline')."
+    },
+    {
+     "actor": "Platform",
+     "action": "On accept, checks no other request already holds the lot, then marks this request reserved."
+    },
+    {
+     "actor": "Platform",
+     "action": "Declines every other request still waiting for the same lot, from any project, with the note 'Reserved for another buyer.'"
+    },
+    {
+     "actor": "Platform",
+     "action": "Exchanges contacts: the seller sees the client organisation, the person who asked and their email; the client sees the seller organisation, contact and email."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Sees 'Reserved on [date]. Contact the seller to agree terms.' with the seller, contact and an email link."
+    },
+    {
+     "actor": "Platform",
+     "action": "On decline, marks the request declined with the seller's note and tells the client; the card shows 'The seller declined this request' and Request again."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "After a decline, follows the 'Choose again' item on the To do list or Request again on the card. A request turned down because another buyer reserved the lot cannot be retried: the material leaves the client's Reservations and Approvals tabs."
+    }
+   ],
+   "rules": [
+    "Only the owner of the donor building the lot comes from can decide, and only a request still waiting: 'This request has already been decided.'",
+    "A lot can be reserved for one project only. Accepting a second request is refused with 'Reserved for another buyer.'",
+    "Contacts are exchanged between the client and the seller only. The architect and the consultant never see the seller: their activity reads 'The seller accepted the reservation of [material]'.",
+    "Before acceptance neither side learns who the other is.",
+    "Once reserved, the lot leaves the open marketplace and cannot be approved or requested by any other project.",
+    "An accepted reservation counts as secured avoided carbon on the project and the client dashboard.",
+    "Prices stay indicative: the client and the seller agree terms directly, outside the platform.",
+    "The seller gets a message offering Undo straight after accepting or declining."
+   ],
+   "notifications": [
+    "Client on accept: '[seller] accepted your reservation. [material] is reserved for [project]. Contact [name], [email].'",
+    "Architect on accept: '[material] is reserved. The seller accepted the client's reservation on [project].' No seller name.",
+    "Client on decline: 'Reservation declined: [material]', with the seller's note, or 'The seller declined this request.'",
+    "Clients of competing requests: 'Reservation declined: [material]. Reserved for another buyer.' Their project activity reads 'The seller reserved [material] for another buyer'.",
+    "Architect on decline, and the consultant in every case: no notification; the project activity shows a line from 'The seller' without a name."
+   ]
+  },
+  {
+   "id": "reservation-lifecycle",
+   "title": "Follow a reservation from request to reserved",
+   "who": [
+    "Client (developer)",
+    "Donor building owner (seller)"
+   ],
+   "where": "Project, Reservations tab (/app/projects/:id/reservations); Home, Reservations panel (/app/home)",
+   "summary": "Each reservation request is one record that moves through a few states. This shows every state a request can reach and what the client can do next from each one.",
+   "mermaid": "flowchart TD\n  A[\"Client sends a reservation request\"]:::client\n  B([\"Awaiting the seller\"]):::system\n  C{\"What happens next?\"}:::system\n  D[\"Client chooses Withdraw\"]:::client\n  E[\"Seller declines\"]:::owner\n  F[\"Another buyer is accepted first\"]:::owner\n  G[\"Seller accepts\"]:::owner\n  H([\"Withdrawn\"]):::system\n  I([\"Declined\"]):::system\n  J([\"Reserved, contacts exchanged\"]):::system\n  K[\"Choose Request again\"]:::client\n  L([\"Material leaves your tabs\"]):::system\n  A --> B --> C\n  C -->|\"Client\"| D --> H --> K\n  C -->|\"Seller says no\"| E --> I --> K\n  C -->|\"Lot taken\"| F --> L\n  C -->|\"Seller says yes\"| G --> J\n  K --> A",
+   "steps": [
+    {
+     "actor": "Client (developer)",
+     "action": "Sends a request for an approved material; the card and the Home panel show Awaiting the seller."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "While it waits, can choose Withdraw; the card then shows 'You withdrew this request' and Request again."
+    },
+    {
+     "actor": "Donor building owner (seller)",
+     "action": "Declines it; the card shows 'The seller declined this request' with the note, and Request again."
+    },
+    {
+     "actor": "Donor building owner (seller)",
+     "action": "Accepts another buyer's request for the same lot first; this request is declined with 'Reserved for another buyer.' and the material leaves the client's Reservations and Approvals tabs."
+    },
+    {
+     "actor": "Donor building owner (seller)",
+     "action": "Accepts it; the card shows 'Reserved on [date]. Contact the seller to agree terms.' with the seller's organisation, contact and email."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "After a withdrawal or a decline, chooses Request again, which starts a new request with a fresh package."
+    }
+   ],
+   "rules": [
+    "Only one request per material can be open at a time for a project.",
+    "Reserved is final in the platform, apart from the seller's Undo straight after accepting. There is no cancel or withdraw after acceptance; the client and the seller agree any change directly.",
+    "The Home Reservations panel lists only requests awaiting the seller or reserved, and counts To request, With the seller and Reserved.",
+    "The status words are the same everywhere: Awaiting the seller, Reserved, Declined, Withdrawn."
+   ],
+   "notifications": [
+    "See 'Request a reservation', 'Withdraw a reservation request' and 'When the seller accepts or declines' for who is told at each step."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Awaiting the seller\" as Pending\n  state \"Reserved\" as Accepted\n  state \"Declined\" as Declined\n  state \"Withdrawn\" as Withdrawn\n  [*] --> Pending: client requests\n  Pending --> Accepted: seller accepts\n  Pending --> Declined: seller declines\n  Pending --> Declined: another buyer reserved it\n  Pending --> Withdrawn: client withdraws\n  Accepted --> [*]\n  Declined --> [*]\n  Withdrawn --> [*]",
+   "states_note": "Each request is one record. Reserved is final; after Declined or Withdrawn the client can choose Request again, which starts a new record."
+  },
+  {
+   "id": "client-todo",
+   "title": "Work through the to do list",
+   "who": [
+    "Client (developer)",
+    "Platform"
+   ],
+   "where": "Home, To do panel (/app/home)",
+   "summary": "The To do list on the client's Home is built from the records each time it is shown, so an item disappears by itself once the underlying task is done. It gathers approvals, reservations to request, statement reviews and requirements at risk across all the client's projects.",
+   "mermaid": "flowchart TD\n  A[\"Platform reads all your projects\"]:::system\n  B[\"Lists approvals, reservations, reviews, risks\"]:::system\n  C[\"Overdue items first, in warning colour\"]:::system\n  D[\"Choose an item\"]:::client\n  E[\"Opens the right project tab\"]:::system\n  F[\"Do the task there\"]:::client\n  G{\"Record now settled?\"}:::system\n  H([\"Item clears from the list\"]):::system\n  I([\"Item stays until done\"]):::system\n  A --> B --> C --> D --> E --> F --> G\n  G -->|\"Yes\"| H\n  G -->|\"No\"| I",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Adds 'Approve or decline [material]' for each material sent and waiting, due 7 days after it was sent; it clears when the client decides."
+    },
+    {
+     "actor": "Platform",
+     "action": "Adds 'Request a reservation for [material]' for each approved material with no open request; it clears when a request is sent."
+    },
+    {
+     "actor": "Platform",
+     "action": "Adds 'Choose again for [material]' when the seller declined or the client withdrew; it clears when the client requests again."
+    },
+    {
+     "actor": "Platform",
+     "action": "Adds 'Review the circular economy statement' when the consultant sends it, due 14 days later; it clears when the client marks it reviewed, and stays if the consultant edits the statement meanwhile."
+    },
+    {
+     "actor": "Platform",
+     "action": "Adds 'Check [requirement]: at risk' for each requirement marked at risk; it clears when the status changes."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses an item to open the Approvals, Reservations, Sustainability or Requirements tab of that project and does the task there."
+    }
+   ],
+   "rules": [
+    "Nothing on the list can be ticked off by hand: an item clears only when the record behind it changes.",
+    "Order: items with a due date first, earliest due first (so overdue items lead), then undated items oldest first, then by title.",
+    "Only approvals (7 days) and statement reviews (14 days) have due dates. Overdue items show 'Overdue by n days' and the panel shows how many are overdue.",
+    "Requirements at risk always show in the warning colour, whoever marked them.",
+    "A material reserved for another buyer, or no longer shared, leaves the list without an item to choose again.",
+    "The Reservations panel beside it counts To request, With the seller and Reserved, and links to the approved materials still to request.",
+    "When the list is empty it reads 'Nothing to do. Approvals and reviews appear here.'"
+   ],
+   "notifications": [
+    "None. The list is derived from the records; the notifications for each underlying event are sent by those workflows."
+   ]
+  },
+  {
+   "id": "review-statement",
+   "title": "Review the circular economy statement",
+   "who": [
+    "Client (developer)",
+    "Sustainability consultant"
+   ],
+   "where": "Project, Sustainability tab, Circular economy statement card (/app/projects/:id/sustainability#statement)",
+   "summary": "The consultant drafts the circular economy statement and sends it to the client. Sending freezes the text: the client reads and reviews the version sent, dated when it was sent, while the records move on. The client marks it reviewed, with optional comments the consultant then sees.",
+   "mermaid": "flowchart TD\n  A[\"Consultant sends the statement for review\"]:::consultant\n  S[\"Text frozen as sent\"]:::system\n  B[\"Client notified, item on To do\"]:::system\n  C[\"Open the Sustainability tab\"]:::client\n  D[\"Choose Read and review\"]:::client\n  E[\"Read the version sent and the caveat\"]:::client\n  F[\"Add optional comments\"]:::client\n  G[\"Choose Mark as reviewed\"]:::client\n  H[\"Statement marked reviewed\"]:::system\n  I[\"Consultant told, with the comments\"]:::system\n  J([\"Reviewed by the client\"]):::client\n  U[\"Consultant sends the updated statement\"]:::consultant\n  A --> S --> B --> C --> D --> E --> F --> G --> H --> I --> J\n  U --> S",
+   "steps": [
+    {
+     "actor": "Sustainability consultant",
+     "action": "Edits the statement drafted from the project records and sends it to the client; this needs the client and the consultancy to have accepted the project."
+    },
+    {
+     "actor": "Platform",
+     "action": "Freezes the text as sent, notifies the client, puts a badge on the Sustainability tab and adds a review item due in 14 days to the To do list."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Opens the Circular economy statement card, which reads 'Ready for your review', and chooses Read and review."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Reads every section of the version sent, with its bulleted lists, under the warning caveat; writes optional comments for the consultant and chooses Mark as reviewed."
+    },
+    {
+     "actor": "Platform",
+     "action": "Records the review with the date and comments, logs it for the project team and tells the consultant."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "If the statement changes after sending, presses Send the updated statement, which replaces the frozen version and asks for review again."
+    }
+   ],
+   "rules": [
+    "Only the project's client can mark the statement reviewed, and only while it is with the client for review: 'The statement has not been sent for review.'",
+    "Only the consultant can edit or send the statement. The client reads it; the architect does not see the statement card.",
+    "A statement never sent reads 'Not sent yet' to the client and the architect, on the Sustainability card, the scheme card and the tracking table, or 'Being drafted' once the consultant has started editing it; the client cannot open it until it is sent. After review the client can still open it with Read the statement.",
+    "An edit after sending does not pull the statement back: the client keeps reading, and can still review, the version sent, and sees 'This is the version sent on [date]. [Consultancy] has updated the statement since, so ask them for the latest if you need it.'",
+    "The statement is indicative and carries the caveat in the dialog. A toast offers Undo after marking it reviewed."
+   ],
+   "notifications": [
+    "Client when sent: 'Circular economy statement ready for review. [project]. Sent by [name], [consultancy].'",
+    "Client when the updated statement is sent: 'Updated circular economy statement ready for review'.",
+    "Consultant when reviewed: '[client] reviewed the circular economy statement', with the comments or 'No comments.'"
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Not sent yet, or being drafted\" as Draft\n  state \"Ready for your review\" as Ready\n  state \"Reviewed\" as Reviewed\n  [*] --> Draft\n  Draft --> Ready: consultant sends\n  Ready --> Reviewed: client marks reviewed\n  Ready --> Ready: consultant sends the updated statement\n  Reviewed --> Ready: consultant sends again",
+   "states_note": "Only the consultant sends, and each send freezes the text the client reads. Editing never moves the statement back; only the client moves it from ready to reviewed."
+  },
+  {
+   "id": "track-requirements",
+   "title": "Track requirements and evidence",
+   "who": [
+    "Client (developer)",
+    "Sustainability consultant",
+    "Architect"
+   ],
+   "where": "Project, Requirements tab (/app/projects/:id/requirements)",
+   "summary": "The planning and sustainability requirements that apply to the project are tracked with a status and an evidence log. The client and the consultant keep them current; the architect chooses which apply and can read them.",
+   "mermaid": "flowchart TD\n  A[\"Open the Requirements tab\"]:::client\n  B[\"Filter by At risk, Open or Evidence ready\"]:::client\n  C{\"What to update?\"}:::client\n  D[\"Choose a new status\"]:::client\n  E[\"Add evidence, note or output\"]:::client\n  F[\"Platform saves and logs the change\"]:::system\n  G{\"At risk or evidence ready?\"}:::system\n  H[\"Consultant notified\"]:::system\n  I([\"Requirement up to date\"]):::client\n  A --> B --> C\n  C -->|\"Status\"| D --> F\n  C -->|\"Evidence\"| E --> F\n  F --> G\n  G -->|\"Yes\"| H --> I\n  G -->|\"No\"| I",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Chooses which requirements apply from the project's local authority and region, on the project overview or the Requirements tab. Until then the requirements suggested for the place are tracked, and the tab says so."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Opens Requirements, from the tab or Track requirements on the overview card, sees the bar of requirements by status and 'n of m ready', and filters with All, At risk, Open, Evidence ready or Not applicable."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Sets a status from the list: Not started, In progress, At risk, Evidence ready or Not applicable."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Chooses Add evidence and writes a note, optionally linking an output held in the platform, such as the compliance workbook or the circular economy statement."
+    },
+    {
+     "actor": "Platform",
+     "action": "Saves the change with who made it and when, logs it for the project team, and moves a not started requirement to in progress when its first evidence is added."
+    },
+    {
+     "actor": "Platform",
+     "action": "When the status becomes At risk or Evidence ready, notifies the other of the two (the consultancy when the client changed it, once it has joined)."
+    }
+   ],
+   "rules": [
+    "Only the client and the consultant can change a status or add evidence. The architect reads the tab.",
+    "Only requirements that apply to the project can be changed: 'That requirement does not apply to this project.'",
+    "Evidence needs a note or a linked output: 'Add a note or choose an output.' Only the person who added evidence can remove it. Each change offers Undo.",
+    "Not applicable requirements are left out of the total and the ready share.",
+    "Each card also shows figures the platform already holds for that requirement, such as carbon or content against target.",
+    "An at risk requirement adds a badge to the Requirements tab and an item to the client's To do list.",
+    "Requirements are indicative planning aids, not certification or planning advice."
+   ],
+   "notifications": [
+    "Consultancy (once it has joined the project), when the client marks a requirement at risk or evidence ready: '[requirement] is [status] on [project]. Marked by [name], [organisation].'",
+    "Client, when the consultant does the same, once the client has accepted the project.",
+    "Other status changes and evidence are logged in the project activity only."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Not started\" as NotStarted\n  state \"In progress\" as InProgress\n  state \"At risk\" as AtRisk\n  state \"Evidence ready\" as Ready\n  state \"Not applicable\" as NA\n  [*] --> NotStarted\n  NotStarted --> InProgress: first evidence or chosen\n  NotStarted --> NA: chosen\n  InProgress --> AtRisk: chosen\n  InProgress --> Ready: chosen\n  AtRisk --> InProgress: chosen\n  AtRisk --> Ready: chosen\n  Ready --> AtRisk: chosen\n  NA --> NotStarted: chosen",
+   "states_note": "Any status can be chosen from the list at any time; the arrows show the usual moves. The only automatic move is from not started to in progress when the first evidence is added."
+  },
+  {
+   "id": "dashboard-figures",
+   "title": "Read the dashboard figures",
+   "who": [
+    "Client (developer)",
+    "Platform"
+   ],
+   "where": "Home (/app/home), the four figures under the greeting",
+   "summary": "The client's Home opens with four indicative figures across all its projects: cost, saving against new, avoided carbon secured and reuse by value. The platform works each one out from the records; the screen only shows them.",
+   "mermaid": "flowchart TD\n  A[\"Platform gathers all your projects\"]:::system\n  B[\"Earlier deals, reserved, with seller, approved\"]:::system\n  C[\"Indicative cost by stage\"]:::system\n  D[\"Saving against buying new\"]:::system\n  E[\"Avoided carbon secured against targets\"]:::system\n  F[\"Reuse and content by value\"]:::system\n  G[\"Read the four figures\"]:::client\n  H{\"Need the detail?\"}:::client\n  I([\"Open a project tab\"]):::client\n  J([\"Done\"]):::client\n  A --> B\n  B --> C\n  B --> D\n  B --> E\n  B --> F\n  C --> G\n  D --> G\n  E --> G\n  F --> G\n  G --> H\n  H -->|\"Yes\"| I\n  H -->|\"No\"| J",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Indicative cost: adds up the package totals of every reclaimed material in four stages: Confirmed (earlier deals at the agreed material price), Reserved, With the seller and Approved; shown as a donut by stage."
+    },
+    {
+     "actor": "Platform",
+     "action": "Saving against new: what the same quantities would cost bought new, minus the indicative cost; shown as an amount marked 'Cheaper than new' or 'Costs more than new', with the share less than buying new."
+    },
+    {
+     "actor": "Platform",
+     "action": "Avoided carbon, secured: carbon avoided against buying new for earlier deals and accepted reservations only, against the sum of the projects' carbon targets, with a line for how much more the approved materials would add."
+    },
+    {
+     "actor": "Platform",
+     "action": "Reuse by value: the reused share of the projects' bills of materials by value; below it, reused and recycled content by value against the projects' own aim, weighted by each bill's value."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Reads the figures and follows a project card or tab for the detail."
+    }
+   ],
+   "rules": [
+    "Every figure is labelled Indicative and comes from guide prices and the package engine, not agreed prices.",
+    "With nothing approved the cost tile reads 'Nothing approved yet' and the saving tile 'Shown once materials are approved'.",
+    "With no carbon target set the carbon tile reads 'No carbon target set'. With no bill of materials the reuse tile reads 'No bill yet'.",
+    "Only secured materials (earlier deals and reservations the seller accepted) count as secured carbon and reuse; approved materials are shown separately as what more they would add.",
+    "Only projects the client organisation has accepted are counted.",
+    "A client with no projects sees no figures: Home opens on a welcome with three next steps (your architect adds you as the client, accept the project, approve and reserve materials) and recent activity. A donor building owner that is the client of a New project sees the same four figures on its own Home, under Your new projects as developer."
+   ],
+   "notifications": [
+    "None."
+   ]
+  },
+  {
+   "id": "dashboard-tracking",
+   "title": "Follow the programme and certification across projects",
+   "who": [
+    "Client (developer)",
+    "Platform"
+   ],
+   "where": "Home (/app/home): Programme across your projects, Sustainability tracking, Your projects and recent activity",
+   "summary": "Below the figures, the client's Home lays every project on one timeline, then shows a tracking table for certification, circular economy and requirements, then a card per project. It answers where each project is and what is at risk, without opening each one.",
+   "mermaid": "flowchart TD\n  A[\"Open Home\"]:::client\n  B[\"Programme across your projects\"]:::system\n  C[\"Stages, site start, completion, materials needed\"]:::system\n  D[\"Sustainability tracking table\"]:::system\n  E[\"BREEAM, LEED and WELL targets and credits\"]:::system\n  F[\"Content by value and statement status\"]:::system\n  G[\"Requirements ready and at risk\"]:::system\n  H[\"Your projects cards\"]:::system\n  I{\"Something at risk or waiting?\"}:::client\n  J([\"Open that project\"]):::client\n  K([\"Nothing to act on\"]):::client\n  A --> B --> C --> D\n  D --> E --> F --> G --> H --> I\n  I -->|\"Yes\"| J\n  I -->|\"No\"| K",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Programme across your projects: one time axis with a row per project showing its RIBA stages, site start, practical completion, when materials are needed on site, and a line for today. A project without a programme reads 'Programme not set'."
+    },
+    {
+     "actor": "Platform",
+     "action": "Sustainability tracking: per project, the BREEAM, LEED and WELL cells, each with the target rating, credits ready and at risk, and a pill with an icon and a word for its state against target (On target, Near target, Off target); content by value against target with the statement status; and requirements ready, in progress and at risk, with the place they are for, for example 'For Newham, Inner London East'."
+    },
+    {
+     "actor": "Platform",
+     "action": "Your projects: a card per project with its drawing and swatches, stage, materials needed date, counts To decide, Approved and Reserved, and the indicative cost so far. A project still setting up reads 'Being set up', then 'Nothing shortlisted yet' or 'Shortlisting under way'."
+    },
+    {
+     "actor": "Client (developer)",
+     "action": "Follows a project name, a card or an at risk pill into the project to act."
+    }
+   ],
+   "rules": [
+    "Certification tracking is read from the consultant's records. It is indicative and not certification advice; the table carries that caveat.",
+    "A project with no consultancy reads 'No consultant appointed yet' under its name and still shows its three scheme cells, with the defaults from its requirements where they apply and 'Not targeted' otherwise. A consultancy that has not joined is named as waiting to accept or declined, never as setting targets.",
+    "The programme dates come from the project programme; the client cannot edit them here. Every rating state comes from one rule shared with the Sustainability tab and the consultant's Home.",
+    "Recent activity lists decisions and reservations on the client's projects; seller names appear only for the client's own accepted reservations.",
+    "Each project row links into that project; nothing on this part of Home can be changed here."
+   ],
+   "notifications": [
+    "None."
+   ]
+  }
+ ]
+}

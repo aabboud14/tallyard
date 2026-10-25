@@ -1,0 +1,585 @@
+{
+ "key": "06-consultant",
+ "title": "Sustainability consultant",
+ "intro": "This section covers the sustainability consultant. An architect asks the consultancy to join a project once its client has accepted it, and the consultancy sees the project only after it accepts too. The consultant then sets each project's targets, tracks its planning requirements and certification credits, and writes the circular economy statement for the client to review. The consultant also checks compliance figures, exports the workbook, and reviews demolition bills on waste engagements.",
+ "workflows": [
+  {
+   "id": "consultant-consent",
+   "title": "Answer a request to join a project",
+   "who": [
+    "Sustainability consultant",
+    "Architect",
+    "Client or developer",
+    "Platform"
+   ],
+   "where": "Consultant: Home, request cards at the top (/app/home), and Projects, Project requests (/app/projects/requests). Architect: project Team tab (/app/projects/:id/team)",
+   "summary": "An architect who names a sustainability consultancy on a project asks it to join, as it asks the client. The consultancy is asked only once the client has accepted the project, and reaches the project only once it accepts too. If it declines, the architect can ask again or choose another consultancy.",
+   "mermaid": "flowchart TD\n  A[\"Architect names the consultancy\"]:::arch --> B{\"Client has accepted the project?\"}:::system\n  B -->|\"Not yet\"| C[\"Request waits for the client\"]:::system\n  C --> D[\"Client accepts\"]:::client\n  D --> E[\"Consultancy asked to join\"]:::system\n  B -->|\"Yes\"| E\n  E --> F{\"Accept the project?\"}:::consultant\n  F -->|\"Accept\"| G[\"Architect and client told\"]:::system\n  G --> H([\"Project opens for the consultant\"]):::consultant\n  F -->|\"Decline, optional note\"| I[\"Architect told, under the consultancy name\"]:::system\n  I --> J{\"Ask again or another?\"}:::arch\n  J -->|\"Ask again\"| E\n  J -->|\"Choose another\"| A",
+   "steps": [
+    {
+     "actor": "Architect",
+     "action": "Chooses a Sustainability consultant on New project or on the Team tab; the confirmation reads Consultancy asked to join, \"They see the project once they accept, and once the client has.\""
+    },
+    {
+     "actor": "Platform",
+     "action": "Holds the request until the client accepts the project, then asks the consultancy: a notification and a card on its Home and under Project requests, with a badge in its sidebar."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Reads the card: project name, architect practice, client, who asked and when, type, location, stage, site start and practical completion, then chooses Accept, or Decline with an optional note."
+    },
+    {
+     "actor": "Platform",
+     "action": "On accept, adds the project to the consultant's Projects and Home, and tells the architect and the client."
+    },
+    {
+     "actor": "Platform",
+     "action": "On decline, tells the architect only, under the consultancy's name; the Team tab reads \"[consultancy] declined to join this project on [date]. Their note: ...\" with Ask again."
+    },
+    {
+     "actor": "Architect",
+     "action": "Presses Ask again on the Team tab, or chooses another consultancy."
+    }
+   ],
+   "rules": [
+    "Until the client has accepted, the consultancy is not told about the project and cannot open it; the setup checklist and the Team tab say it is asked once the client accepts.",
+    "Until the consultancy accepts, it cannot open the project. Opening the project's address shows \"Accept [project] to open it\" with a button to Project requests.",
+    "Until it joins, the consultancy is named as waiting to accept or declined, never as setting targets: the Sustainability tab reads, for example, \"[consultancy] has not accepted the project yet. Defaults from the requirements are shown.\"",
+    "Activity and notifications about reservations, client decisions and sustainability reach only a consultancy that has joined.",
+    "Only a waiting request can be answered: \"This request has already been answered.\" A decline reaches the architect under the consultancy's name, never a person's.",
+    "Projects and sample records made before this change count as accepted."
+   ],
+   "notifications": [
+    "The consultancy, once the client has accepted: \"[practice] asked to add you as sustainability consultant on [project]\", \"[client] has accepted the project. Accept to see it and set its targets.\"",
+    "The architect and the client on accept: \"[consultancy] joined [project] as sustainability consultant\", \"They can now set targets and follow carbon and compliance on the project.\"",
+    "The architect on decline: \"[consultancy] declined [project]\", with \"Their note: ...\" or \"Ask again or choose another consultancy on the Team tab.\""
+   ]
+  },
+  {
+   "id": "set-targets",
+   "title": "Set, override or reset a project target",
+   "who": [
+    "Sustainability consultant",
+    "Client (told)"
+   ],
+   "where": "Project, Goals and targets (/app/projects/:id/targets)",
+   "summary": "Each goal starts with a default target taken from the planning and sustainability requirements that apply to the project. The consultant keeps the default, overrides it with a project value, marks the goal not targeted, or later resets it to the default. The result is the project's effective target, which every dashboard and page reads.",
+   "mermaid": "flowchart TD\n  A[\"Open Goals and targets\"]:::consultant --> B[\"Platform shows default from requirements\"]:::system\n  B --> C{\"Is the default right?\"}:::consultant\n  C -->|\"Yes\"| D([\"Default target used\"]):::system\n  C -->|\"No\"| E[\"Choose Edit target\"]:::consultant\n  E --> F{\"Target this goal here?\"}:::consultant\n  F -->|\"Yes\"| G[\"Enter value or level and reason\"]:::consultant\n  F -->|\"No\"| H[\"Tick Not targeted on this project\"]:::consultant\n  G --> I{\"Value fits the goal?\"}:::system\n  I -->|\"No\"| M([\"Refused with a message\"]):::system\n  I -->|\"Yes\"| J[\"Save target, client told\"]:::system\n  H --> J\n  J --> K([\"Overridden target used everywhere\"]):::system\n  K --> L[\"Reset to default when needed\"]:::consultant\n  L --> D",
+   "steps": [
+    {
+     "actor": "Sustainability consultant",
+     "action": "Opens the project and the Goals and targets tab, which lists eight goals: reused and recycled content by value, reused content by value, upfront carbon avoided by reuse, upfront carbon (modules A1 to A5), demolition waste diverted from landfill, BREEAM rating, LEED certification and WELL certification."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows each goal's default, the requirement it comes from and its basis, with the requirements that apply listed at the top."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Edit target on a goal, enters a number or picks a rating level, and may add a reason that the project team sees."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Or ticks Not targeted on this project to switch the goal off, then chooses Save target."
+    },
+    {
+     "actor": "Platform",
+     "action": "Refuses a value that does not fit the goal's unit with a message; otherwise marks the row Overridden, shows who set it and when, keeps the default on record and logs the change in the project activity."
+    },
+    {
+     "actor": "Platform",
+     "action": "Notifies the client organisation, once it has accepted the project, of the new target."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Reset to default on an overridden goal to go back to the requirement's default."
+    },
+    {
+     "actor": "Platform",
+     "action": "Uses the effective target (the override, else the default) on the Sustainability tab, Certification, Requirements, Compliance, the statement, the workbook and the consultant, client and architect home dashboards; the consultant's Home builds its meters from the same rows."
+    }
+   ],
+   "rules": [
+    "Only the project's consultant can edit targets. The Goals and targets tab is not shown to the architect or the client; they see targets, read only, on the Sustainability tab.",
+    "A value that does not fit the goal's unit is refused with a message and nothing is saved.",
+    "Marking a rating goal (BREEAM, LEED or WELL) not targeted also turns that scheme off, so its credits that nobody has changed yet start as not targeted.",
+    "Saving the same value and reason again changes nothing and sends nothing.",
+    "Reset to default appears only on an overridden goal and sends no notification.",
+    "A goal with no default and no override shows No target set. A goal is marked indicative when Tallyard works out its figure or when its default is not from a published source.",
+    "Each save and reset offers Undo in the confirmation message."
+   ],
+   "notifications": [
+    "Client organisation (once it has accepted the project): New target on the project, with the goal and value, linking to the Sustainability tab. Sent on each save, including Not targeted.",
+    "Reset to default: none, only an activity entry."
+   ]
+  },
+  {
+   "id": "consultant-overview",
+   "title": "Follow projects from the Overview and the Projects list",
+   "who": [
+    "Sustainability consultant",
+    "Platform"
+   ],
+   "where": "Home (/app/home), Projects (/app/projects) and each project's Overview (/app/projects/:id)",
+   "summary": "The consultant reads every project against its targets without opening each tab: the Home meters, the Projects list and an Overview section of his own all read the same goal rows as Goals and targets, so an override shows the same status everywhere.",
+   "mermaid": "flowchart TD\n  A[\"Open Home or Projects\"]:::consultant --> B[\"Meters from the Goals and targets rows\"]:::system\n  B --> C[\"Content, avoided carbon secured, state\"]:::system\n  C --> D[\"Statement status, requirements at risk\"]:::system\n  D --> E{\"Something off target or at risk?\"}:::consultant\n  E -->|\"Yes\"| F[\"Open the project Overview\"]:::consultant\n  F --> G[\"Figures, statement, targets, schemes, risks\"]:::system\n  G --> H([\"Follow a link to edit\"]):::consultant\n  E -->|\"No\"| I([\"Nothing to act on\"]):::consultant",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "On Home, shows tiles including Avoided carbon, secured (with \"N tCO2e more with approved materials\") and Targets met, then a card per project with its meters, the borough and region, a Requirements line (\"0 of 10 ready\" with an at risk pill) and links to each at risk requirement."
+    },
+    {
+     "actor": "Platform",
+     "action": "On Projects, lists each project as a card or a table row with reused and recycled content by value and upfront carbon avoided by reuse, secured, against their targets with their state, the statement status, and requirements ready and at risk."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Opens a project, whose Overview leads with the programme card, then his own section: the four Sustainability figures against target, the statement card, the target meters, each scheme's certification snapshot and the requirements at risk."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Follows Edit targets, Open certification, Open the statement or a requirement to act."
+    }
+   ],
+   "rules": [
+    "Carbon is measured on secured materials (earlier deals and accepted reservations); approved materials are shown as what more they would add.",
+    "Targets met counts every goal with a target, as Goals and targets lists them, judged by the same rule as the Sustainability tab and the client's tracking.",
+    "The shortlist and approval counts on the Overview are left out for the consultant.",
+    "Only projects the consultancy has accepted appear. A consultancy with no projects and no engagements sees its first steps instead of zero tiles, below any waiting requests.",
+    "Every figure is indicative and comes from public listings and the project's own records."
+   ],
+   "notifications": [
+    "None."
+   ]
+  },
+  {
+   "id": "enter-result",
+   "title": "Enter a result with its date and source",
+   "who": [
+    "Sustainability consultant"
+   ],
+   "where": "Project, Goals and targets (/app/projects/:id/targets), Enter result",
+   "summary": "Some goals cannot be worked out by Tallyard, such as upfront carbon, waste diverted and the rating levels. The consultant records the latest result with the date it applies to and where it comes from, so the status against the target can be shown.",
+   "mermaid": "flowchart TD\n  A[\"Pick a goal on Goals and targets\"]:::consultant --> B{\"Does Tallyard measure it?\"}:::system\n  B -->|\"Yes\"| C([\"Worked out by Tallyard, no entry\"]):::system\n  B -->|\"No\"| D[\"Choose Enter result\"]:::consultant\n  D --> E[\"Enter result, as at date and source\"]:::consultant\n  E --> F[\"Save result\"]:::consultant\n  F --> G{\"Result, date and source valid?\"}:::system\n  G -->|\"No\"| H([\"Refused with a message\"]):::system\n  G -->|\"Yes\"| I[\"Result shown under Now with source\"]:::system\n  I --> J[\"Status compares result with target\"]:::system\n  J --> K([\"Rating results show as predicted\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Works out reused and recycled content by value, reused content by value and upfront carbon avoided by reuse from the bill of materials and the secured materials; these rows have no Enter result button."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Enter result on upfront carbon, demolition waste diverted, BREEAM, LEED or WELL."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Enters the result or picks the level, sets the As at date (today unless changed) and writes the Source, for example a stage 2 life cycle assessment, then chooses Save result."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the result under Now with its date and source, updates the status meter and logs it in the project activity."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows a BREEAM, LEED or WELL result as the latest predicted rating for that scheme on Certification, the Sustainability tab and Compliance."
+    }
+   ],
+   "rules": [
+    "Only the consultant can enter results, and only for goals Tallyard does not measure; an attempt on a measured goal is refused.",
+    "The result must fit the goal's unit, the As at date must be on or before today and the source must not be empty; otherwise the save is refused with a message.",
+    "Entering the same value, date and source again changes nothing. A new result replaces the earlier one; there is no button to remove a result.",
+    "Measured results need the project's bill of materials for content by value; without it the row reads Needs the bill of materials.",
+    "Saving offers Undo in the confirmation message."
+   ],
+   "notifications": [
+    "None. The result is recorded in the project activity only."
+   ]
+  },
+  {
+   "id": "track-requirements",
+   "title": "Track a requirement's status and evidence",
+   "who": [
+    "Sustainability consultant",
+    "Client or developer",
+    "Architect (reads)"
+   ],
+   "where": "Project, Requirements (/app/projects/:id/requirements)",
+   "summary": "Every planning and sustainability requirement that applies to the project is tracked with a status and a list of evidence. The consultant and the client keep it current together, and each is told when the other marks a requirement at risk or evidence ready.",
+   "mermaid": "flowchart TD\n  A[\"Open the Requirements tab\"]:::consultant --> B[\"Platform lists requirements that apply\"]:::system\n  B --> C{\"What needs updating?\"}:::consultant\n  C -->|\"Evidence\"| D[\"Add a note or link an output\"]:::consultant\n  D --> E{\"Note or output given?\"}:::system\n  E -->|\"No\"| F([\"Refused, nothing added\"]):::system\n  E -->|\"Yes\"| G[\"Not started becomes In progress\"]:::system\n  C -->|\"Status\"| H[\"Choose a status\"]:::consultant\n  H --> I{\"At risk or Evidence ready?\"}:::system\n  I -->|\"Yes\"| J[\"Client is notified\"]:::system\n  I -->|\"No\"| K([\"Saved and logged\"]):::system\n  J --> K\n  G --> K\n  K --> L([\"Client can do the same, consultant told\"]):::client",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Lists the requirements the architect chose for the project, or the ones suggested for its region and local authority until the architect has chosen, each with its scope, source and summary."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows what Tallyard already holds for each requirement under Held in Tallyard, such as the goal figures it sets and the circular economy statement status."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Filters by All, At risk, Open, Evidence ready or Not applicable."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Sets the status: Not started, In progress, At risk, Evidence ready or Not applicable."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Add evidence, writes what was done and where it is held, and may link an output: Compliance workbook, Circular economy statement, Sustainability summary or Certification tracking."
+    },
+    {
+     "actor": "Platform",
+     "action": "Moves a Not started requirement to In progress when its first evidence is added, and logs status changes and new evidence in the project activity."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "Can change status and add evidence the same way; the client may link the Circular economy statement, Specification, Sustainability summary or Certification tracking."
+    }
+   ],
+   "rules": [
+    "The consultant and the client (once it has accepted the project) may edit; the architect reads the tab only.",
+    "Evidence needs a note or an output; an empty entry is refused with Add a note or choose an output.",
+    "Only the person who added a piece of evidence can remove it.",
+    "A requirement that does not apply to the project is refused.",
+    "The Requirements tab shows a badge with the number of requirements at risk for the consultant and the client.",
+    "While the architect has not reviewed the requirements, the suggested ones for the place are tracked and the page says so. If none apply, the page points to the project overview. On a building owner's own project with no architect, the owner is prompted to appoint one.",
+    "Status changes, new evidence and removals offer Undo in the confirmation message."
+   ],
+   "notifications": [
+    "When the consultant marks At risk or Evidence ready: the client organisation (once linked) is told the requirement's new status.",
+    "When the client marks At risk or Evidence ready: the consultant organisation is told, once it has joined the project.",
+    "Other statuses and evidence: no notification, activity entry only."
+   ]
+  },
+  {
+   "id": "certification-credits",
+   "title": "Target certification credits and set their status",
+   "who": [
+    "Sustainability consultant",
+    "Client (told)"
+   ],
+   "where": "Project, Certification (/app/projects/:id/certification?scheme=breeam)",
+   "summary": "For BREEAM, LEED, WELL and the circular economy measures, the consultant chooses which credits the project is seeking and keeps each one's status current. Tallyard suggests a status from its own records with the reason, which the consultant can accept or ignore.",
+   "mermaid": "flowchart TD\n  A[\"Open Certification\"]:::consultant --> B[\"Pick a scheme tab\"]:::consultant\n  B --> C{\"Seeking this credit?\"}:::consultant\n  C -->|\"No\"| D([\"Switch off, not targeted\"]):::consultant\n  C -->|\"Yes\"| E[\"Switch on the credit\"]:::consultant\n  E --> F[\"Platform suggests a status and reason\"]:::system\n  F --> G{\"Agree with the suggestion?\"}:::consultant\n  G -->|\"Yes\"| H[\"Choose Use suggestion\"]:::consultant\n  G -->|\"No\"| I[\"Choose a status yourself\"]:::consultant\n  H --> J{\"Marked At risk?\"}:::system\n  I --> J\n  J -->|\"Yes\"| K[\"Client is notified\"]:::system\n  J -->|\"No\"| L([\"Status saved, add a note\"]):::consultant\n  K --> L",
+   "steps": [
+    {
+     "actor": "Sustainability consultant",
+     "action": "Opens Certification and picks a scheme tab: BREEAM, LEED, WELL or Circular economy; each tab shows how many credits are targeted."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the scheme summary: the target (for BREEAM, LEED and WELL with a link, Change in Goals and targets), the latest predicted rating and a bar of the targeted credits by status."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Turns a credit's switch on or off; credits start targeted when the scheme is targeted and the credit is usually sought."
+    },
+    {
+     "actor": "Platform",
+     "action": "For a targeted credit, shows Suggested: and a status with the reason from Tallyard's records, for example content by value against the aim or how many items need screening."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Use suggestion or picks a status: Not started, In progress, At risk or Evidence ready."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Writes a note, for example where the assessor holds the evidence, and chooses Save note."
+    },
+    {
+     "actor": "Platform",
+     "action": "Records who updated the credit and when, and logs targeting and status changes in the project activity."
+    }
+   ],
+   "rules": [
+    "Only the project's consultant can open Certification; the client and the architect see the scheme summaries on the Sustainability tab.",
+    "A credit must be targeted before its status can be set: the status menu is greyed out, and the platform refuses with Target this credit before you set its status. Not applicable is not offered for credits.",
+    "The suggestion appears only on a targeted credit, only when Tallyard's records say something about it, and only when it differs from the current status.",
+    "Saving a note does not add an activity entry; it records who updated the credit and when.",
+    "Everything on the page is labelled indicative, not certification advice."
+   ],
+   "notifications": [
+    "When a credit is marked At risk: the client organisation (once linked) is told the credit is at risk.",
+    "Other changes: none, activity entry only."
+   ]
+  },
+  {
+   "id": "map-materials",
+   "title": "Map reclaimed materials to credits",
+   "who": [
+    "Sustainability consultant"
+   ],
+   "where": "Project, Certification (/app/projects/:id/certification), By credit and By material views",
+   "summary": "The project's reclaimed materials (earlier deals, accepted reservations and approved shortlist items) are mapped to the credits that rely on them. A rule ticks the right materials by default, and the consultant adds or leaves out individual materials, either per credit or in a grid.",
+   "mermaid": "flowchart TD\n  A[\"Open Certification, pick a scheme\"]:::consultant --> B{\"Which view?\"}:::consultant\n  B -->|\"By credit\"| C[\"Open a targeted credit\"]:::consultant\n  C --> D[\"Rule ticks materials by default\"]:::system\n  D --> E{\"Rule right for this material?\"}:::consultant\n  E -->|\"Yes\"| F([\"Leave as it is\"]):::consultant\n  E -->|\"No\"| G[\"Tick or untick the material\"]:::consultant\n  B -->|\"By material\"| H[\"Grid of materials and targeted credits\"]:::system\n  H --> I[\"Tick or untick in the grid\"]:::consultant\n  G --> J[\"Hint shows added or left out\"]:::system\n  I --> J\n  J --> K([\"Used in suggestions and the workbook\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Lists the project's materials from their public listings, each tagged Confirmed (earlier deal), Reserved (accepted reservation) or Approved (approved on the shortlist)."
+    },
+    {
+     "actor": "Platform",
+     "action": "Ticks each material by the credit's rule, for example every reused item, steel sections only, or items built before 1970 or untested."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Ticks or unticks a material; the hint reads Included by the rule, Added by you, Left out by you or Not covered by the rule."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Switches to By material to see a grid of materials against every targeted credit that maps materials, and ticks there."
+    },
+    {
+     "actor": "Platform",
+     "action": "Uses the mapped materials in the credit's suggestion and in the Certification mapping sheet of the compliance workbook."
+    }
+   ],
+   "rules": [
+    "Only the consultant can change the mapping, and only for materials that are on the project.",
+    "Credits that do not map individual materials say so and refuse a mapping.",
+    "Material checkboxes are greyed out while a credit is not targeted; the By material grid shows only targeted credits that map materials.",
+    "Ticking a material back to what the rule says drops the override.",
+    "No prices or seller details appear; only public listing data is used.",
+    "With no reclaimed materials yet, the page says credits fill in as the client approves and reserves materials, and the By material grid is not shown."
+   ],
+   "notifications": [
+    "None."
+   ]
+  },
+  {
+   "id": "statement-draft",
+   "title": "Draft and export the circular economy statement",
+   "who": [
+    "Sustainability consultant"
+   ],
+   "where": "Project, Circular economy tab (/app/projects/:id/statement)",
+   "summary": "Tallyard writes a circular economy statement in eight sections from the project's records. The consultant edits any section, is warned when the figures behind an edited section change, and can copy, print or download the statement for Word at any time.",
+   "mermaid": "flowchart TD\n  A[\"Open the Circular economy tab\"]:::consultant --> B[\"Platform writes eight sections\"]:::system\n  B --> C{\"Section needs changes?\"}:::consultant\n  C -->|\"No\"| D[\"Generated text kept\"]:::system\n  C -->|\"Yes\"| E[\"Edit, then Save\"]:::consultant\n  E --> F[\"Section marked Edited\"]:::system\n  F --> G{\"Figures changed since the edit?\"}:::system\n  G -->|\"Yes\"| H{\"Take the new text?\"}:::consultant\n  H -->|\"Yes\"| I[\"Use updated text\"]:::consultant\n  H -->|\"No\"| J[\"Keep my text\"]:::consultant\n  G -->|\"No\"| K[\"Copy, Print or Download for Word\"]:::consultant\n  I --> K\n  J --> K\n  D --> K\n  K --> L([\"Statement ready to send\"]):::consultant",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Writes the sections: project and policy context, strategic approach, reclaimed materials, reused and recycled content by value, upfront carbon avoided, targets and commitments, certification, and next steps, using the effective targets and the targeted credits."
+    },
+    {
+     "actor": "Platform",
+     "action": "Groups the reclaimed materials by status and family with no listing codes, gives one line per certification scheme with credits at risk and with evidence ready, and derives the next steps from the records: request reservations for approved materials, follow up requests with the seller, close each gap below target, record missing results, resolve credits at risk, set a target for a rating scheme recorded as a requirement, then the step for the RIBA stage. List lines show as bullets."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Edit on a section, changes the text and chooses Save; Reset to generated text returns it to Tallyard's text."
+    },
+    {
+     "actor": "Platform",
+     "action": "Keeps the generated text the edit replaced, and when the project's figures later change shows a warning on that section."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Use updated text to take the new generated text, or Keep my text to keep the edit against the new figures."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Copy text, Print (laid out on A4) or Download for Word, which saves a .docx with real bullet lists, named after the project and today's date."
+    }
+   ],
+   "rules": [
+    "Only the project's consultant can open this page and edit. The client reads the statement on its Sustainability tab once it has been sent; the architect never sees it.",
+    "Save is unavailable while a section's text is empty; Reset to generated text brings back Tallyard's text.",
+    "Editing a statement already sent keeps its status: the client goes on reading the version sent, and the consultant is offered Send the updated statement (see Send the statement for the client's review).",
+    "Saving and resetting a section offer Undo in the confirmation message.",
+    "The Word file is built in the browser; nothing is sent anywhere.",
+    "A Check before you submit warning shows on screen; the indicative footer appears on screen, in print, in the Word file and in the copied text.",
+    "Figures read one decimal place throughout, and \"No avoided carbon is on record yet\" when there is none."
+   ],
+   "notifications": [
+    "None while drafting."
+   ]
+  },
+  {
+   "id": "statement-review",
+   "title": "Send the statement for the client's review",
+   "who": [
+    "Sustainability consultant",
+    "Client or developer"
+   ],
+   "where": "Consultant: Circular economy tab (/app/projects/:id/statement). Client: Sustainability tab, statement card (/app/projects/:id/sustainability#statement)",
+   "summary": "When the draft is ready, the consultant sends it to the client. Sending freezes the text: the client reads, comments on and marks reviewed the version sent. If the statement changes afterwards, the consultant sends the updated statement, which replaces the frozen copy and asks for review again.",
+   "mermaid": "flowchart TD\n  A[\"Send to the client for review\"]:::consultant --> B{\"Client accepted the project?\"}:::system\n  B -->|\"No\"| C([\"Send button stays unavailable\"]):::system\n  B -->|\"Yes\"| S[\"Text frozen as sent\"]:::system\n  S --> D[\"Client notified, to-do on home\"]:::system\n  D --> E[\"Client chooses Read and review\"]:::client\n  E --> F[\"Client adds optional comments\"]:::client\n  F --> G[\"Client chooses Mark as reviewed\"]:::client\n  G --> H[\"Consultant notified with comments\"]:::system\n  H --> I([\"Reviewed by the client\"]):::system\n  I --> J{\"Statement changed since sending?\"}:::system\n  J -->|\"Yes\"| K[\"Send the updated statement\"]:::consultant\n  K --> S\n  J -->|\"No\"| L([\"Stays reviewed\"]):::system",
+   "steps": [
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Send to (client name) for review; the button then reads Sent for review and is unavailable until the statement changes."
+    },
+    {
+     "actor": "Platform",
+     "action": "Freezes the sections as sent, sets the status to With the client for review, clears any earlier review, notifies the client organisation and adds a to-do, Review the circular economy statement, due 14 days after sending, to a developer client's home."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the client a badge on its Sustainability tab and a highlighted statement card reading Ready for your review."
+    },
+    {
+     "actor": "Client or developer",
+     "action": "Chooses Read and review, reads the version sent, dated when it was sent, may write comments for the consultant, and chooses Mark as reviewed."
+    },
+    {
+     "actor": "Platform",
+     "action": "Sets the status to Reviewed by the client, notifies the consultant organisation with the comments, and shows the comments on the statement page."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "After an edit, or when the figures move on, sees \"Changed since you sent it\", \"Sent on [date]. Send the updated statement so [client] reviews the latest version.\", and chooses Send the updated statement, which replaces the frozen copy. A reviewed statement can also be sent again without changes."
+    }
+   ],
+   "rules": [
+    "Only the consultant sends; only the client (or a building owner on its own project, who acts as the client) marks it reviewed.",
+    "Sending is not possible until the client has accepted the project: the button is unavailable and the platform refuses.",
+    "Marking reviewed is refused unless the statement has been sent: The statement has not been sent for review.",
+    "An edit never pulls the statement back from the client: a statement with the client stays With the client for review, and a reviewed one stays Reviewed, until the consultant sends the updated statement. The client keeps the review to-do and can still mark the version sent as reviewed.",
+    "While the statement waits for review, sending again is possible only once its text differs from the version sent.",
+    "The client cannot decline or return the statement; it can only add comments and mark it reviewed.",
+    "A statement never sent reads Draft to the consultant and Not sent yet to the client and the architect; once the consultant has started editing it, the client's card reads Being drafted. After review the client can still choose Read the statement.",
+    "The architect never sees the statement itself.",
+    "Send and review both offer Undo in the confirmation message."
+   ],
+   "notifications": [
+    "On send: the client organisation gets Circular economy statement ready for review, linking to the Sustainability tab.",
+    "On sending the updated statement: the client organisation gets Updated circular economy statement ready for review.",
+    "On review: the consultant organisation gets the client reviewed the circular economy statement, with the comments or No comments."
+   ],
+   "states_mermaid": "stateDiagram-v2\n  state \"Draft\" as Draft\n  state \"With the client for review\" as Review\n  state \"Reviewed by the client\" as Reviewed\n  [*] --> Draft\n  Draft --> Review : Consultant sends\n  Review --> Reviewed : Client marks reviewed\n  Review --> Review : Consultant sends the updated statement\n  Reviewed --> Review : Consultant sends again",
+   "states_note": "The client sees these as Not sent yet or Being drafted, Ready for your review and Reviewed. Each send freezes the text the client reads; editing never moves the status back."
+  },
+  {
+   "id": "sustainability-tab",
+   "title": "Read the Sustainability tab",
+   "who": [
+    "Sustainability consultant",
+    "Client or developer",
+    "Architect"
+   ],
+   "where": "Project, Sustainability (/app/projects/:id/sustainability; the old /carbon address redirects here)",
+   "summary": "The Sustainability tab is the shared summary every side of the project sees: figures, targets, avoided carbon, certification schemes and the requirements roll up. It is read only; the consultant follows its links to the pages where things are edited.",
+   "mermaid": "flowchart TD\n  A[\"Open the Sustainability tab\"]:::consultant --> B[\"Four headline figures shown\"]:::system\n  B --> C{\"Who is viewing?\"}:::system\n  C -->|\"Consultant\"| D[\"Links to edit targets and more\"]:::consultant\n  C -->|\"Client\"| E[\"Statement card, Read and review\"]:::client\n  C -->|\"Architect\"| F[\"Read only, no statement card\"]:::arch\n  D --> G[\"Targets, carbon, schemes, requirements\"]:::system\n  E --> G\n  F --> G\n  G --> H([\"Same effective targets on every side\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Shows four headline figures: Avoided carbon, secured; Avoided carbon, live list; Content by value; and Reclaimed mass, secured. The carbon and content figures have progress rings against the effective targets."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the circular economy statement card to the consultant (Open the statement) and the client (Read and review, or Read the statement); the scheme card and the architect read only its status, Not sent yet until it is sent."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows the targets that are set or have results, the avoided carbon section, a card per certification scheme and the requirements roll up with the titles of those at risk."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Uses Edit targets, Open certification, Open the statement and Open requirements to go to the editing pages."
+    }
+   ],
+   "rules": [
+    "Everyone on the project can open it: architect, client once linked, and consultant. Nothing on it is edited in place.",
+    "The targets note reads \"Targets are set by [consultancy].\" only once the consultancy has joined; otherwise \"[consultancy] has not accepted the project yet.\", \"[consultancy] declined to join.\" or \"[consultancy] is asked to join once the client accepts.\", each followed by \"Defaults from the requirements are shown.\"",
+    "Figures come from public listings and the project's own records; no prices are shown. Carbon and content figures are labelled indicative."
+   ],
+   "notifications": [
+    "None."
+   ]
+  },
+  {
+   "id": "compliance-workbook",
+   "title": "Check compliance and export the workbook",
+   "who": [
+    "Sustainability consultant"
+   ],
+   "where": "Project, Compliance (/app/projects/:id/compliance)",
+   "summary": "The consultant's compliance page gathers content by value, avoided carbon, reclaimed mass, the statement status, certification and the reused items in one place. It prints to A4 and exports a spreadsheet workbook for the planning submission or the assessor.",
+   "mermaid": "flowchart TD\n  A[\"Open the Compliance tab\"]:::consultant --> B{\"Project has a bill of materials?\"}:::system\n  B -->|\"Yes\"| C[\"Content by value against the target\"]:::system\n  B -->|\"No\"| D[\"Note: needs the bill of materials\"]:::system\n  C --> E[\"Carbon, mass, statement, certification\"]:::system\n  D --> E\n  E --> F[\"Reused items and bill of materials\"]:::system\n  F --> G{\"Print or export?\"}:::consultant\n  G -->|\"Print\"| H([\"A4 report printed\"]):::consultant\n  G -->|\"Export\"| I[\"Choose Export workbook\"]:::consultant\n  I --> J([\"Workbook downloaded\"]):::system",
+   "steps": [
+    {
+     "actor": "Platform",
+     "action": "Labels the page Forecast, design stage and states the policy basis, London Plan 2021 and the 2022 guidance."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows content by value secured against the project's effective target, or against the policy aim when the project has no target, with the figures with approved materials and without reuse beside it, and how much each bill line adds through reuse."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows upfront carbon avoided and reclaimed mass, the statement status (Open the statement), the certification summary per scheme (Open certification), the reused items and the bill of materials."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Print for a report laid out on A4, or Export workbook."
+    },
+    {
+     "actor": "Platform",
+     "action": "Builds the workbook in the browser with sheets for Summary, Bill of materials, Reused items, Targets, Requirements, Certification mapping and Assumptions, and names the file after the project and today's date."
+    }
+   ],
+   "rules": [
+    "Only the project's consultant can open Compliance and export the workbook.",
+    "Without a bill of materials, content by value is not shown; avoided carbon and reused items are still counted.",
+    "Untargeted credits are listed as Not targeted in the mapping sheet; credits without a note carry the standard assessor caveat.",
+    "Every figure is indicative and labelled as such; nothing leaves the browser."
+   ],
+   "notifications": [
+    "None."
+   ]
+  },
+  {
+   "id": "waste-engagement",
+   "title": "Import and review a demolition bill",
+   "who": [
+    "Sustainability consultant"
+   ],
+   "where": "Sidebar, Engagements, then the engagement (/app/engagements/:id/waste)",
+   "summary": "For a demolition engagement, the consultant brings in the contractor's bill of arisings, checks how each row was coded to a waste stream and destination, fixes the unclear ones and exports a waste and reuse workbook. The figures are actuals from the contractor's bill.",
+   "mermaid": "flowchart TD\n  A[\"Open the engagement\"]:::consultant --> B{\"Which bill?\"}:::consultant\n  B -->|\"Sample\"| C[\"Use the sample bill\"]:::consultant\n  B -->|\"Own file\"| D[\"Upload a workbook\"]:::consultant\n  C --> E{\"Header row and rows found?\"}:::system\n  D --> E\n  E -->|\"No\"| F([\"Refused, try another file\"]):::system\n  E -->|\"Yes\"| G[\"Rows coded with confidence\"]:::system\n  G --> H[\"Show only rows to review\"]:::consultant\n  H --> I[\"Set stream and destination\"]:::consultant\n  I --> J[\"Diversion, reuse and carbon updated\"]:::system\n  J --> K[\"Choose Export workbook\"]:::consultant\n  K --> L([\"Waste and reuse workbook downloaded\"]):::system",
+   "steps": [
+    {
+     "actor": "Sustainability consultant",
+     "action": "Opens an engagement from the Engagements section of the sidebar and, while no bill is loaded, sees Import the demolition bill."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Use the sample bill or Upload a workbook (.xlsx)."
+    },
+    {
+     "actor": "Platform",
+     "action": "Reads each row, codes it to a waste stream and destination with high, medium or low confidence, skips title and total rows, and checks the stated total against the rows."
+    },
+    {
+     "actor": "Platform",
+     "action": "Shows Rows to review: a row without a stream, a destination or a tonnage is not counted until it is reviewed."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Turns on Only rows to review (the low confidence rows) and sets the Stream and Destination for each, beside the text as written on the bill; an edited row leaves that filter and is counted as edited."
+    },
+    {
+     "actor": "Platform",
+     "action": "Updates diversion from landfill against the aim, reuse rate, counted demolition waste and the potential carbon benefit, with hazardous and excavation rows reported separately."
+    },
+    {
+     "actor": "Sustainability consultant",
+     "action": "Chooses Export workbook, or Replace to load a different bill, or Clear bill to start again."
+    },
+    {
+     "actor": "Platform",
+     "action": "Builds the workbook in the browser with sheets for Summary, Arisings, Recycling and waste reporting, Reuse carbon, Certification mapping and Assumptions."
+    }
+   ],
+   "rules": [
+    "Only the engagement's consultant can open it; the building owner on the engagement cannot.",
+    "A file with no recognisable header row, or with no rows, is refused with a message to use the sample bill or a bill with the same columns.",
+    "Rows can be edited only after a bill is loaded.",
+    "The page is labelled Actual, from contractor's bill; the carbon benefit is indicative and reported separately as module D.",
+    "Load, Replace and Clear bill offer Undo; row edits do not. The workbook never leaves the browser."
+   ],
+   "notifications": [
+    "None. Loading a bill adds an entry to the consultant organisation's activity; clearing it or editing rows adds none."
+   ]
+  }
+ ]
+}
